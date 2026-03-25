@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import SwiftData
 
 @main
 struct trackerApp: App {
@@ -13,5 +14,6 @@ struct trackerApp: App {
         WindowGroup {
             ContentView()
         }
+        .modelContainer(for: [Workout.self, UserSettings.self, BodyWeightEntry.self], isAutosaveEnabled: true)
     }
 }
