@@ -36,6 +36,7 @@ final class Exercise {
     var order: Int = 0
     var supersetGroup: Int? = nil
     var categoryRaw: String? = nil
+    var customRestDuration: Int? = nil
     var workout: Workout?
     @Relationship(deleteRule: .cascade, inverse: \ExerciseSet.exercise)
     var sets: [ExerciseSet]

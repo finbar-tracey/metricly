@@ -8,13 +8,40 @@ struct ContentView: View {
     @Query private var settingsArray: [UserSettings]
     @State private var showingAddWorkout = false
     @State private var showingSettings = false
-    @State private var showingVolume = false
     @State private var workoutToDelete: Workout?
     @State private var repeatConfirmation = false
     @State private var searchText = ""
     @State private var showingOnboarding = false
-    @State private var showingBodyWeight = false
     @State private var showingCalendar = false
+    @State private var showingExerciseLibrary = false
+    @State private var showingInsights = false
+    @State private var showingComparison = false
+    @State private var showingPrograms = false
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @State private var selectedSidebarItem: SidebarItem? = .workouts
+    @State private var selectedWorkout: Workout?
+
+    enum SidebarItem: String, Hashable, CaseIterable {
+        case workouts = "Workouts"
+        case programs = "Programs"
+        case insights = "Insights"
+        case calendar = "Calendar"
+        case exerciseLibrary = "Exercise Library"
+        case comparison = "Compare"
+        case settings = "Settings"
+
+        var icon: String {
+            switch self {
+            case .workouts: return "dumbbell"
+            case .programs: return "calendar.badge.clock"
+            case .insights: return "chart.bar"
+            case .calendar: return "calendar"
+            case .exerciseLibrary: return "books.vertical"
+            case .comparison: return "arrow.left.arrow.right"
+            case .settings: return "gearshape"
+            }
+        }
+    }
 
     private var filteredWorkouts: [Workout] {
         if searchText.isEmpty { return workouts }
@@ -39,168 +66,11 @@ struct ContentView: View {
     }
 
     var body: some View {
-        NavigationStack {
-            List {
-                if searchText.isEmpty && !workouts.isEmpty {
-                    streakSection
-                }
-                ForEach(filteredWorkouts) { workout in
-                    NavigationLink(value: workout) {
-                        HStack(spacing: 14) {
-                            Image(systemName: "figure.strengthtraining.traditional")
-                                .font(.title2)
-                                .foregroundStyle(.tint)
-                                .frame(width: 32)
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(workout.name)
-                                    .font(.headline)
-                                HStack(spacing: 6) {
-                                    Text(workout.date, format: .dateTime.weekday(.wide).month().day())
-                                    if let duration = workout.formattedDuration {
-                                        Text("·")
-                                        Image(systemName: "clock")
-                                            .imageScale(.small)
-                                        Text(duration)
-                                    }
-                                    if let rating = workout.rating, rating > 0 {
-                                        Text("·")
-                                        HStack(spacing: 1) {
-                                            ForEach(1...rating, id: \.self) { _ in
-                                                Image(systemName: "star.fill")
-                                                    .imageScale(.small)
-                                            }
-                                        }
-                                        .foregroundStyle(.yellow)
-                                    }
-                                }
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                                if !workout.exercises.isEmpty {
-                                    Text(workoutSummary(workout))
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                }
-                            }
-                        }
-                        .padding(.vertical, 4)
-                        .accessibilityElement(children: .combine)
-                        .accessibilityLabel(workoutAccessibilityLabel(workout))
-                    }
-                }
-                .onDelete { offsets in
-                    if let index = offsets.first {
-                        workoutToDelete = filteredWorkouts[index]
-                    }
-                }
-            }
-            .overlay {
-                if workouts.isEmpty {
-                    ContentUnavailableView {
-                        Label("No Workouts", systemImage: "dumbbell")
-                    } description: {
-                        Text("Tap + to log your first workout.")
-                    }
-                } else if filteredWorkouts.isEmpty {
-                    ContentUnavailableView.search(text: searchText)
-                }
-            }
-            .navigationTitle("Workouts")
-            .searchable(text: $searchText, prompt: "Search workouts or exercises")
-            .navigationDestination(for: Workout.self) { workout in
-                WorkoutDetailView(workout: workout)
-            }
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    HStack(spacing: 16) {
-                        Button {
-                            showingSettings = true
-                        } label: {
-                            Label("Settings", systemImage: "gearshape")
-                        }
-                        Menu {
-                            Button {
-                                showingCalendar = true
-                            } label: {
-                                Label("Calendar", systemImage: "calendar")
-                            }
-                            Button {
-                                showingVolume = true
-                            } label: {
-                                Label("Volume", systemImage: "chart.bar")
-                            }
-                            Button {
-                                showingBodyWeight = true
-                            } label: {
-                                Label("Body Weight", systemImage: "scalemass")
-                            }
-                        } label: {
-                            Label("Charts", systemImage: "chart.bar")
-                        }
-                    }
-                }
-                ToolbarItem(placement: .topBarTrailing) {
-                    HStack(spacing: 16) {
-                        if let lastWorkout = workouts.first, !lastWorkout.exercises.isEmpty {
-                            Button {
-                                repeatConfirmation = true
-                            } label: {
-                                Label("Repeat Last", systemImage: "arrow.counterclockwise")
-                            }
-                        }
-                        Button {
-                            showingAddWorkout = true
-                        } label: {
-                            Label("Add Workout", systemImage: "plus")
-                        }
-                    }
-                }
-            }
-            .sheet(isPresented: $showingAddWorkout) {
-                AddWorkoutSheet()
-            }
-            .sheet(isPresented: $showingVolume) {
-                NavigationStack {
-                    VolumeChartView()
-                        .toolbar {
-                            ToolbarItem(placement: .confirmationAction) {
-                                Button("Done") { showingVolume = false }
-                            }
-                        }
-                }
-                .environment(\.weightUnit, weightUnit)
-            }
-            .sheet(isPresented: $showingCalendar) {
-                NavigationStack {
-                    WorkoutCalendarView()
-                        .toolbar {
-                            ToolbarItem(placement: .confirmationAction) {
-                                Button("Done") { showingCalendar = false }
-                            }
-                        }
-                }
-                .environment(\.weightUnit, weightUnit)
-            }
-            .sheet(isPresented: $showingBodyWeight) {
-                NavigationStack {
-                    BodyWeightView()
-                        .toolbar {
-                            ToolbarItem(placement: .confirmationAction) {
-                                Button("Done") { showingBodyWeight = false }
-                            }
-                        }
-                }
-                .environment(\.weightUnit, weightUnit)
-            }
-            .sheet(isPresented: $showingSettings) {
-                NavigationStack {
-                    SettingsView()
-                        .toolbar {
-                            ToolbarItem(placement: .confirmationAction) {
-                                Button("Done") { showingSettings = false }
-                            }
-                        }
-                }
-                .environment(\.weightUnit, weightUnit)
+        Group {
+            if horizontalSizeClass == .regular {
+                iPadLayout
+            } else {
+                iPhoneLayout
             }
         }
         .environment(\.weightUnit, weightUnit)
@@ -239,6 +109,324 @@ struct ContentView: View {
             if let workout = workoutToDelete {
                 Text("Are you sure you want to delete \"\(workout.name)\"? This cannot be undone.")
             }
+        }
+    }
+
+    // MARK: - iPad Layout
+
+    private var iPadLayout: some View {
+        NavigationSplitView {
+            List(selection: $selectedSidebarItem) {
+                Section("Track") {
+                    Label("Workouts", systemImage: "dumbbell")
+                        .tag(SidebarItem.workouts)
+                    Label("Programs", systemImage: "calendar.badge.clock")
+                        .tag(SidebarItem.programs)
+                    Label("Calendar", systemImage: "calendar")
+                        .tag(SidebarItem.calendar)
+                }
+                Section("Analyze") {
+                    Label("Insights", systemImage: "chart.bar")
+                        .tag(SidebarItem.insights)
+                    Label("Exercise Library", systemImage: "books.vertical")
+                        .tag(SidebarItem.exerciseLibrary)
+                    Label("Compare", systemImage: "arrow.left.arrow.right")
+                        .tag(SidebarItem.comparison)
+                }
+                Section {
+                    Label("Settings", systemImage: "gearshape")
+                        .tag(SidebarItem.settings)
+                }
+            }
+            .navigationTitle("Metricly")
+        } detail: {
+            NavigationStack {
+                switch selectedSidebarItem {
+                case .workouts, .none:
+                    workoutListView
+                case .programs:
+                    TrainingProgramsView()
+                        .navigationTitle("Programs")
+                case .insights:
+                    InsightsView()
+                        .navigationTitle("Insights")
+                case .calendar:
+                    WorkoutCalendarView()
+                        .navigationTitle("Calendar")
+                case .exerciseLibrary:
+                    ExerciseLibraryView()
+                        .navigationTitle("Exercise Library")
+                case .comparison:
+                    WorkoutComparisonView()
+                        .navigationTitle("Compare Workouts")
+                case .settings:
+                    SettingsView()
+                        .navigationTitle("Settings")
+                }
+            }
+        }
+    }
+
+    // MARK: - iPhone Layout
+
+    private var iPhoneLayout: some View {
+        NavigationStack {
+            workoutListView
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    HStack(spacing: 16) {
+                        Button {
+                            showingSettings = true
+                        } label: {
+                            Label("Settings", systemImage: "gearshape")
+                        }
+                        Menu {
+                            Button {
+                                showingInsights = true
+                            } label: {
+                                Label("Insights", systemImage: "chart.bar")
+                            }
+                            Button {
+                                showingCalendar = true
+                            } label: {
+                                Label("Calendar", systemImage: "calendar")
+                            }
+                            Button {
+                                showingExerciseLibrary = true
+                            } label: {
+                                Label("Exercise Library", systemImage: "books.vertical")
+                            }
+                            Button {
+                                showingComparison = true
+                            } label: {
+                                Label("Compare Workouts", systemImage: "arrow.left.arrow.right")
+                            }
+                            Button {
+                                showingPrograms = true
+                            } label: {
+                                Label("Training Programs", systemImage: "calendar.badge.clock")
+                            }
+                        } label: {
+                            Label("More", systemImage: "chart.bar")
+                        }
+                    }
+                }
+            }
+            .sheet(isPresented: $showingInsights) {
+                NavigationStack {
+                    InsightsView()
+                        .toolbar {
+                            ToolbarItem(placement: .confirmationAction) {
+                                Button("Done") { showingInsights = false }
+                            }
+                        }
+                }
+                .environment(\.weightUnit, weightUnit)
+            }
+            .sheet(isPresented: $showingExerciseLibrary) {
+                NavigationStack {
+                    ExerciseLibraryView()
+                        .toolbar {
+                            ToolbarItem(placement: .confirmationAction) {
+                                Button("Done") { showingExerciseLibrary = false }
+                            }
+                        }
+                }
+                .environment(\.weightUnit, weightUnit)
+            }
+            .sheet(isPresented: $showingComparison) {
+                NavigationStack {
+                    WorkoutComparisonView()
+                        .toolbar {
+                            ToolbarItem(placement: .confirmationAction) {
+                                Button("Done") { showingComparison = false }
+                            }
+                        }
+                }
+                .environment(\.weightUnit, weightUnit)
+            }
+            .sheet(isPresented: $showingCalendar) {
+                NavigationStack {
+                    WorkoutCalendarView()
+                        .toolbar {
+                            ToolbarItem(placement: .confirmationAction) {
+                                Button("Done") { showingCalendar = false }
+                            }
+                        }
+                }
+                .environment(\.weightUnit, weightUnit)
+            }
+            .sheet(isPresented: $showingSettings) {
+                NavigationStack {
+                    SettingsView()
+                        .toolbar {
+                            ToolbarItem(placement: .confirmationAction) {
+                                Button("Done") { showingSettings = false }
+                            }
+                        }
+                }
+                .environment(\.weightUnit, weightUnit)
+            }
+            .sheet(isPresented: $showingPrograms) {
+                NavigationStack {
+                    TrainingProgramsView()
+                        .toolbar {
+                            ToolbarItem(placement: .confirmationAction) {
+                                Button("Done") { showingPrograms = false }
+                            }
+                        }
+                }
+                .environment(\.weightUnit, weightUnit)
+            }
+        }
+    }
+
+    // MARK: - Workout List (shared)
+
+    private var workoutListView: some View {
+        List {
+            if searchText.isEmpty && !workouts.isEmpty {
+                if settings.weeklyGoal > 0 {
+                    goalSection
+                }
+                streakSection
+            }
+            ForEach(filteredWorkouts) { workout in
+                NavigationLink(value: workout) {
+                    HStack(spacing: 14) {
+                        Image(systemName: "figure.strengthtraining.traditional")
+                            .font(.title2)
+                            .foregroundStyle(.tint)
+                            .frame(width: 32)
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(workout.name)
+                                .font(.headline)
+                            HStack(spacing: 6) {
+                                Text(workout.date, format: .dateTime.weekday(.wide).month().day())
+                                if let duration = workout.formattedDuration {
+                                    Text("·")
+                                    Image(systemName: "clock")
+                                        .imageScale(.small)
+                                    Text(duration)
+                                }
+                                if let rating = workout.rating, rating > 0 {
+                                    Text("·")
+                                    HStack(spacing: 1) {
+                                        ForEach(1...rating, id: \.self) { _ in
+                                            Image(systemName: "star.fill")
+                                                .imageScale(.small)
+                                        }
+                                    }
+                                    .foregroundStyle(.yellow)
+                                }
+                            }
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            if !workout.exercises.isEmpty {
+                                Text(workoutSummary(workout))
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                    .padding(.vertical, 4)
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel(workoutAccessibilityLabel(workout))
+                }
+            }
+            .onDelete { offsets in
+                if let index = offsets.first {
+                    workoutToDelete = filteredWorkouts[index]
+                }
+            }
+        }
+        .overlay {
+            if workouts.isEmpty {
+                ContentUnavailableView {
+                    Label("No Workouts", systemImage: "dumbbell")
+                } description: {
+                    Text("Tap + to log your first workout.")
+                }
+            } else if filteredWorkouts.isEmpty {
+                ContentUnavailableView.search(text: searchText)
+            }
+        }
+        .navigationTitle("Workouts")
+        .searchable(text: $searchText, prompt: "Search workouts or exercises")
+        .navigationDestination(for: Workout.self) { workout in
+            WorkoutDetailView(workout: workout)
+        }
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                HStack(spacing: 16) {
+                    if let lastWorkout = workouts.first, !lastWorkout.exercises.isEmpty {
+                        Button {
+                            repeatConfirmation = true
+                        } label: {
+                            Label("Repeat Last", systemImage: "arrow.counterclockwise")
+                        }
+                    }
+                    Button {
+                        showingAddWorkout = true
+                    } label: {
+                        Label("Add Workout", systemImage: "plus")
+                    }
+                }
+            }
+        }
+        .sheet(isPresented: $showingAddWorkout) {
+            AddWorkoutSheet()
+        }
+    }
+
+    private var goalProgress: Double {
+        guard settings.weeklyGoal > 0 else { return 0 }
+        return min(1.0, Double(workoutsThisWeek) / Double(settings.weeklyGoal))
+    }
+
+    private var goalSection: some View {
+        Section {
+            HStack(spacing: 16) {
+                ZStack {
+                    Circle()
+                        .stroke(Color.accentColor.opacity(0.2), lineWidth: 8)
+                    Circle()
+                        .trim(from: 0, to: goalProgress)
+                        .stroke(
+                            goalProgress >= 1.0 ? Color.green : Color.accentColor,
+                            style: StrokeStyle(lineWidth: 8, lineCap: .round)
+                        )
+                        .rotationEffect(.degrees(-90))
+                        .animation(.easeInOut(duration: 0.5), value: goalProgress)
+                    VStack(spacing: 0) {
+                        Text("\(workoutsThisWeek)")
+                            .font(.title2.bold().monospacedDigit())
+                        Text("/\(settings.weeklyGoal)")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .frame(width: 64, height: 64)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    if workoutsThisWeek >= settings.weeklyGoal {
+                        Text("Goal reached!")
+                            .font(.headline)
+                            .foregroundStyle(.green)
+                    } else {
+                        Text("\(settings.weeklyGoal - workoutsThisWeek) more to go")
+                            .font(.headline)
+                    }
+                    Text("Weekly goal: \(settings.weeklyGoal) workouts")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer()
+            }
+            .padding(.vertical, 4)
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("Weekly goal: \(workoutsThisWeek) of \(settings.weeklyGoal) workouts completed")
         }
     }
 
@@ -357,6 +545,8 @@ struct ContentView: View {
             let exercise = Exercise(name: oldExercise.name, workout: workout, category: oldExercise.category)
             exercise.order = index
             exercise.supersetGroup = oldExercise.supersetGroup
+            exercise.notes = oldExercise.notes
+            exercise.customRestDuration = oldExercise.customRestDuration
             modelContext.insert(exercise)
             workout.exercises.append(exercise)
         }

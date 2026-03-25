@@ -21,6 +21,7 @@ struct ExerciseDetailView: View {
     @State private var loggedPreviousIndices: Set<Int> = []
     @State private var hasPreFilled = false
     @State private var showPRBanner = false
+    @State private var prScale = 1.0
     @State private var lastAddedSet: ExerciseSet?
     @State private var showUndo = false
     @State private var undoWorkItem: DispatchWorkItem?
@@ -83,19 +84,23 @@ struct ExerciseDetailView: View {
         }
         .overlay(alignment: .top) {
             if showPRBanner {
-                HStack {
-                    Image(systemName: "star.fill")
+                HStack(spacing: 6) {
+                    Image(systemName: "trophy.fill")
                     Text("New Personal Record!")
-                    Image(systemName: "star.fill")
+                    Image(systemName: "trophy.fill")
                 }
                 .font(.subheadline.bold())
                 .foregroundStyle(.black)
                 .padding(.horizontal, 20)
                 .padding(.vertical, 10)
                 .background(.yellow.gradient, in: .capsule)
-                .shadow(color: .yellow.opacity(0.3), radius: 8, y: 4)
+                .shadow(color: .yellow.opacity(0.4), radius: 12, y: 4)
+                .scaleEffect(prScale)
                 .padding(.top, 8)
-                .transition(.move(edge: .top).combined(with: .opacity))
+                .transition(.asymmetric(
+                    insertion: .move(edge: .top).combined(with: .scale(scale: 0.5)).combined(with: .opacity),
+                    removal: .move(edge: .top).combined(with: .opacity)
+                ))
                 .accessibilityLabel("New personal record achieved")
             }
         }
@@ -150,7 +155,8 @@ struct ExerciseDetailView: View {
         }
         .onAppear {
             if !hasLoadedSettings, let settings = settingsArray.first {
-                restDuration = settings.defaultRestDuration
+                // Prefer exercise-specific rest duration, then fall back to global
+                restDuration = exercise.customRestDuration ?? settings.defaultRestDuration
                 autoStartRest = settings.autoStartRestTimer
                 hasLoadedSettings = true
             }
@@ -287,7 +293,24 @@ struct ExerciseDetailView: View {
 
     private var newSetSection: some View {
         Section {
-            Stepper("Rest: \(restDuration)s", value: $restDuration, in: 15...300, step: 15)
+            HStack {
+                Stepper("Rest: \(restDuration)s", value: $restDuration, in: 15...300, step: 15)
+                if exercise.customRestDuration != restDuration {
+                    Button {
+                        exercise.customRestDuration = restDuration
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    } label: {
+                        Text("Save")
+                            .font(.caption.bold())
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Color.accentColor, in: .capsule)
+                            .foregroundStyle(.white)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Save rest duration for this exercise")
+                }
+            }
             Stepper("Reps: \(newReps)", value: $newReps, in: 1...100)
             HStack {
                 Text("Weight")
@@ -606,12 +629,23 @@ struct ExerciseDetailView: View {
 
     private func checkForPR(weight: Double, isWarmUp: Bool) {
         if !isWarmUp && historicalBestWeight > 0 && weight > historicalBestWeight {
-            withAnimation(.spring(duration: 0.5)) {
+            withAnimation(.spring(duration: 0.5, bounce: 0.3)) {
                 showPRBanner = true
+                prScale = 1.15
             }
+            // Double haptic burst for celebration
             UINotificationFeedbackGenerator().notificationOccurred(.success)
-            DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                withAnimation {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                UIImpactFeedbackGenerator(style: .heavy).impactOccurred()
+            }
+            // Pulse back to normal
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                withAnimation(.spring(duration: 0.3)) {
+                    prScale = 1.0
+                }
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
+                withAnimation(.easeOut(duration: 0.4)) {
                     showPRBanner = false
                 }
             }
@@ -626,8 +660,10 @@ struct ExerciseDetailView: View {
             isWarmUp: newIsWarmUp,
             exercise: exercise
         )
-        modelContext.insert(exerciseSet)
-        exercise.sets.append(exerciseSet)
+        withAnimation(.spring(duration: 0.3)) {
+            modelContext.insert(exerciseSet)
+            exercise.sets.append(exerciseSet)
+        }
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
         checkForPR(weight: weightInKg, isWarmUp: newIsWarmUp)
         showUndoSnackbar(for: exerciseSet)
@@ -642,8 +678,10 @@ struct ExerciseDetailView: View {
             weight: source.weight,
             exercise: exercise
         )
-        modelContext.insert(newSet)
-        exercise.sets.append(newSet)
+        withAnimation(.spring(duration: 0.3)) {
+            modelContext.insert(newSet)
+            exercise.sets.append(newSet)
+        }
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
         checkForPR(weight: source.weight, isWarmUp: false)
         showUndoSnackbar(for: newSet)
@@ -656,8 +694,10 @@ struct ExerciseDetailView: View {
             weight: source.weight,
             exercise: exercise
         )
-        modelContext.insert(newSet)
-        exercise.sets.append(newSet)
+        withAnimation(.spring(duration: 0.3)) {
+            modelContext.insert(newSet)
+            exercise.sets.append(newSet)
+        }
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
         showUndoSnackbar(for: newSet)
         triggerRestTimer()

@@ -44,6 +44,29 @@ struct AddWorkoutSheet: View {
                     }
                 }
 
+                if let template = selectedTemplate, !template.exercises.isEmpty {
+                    Section {
+                        ForEach(template.exercises.sorted { $0.order < $1.order }) { exercise in
+                            HStack {
+                                Image(systemName: exercise.category?.icon ?? "dumbbell")
+                                    .foregroundStyle(.tint)
+                                    .frame(width: 24)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(exercise.name)
+                                        .font(.subheadline)
+                                    if let category = exercise.category {
+                                        Text(category.rawValue)
+                                            .font(.caption2)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                }
+                            }
+                        }
+                    } header: {
+                        Text("Template Preview")
+                    }
+                }
+
                 Section {
                     TextField("Workout Name", text: $name)
                     DatePicker("Date", selection: $date, displayedComponents: .date)
@@ -74,8 +97,13 @@ struct AddWorkoutSheet: View {
         modelContext.insert(workout)
 
         if let template = selectedTemplate {
-            for templateExercise in template.exercises {
+            let sorted = template.exercises.sorted { $0.order < $1.order }
+            for (index, templateExercise) in sorted.enumerated() {
                 let exercise = Exercise(name: templateExercise.name, workout: workout, category: templateExercise.category)
+                exercise.order = index
+                exercise.notes = templateExercise.notes
+                exercise.supersetGroup = templateExercise.supersetGroup
+                exercise.customRestDuration = templateExercise.customRestDuration
                 modelContext.insert(exercise)
                 workout.exercises.append(exercise)
             }

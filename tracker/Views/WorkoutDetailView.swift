@@ -18,7 +18,7 @@ struct WorkoutDetailView: View {
     @State private var linkingSupersetFor: Exercise?
     @State private var showingFinishSheet = false
     @State private var showingShare = false
-    @State private var shareText = ""
+    @State private var shareItems: [Any] = []
 
     private var suggestions: [String] {
         let history = Set(allExercises.map(\.name))
@@ -237,10 +237,19 @@ struct WorkoutDetailView: View {
                         Label("Save as Template", systemImage: "doc.on.doc")
                     }
                     Button {
-                        shareText = formatWorkoutSummary()
+                        shareItems = [formatWorkoutSummary()]
                         showingShare = true
                     } label: {
-                        Label("Share Workout", systemImage: "square.and.arrow.up")
+                        Label("Share as Text", systemImage: "text.quote")
+                    }
+                    Button {
+                        let card = WorkoutShareCardView(workout: workout, weightUnit: weightUnit)
+                        if let image = card.renderImage() {
+                            shareItems = [image]
+                            showingShare = true
+                        }
+                    } label: {
+                        Label("Share as Image", systemImage: "photo")
                     }
                 } label: {
                     Image(systemName: "ellipsis.circle")
@@ -256,7 +265,7 @@ struct WorkoutDetailView: View {
             FinishWorkoutSheet(workout: workout)
         }
         .sheet(isPresented: $showingShare) {
-            ShareSheet(items: [shareText])
+            ShareSheet(items: shareItems)
         }
         .alert("Template Saved", isPresented: $showTemplateSaved) {
             Button("OK", role: .cancel) {}
@@ -285,6 +294,7 @@ struct WorkoutDetailView: View {
         .onAppear {
             updateElapsedTime()
             startDurationTimer()
+            startLiveActivityIfNeeded()
         }
         .onDisappear {
             stopDurationTimer()
@@ -401,8 +411,13 @@ struct WorkoutDetailView: View {
     private func saveAsTemplate() {
         let template = Workout(name: workout.name, isTemplate: true)
         modelContext.insert(template)
-        for exercise in workout.exercises {
+        let sorted = workout.exercises.sorted { $0.order < $1.order }
+        for (index, exercise) in sorted.enumerated() {
             let templateExercise = Exercise(name: exercise.name, workout: template, category: exercise.category)
+            templateExercise.order = index
+            templateExercise.notes = exercise.notes
+            templateExercise.supersetGroup = exercise.supersetGroup
+            templateExercise.customRestDuration = exercise.customRestDuration
             modelContext.insert(templateExercise)
             template.exercises.append(templateExercise)
         }
@@ -414,6 +429,28 @@ struct WorkoutDetailView: View {
         for index in offsets {
             modelContext.delete(sorted[index])
         }
+    }
+
+    // MARK: - Live Activity
+
+    private func startLiveActivityIfNeeded() {
+        guard !workout.isFinished, !workout.isTemplate else { return }
+        let manager = WorkoutActivityManager.shared
+        if !manager.isActive {
+            manager.startActivity(workoutName: workout.name)
+        }
+        updateLiveActivity()
+    }
+
+    private func updateLiveActivity() {
+        let manager = WorkoutActivityManager.shared
+        let totalSets = workout.exercises.reduce(0) { $0 + $1.sets.count }
+        let currentExercise = sortedExercises.last?.name ?? workout.name
+        manager.updateActivity(
+            exerciseCount: workout.exercises.count,
+            setCount: totalSets,
+            currentExercise: currentExercise
+        )
     }
 
     // MARK: - Duration Timer

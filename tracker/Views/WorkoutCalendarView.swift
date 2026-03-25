@@ -23,6 +23,23 @@ struct WorkoutCalendarView: View {
                 .padding(.vertical, 8)
             }
 
+            Section {
+                HStack(spacing: 4) {
+                    Text("Less")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                    ForEach(0...3, id: \.self) { level in
+                        RoundedRectangle(cornerRadius: 3)
+                            .fill(heatmapColor(count: level))
+                            .frame(width: 14, height: 14)
+                    }
+                    Text("More")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, alignment: .trailing)
+            }
+
             if let selected = selectedDate {
                 let dayWorkouts = workoutsOn(selected)
                 if dayWorkouts.isEmpty {
@@ -135,9 +152,22 @@ struct WorkoutCalendarView: View {
         }
     }
 
+    private func workoutCount(on date: Date) -> Int {
+        workoutsOn(date).count
+    }
+
+    private func heatmapColor(count: Int) -> Color {
+        switch count {
+        case 0: return Color(.systemFill).opacity(0.3)
+        case 1: return Color.accentColor.opacity(0.35)
+        case 2: return Color.accentColor.opacity(0.6)
+        default: return Color.accentColor.opacity(0.9)
+        }
+    }
+
     private func dayCell(_ date: Date) -> some View {
         let isToday = calendar.isDateInToday(date)
-        let hasWorkout = hasWorkout(on: date)
+        let count = workoutCount(on: date)
         let isSelected = selectedDate.map { calendar.isDate($0, inSameDayAs: date) } ?? false
         let dayNum = calendar.component(.day, from: date)
 
@@ -148,40 +178,30 @@ struct WorkoutCalendarView: View {
         } label: {
             ZStack {
                 if isSelected {
-                    Circle()
+                    RoundedRectangle(cornerRadius: 8)
                         .fill(Color.accentColor)
                         .frame(width: 36, height: 36)
-                } else if isToday {
-                    Circle()
+                } else {
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(count > 0 ? heatmapColor(count: count) : .clear)
+                        .frame(width: 36, height: 36)
+                }
+
+                if isToday && !isSelected {
+                    RoundedRectangle(cornerRadius: 8)
                         .stroke(Color.accentColor, lineWidth: 2)
                         .frame(width: 36, height: 36)
                 }
 
-                VStack(spacing: 2) {
-                    Text("\(dayNum)")
-                        .font(.subheadline)
-                        .foregroundStyle(isSelected ? .white : isToday ? Color.accentColor : .primary)
-
-                    if hasWorkout && !isSelected {
-                        Circle()
-                            .fill(Color.accentColor)
-                            .frame(width: 5, height: 5)
-                    } else if hasWorkout && isSelected {
-                        Circle()
-                            .fill(.white)
-                            .frame(width: 5, height: 5)
-                    } else {
-                        Circle()
-                            .fill(.clear)
-                            .frame(width: 5, height: 5)
-                    }
-                }
+                Text("\(dayNum)")
+                    .font(.subheadline.weight(count > 0 ? .semibold : .regular))
+                    .foregroundStyle(isSelected ? .white : isToday ? Color.accentColor : .primary)
             }
         }
         .buttonStyle(.plain)
         .frame(maxWidth: .infinity)
         .frame(height: 42)
-        .accessibilityLabel("\(dayNum), \(hasWorkout ? "has workout" : "no workout")\(isToday ? ", today" : "")")
+        .accessibilityLabel("\(dayNum), \(count) workout\(count == 1 ? "" : "s")\(isToday ? ", today" : "")")
     }
 
     // MARK: - Workout Row

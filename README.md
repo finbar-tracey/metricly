@@ -6,6 +6,15 @@ A clean, focused gym tracker for iOS built with SwiftUI and SwiftData.
 ![Platform](https://img.shields.io/badge/Platform-iOS_18+-blue)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
+## Screenshots
+
+<p align="center">
+  <img src="screenshots/home.png" width="200" />
+  <img src="screenshots/workout.png" width="200" />
+  <img src="screenshots/exercise.png" width="200" />
+  <img src="screenshots/calendar.png" width="200" />
+</p>
+
 ## Features
 
 **Workout Logging**

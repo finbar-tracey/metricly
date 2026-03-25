@@ -6,6 +6,7 @@ struct ExerciseHistoryView: View {
     @Environment(\.weightUnit) private var weightUnit
     @Query private var allExercises: [Exercise]
     let exerciseName: String
+    @State private var showEstimated1RM = false
 
     private var history: [Exercise] {
         allExercises
@@ -30,11 +31,30 @@ struct ExerciseHistoryView: View {
                     }
                     .accessibilityElement(children: .combine)
                     .accessibilityLabel("Personal best: \(best.reps) reps at \(weightUnit.format(best.weight))")
+
+                    if let e1rm = currentEstimated1RM, e1rm > 0 {
+                        HStack {
+                            Label("Est. 1RM", systemImage: "arrow.up.right.circle")
+                                .foregroundStyle(.purple)
+                            Spacer()
+                            Text(weightUnit.format(e1rm))
+                                .font(.headline)
+                        }
+                        .accessibilityElement(children: .combine)
+                        .accessibilityLabel("Estimated one rep max: \(weightUnit.format(e1rm))")
+                    }
                 }
             }
 
             if chartData.count >= 2 {
                 Section {
+                    Picker("Chart", selection: $showEstimated1RM) {
+                        Text("Max Weight").tag(false)
+                        Text("Est. 1RM").tag(true)
+                    }
+                    .pickerStyle(.segmented)
+                    .listRowSeparator(.hidden)
+
                     progressionChart
                         .frame(height: 200)
                         .padding(.vertical, 8)
@@ -89,41 +109,58 @@ struct ExerciseHistoryView: View {
         let id = UUID()
         let date: Date
         let maxWeight: Double
+        let estimated1RM: Double
+    }
+
+    /// Epley formula: 1RM = weight × (1 + reps / 30)
+    private func estimated1RM(weight: Double, reps: Int) -> Double {
+        guard reps > 0 else { return weight }
+        if reps == 1 { return weight }
+        return weight * (1.0 + Double(reps) / 30.0)
     }
 
     private var chartData: [ChartPoint] {
         history.reversed().compactMap { exercise in
             guard let date = exercise.workout?.date else { return nil }
-            let maxW = exercise.sets.filter { !$0.isWarmUp }.map(\.weight).max() ?? 0
+            let workingSets = exercise.sets.filter { !$0.isWarmUp }
+            let maxW = workingSets.map(\.weight).max() ?? 0
             guard maxW > 0 else { return nil }
-            return ChartPoint(date: date, maxWeight: maxW)
+            let best1RM = workingSets.map { estimated1RM(weight: $0.weight, reps: $0.reps) }.max() ?? maxW
+            return ChartPoint(date: date, maxWeight: maxW, estimated1RM: best1RM)
         }
+    }
+
+    private var currentEstimated1RM: Double? {
+        guard let latest = chartData.last else { return nil }
+        return latest.estimated1RM
     }
 
     private var progressionChart: some View {
         Chart(chartData) { point in
+            let value = showEstimated1RM ? point.estimated1RM : point.maxWeight
             LineMark(
                 x: .value("Date", point.date, unit: .day),
-                y: .value("Weight", weightUnit.display(point.maxWeight))
+                y: .value("Weight", weightUnit.display(value))
             )
             .interpolationMethod(.catmullRom)
-            .foregroundStyle(Color.accentColor)
+            .foregroundStyle(showEstimated1RM ? Color.purple : Color.accentColor)
 
             PointMark(
                 x: .value("Date", point.date, unit: .day),
-                y: .value("Weight", weightUnit.display(point.maxWeight))
+                y: .value("Weight", weightUnit.display(value))
             )
             .symbolSize(30)
-            .foregroundStyle(Color.accentColor)
+            .foregroundStyle(showEstimated1RM ? Color.purple : Color.accentColor)
         }
         .chartYAxisLabel(weightUnit.label)
         .chartYScale(domain: chartYDomain)
+        .animation(.easeInOut(duration: 0.3), value: showEstimated1RM)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("Weight progression, \(chartData.count) sessions")
+        .accessibilityLabel("\(showEstimated1RM ? "Estimated 1RM" : "Weight") progression, \(chartData.count) sessions")
     }
 
     private var chartYDomain: ClosedRange<Double> {
-        let weights = chartData.map { weightUnit.display($0.maxWeight) }
+        let weights = chartData.map { weightUnit.display(showEstimated1RM ? $0.estimated1RM : $0.maxWeight) }
         guard let minVal = weights.min(), let maxVal = weights.max() else {
             return 0...100
         }

@@ -111,6 +111,14 @@ struct FinishWorkoutSheet: View {
         if rating > 0 {
             workout.rating = rating
         }
+
+        // End Live Activity
+        let totalSets = workout.exercises.flatMap(\.sets).count
+        WorkoutActivityManager.shared.endActivity(
+            exerciseCount: workout.exercises.count,
+            setCount: totalSets
+        )
+
         UIImpactFeedbackGenerator(style: .heavy).impactOccurred()
         dismiss()
     }
