@@ -11,6 +11,9 @@ final class UserSettings {
     var reminderDays: [Int] = []
     var reminderHour: Int = 9
     var reminderMinute: Int = 0
+    var accentColorName: String = "blue"
+    var appearanceMode: String = "system"
+    var healthKitEnabled: Bool = false
 
     init(useKilograms: Bool = true, defaultRestDuration: Int = 90, autoStartRestTimer: Bool = false) {
         self.useKilograms = useKilograms
@@ -21,5 +24,8 @@ final class UserSettings {
         self.reminderDays = []
         self.reminderHour = 9
         self.reminderMinute = 0
+        self.accentColorName = "blue"
+        self.appearanceMode = "system"
+        self.healthKitEnabled = false
     }
 }

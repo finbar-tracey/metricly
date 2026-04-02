@@ -2,19 +2,52 @@ import SwiftUI
 import SwiftData
 import Charts
 
-struct BodyWeightView: View {
+struct BodyMeasurementsView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.weightUnit) private var weightUnit
-    @Query(sort: \BodyWeightEntry.date, order: .reverse) private var entries: [BodyWeightEntry]
-    @Query private var settingsArray: [UserSettings]
+    @Query(sort: \BodyMeasurement.date, order: .reverse) private var allEntries: [BodyMeasurement]
 
-    @State private var newWeight = ""
+    @State private var selectedSite = "Waist"
+    @State private var newValue = ""
     @State private var selectedDate = Date.now
-    @State private var entryToDelete: BodyWeightEntry?
-    @FocusState private var isWeightFocused: Bool
+    @State private var entryToDelete: BodyMeasurement?
+    @FocusState private var isValueFocused: Bool
+
+    private var isMetric: Bool { weightUnit == .kg }
+    private var lengthLabel: String { isMetric ? "cm" : "in" }
+
+    private func displayLength(_ cm: Double) -> Double {
+        isMetric ? cm : cm / 2.54
+    }
+
+    private func toCm(_ displayValue: Double) -> Double {
+        isMetric ? displayValue : displayValue * 2.54
+    }
+
+    private func formatLength(_ cm: Double) -> String {
+        let value = displayLength(cm)
+        return "\(String(format: "%.1f", value)) \(lengthLabel)"
+    }
+
+    private var siteEntries: [BodyMeasurement] {
+        allEntries.filter { $0.site == selectedSite }
+    }
+
+    private var chartEntries: [BodyMeasurement] {
+        Array(siteEntries.suffix(90).reversed())
+    }
 
     var body: some View {
         List {
+            // Site picker
+            Section {
+                Picker("Measurement Site", selection: $selectedSite) {
+                    ForEach(BodyMeasurement.allSites, id: \.self) { site in
+                        Text(site).tag(site)
+                    }
+                }
+            }
+
             if !chartEntries.isEmpty {
                 Section {
                     chartView
@@ -25,10 +58,10 @@ struct BodyWeightView: View {
                 }
 
                 Section {
-                    statsRow("Current", value: entries.first.map { weightUnit.format($0.weight) } ?? "—")
-                    statsRow("Lowest", value: lowestWeight.map { weightUnit.format($0) } ?? "—")
-                    statsRow("Highest", value: highestWeight.map { weightUnit.format($0) } ?? "—")
-                    if let change = weightChange {
+                    statsRow("Current", value: siteEntries.first.map { formatLength($0.value) } ?? "—")
+                    statsRow("Lowest", value: lowestValue.map { formatLength($0) } ?? "—")
+                    statsRow("Highest", value: highestValue.map { formatLength($0) } ?? "—")
+                    if let change = valueChange {
                         statsRow("Change (30d)", value: formatChange(change))
                     }
                 } header: {
@@ -38,9 +71,9 @@ struct BodyWeightView: View {
 
             Section {
                 HStack {
-                    TextField("Weight (\(weightUnit.label))", text: $newWeight)
+                    TextField("Value (\(lengthLabel))", text: $newValue)
                         .keyboardType(.decimalPad)
-                        .focused($isWeightFocused)
+                        .focused($isValueFocused)
                     DatePicker("", selection: $selectedDate, displayedComponents: .date)
                         .labelsHidden()
                 }
@@ -49,25 +82,25 @@ struct BodyWeightView: View {
                 } label: {
                     HStack {
                         Image(systemName: "plus.circle.fill")
-                        Text("Log Weight")
+                        Text("Log Measurement")
                     }
                 }
-                .disabled(newWeight.isEmpty)
+                .disabled(newValue.isEmpty)
             } header: {
                 Text("Log")
             }
 
             Section {
-                if entries.isEmpty {
-                    Text("No entries yet. Log your weight above.")
+                if siteEntries.isEmpty {
+                    Text("No entries for \(selectedSite) yet.")
                         .foregroundStyle(.secondary)
                 } else {
-                    ForEach(entries.prefix(30)) { entry in
+                    ForEach(siteEntries.prefix(30)) { entry in
                         HStack {
                             Text(entry.date, format: .dateTime.weekday(.abbreviated).month(.abbreviated).day())
                                 .font(.subheadline)
                             Spacer()
-                            Text(weightUnit.format(entry.weight))
+                            Text(formatLength(entry.value))
                                 .font(.subheadline.bold().monospacedDigit())
                             changeIndicator(for: entry)
                         }
@@ -75,8 +108,8 @@ struct BodyWeightView: View {
                     }
                     .onDelete { offsets in
                         if let index = offsets.first {
-                            let entriesPrefix = Array(entries.prefix(30))
-                            entryToDelete = entriesPrefix[index]
+                            let entries = Array(siteEntries.prefix(30))
+                            entryToDelete = entries[index]
                         }
                     }
                 }
@@ -84,12 +117,12 @@ struct BodyWeightView: View {
                 Text("History")
             }
         }
-        .navigationTitle("Body Weight")
+        .navigationTitle("Measurements")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItemGroup(placement: .keyboard) {
                 Spacer()
-                Button("Done") { isWeightFocused = false }
+                Button("Done") { isValueFocused = false }
             }
         }
         .alert("Delete Entry?", isPresented: Binding(
@@ -108,70 +141,66 @@ struct BodyWeightView: View {
 
     // MARK: - Chart
 
-    private var chartEntries: [BodyWeightEntry] {
-        Array(entries.suffix(90).reversed())
-    }
-
     private var chartView: some View {
         Chart(chartEntries) { entry in
             LineMark(
                 x: .value("Date", entry.date, unit: .day),
-                y: .value("Weight", weightUnit.display(entry.weight))
+                y: .value("Value", displayLength(entry.value))
             )
             .interpolationMethod(.catmullRom)
             .foregroundStyle(Color.accentColor)
 
             AreaMark(
                 x: .value("Date", entry.date, unit: .day),
-                y: .value("Weight", weightUnit.display(entry.weight))
+                y: .value("Value", displayLength(entry.value))
             )
             .interpolationMethod(.catmullRom)
             .foregroundStyle(Color.accentColor.opacity(0.15).gradient)
 
             PointMark(
                 x: .value("Date", entry.date, unit: .day),
-                y: .value("Weight", weightUnit.display(entry.weight))
+                y: .value("Value", displayLength(entry.value))
             )
             .symbolSize(20)
             .foregroundStyle(Color.accentColor)
         }
-        .chartYAxisLabel(weightUnit.label)
+        .chartYAxisLabel(lengthLabel)
         .chartYScale(domain: chartYDomain)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("Body weight trend, \(chartEntries.count) entries")
+        .accessibilityLabel("\(selectedSite) measurement trend, \(chartEntries.count) entries")
     }
 
     private var chartYDomain: ClosedRange<Double> {
-        let weights = chartEntries.map { weightUnit.display($0.weight) }
-        guard let minVal = weights.min(), let maxVal = weights.max() else {
+        let values = chartEntries.map { displayLength($0.value) }
+        guard let minVal = values.min(), let maxVal = values.max() else {
             return 0...100
         }
-        let padding = Swift.max(1, (maxVal - minVal) * 0.15)
+        let padding = Swift.max(0.5, (maxVal - minVal) * 0.15)
         return (minVal - padding)...(maxVal + padding)
     }
 
     // MARK: - Stats
 
-    private var lowestWeight: Double? {
-        entries.map(\.weight).min()
+    private var lowestValue: Double? {
+        siteEntries.map(\.value).min()
     }
 
-    private var highestWeight: Double? {
-        entries.map(\.weight).max()
+    private var highestValue: Double? {
+        siteEntries.map(\.value).max()
     }
 
-    private var weightChange: Double? {
-        guard let latest = entries.first else { return nil }
+    private var valueChange: Double? {
+        guard let latest = siteEntries.first else { return nil }
         let thirtyDaysAgo = Calendar.current.date(byAdding: .day, value: -30, to: .now) ?? .distantPast
-        guard let oldest = entries.last(where: { $0.date <= thirtyDaysAgo }) ?? entries.last,
+        guard let oldest = siteEntries.last(where: { $0.date <= thirtyDaysAgo }) ?? siteEntries.last,
               oldest.persistentModelID != latest.persistentModelID else { return nil }
-        return latest.weight - oldest.weight
+        return latest.value - oldest.value
     }
 
-    private func formatChange(_ changeKg: Double) -> String {
-        let value = weightUnit.display(changeKg)
+    private func formatChange(_ changeCm: Double) -> String {
+        let value = displayLength(changeCm)
         let sign = value >= 0 ? "+" : ""
-        return "\(sign)\(String(format: "%.1f", value)) \(weightUnit.label)"
+        return "\(sign)\(String(format: "%.1f", value)) \(lengthLabel)"
     }
 
     private func statsRow(_ title: String, value: String) -> some View {
@@ -187,15 +216,16 @@ struct BodyWeightView: View {
     // MARK: - Change Indicator
 
     @ViewBuilder
-    private func changeIndicator(for entry: BodyWeightEntry) -> some View {
+    private func changeIndicator(for entry: BodyMeasurement) -> some View {
+        let entries = siteEntries
         if let index = entries.firstIndex(where: { $0.persistentModelID == entry.persistentModelID }),
            index + 1 < entries.count {
             let previous = entries[index + 1]
-            let diff = entry.weight - previous.weight
-            if abs(diff) > 0.05 {
+            let diff = entry.value - previous.value
+            if abs(diff) > 0.1 {
                 Image(systemName: diff > 0 ? "arrow.up.right" : "arrow.down.right")
                     .font(.caption)
-                    .foregroundStyle(diff > 0 ? .red : .green)
+                    .foregroundStyle(diff > 0 ? .orange : .green)
             }
         }
     }
@@ -203,20 +233,19 @@ struct BodyWeightView: View {
     // MARK: - Actions
 
     private func addEntry() {
-        guard let value = Double(newWeight), value > 0 else { return }
-        let weightKg = weightUnit.toKg(value)
-        let entry = BodyWeightEntry(date: selectedDate, weight: weightKg)
+        guard let value = Double(newValue), value > 0 else { return }
+        let cm = toCm(value)
+        let entry = BodyMeasurement(date: selectedDate, site: selectedSite, value: cm)
         modelContext.insert(entry)
-
-        // Save to Apple Health if enabled
-        if settingsArray.first?.healthKitEnabled == true {
-            Task {
-                try? await HealthKitManager.shared.saveBodyWeight(weightKg, date: selectedDate)
-            }
-        }
-
-        newWeight = ""
+        newValue = ""
         selectedDate = .now
-        isWeightFocused = false
+        isValueFocused = false
     }
+}
+
+#Preview {
+    NavigationStack {
+        BodyMeasurementsView()
+    }
+    .modelContainer(for: BodyMeasurement.self, inMemory: true)
 }

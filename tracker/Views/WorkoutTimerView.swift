@@ -173,7 +173,7 @@ struct WorkoutTimerView: View {
             // Progress bar
             ProgressView(value: progress)
                 .progressViewStyle(.linear)
-                .tint(selectedMode == .tabata ? (isWorkPhase ? .green : .orange) : .tint)
+                .tint(selectedMode == .tabata ? (isWorkPhase ? .green : .orange) : .blue)
                 .scaleEffect(y: 2)
                 .padding(.horizontal)
 

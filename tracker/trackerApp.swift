@@ -19,6 +19,6 @@ struct trackerApp: App {
         WindowGroup {
             ContentView()
         }
-        .modelContainer(for: [Workout.self, UserSettings.self, BodyWeightEntry.self, TrainingProgram.self], isAutosaveEnabled: true)
+        .modelContainer(for: [Workout.self, UserSettings.self, BodyWeightEntry.self, TrainingProgram.self, BodyMeasurement.self, LiftGoal.self], isAutosaveEnabled: true)
     }
 }

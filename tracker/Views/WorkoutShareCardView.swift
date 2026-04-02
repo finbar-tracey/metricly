@@ -88,7 +88,11 @@ struct WorkoutShareCardView: View {
                                 .font(.subheadline.bold())
                             let workingSets = exercise.sets.filter { !$0.isWarmUp }
                             if !workingSets.isEmpty {
-                                Text(workingSets.map { "\($0.reps)×\(weightUnit.formatShort($0.weight))" }.joined(separator: "  "))
+                                Text(workingSets.map { s in
+                                    var text = "\(s.reps)×\(weightUnit.formatShort(s.weight))"
+                                    if let rpe = s.rpe { text += " @\(rpe)" }
+                                    return text
+                                }.joined(separator: "  "))
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                             }

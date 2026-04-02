@@ -4,6 +4,7 @@ import SwiftData
 enum InsightsTab: String, CaseIterable, Identifiable {
     case volume = "Volume"
     case muscles = "Muscles"
+    case recovery = "Recovery"
     case bodyWeight = "Weight"
     case recap = "Recap"
 
@@ -13,6 +14,7 @@ enum InsightsTab: String, CaseIterable, Identifiable {
         switch self {
         case .volume: return "chart.bar"
         case .muscles: return "figure.strengthtraining.traditional"
+        case .recovery: return "heart.text.square"
         case .bodyWeight: return "scalemass"
         case .recap: return "list.clipboard"
         }
@@ -27,18 +29,26 @@ struct InsightsView: View {
         VStack(spacing: 0) {
             Picker("Section", selection: $selectedTab) {
                 ForEach(InsightsTab.allCases) { tab in
-                    Label(tab.rawValue, systemImage: tab.icon).tag(tab)
+                    Image(systemName: tab.icon).tag(tab)
                 }
             }
             .pickerStyle(.segmented)
             .padding(.horizontal)
             .padding(.top, 8)
 
+            // Show selected tab name
+            Text(selectedTab.rawValue)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .padding(.top, 6)
+
             switch selectedTab {
             case .volume:
-                VolumeChartView()
+                VolumeTrendsView()
             case .muscles:
                 MuscleGroupSummaryView()
+            case .recovery:
+                MuscleRecoveryView()
             case .bodyWeight:
                 BodyWeightView()
             case .recap:

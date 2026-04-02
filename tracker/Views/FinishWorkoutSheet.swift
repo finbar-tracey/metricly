@@ -1,8 +1,10 @@
 import SwiftUI
+import SwiftData
 import UIKit
 
 struct FinishWorkoutSheet: View {
     @Environment(\.dismiss) private var dismiss
+    @Query private var settingsArray: [UserSettings]
     let workout: Workout
 
     @State private var rating: Int = 0
@@ -13,23 +15,40 @@ struct FinishWorkoutSheet: View {
         _notes = State(initialValue: workout.notes)
     }
 
+    private var totalVolume: Double {
+        workout.exercises.flatMap(\.sets).filter { !$0.isWarmUp }.reduce(0) { $0 + Double($1.reps) * $1.weight }
+    }
+
     var body: some View {
         NavigationStack {
             Form {
+                // Celebration header
                 Section {
-                    VStack(spacing: 12) {
+                    VStack(spacing: 16) {
+                        ZStack {
+                            Circle()
+                                .fill(Color.green.opacity(0.12))
+                                .frame(width: 72, height: 72)
+                            Image(systemName: "trophy.fill")
+                                .font(.system(size: 32))
+                                .foregroundStyle(.green)
+                        }
+                        Text("Great work!")
+                            .font(.title2.bold())
                         Text("How was your workout?")
-                            .font(.headline)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
                         HStack(spacing: 16) {
                             ForEach(1...5, id: \.self) { value in
                                 Button {
-                                    withAnimation(.easeInOut(duration: 0.15)) {
+                                    withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
                                         rating = value
                                     }
                                 } label: {
                                     Image(systemName: value <= rating ? "star.fill" : "star")
                                         .font(.title)
                                         .foregroundStyle(value <= rating ? .yellow : .secondary)
+                                        .scaleEffect(value <= rating ? 1.1 : 1.0)
                                 }
                                 .buttonStyle(.plain)
                                 .accessibilityLabel("\(value) star\(value == 1 ? "" : "s")")
@@ -38,36 +57,27 @@ struct FinishWorkoutSheet: View {
                         }
                         if rating > 0 {
                             Text(ratingLabel)
-                                .font(.caption)
+                                .font(.caption.bold())
                                 .foregroundStyle(.secondary)
+                                .transition(.scale.combined(with: .opacity))
                         }
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 8)
+                    .listRowBackground(Color.clear)
                 }
 
+                // Stats cards
                 Section {
-                    if let duration = workout.formattedDuration {
-                        HStack {
-                            Label("Duration", systemImage: "clock")
-                            Spacer()
-                            Text(duration)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                    HStack {
-                        Label("Exercises", systemImage: "figure.strengthtraining.functional")
-                        Spacer()
-                        Text("\(workout.exercises.count)")
-                            .foregroundStyle(.secondary)
-                    }
-                    HStack {
-                        Label("Total Sets", systemImage: "repeat")
-                        Spacer()
+                    HStack(spacing: 0) {
+                        finishStatCard(icon: "clock", value: workout.formattedDuration ?? "-", label: "Duration")
+                        Divider().frame(height: 36)
+                        finishStatCard(icon: "figure.strengthtraining.functional", value: "\(workout.exercises.count)", label: "Exercises")
+                        Divider().frame(height: 36)
                         let totalSets = workout.exercises.flatMap(\.sets).filter { !$0.isWarmUp }.count
-                        Text("\(totalSets)")
-                            .foregroundStyle(.secondary)
+                        finishStatCard(icon: "repeat", value: "\(totalSets)", label: "Sets")
                     }
+                    .padding(.vertical, 4)
                 } header: {
                     Text("Summary")
                 }
@@ -89,9 +99,27 @@ struct FinishWorkoutSheet: View {
                     Button("Done") {
                         finishWorkout()
                     }
+                    .font(.headline)
                 }
             }
         }
+    }
+
+    private func finishStatCard(icon: String, value: String, label: String) -> some View {
+        VStack(spacing: 2) {
+            HStack(spacing: 4) {
+                Image(systemName: icon)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                Text(value)
+                    .font(.system(.subheadline, design: .rounded, weight: .bold))
+                    .monospacedDigit()
+            }
+            Text(label)
+                .font(.caption2)
+                .foregroundStyle(.tertiary)
+        }
+        .frame(maxWidth: .infinity)
     }
 
     private var ratingLabel: String {
@@ -118,6 +146,17 @@ struct FinishWorkoutSheet: View {
             exerciseCount: workout.exercises.count,
             setCount: totalSets
         )
+
+        // Save to Apple Health if enabled
+        if settingsArray.first?.healthKitEnabled == true {
+            Task {
+                try? await HealthKitManager.shared.saveWorkout(
+                    name: workout.name,
+                    start: workout.date,
+                    end: workout.endTime ?? .now
+                )
+            }
+        }
 
         UIImpactFeedbackGenerator(style: .heavy).impactOccurred()
         dismiss()

@@ -199,10 +199,10 @@ struct StreakCalendarView: View {
     private func colorForLevel(_ level: Int) -> Color {
         switch level {
         case 0: return .gray.opacity(0.15)
-        case 1: return .green.opacity(0.3)
-        case 2: return .green.opacity(0.5)
-        case 3: return .green.opacity(0.7)
-        default: return .green
+        case 1: return Color.accentColor.opacity(0.25)
+        case 2: return Color.accentColor.opacity(0.45)
+        case 3: return Color.accentColor.opacity(0.7)
+        default: return Color.accentColor
         }
     }
 }

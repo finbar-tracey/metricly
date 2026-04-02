@@ -13,31 +13,71 @@ struct AddWorkoutSheet: View {
     var body: some View {
         NavigationStack {
             Form {
+                // Details section first for better flow
+                Section {
+                    HStack(spacing: 12) {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 7)
+                                .fill(Color.accentColor.gradient)
+                                .frame(width: 28, height: 28)
+                            Image(systemName: "pencil")
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundStyle(.white)
+                        }
+                        TextField("Workout Name", text: $name)
+                    }
+                    HStack(spacing: 12) {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 7)
+                                .fill(Color.red.gradient)
+                                .frame(width: 28, height: 28)
+                            Image(systemName: "calendar")
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundStyle(.white)
+                        }
+                        DatePicker("Date", selection: $date, displayedComponents: .date)
+                    }
+                } header: {
+                    Text("Details")
+                }
+
                 if !templates.isEmpty {
                     Section {
                         ForEach(templates) { template in
+                            let isSelected = selectedTemplate?.persistentModelID == template.persistentModelID
                             Button {
-                                selectedTemplate = template
-                                name = template.name
+                                withAnimation(.spring(response: 0.3)) {
+                                    selectedTemplate = template
+                                    name = template.name
+                                }
                             } label: {
-                                HStack {
-                                    VStack(alignment: .leading) {
+                                HStack(spacing: 12) {
+                                    ZStack {
+                                        RoundedRectangle(cornerRadius: 8)
+                                            .fill(isSelected ? Color.accentColor.opacity(0.15) : Color(.tertiarySystemFill))
+                                            .frame(width: 36, height: 36)
+                                        Image(systemName: isSelected ? "checkmark.circle.fill" : "doc.text")
+                                            .font(.system(size: 14, weight: .semibold))
+                                            .foregroundStyle(isSelected ? Color.accentColor : .secondary)
+                                    }
+                                    VStack(alignment: .leading, spacing: 2) {
                                         Text(template.name)
+                                            .font(.subheadline.weight(.semibold))
                                             .foregroundStyle(.primary)
-                                        Text(template.exercises.map(\.name).joined(separator: ", "))
+                                        Text("\(template.exercises.count) exercises")
                                             .font(.caption)
                                             .foregroundStyle(.secondary)
                                     }
                                     Spacer()
-                                    if selectedTemplate?.persistentModelID == template.persistentModelID {
+                                    if isSelected {
                                         Image(systemName: "checkmark")
-                                            .foregroundStyle(.tint)
-                                            .accessibilityHidden(true)
+                                            .font(.caption.bold())
+                                            .foregroundStyle(Color.accentColor)
                                     }
                                 }
                             }
-                            .accessibilityLabel("\(template.name), \(template.exercises.map(\.name).joined(separator: ", "))")
-                            .accessibilityAddTraits(selectedTemplate?.persistentModelID == template.persistentModelID ? .isSelected : [])
+                            .accessibilityLabel("\(template.name), \(template.exercises.count) exercises")
+                            .accessibilityAddTraits(isSelected ? .isSelected : [])
                         }
                     } header: {
                         Text("From Template")
@@ -47,31 +87,24 @@ struct AddWorkoutSheet: View {
                 if let template = selectedTemplate, !template.exercises.isEmpty {
                     Section {
                         ForEach(template.exercises.sorted { $0.order < $1.order }) { exercise in
-                            HStack {
+                            HStack(spacing: 10) {
                                 Image(systemName: exercise.category?.icon ?? "dumbbell")
-                                    .foregroundStyle(.tint)
-                                    .frame(width: 24)
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(exercise.name)
-                                        .font(.subheadline)
-                                    if let category = exercise.category {
-                                        Text(category.rawValue)
-                                            .font(.caption2)
-                                            .foregroundStyle(.secondary)
-                                    }
+                                    .font(.caption)
+                                    .foregroundStyle(Color.accentColor)
+                                    .frame(width: 20)
+                                Text(exercise.name)
+                                    .font(.subheadline)
+                                Spacer()
+                                if let category = exercise.category {
+                                    Text(category.rawValue)
+                                        .font(.caption2)
+                                        .foregroundStyle(.tertiary)
                                 }
                             }
                         }
                     } header: {
-                        Text("Template Preview")
+                        Text("Exercises Preview")
                     }
-                }
-
-                Section {
-                    TextField("Workout Name", text: $name)
-                    DatePicker("Date", selection: $date, displayedComponents: .date)
-                } header: {
-                    Text("Details")
                 }
             }
             .navigationTitle("New Workout")
@@ -84,8 +117,10 @@ struct AddWorkoutSheet: View {
                     Button("Start") {
                         createWorkout()
                         try? modelContext.save()
+                        HapticsManager.workoutStarted()
                         dismiss()
                     }
+                    .font(.headline)
                     .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
                 }
             }

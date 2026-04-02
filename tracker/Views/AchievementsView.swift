@@ -111,7 +111,7 @@ struct AchievementsView: View {
         ))
 
         // Variety achievements
-        let uniqueExercises = Set(finishedWorkouts.flatMap { $0.exercises.map(\.name.lowercased) }).count
+        let uniqueExercises = Set(finishedWorkouts.flatMap { $0.exercises.map { $0.name.lowercased() } }).count
         list.append(Achievement(
             id: "variety_10", name: "Variety Pack", description: "Use 10 different exercises",
             icon: "square.grid.3x3", tier: .bronze,

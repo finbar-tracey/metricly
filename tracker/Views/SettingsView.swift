@@ -30,23 +30,32 @@ struct SettingsView: View {
     var body: some View {
         Form {
             Section {
-                Toggle("Use Kilograms", isOn: Binding(
-                    get: { settings.useKilograms },
-                    set: { settings.useKilograms = $0 }
-                ))
-                Stepper(
-                    "Default Rest: \(settings.defaultRestDuration)s",
-                    value: Binding(
-                        get: { settings.defaultRestDuration },
-                        set: { settings.defaultRestDuration = $0 }
-                    ),
-                    in: 15...300,
-                    step: 15
-                )
-                Toggle("Auto-start Rest Timer", isOn: Binding(
-                    get: { settings.autoStartRestTimer },
-                    set: { settings.autoStartRestTimer = $0 }
-                ))
+                HStack(spacing: 12) {
+                    settingsIcon("scalemass", color: .blue)
+                    Toggle("Use Kilograms", isOn: Binding(
+                        get: { settings.useKilograms },
+                        set: { settings.useKilograms = $0 }
+                    ))
+                }
+                HStack(spacing: 12) {
+                    settingsIcon("timer", color: .orange)
+                    Stepper(
+                        "Default Rest: \(settings.defaultRestDuration)s",
+                        value: Binding(
+                            get: { settings.defaultRestDuration },
+                            set: { settings.defaultRestDuration = $0 }
+                        ),
+                        in: 15...300,
+                        step: 15
+                    )
+                }
+                HStack(spacing: 12) {
+                    settingsIcon("play.circle", color: .green)
+                    Toggle("Auto-start Rest Timer", isOn: Binding(
+                        get: { settings.autoStartRestTimer },
+                        set: { settings.autoStartRestTimer = $0 }
+                    ))
+                }
             } header: {
                 Text("General")
             } footer: {
@@ -54,14 +63,67 @@ struct SettingsView: View {
             }
 
             Section {
-                Stepper(
-                    "Weekly Goal: \(settings.weeklyGoal == 0 ? "Off" : "\(settings.weeklyGoal)x")",
-                    value: Binding(
-                        get: { settings.weeklyGoal },
-                        set: { settings.weeklyGoal = $0 }
-                    ),
-                    in: 0...7
-                )
+                let accentColors: [(name: String, color: Color)] = [
+                    ("blue", .blue), ("indigo", .indigo), ("purple", .purple),
+                    ("pink", .pink), ("red", .red), ("orange", .orange),
+                    ("green", .green), ("teal", .teal)
+                ]
+                VStack(alignment: .leading, spacing: 10) {
+                    Label("Accent Color", systemImage: "paintpalette")
+                        .font(.subheadline)
+                    HStack(spacing: 12) {
+                        ForEach(accentColors, id: \.name) { item in
+                            Button {
+                                settings.accentColorName = item.name
+                            } label: {
+                                Circle()
+                                    .fill(item.color.gradient)
+                                    .frame(width: 30, height: 30)
+                                    .overlay {
+                                        if settings.accentColorName == item.name {
+                                            Image(systemName: "checkmark")
+                                                .font(.caption.bold())
+                                                .foregroundStyle(.white)
+                                        }
+                                    }
+                                    .scaleEffect(settings.accentColorName == item.name ? 1.15 : 1.0)
+                                    .animation(.spring(response: 0.3), value: settings.accentColorName)
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel(item.name)
+                            .accessibilityAddTraits(settings.accentColorName == item.name ? .isSelected : [])
+                        }
+                    }
+                }
+                .padding(.vertical, 4)
+
+                HStack(spacing: 12) {
+                    settingsIcon("moon.fill", color: .indigo)
+                    Picker("Appearance", selection: Binding(
+                        get: { settings.appearanceMode },
+                        set: { settings.appearanceMode = $0 }
+                    )) {
+                        Text("System").tag("system")
+                        Text("Light").tag("light")
+                        Text("Dark").tag("dark")
+                    }
+                }
+            } header: {
+                Text("Appearance")
+            }
+
+            Section {
+                HStack(spacing: 12) {
+                    settingsIcon("target", color: .red)
+                    Stepper(
+                        "Weekly Goal: \(settings.weeklyGoal == 0 ? "Off" : "\(settings.weeklyGoal)x")",
+                        value: Binding(
+                            get: { settings.weeklyGoal },
+                            set: { settings.weeklyGoal = $0 }
+                        ),
+                        in: 0...7
+                    )
+                }
             } header: {
                 Text("Goals")
             } footer: {
@@ -106,18 +168,44 @@ struct SettingsView: View {
             }
 
             Section {
+                NavigationLink(value: "templateMarketplace") {
+                    HStack(spacing: 12) {
+                        settingsIcon("square.grid.2x2", color: .purple)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Browse Program Templates")
+                                .font(.subheadline.weight(.semibold))
+                            Text("PPL, 5/3/1, Starting Strength & more")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+
                 if templates.isEmpty {
-                    Text("No templates saved yet.")
-                        .foregroundStyle(.secondary)
+                    HStack(spacing: 12) {
+                        settingsIcon("doc.on.doc", color: .secondary)
+                        Text("No templates saved yet.")
+                            .foregroundStyle(.secondary)
+                    }
                 } else {
                     ForEach(templates) { template in
                         NavigationLink(value: template) {
-                            VStack(alignment: .leading) {
-                                Text(template.name)
-                                    .font(.headline)
-                                Text(template.exercises.sorted { $0.order < $1.order }.map(\.name).joined(separator: ", "))
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
+                            HStack(spacing: 12) {
+                                ZStack {
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .fill(Color.accentColor.opacity(0.12))
+                                        .frame(width: 36, height: 36)
+                                    Image(systemName: "doc.text")
+                                        .font(.system(size: 14, weight: .semibold))
+                                        .foregroundStyle(Color.accentColor)
+                                }
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(template.name)
+                                        .font(.subheadline.weight(.semibold))
+                                    Text("\(template.exercises.count) exercises")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
                             }
                         }
                     }
@@ -127,16 +215,43 @@ struct SettingsView: View {
                 Text("Templates")
             }
             Section {
+                HStack(spacing: 12) {
+                    settingsIcon("heart.fill", color: .red)
+                    Toggle("Sync with Apple Health", isOn: Binding(
+                        get: { settings.healthKitEnabled },
+                        set: { newValue in
+                            settings.healthKitEnabled = newValue
+                            if newValue {
+                                Task {
+                                    try? await HealthKitManager.shared.requestAuthorization()
+                                }
+                            }
+                        }
+                    ))
+                }
+            } header: {
+                Text("Health")
+            } footer: {
+                Text("Completed workouts and body weight entries will be saved to Apple Health.")
+            }
+
+            Section {
                 Button {
                     exportCSV()
                 } label: {
-                    Label("Export Workouts as CSV", systemImage: "square.and.arrow.up")
+                    HStack(spacing: 12) {
+                        settingsIcon("square.and.arrow.up", color: .blue)
+                        Text("Export Workouts as CSV")
+                    }
                 }
                 .disabled(workouts.isEmpty)
                 Button {
                     showingImport = true
                 } label: {
-                    Label("Import Workouts from CSV", systemImage: "square.and.arrow.down")
+                    HStack(spacing: 12) {
+                        settingsIcon("square.and.arrow.down", color: .green)
+                        Text("Import Workouts from CSV")
+                    }
                 }
             } header: {
                 Text("Data")
@@ -145,6 +260,11 @@ struct SettingsView: View {
         .navigationTitle("Settings")
         .navigationDestination(for: Workout.self) { template in
             TemplateEditView(template: template)
+        }
+        .navigationDestination(for: String.self) { value in
+            if value == "templateMarketplace" {
+                TemplateMarketplaceView()
+            }
         }
         .sheet(isPresented: $showingExport) {
             if let url = csvURL {
@@ -186,6 +306,17 @@ struct SettingsView: View {
             Button("OK", role: .cancel) {}
         } message: {
             Text(importErrorMessage)
+        }
+    }
+
+    private func settingsIcon(_ name: String, color: Color) -> some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 7)
+                .fill(color.gradient)
+                .frame(width: 28, height: 28)
+            Image(systemName: name)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(.white)
         }
     }
 
