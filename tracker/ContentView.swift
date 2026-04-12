@@ -6,10 +6,8 @@ struct ContentView: View {
     @Query(filter: #Predicate<Workout> { !$0.isTemplate }, sort: \Workout.date, order: .reverse)
     private var workouts: [Workout]
     @Query private var settingsArray: [UserSettings]
-    @State private var showingAddWorkout = false
     @State private var workoutToDelete: Workout?
     @State private var repeatConfirmation = false
-    @State private var searchText = ""
     @State private var showingOnboarding = false
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
@@ -19,21 +17,8 @@ struct ContentView: View {
     // iPhone
     @State private var selectedTab: AppTab = .home
 
-    // Filters
-    @State private var filterDateRange: DateRange = .all
-    @State private var filterMuscleGroup: MuscleGroup? = nil
-    @State private var filterRating: Int? = nil
-
     enum AppTab: Hashable {
         case home, progress, insights, tools, settings
-    }
-
-    enum DateRange: String, CaseIterable {
-        case all = "All Time"
-        case week = "This Week"
-        case month = "This Month"
-        case threeMonths = "3 Months"
-        case year = "This Year"
     }
 
     enum SidebarItem: String, Hashable, CaseIterable {
@@ -51,6 +36,9 @@ struct ContentView: View {
         case comparison = "Compare"
         case plateCalculator = "Plate Calculator"
         case oneRepMax = "1RM Calculator"
+        case workoutTimers = "Workout Timers"
+        case bodyFat = "Body Fat %"
+        case health = "Health"
         case settings = "Settings"
 
         var icon: String {
@@ -69,50 +57,11 @@ struct ContentView: View {
             case .comparison: return "arrow.left.arrow.right"
             case .plateCalculator: return "circle.grid.cross"
             case .oneRepMax: return "function"
+            case .workoutTimers: return "timer"
+            case .bodyFat: return "percent"
+            case .health: return "heart.text.square"
             case .settings: return "gearshape"
             }
-        }
-    }
-
-    private var hasActiveFilters: Bool {
-        filterDateRange != .all || filterMuscleGroup != nil || filterRating != nil
-    }
-
-    private var filteredWorkouts: [Workout] {
-        var result = workouts
-
-        if !searchText.isEmpty {
-            let query = searchText.lowercased()
-            result = result.filter { workout in
-                workout.name.lowercased().contains(query)
-                || workout.exercises.contains { $0.name.lowercased().contains(query) }
-            }
-        }
-
-        if filterDateRange != .all {
-            let cutoff = cutoffDate(for: filterDateRange)
-            result = result.filter { $0.date >= cutoff }
-        }
-
-        if let group = filterMuscleGroup {
-            result = result.filter { $0.exercises.contains { $0.category == group } }
-        }
-
-        if let rating = filterRating {
-            result = result.filter { $0.rating == rating }
-        }
-
-        return result
-    }
-
-    private func cutoffDate(for range: DateRange) -> Date {
-        let calendar = Calendar.current
-        switch range {
-        case .all: return .distantPast
-        case .week: return calendar.dateInterval(of: .weekOfYear, for: .now)?.start ?? .now
-        case .month: return calendar.dateInterval(of: .month, for: .now)?.start ?? .now
-        case .threeMonths: return calendar.date(byAdding: .month, value: -3, to: .now) ?? .now
-        case .year: return calendar.date(byAdding: .year, value: -1, to: .now) ?? .now
         }
     }
 
@@ -223,6 +172,10 @@ struct ContentView: View {
                         .tag(SidebarItem.personalRecords)
                     Label("Measurements", systemImage: "ruler")
                         .tag(SidebarItem.measurements)
+                    Label("Body Fat %", systemImage: "percent")
+                        .tag(SidebarItem.bodyFat)
+                    Label("Health", systemImage: "heart.text.square")
+                        .tag(SidebarItem.health)
                     Label("Lift Goals", systemImage: "target")
                         .tag(SidebarItem.liftGoals)
                 }
@@ -239,6 +192,8 @@ struct ContentView: View {
                         .tag(SidebarItem.plateCalculator)
                     Label("1RM Calculator", systemImage: "function")
                         .tag(SidebarItem.oneRepMax)
+                    Label("Workout Timers", systemImage: "timer")
+                        .tag(SidebarItem.workoutTimers)
                 }
                 Section {
                     Label("Settings", systemImage: "gearshape")
@@ -250,7 +205,7 @@ struct ContentView: View {
             NavigationStack {
                 switch selectedSidebarItem {
                 case .workouts, .none:
-                    workoutListView
+                    HomeDashboardView()
                 case .programs:
                     TrainingProgramsView()
                         .navigationTitle("Programs")
@@ -282,10 +237,22 @@ struct ContentView: View {
                     PlateCalculatorView()
                 case .oneRepMax:
                     OneRepMaxView()
+                case .workoutTimers:
+                    WorkoutTimerView()
+                case .bodyFat:
+                    BodyFatEstimateView()
+                case .health:
+                    HealthDashboardView()
                 case .settings:
                     SettingsView()
                         .navigationTitle("Settings")
                 }
+            }
+            .navigationDestination(for: Workout.self) { workout in
+                WorkoutDetailView(workout: workout)
+            }
+            .navigationDestination(for: String.self) { exerciseName in
+                ExerciseHistoryView(exerciseName: exerciseName)
             }
         }
     }
@@ -296,7 +263,13 @@ struct ContentView: View {
         TabView(selection: $selectedTab) {
             Tab("Home", systemImage: "dumbbell", value: .home) {
                 NavigationStack {
-                    workoutListView
+                    HomeDashboardView()
+                        .navigationDestination(for: Workout.self) { workout in
+                            WorkoutDetailView(workout: workout)
+                        }
+                        .navigationDestination(for: String.self) { exerciseName in
+                            ExerciseHistoryView(exerciseName: exerciseName)
+                        }
                         .toolbar {
                             ToolbarItem(placement: .topBarLeading) {
                                 Menu {
@@ -369,6 +342,11 @@ struct ContentView: View {
             }
 
             Section {
+                NavigationLink {
+                    HealthDashboardView()
+                } label: {
+                    hubRow(icon: "heart.text.square", color: .red, title: "Health", subtitle: "Steps, heart rate, sleep & more")
+                }
                 NavigationLink {
                     AchievementsView()
                 } label: {
@@ -500,6 +478,18 @@ struct ContentView: View {
                 } label: {
                     hubRow(icon: "function", color: .teal, title: "1RM Calculator", subtitle: "Estimated one-rep max")
                 }
+                NavigationLink {
+                    BodyFatEstimateView()
+                } label: {
+                    hubRow(icon: "percent", color: .indigo, title: "Body Fat %", subtitle: "Navy method estimation")
+                }
+            }
+            Section("Timers") {
+                NavigationLink {
+                    WorkoutTimerView()
+                } label: {
+                    hubRow(icon: "timer", color: .red, title: "Workout Timers", subtitle: "EMOM, AMRAP, and Tabata")
+                }
             }
         }
         .navigationTitle("Tools")
@@ -526,357 +516,7 @@ struct ContentView: View {
         .padding(.vertical, 2)
     }
 
-    // MARK: - Filter Chips
-
-    @ViewBuilder
-    private func filterChip(label: String, isActive: Bool, icon: String, @ViewBuilder menu: () -> some View) -> some View {
-        menu()
-    }
-
-    private func filterChipLabel(label: String, isActive: Bool, icon: String) -> some View {
-        HStack(spacing: 4) {
-            Image(systemName: icon)
-                .font(.system(size: 10))
-            Text(label)
-                .font(.caption.weight(.medium))
-        }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
-        .background(isActive ? Color.accentColor : Color(.tertiarySystemFill), in: Capsule())
-        .foregroundStyle(isActive ? .white : .primary)
-    }
-
-    // MARK: - Workout List (shared)
-
-    private var workoutListView: some View {
-        List {
-            if searchText.isEmpty && !workouts.isEmpty {
-                if settings.weeklyGoal > 0 {
-                    goalSection
-                }
-                streakSection
-            }
-
-            // Filter chips
-            if !workouts.isEmpty {
-                Section {
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 8) {
-                            filterChip(
-                                label: filterDateRange == .all ? "Date" : filterDateRange.rawValue,
-                                isActive: filterDateRange != .all,
-                                icon: "calendar"
-                            ) {
-                                Menu {
-                                    ForEach(DateRange.allCases, id: \.self) { range in
-                                        Button {
-                                            filterDateRange = range
-                                        } label: {
-                                            if filterDateRange == range {
-                                                Label(range.rawValue, systemImage: "checkmark")
-                                            } else {
-                                                Text(range.rawValue)
-                                            }
-                                        }
-                                    }
-                                } label: {
-                                    filterChipLabel(
-                                        label: filterDateRange == .all ? "Date" : filterDateRange.rawValue,
-                                        isActive: filterDateRange != .all,
-                                        icon: "calendar"
-                                    )
-                                }
-                            }
-
-                            filterChip(
-                                label: filterMuscleGroup?.rawValue ?? "Muscle",
-                                isActive: filterMuscleGroup != nil,
-                                icon: "figure.strengthtraining.traditional"
-                            ) {
-                                Menu {
-                                    Button {
-                                        filterMuscleGroup = nil
-                                    } label: {
-                                        if filterMuscleGroup == nil {
-                                            Label("All", systemImage: "checkmark")
-                                        } else {
-                                            Text("All")
-                                        }
-                                    }
-                                    ForEach(MuscleGroup.allCases) { group in
-                                        Button {
-                                            filterMuscleGroup = group
-                                        } label: {
-                                            if filterMuscleGroup == group {
-                                                Label(group.rawValue, systemImage: "checkmark")
-                                            } else {
-                                                Text(group.rawValue)
-                                            }
-                                        }
-                                    }
-                                } label: {
-                                    filterChipLabel(
-                                        label: filterMuscleGroup?.rawValue ?? "Muscle",
-                                        isActive: filterMuscleGroup != nil,
-                                        icon: "figure.strengthtraining.traditional"
-                                    )
-                                }
-                            }
-
-                            filterChip(
-                                label: filterRating.map { "\($0)★" } ?? "Rating",
-                                isActive: filterRating != nil,
-                                icon: "star"
-                            ) {
-                                Menu {
-                                    Button {
-                                        filterRating = nil
-                                    } label: {
-                                        if filterRating == nil {
-                                            Label("Any", systemImage: "checkmark")
-                                        } else {
-                                            Text("Any")
-                                        }
-                                    }
-                                    ForEach(1...5, id: \.self) { stars in
-                                        Button {
-                                            filterRating = stars
-                                        } label: {
-                                            if filterRating == stars {
-                                                Label(String(repeating: "★", count: stars), systemImage: "checkmark")
-                                            } else {
-                                                Text(String(repeating: "★", count: stars))
-                                            }
-                                        }
-                                    }
-                                } label: {
-                                    filterChipLabel(
-                                        label: filterRating.map { "\($0)★" } ?? "Rating",
-                                        isActive: filterRating != nil,
-                                        icon: "star"
-                                    )
-                                }
-                            }
-
-                            if hasActiveFilters {
-                                Button {
-                                    filterDateRange = .all
-                                    filterMuscleGroup = nil
-                                    filterRating = nil
-                                } label: {
-                                    Text("Clear")
-                                        .font(.caption.bold())
-                                        .foregroundStyle(.red)
-                                        .padding(.horizontal, 10)
-                                        .padding(.vertical, 6)
-                                        .background(.red.opacity(0.1), in: Capsule())
-                                }
-                            }
-                        }
-                    }
-                    .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
-                }
-            }
-
-            if !filteredWorkouts.isEmpty {
-                Section {
-                    ForEach(filteredWorkouts) { workout in
-                        NavigationLink(value: workout) {
-                            workoutCard(workout)
-                        }
-                    }
-                    .onDelete { offsets in
-                        if let index = offsets.first {
-                            workoutToDelete = filteredWorkouts[index]
-                        }
-                    }
-                } header: {
-                    HStack {
-                        Text(hasActiveFilters ? "Filtered Workouts" : "Recent Workouts")
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(.secondary)
-                            .textCase(nil)
-                        if hasActiveFilters {
-                            Spacer()
-                            Text("\(filteredWorkouts.count)")
-                                .font(.caption.bold().monospacedDigit())
-                                .foregroundStyle(Color.accentColor)
-                        }
-                    }
-                }
-            } else if hasActiveFilters {
-                ContentUnavailableView {
-                    Label("No Matches", systemImage: "line.3.horizontal.decrease.circle")
-                } description: {
-                    Text("No workouts match your current filters.")
-                } actions: {
-                    Button("Clear Filters") {
-                        filterDateRange = .all
-                        filterMuscleGroup = nil
-                        filterRating = nil
-                    }
-                }
-                .listRowBackground(Color.clear)
-            }
-        }
-        .listStyle(.insetGrouped)
-        .overlay {
-            if workouts.isEmpty {
-                ContentUnavailableView {
-                    Label("No Workouts Yet", systemImage: "dumbbell.fill")
-                } description: {
-                    Text("Tap the + button to log your first workout and start tracking your progress.")
-                } actions: {
-                    Button {
-                        showingAddWorkout = true
-                    } label: {
-                        Text("Start Workout")
-                            .font(.subheadline.bold())
-                    }
-                    .buttonStyle(.borderedProminent)
-                }
-            } else if filteredWorkouts.isEmpty {
-                ContentUnavailableView.search(text: searchText)
-            }
-        }
-        .navigationTitle("Metricly")
-        .searchable(text: $searchText, prompt: "Search workouts or exercises")
-        .navigationDestination(for: Workout.self) { workout in
-            WorkoutDetailView(workout: workout)
-        }
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                HStack(spacing: 16) {
-                    if let lastWorkout = workouts.first, !lastWorkout.exercises.isEmpty {
-                        Button {
-                            repeatConfirmation = true
-                        } label: {
-                            Label("Repeat Last", systemImage: "arrow.counterclockwise")
-                        }
-                    }
-                    Button {
-                        showingAddWorkout = true
-                    } label: {
-                        Label("Add Workout", systemImage: "plus")
-                    }
-                }
-            }
-        }
-        .sheet(isPresented: $showingAddWorkout) {
-            AddWorkoutSheet()
-                .environment(\.weightUnit, weightUnit)
-        }
-    }
-
-    private var goalProgress: Double {
-        guard settings.weeklyGoal > 0 else { return 0 }
-        return min(1.0, Double(workoutsThisWeek) / Double(settings.weeklyGoal))
-    }
-
-    private var goalSection: some View {
-        Section {
-            HStack(spacing: 16) {
-                ZStack {
-                    Circle()
-                        .stroke(Color.accentColor.opacity(0.2), lineWidth: 8)
-                    Circle()
-                        .trim(from: 0, to: goalProgress)
-                        .stroke(
-                            goalProgress >= 1.0 ? Color.green : Color.accentColor,
-                            style: StrokeStyle(lineWidth: 8, lineCap: .round)
-                        )
-                        .rotationEffect(.degrees(-90))
-                        .animation(.easeInOut(duration: 0.5), value: goalProgress)
-                    VStack(spacing: 0) {
-                        Text("\(workoutsThisWeek)")
-                            .font(.title2.bold().monospacedDigit())
-                        Text("/\(settings.weeklyGoal)")
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-                .frame(width: 64, height: 64)
-
-                VStack(alignment: .leading, spacing: 4) {
-                    if workoutsThisWeek >= settings.weeklyGoal {
-                        Text("Goal reached!")
-                            .font(.headline)
-                            .foregroundStyle(.green)
-                    } else {
-                        Text("\(settings.weeklyGoal - workoutsThisWeek) more to go")
-                            .font(.headline)
-                    }
-                    Text("Weekly goal: \(settings.weeklyGoal) workouts")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-
-                Spacer()
-            }
-            .padding(.vertical, 4)
-            .accessibilityElement(children: .combine)
-            .accessibilityLabel("Weekly goal: \(workoutsThisWeek) of \(settings.weeklyGoal) workouts completed")
-        }
-    }
-
-    private var streakSection: some View {
-        Section {
-            NavigationLink {
-                StreakCalendarView()
-            } label: {
-                HStack(spacing: 20) {
-                    statBubble(
-                        value: "\(workoutsThisWeek)",
-                        label: "This Week",
-                        icon: "flame.fill",
-                        color: workoutsThisWeek > 0 ? .orange : .secondary
-                    )
-                    Divider()
-                        .frame(height: 40)
-                    statBubble(
-                        value: "\(currentStreak)",
-                        label: "Day Streak",
-                        icon: "bolt.fill",
-                        color: currentStreak >= 3 ? .yellow : .secondary
-                    )
-                    Divider()
-                        .frame(height: 40)
-                    statBubble(
-                        value: "\(workouts.count)",
-                        label: "Total",
-                        icon: "figure.strengthtraining.traditional",
-                        color: Color.accentColor
-                    )
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 4)
-            }
-        }
-    }
-
-    private func statBubble(value: String, label: String, icon: String, color: Color) -> some View {
-        VStack(spacing: 4) {
-            HStack(spacing: 4) {
-                Image(systemName: icon)
-                    .foregroundStyle(color)
-                    .font(.caption)
-                Text(value)
-                    .font(.title2.bold().monospacedDigit())
-            }
-            Text(label)
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(label): \(value)")
-    }
-
-    private var workoutsThisWeek: Int {
-        let calendar = Calendar.current
-        guard let weekStart = calendar.dateInterval(of: .weekOfYear, for: .now)?.start else { return 0 }
-        return workouts.filter { $0.date >= weekStart }.count
-    }
+    // MARK: - Streak Helpers
 
     private var currentStreak: Int {
         let calendar = Calendar.current
@@ -900,97 +540,7 @@ struct ContentView: View {
         return streak
     }
 
-    private func workoutCard(_ workout: Workout) -> some View {
-        HStack(spacing: 0) {
-            // Status accent bar
-            RoundedRectangle(cornerRadius: 2)
-                .fill(workout.isFinished ? Color.green : Color.accentColor)
-                .frame(width: 4, height: 44)
-                .padding(.trailing, 12)
-
-            VStack(alignment: .leading, spacing: 4) {
-                HStack {
-                    Text(workout.name)
-                        .font(.headline)
-                    Spacer()
-                    if !workout.isFinished {
-                        Text("In Progress")
-                            .font(.caption2.bold())
-                            .foregroundStyle(Color.accentColor)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 3)
-                            .background(Color.accentColor.opacity(0.12), in: .capsule)
-                    }
-                }
-
-                HStack(spacing: 8) {
-                    Label(workout.date.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day()),
-                          systemImage: "calendar")
-                    if let duration = workout.formattedDuration {
-                        Label(duration, systemImage: "clock")
-                    }
-                    if let rating = workout.rating, rating > 0 {
-                        HStack(spacing: 1) {
-                            ForEach(1...rating, id: \.self) { _ in
-                                Image(systemName: "star.fill")
-                                    .imageScale(.small)
-                            }
-                        }
-                        .foregroundStyle(.yellow)
-                    }
-                }
-                .font(.caption)
-                .foregroundStyle(.secondary)
-
-                if !workout.exercises.isEmpty {
-                    HStack(spacing: 6) {
-                        ForEach(workout.exercises.sorted { $0.order < $1.order }.prefix(3)) { exercise in
-                            HStack(spacing: 3) {
-                                Image(systemName: exercise.category?.icon ?? "dumbbell")
-                                    .font(.system(size: 9))
-                                Text(exercise.name)
-                            }
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(Color(.tertiarySystemFill), in: .capsule)
-                        }
-                        if workout.exercises.count > 3 {
-                            Text("+\(workout.exercises.count - 3)")
-                                .font(.caption2)
-                                .foregroundStyle(.tertiary)
-                        }
-                    }
-                }
-            }
-        }
-        .padding(.vertical, 4)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(workoutAccessibilityLabel(workout))
-    }
-
-    private func workoutAccessibilityLabel(_ workout: Workout) -> String {
-        var parts = [workout.name]
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateStyle = .medium
-        parts.append(dateFormatter.string(from: workout.date))
-        if let duration = workout.formattedDuration {
-            parts.append("Duration \(duration)")
-        }
-        if !workout.exercises.isEmpty {
-            parts.append("\(workout.exercises.count) exercises")
-        }
-        return parts.joined(separator: ", ")
-    }
-
-    private func workoutSummary(_ workout: Workout) -> String {
-        let exerciseNames = workout.exercises.map(\.name)
-        let totalSets = workout.exercises.reduce(0) { $0 + $1.sets.count }
-        let names = exerciseNames.prefix(3).joined(separator: ", ")
-        let suffix = exerciseNames.count > 3 ? " +\(exerciseNames.count - 3) more" : ""
-        return "\(names)\(suffix) \u{00B7} \(totalSets) set\(totalSets == 1 ? "" : "s")"
-    }
+    // MARK: - Actions
 
     private func repeatLastWorkout() {
         guard let last = workouts.first else { return }
@@ -1012,11 +562,6 @@ struct ContentView: View {
         try? modelContext.save()
     }
 
-    private func deleteWorkouts(at offsets: IndexSet) {
-        for index in offsets {
-            modelContext.delete(workouts[index])
-        }
-    }
 }
 
 #Preview {

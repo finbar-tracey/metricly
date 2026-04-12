@@ -14,6 +14,9 @@ final class UserSettings {
     var accentColorName: String = "blue"
     var appearanceMode: String = "system"
     var healthKitEnabled: Bool = false
+    var heightCm: Double = 0
+    var biologicalSex: String = "" // "male" or "female"
+    var userName: String = ""
 
     init(useKilograms: Bool = true, defaultRestDuration: Int = 90, autoStartRestTimer: Bool = false) {
         self.useKilograms = useKilograms
@@ -27,5 +30,8 @@ final class UserSettings {
         self.accentColorName = "blue"
         self.appearanceMode = "system"
         self.healthKitEnabled = false
+        self.heightCm = 0
+        self.biologicalSex = ""
+        self.userName = ""
     }
 }

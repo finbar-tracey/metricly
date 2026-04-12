@@ -6,40 +6,21 @@ struct SmartSuggestionsView: View {
            sort: \Workout.date, order: .reverse)
     private var workouts: [Workout]
 
-    private let recoveryHours: [MuscleGroup: Double] = [
-        .chest: 48, .back: 48, .shoulders: 48,
-        .biceps: 36, .triceps: 36, .legs: 72,
-        .core: 24, .cardio: 24, .other: 48
-    ]
+    private var recoveryResult: RecoveryResult {
+        RecoveryEngine.evaluate(workouts: workouts)
+    }
 
     private var muscleReadiness: [(MuscleGroup, Double)] {
-        let trainable = MuscleGroup.allCases.filter { $0 != .cardio && $0 != .other }
-        return trainable.map { group in
-            let lastTrained = lastTrainedDate(for: group)
-            let recovery = recoveryHours[group] ?? 48
-            let freshness = calculateFreshness(lastTrained: lastTrained, recoveryHours: recovery)
-            return (group, freshness)
-        }
-        .sorted { $0.1 > $1.1 }
+        recoveryResult.muscleResults.map { ($0.group, $0.freshness) }
+            .sorted { $0.1 > $1.1 }
     }
 
     private var readyMuscles: [MuscleGroup] {
-        muscleReadiness.filter { $0.1 >= 0.7 }.map(\.0)
+        recoveryResult.muscleResults.filter { $0.freshness >= 0.7 }.map(\.group)
     }
 
     private var suggestedWorkoutType: String {
-        let ready = Set(readyMuscles)
-        if ready.contains(.chest) && ready.contains(.shoulders) && ready.contains(.triceps) {
-            return "Push"
-        } else if ready.contains(.back) && ready.contains(.biceps) {
-            return "Pull"
-        } else if ready.contains(.legs) {
-            return "Legs"
-        } else if ready.count >= 3 {
-            return "Full Body"
-        } else {
-            return "Active Recovery"
-        }
+        recoveryResult.suggestedWorkoutType
     }
 
     private var suggestedExercises: [SuggestedExercise] {
@@ -79,14 +60,14 @@ struct SmartSuggestionsView: View {
                         ForEach(muscleReadiness, id: \.0) { group, freshness in
                             HStack(spacing: 4) {
                                 Circle()
-                                    .fill(freshnessColor(freshness))
+                                    .fill(RecoveryEngine.freshnessColor(freshness))
                                     .frame(width: 8, height: 8)
                                 Text(group.rawValue)
                                     .font(.caption2)
                             }
                             .padding(.horizontal, 8)
                             .padding(.vertical, 4)
-                            .background(freshnessColor(freshness).opacity(0.1), in: Capsule())
+                            .background(RecoveryEngine.freshnessColor(freshness).opacity(0.1), in: Capsule())
                         }
                     }
                 }
@@ -144,30 +125,6 @@ struct SmartSuggestionsView: View {
         }
     }
 
-    private func lastTrainedDate(for group: MuscleGroup) -> Date? {
-        for workout in workouts {
-            for exercise in workout.exercises {
-                if exercise.category == group && !exercise.sets.isEmpty {
-                    return workout.date
-                }
-            }
-        }
-        return nil
-    }
-
-    private func calculateFreshness(lastTrained: Date?, recoveryHours: Double) -> Double {
-        guard let lastTrained else { return 1.0 }
-        let hoursSince = Date.now.timeIntervalSince(lastTrained) / 3600
-        return min(1.0, max(0.0, hoursSince / recoveryHours))
-    }
-
-    private func freshnessColor(_ freshness: Double) -> Color {
-        if freshness >= 0.8 { return .green }
-        if freshness >= 0.5 { return .yellow }
-        if freshness >= 0.25 { return .orange }
-        return .red
-    }
-
     private func recentExerciseNames(days: Int) -> Set<String> {
         let cutoff = Calendar.current.date(byAdding: .day, value: -days, to: .now) ?? .now
         let recent = workouts.filter { $0.date >= cutoff }
@@ -175,7 +132,7 @@ struct SmartSuggestionsView: View {
     }
 
     private func reasonForGroup(_ group: MuscleGroup) -> String {
-        if let lastTrained = lastTrainedDate(for: group) {
+        if let lastTrained = recoveryResult.muscleResults.first(where: { $0.group == group })?.lastTrained {
             let days = Int(Date.now.timeIntervalSince(lastTrained) / 86400)
             if days == 0 { return "Trained today" }
             if days == 1 { return "Last trained yesterday" }
@@ -214,7 +171,7 @@ struct SuggestedExercise: Identifiable {
     let reason: String
 }
 
-// FlowLayout is defined in WeeklyRecapView.swift
+
 
 #Preview {
     NavigationStack {

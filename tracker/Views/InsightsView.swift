@@ -6,7 +6,7 @@ enum InsightsTab: String, CaseIterable, Identifiable {
     case muscles = "Muscles"
     case recovery = "Recovery"
     case bodyWeight = "Weight"
-    case recap = "Recap"
+    case recap = "Report"
 
     var id: String { rawValue }
 
@@ -16,7 +16,7 @@ enum InsightsTab: String, CaseIterable, Identifiable {
         case .muscles: return "figure.strengthtraining.traditional"
         case .recovery: return "heart.text.square"
         case .bodyWeight: return "scalemass"
-        case .recap: return "list.clipboard"
+        case .recap: return "doc.text.magnifyingglass"
         }
     }
 }
@@ -52,7 +52,7 @@ struct InsightsView: View {
             case .bodyWeight:
                 BodyWeightView()
             case .recap:
-                WeeklyRecapView()
+                WeeklyMonthlyReportView()
             }
         }
         .navigationTitle("Insights")

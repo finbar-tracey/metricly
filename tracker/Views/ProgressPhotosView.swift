@@ -9,6 +9,7 @@ struct ProgressPhotosView: View {
     @State private var selectedCategory = "Front"
     @State private var showingPicker = false
     @State private var selectedPhoto: ProgressPhoto?
+    @State private var photoToDelete: ProgressPhoto?
 
     private let categories = ["Front", "Back", "Side", "Legs", "Other"]
 
@@ -73,6 +74,20 @@ struct ProgressPhotosView: View {
         .confirmationDialog("Photo Category", isPresented: .constant(false)) {
             // Placeholder for category selection
         }
+        .alert("Delete Photo?", isPresented: Binding(
+            get: { photoToDelete != nil },
+            set: { if !$0 { photoToDelete = nil } }
+        )) {
+            Button("Delete", role: .destructive) {
+                if let photo = photoToDelete {
+                    modelContext.delete(photo)
+                    photoToDelete = nil
+                }
+            }
+            Button("Cancel", role: .cancel) { photoToDelete = nil }
+        } message: {
+            Text("This photo will be permanently deleted.")
+        }
     }
 
     private var addPhotoButton: some View {
@@ -116,7 +131,7 @@ struct ProgressPhotosView: View {
         .buttonStyle(.plain)
         .contextMenu {
             Button(role: .destructive) {
-                modelContext.delete(photo)
+                photoToDelete = photo
             } label: {
                 Label("Delete", systemImage: "trash")
             }
@@ -145,6 +160,7 @@ struct PhotoDetailView: View {
     @Environment(\.modelContext) private var modelContext
     let photo: ProgressPhoto
     @State private var notes: String = ""
+    @State private var showDeleteConfirm = false
 
     var body: some View {
         ScrollView {
@@ -187,11 +203,19 @@ struct PhotoDetailView: View {
         .toolbar {
             ToolbarItem(placement: .bottomBar) {
                 Button(role: .destructive) {
-                    modelContext.delete(photo)
+                    showDeleteConfirm = true
                 } label: {
                     Label("Delete Photo", systemImage: "trash")
                 }
             }
+        }
+        .alert("Delete Photo?", isPresented: $showDeleteConfirm) {
+            Button("Delete", role: .destructive) {
+                modelContext.delete(photo)
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This photo will be permanently deleted.")
         }
     }
 }

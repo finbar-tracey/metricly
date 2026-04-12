@@ -91,8 +91,15 @@ struct ExerciseLibraryView: View {
     private func exerciseRow(_ exercise: ExerciseInfo) -> some View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
-                Text(exercise.name)
-                    .font(.headline)
+                HStack(spacing: 6) {
+                    Text(exercise.name)
+                        .font(.headline)
+                    if ExerciseGuide.find(exercise.name) != nil {
+                        Image(systemName: "text.book.closed")
+                            .font(.caption2)
+                            .foregroundStyle(.tint)
+                    }
+                }
                 HStack(spacing: 8) {
                     Text("\(exercise.sessionCount) sessions")
                     Text("·")
