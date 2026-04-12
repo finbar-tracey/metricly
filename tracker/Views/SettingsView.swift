@@ -17,6 +17,7 @@ struct SettingsView: View {
     @State private var showImportResult = false
     @State private var showImportError = false
     @State private var importErrorMessage = ""
+    @State private var templateToDelete: Workout?
 
     private var settings: UserSettings {
         if let existing = settingsArray.first {
@@ -60,6 +61,44 @@ struct SettingsView: View {
                 Text("General")
             } footer: {
                 Text("When off, a \"Start Rest\" button appears after each set instead of starting automatically.")
+            }
+
+            Section {
+                HStack(spacing: 12) {
+                    settingsIcon("person.text.rectangle", color: .cyan)
+                    TextField("Your Name", text: Binding(
+                        get: { settings.userName },
+                        set: { settings.userName = $0 }
+                    ))
+                }
+                HStack(spacing: 12) {
+                    settingsIcon("person.fill", color: .cyan)
+                    Picker("Sex", selection: Binding(
+                        get: { settings.biologicalSex },
+                        set: { settings.biologicalSex = $0 }
+                    )) {
+                        Text("Not Set").tag("")
+                        Text("Male").tag("male")
+                        Text("Female").tag("female")
+                    }
+                }
+                HStack(spacing: 12) {
+                    settingsIcon("ruler", color: .mint)
+                    let isMetric = settings.useKilograms
+                    Stepper(
+                        "Height: \(formatHeight(settings.heightCm, metric: isMetric))",
+                        value: Binding(
+                            get: { settings.heightCm },
+                            set: { settings.heightCm = $0 }
+                        ),
+                        in: 100...250,
+                        step: isMetric ? 1 : 2.54
+                    )
+                }
+            } header: {
+                Text("Profile")
+            } footer: {
+                Text("Used for body fat % estimation. Height and sex are required for the Navy method calculator.")
             }
 
             Section {
@@ -209,7 +248,11 @@ struct SettingsView: View {
                             }
                         }
                     }
-                    .onDelete(perform: deleteTemplates)
+                    .onDelete { offsets in
+                        if let index = offsets.first {
+                            templateToDelete = templates[index]
+                        }
+                    }
                 }
             } header: {
                 Text("Templates")
@@ -307,6 +350,22 @@ struct SettingsView: View {
         } message: {
             Text(importErrorMessage)
         }
+        .alert("Delete Template?", isPresented: Binding(
+            get: { templateToDelete != nil },
+            set: { if !$0 { templateToDelete = nil } }
+        )) {
+            Button("Delete", role: .destructive) {
+                if let template = templateToDelete {
+                    modelContext.delete(template)
+                    templateToDelete = nil
+                }
+            }
+            Button("Cancel", role: .cancel) { templateToDelete = nil }
+        } message: {
+            if let template = templateToDelete {
+                Text("Are you sure you want to delete \"\(template.name)\"?")
+            }
+        }
     }
 
     private func settingsIcon(_ name: String, color: Color) -> some View {
@@ -317,6 +376,18 @@ struct SettingsView: View {
             Image(systemName: name)
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(.white)
+        }
+    }
+
+    private func formatHeight(_ cm: Double, metric: Bool) -> String {
+        if cm <= 0 { return "Not Set" }
+        if metric {
+            return "\(Int(cm)) cm"
+        } else {
+            let totalInches = cm / 2.54
+            let feet = Int(totalInches) / 12
+            let inches = Int(totalInches) % 12
+            return "\(feet)'\(inches)\""
         }
     }
 
@@ -344,9 +415,5 @@ struct SettingsView: View {
         }
     }
 
-    private func deleteTemplates(at offsets: IndexSet) {
-        for index in offsets {
-            modelContext.delete(templates[index])
-        }
-    }
+
 }

@@ -4,6 +4,7 @@ import UIKit
 
 struct FinishWorkoutSheet: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.weightUnit) private var weightUnit
     @Query private var settingsArray: [UserSettings]
     let workout: Workout
 
@@ -76,6 +77,8 @@ struct FinishWorkoutSheet: View {
                         Divider().frame(height: 36)
                         let totalSets = workout.exercises.flatMap(\.sets).filter { !$0.isWarmUp }.count
                         finishStatCard(icon: "repeat", value: "\(totalSets)", label: "Sets")
+                        Divider().frame(height: 36)
+                        finishStatCard(icon: "scalemass", value: formatVolume(totalVolume), label: "Volume")
                     }
                     .padding(.vertical, 4)
                 } header: {
@@ -120,6 +123,14 @@ struct FinishWorkoutSheet: View {
                 .foregroundStyle(.tertiary)
         }
         .frame(maxWidth: .infinity)
+    }
+
+    private func formatVolume(_ volumeKg: Double) -> String {
+        let value = weightUnit.display(volumeKg)
+        if value >= 1000 {
+            return String(format: "%.1fk", value / 1000)
+        }
+        return String(format: "%.0f", value)
     }
 
     private var ratingLabel: String {

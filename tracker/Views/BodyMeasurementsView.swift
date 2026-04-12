@@ -43,7 +43,16 @@ struct BodyMeasurementsView: View {
             Section {
                 Picker("Measurement Site", selection: $selectedSite) {
                     ForEach(BodyMeasurement.allSites, id: \.self) { site in
-                        Text(site).tag(site)
+                        let count = allEntries.filter { $0.site == site }.count
+                        HStack {
+                            Text(site)
+                            if count > 0 {
+                                Spacer()
+                                Text("\(count)")
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                        .tag(site)
                     }
                 }
             }

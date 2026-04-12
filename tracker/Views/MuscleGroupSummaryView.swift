@@ -3,7 +3,7 @@ import SwiftData
 import Charts
 
 struct MuscleGroupSummaryView: View {
-    @Query(filter: #Predicate<Workout> { !$0.isTemplate }, sort: \Workout.date, order: .reverse)
+    @Query(filter: #Predicate<Workout> { !$0.isTemplate && $0.endTime != nil }, sort: \Workout.date, order: .reverse)
     private var workouts: [Workout]
     @Environment(\.weightUnit) private var weightUnit
 

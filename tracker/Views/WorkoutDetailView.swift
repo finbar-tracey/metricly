@@ -114,14 +114,27 @@ struct WorkoutDetailView: View {
                 }
             }
 
-            if !workout.notes.isEmpty {
-                Section {
-                    Text(workout.notes)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                } header: {
-                    Text("Notes")
+            Section {
+                NavigationLink {
+                    WorkoutNotesView(workout: workout)
+                } label: {
+                    if workout.notes.isEmpty {
+                        HStack(spacing: 8) {
+                            Image(systemName: "note.text")
+                                .foregroundStyle(.secondary)
+                            Text("Add notes...")
+                                .font(.subheadline)
+                                .foregroundStyle(.tertiary)
+                        }
+                    } else {
+                        Text(LocalizedStringKey(workout.notes))
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(3)
+                    }
                 }
+            } header: {
+                Text("Notes")
             }
 
             if workout.exercises.isEmpty {
@@ -307,6 +320,11 @@ struct WorkoutDetailView: View {
                         Label("Save as Template", systemImage: "doc.on.doc")
                     }
                     Button {
+                        duplicateWorkout()
+                    } label: {
+                        Label("Duplicate Workout", systemImage: "plus.square.on.square")
+                    }
+                    Button {
                         shareItems = [formatWorkoutSummary()]
                         showingShare = true
                     } label: {
@@ -331,6 +349,9 @@ struct WorkoutDetailView: View {
         }
         .sheet(isPresented: $showingFinishSheet) {
             stopDurationTimer()
+            if workout.isFinished {
+                UINotificationFeedbackGenerator().notificationOccurred(.success)
+            }
         } content: {
             FinishWorkoutSheet(workout: workout)
         }
@@ -509,6 +530,22 @@ struct WorkoutDetailView: View {
             template.exercises.append(templateExercise)
         }
         showTemplateSaved = true
+    }
+
+    private func duplicateWorkout() {
+        let newWorkout = Workout(name: workout.name, date: .now)
+        modelContext.insert(newWorkout)
+        let sorted = workout.exercises.sorted { $0.order < $1.order }
+        for (index, exercise) in sorted.enumerated() {
+            let newExercise = Exercise(name: exercise.name, workout: newWorkout, category: exercise.category)
+            newExercise.order = index
+            newExercise.notes = exercise.notes
+            newExercise.supersetGroup = exercise.supersetGroup
+            newExercise.customRestDuration = exercise.customRestDuration
+            modelContext.insert(newExercise)
+            newWorkout.exercises.append(newExercise)
+        }
+        HapticsManager.success()
     }
 
     private func deleteExercises(at offsets: IndexSet) {

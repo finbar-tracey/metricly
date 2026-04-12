@@ -22,6 +22,7 @@ struct ExerciseDetailView: View {
     @State private var editedName = ""
     @State private var loggedPreviousIndices: Set<Int> = []
     @State private var hasPreFilled = false
+    @State private var showProgression = true
     @State private var showPRBanner = false
     @State private var prScale = 1.0
     @State private var lastAddedSet: ExerciseSet?
@@ -78,6 +79,18 @@ struct ExerciseDetailView: View {
                         }
                     }
                     .padding(.vertical, 4)
+                }
+            }
+
+            if let rec = progressionRecommendation {
+                Section(isExpanded: $showProgression) {
+                    ProgressionBannerView(recommendation: rec)
+                } header: {
+                    HStack {
+                        Image(systemName: "chart.line.uptrend.xyaxis")
+                        Text("Progression")
+                    }
+                    .font(.subheadline)
                 }
             }
 
@@ -143,6 +156,9 @@ struct ExerciseDetailView: View {
                     NavigationLink(value: exercise.name) {
                         Label("History", systemImage: "chart.bar")
                     }
+                    NavigationLink(value: FormGuideDestination(exerciseName: exercise.name)) {
+                        Label("Form Guide", systemImage: "text.book.closed")
+                    }
                     NavigationLink(value: SubstitutionsDestination(exerciseName: exercise.name)) {
                         Label("Substitutions", systemImage: "arrow.triangle.2.circlepath")
                     }
@@ -151,6 +167,23 @@ struct ExerciseDetailView: View {
                         isEditingName = true
                     } label: {
                         Label("Rename", systemImage: "pencil")
+                    }
+                    Menu {
+                        ForEach(MuscleGroup.allCases) { group in
+                            Button {
+                                exercise.category = group
+                                HapticsManager.lightTap()
+                            } label: {
+                                HStack {
+                                    Label(group.rawValue, systemImage: group.icon)
+                                    if exercise.category == group {
+                                        Image(systemName: "checkmark")
+                                    }
+                                }
+                            }
+                        }
+                    } label: {
+                        Label("Change Category", systemImage: "folder")
                     }
                 } label: {
                     Image(systemName: "ellipsis.circle")
@@ -162,6 +195,9 @@ struct ExerciseDetailView: View {
         }
         .navigationDestination(for: SubstitutionsDestination.self) { dest in
             ExerciseSubstitutionsView(exerciseName: dest.exerciseName)
+        }
+        .navigationDestination(for: FormGuideDestination.self) { dest in
+            ExerciseGuideView(exerciseName: dest.exerciseName)
         }
         .alert("Edit Exercise", isPresented: $isEditingName) {
             TextField("Name", text: $editedName)
@@ -701,6 +737,21 @@ struct ExerciseDetailView: View {
             .filter { !$0.isWarmUp }
             .map(\.weight)
             .max() ?? 0
+    }
+
+    private var progressionRecommendation: ProgressionRecommendation? {
+        let history = allExercises
+            .filter { other in
+                other.name == exercise.name
+                && !(other.workout?.isTemplate ?? true)
+                && !other.sets.isEmpty
+            }
+            .sorted { ($0.workout?.date ?? .distantPast) > ($1.workout?.date ?? .distantPast) }
+        let sessions = ProgressionAdvisor.buildSessions(from: history)
+        guard sessions.count >= 2 else { return nil }
+        let rec = ProgressionAdvisor.recommend(sessions: sessions, muscleGroup: exercise.category)
+        if case .insufficient = rec.action { return nil }
+        return rec
     }
 
     private var previousSession: Exercise? {

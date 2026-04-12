@@ -28,7 +28,7 @@ struct Achievement: Identifiable {
 }
 
 struct AchievementsView: View {
-    @Query(filter: #Predicate<Workout> { !$0.isTemplate })
+    @Query(filter: #Predicate<Workout> { !$0.isTemplate && $0.endTime != nil })
     private var workouts: [Workout]
     @Query private var bodyWeights: [BodyWeightEntry]
     @Environment(\.weightUnit) private var unit

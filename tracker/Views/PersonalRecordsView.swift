@@ -3,7 +3,7 @@ import SwiftData
 import Charts
 
 struct PersonalRecordsView: View {
-    @Query(filter: #Predicate<Workout> { !$0.isTemplate })
+    @Query(filter: #Predicate<Workout> { !$0.isTemplate && $0.endTime != nil })
     private var workouts: [Workout]
     @Environment(\.weightUnit) private var unit
 
@@ -59,6 +59,38 @@ struct PersonalRecordsView: View {
                 }
                 .listRowBackground(Color.clear)
             } else {
+                Section {
+                    HStack(spacing: 0) {
+                        VStack(spacing: 4) {
+                            Text("\(records.count)")
+                                .font(.title2.bold().monospacedDigit())
+                            Text("Exercises")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                        .frame(maxWidth: .infinity)
+                        VStack(spacing: 4) {
+                            Text("\(groupedRecords.count)")
+                                .font(.title2.bold().monospacedDigit())
+                            Text("Muscle Groups")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                        .frame(maxWidth: .infinity)
+                        if let heaviest = records.first {
+                            VStack(spacing: 4) {
+                                Text(unit.formatShort(heaviest.weight))
+                                    .font(.title2.bold().monospacedDigit())
+                                Text("Heaviest")
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
+                            .frame(maxWidth: .infinity)
+                        }
+                    }
+                    .padding(.vertical, 4)
+                }
+
                 // Top 3 highlight
                 if records.count >= 3 {
                     Section("Top Lifts") {

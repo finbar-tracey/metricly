@@ -7,6 +7,13 @@ struct ExerciseHistoryView: View {
     @Query private var allExercises: [Exercise]
     let exerciseName: String
     @State private var showEstimated1RM = false
+    @State private var sortOrder: HistorySortOrder = .date
+
+    private enum HistorySortOrder: String, CaseIterable {
+        case date = "Date"
+        case weight = "Weight"
+        case reps = "Reps"
+    }
 
     private var history: [Exercise] {
         allExercises
@@ -14,12 +21,44 @@ struct ExerciseHistoryView: View {
             .sorted { ($0.workout?.date ?? .distantPast) > ($1.workout?.date ?? .distantPast) }
     }
 
+    private var sortedHistory: [Exercise] {
+        switch sortOrder {
+        case .date:
+            return history
+        case .weight:
+            return history.sorted {
+                ($0.sets.map(\.weight).max() ?? 0) > ($1.sets.map(\.weight).max() ?? 0)
+            }
+        case .reps:
+            return history.sorted {
+                ($0.sets.map(\.reps).max() ?? 0) > ($1.sets.map(\.reps).max() ?? 0)
+            }
+        }
+    }
+
     private var bestSet: ExerciseSet? {
         history.flatMap(\.sets).max { $0.weight < $1.weight }
     }
 
+    private var progressionRecommendation: ProgressionRecommendation? {
+        let sessions = ProgressionAdvisor.buildSessions(from: history)
+        guard sessions.count >= 2 else { return nil }
+        let category = history.first?.category
+        let rec = ProgressionAdvisor.recommend(sessions: sessions, muscleGroup: category)
+        if case .insufficient = rec.action { return nil }
+        return rec
+    }
+
     var body: some View {
         List {
+            ExerciseGuideSectionView(exerciseName: exerciseName)
+
+            if let rec = progressionRecommendation {
+                Section {
+                    ProgressionBannerView(recommendation: rec)
+                }
+            }
+
             if let best = bestSet {
                 Section {
                     HStack {
@@ -68,7 +107,7 @@ struct ExerciseHistoryView: View {
                     Text("No history yet for this exercise.")
                         .foregroundStyle(.secondary)
                 } else {
-                    ForEach(history.prefix(10)) { exercise in
+                    ForEach(sortedHistory.prefix(10)) { exercise in
                         VStack(alignment: .leading, spacing: 4) {
                             if let date = exercise.workout?.date {
                                 Text(date, format: .dateTime.weekday(.wide).month().day())
@@ -97,10 +136,27 @@ struct ExerciseHistoryView: View {
                     }
                 }
             } header: {
-                Text("Recent Sessions")
+                HStack {
+                    Text("Recent Sessions")
+                    Spacer()
+                    Menu {
+                        Picker("Sort", selection: $sortOrder) {
+                            ForEach(HistorySortOrder.allCases, id: \.self) { order in
+                                Text(order.rawValue).tag(order)
+                            }
+                        }
+                    } label: {
+                        Label("Sort", systemImage: "arrow.up.arrow.down")
+                            .font(.caption)
+                            .textCase(nil)
+                    }
+                }
             }
         }
         .navigationTitle(exerciseName)
+        .navigationDestination(for: FormGuideDestination.self) { dest in
+            ExerciseGuideView(exerciseName: dest.exerciseName)
+        }
     }
 
     // MARK: - Progression Chart

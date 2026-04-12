@@ -7,6 +7,7 @@ struct StreakCalendarView: View {
     private var workouts: [Workout]
 
     @State private var monthsBack: Int = 6
+    @State private var restDayDismissed = false
 
     private var calendar: Calendar { Calendar.current }
 
@@ -76,6 +77,34 @@ struct StreakCalendarView: View {
                     statCard(value: "\(thisMonthCount)", label: "This\nMonth", icon: "calendar.badge.clock", color: .green)
                 }
                 .padding(.horizontal)
+
+                // Rest day recommendation
+                if currentStreak >= 7 && !restDayDismissed {
+                    HStack(spacing: 10) {
+                        Image(systemName: "bed.double.fill")
+                            .font(.title3)
+                            .foregroundStyle(.orange)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Consider a rest day")
+                                .font(.subheadline.weight(.semibold))
+                            Text("\(currentStreak)-day streak — recovery helps muscles grow.")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Button {
+                            withAnimation { restDayDismissed = true }
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundStyle(.secondary)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    .padding()
+                    .background(.orange.opacity(0.1), in: RoundedRectangle(cornerRadius: 12))
+                    .padding(.horizontal)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+                }
 
                 // Contribution grid
                 VStack(alignment: .leading, spacing: 8) {

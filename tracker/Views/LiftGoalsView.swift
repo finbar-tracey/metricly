@@ -5,11 +5,12 @@ struct LiftGoalsView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.weightUnit) private var weightUnit
     @Query private var goals: [LiftGoal]
-    @Query(filter: #Predicate<Workout> { !$0.isTemplate }) private var workouts: [Workout]
+    @Query(filter: #Predicate<Workout> { !$0.isTemplate && $0.endTime != nil }) private var workouts: [Workout]
     @State private var showingAddGoal = false
     @State private var newExerciseName = ""
     @State private var newTargetWeight = ""
     @FocusState private var isWeightFocused: Bool
+    @State private var goalToDelete: LiftGoal?
 
     private var activeGoals: [LiftGoal] {
         goals.filter { $0.achievedDate == nil }.sorted { $0.exerciseName < $1.exerciseName }
@@ -79,8 +80,8 @@ struct LiftGoalsView: View {
                         goalRow(goal)
                     }
                     .onDelete { offsets in
-                        for index in offsets {
-                            modelContext.delete(activeGoals[index])
+                        if let index = offsets.first {
+                            goalToDelete = activeGoals[index]
                         }
                     }
                 }
@@ -92,8 +93,8 @@ struct LiftGoalsView: View {
                         goalRow(goal)
                     }
                     .onDelete { offsets in
-                        for index in offsets {
-                            modelContext.delete(completedGoals[index])
+                        if let index = offsets.first {
+                            goalToDelete = completedGoals[index]
                         }
                     }
                 }
@@ -111,6 +112,22 @@ struct LiftGoalsView: View {
                 } label: {
                     Label("Add Goal", systemImage: "plus")
                 }
+            }
+        }
+        .alert("Delete Goal?", isPresented: Binding(
+            get: { goalToDelete != nil },
+            set: { if !$0 { goalToDelete = nil } }
+        )) {
+            Button("Delete", role: .destructive) {
+                if let goal = goalToDelete {
+                    modelContext.delete(goal)
+                    goalToDelete = nil
+                }
+            }
+            Button("Cancel", role: .cancel) { goalToDelete = nil }
+        } message: {
+            if let goal = goalToDelete {
+                Text("Are you sure you want to delete the goal for \"\(goal.exerciseName)\"?")
             }
         }
     }

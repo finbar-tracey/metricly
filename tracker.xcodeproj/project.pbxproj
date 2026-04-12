@@ -6,8 +6,37 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		82CCBB3A2F81354000BD46EA /* AppShortcuts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82CCBB032F81354000BD46EA /* AppShortcuts.swift */; };
+		82CCBB422F81354000BD46EA /* ExportHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82CCBB0B2F81354000BD46EA /* ExportHelper.swift */; };
+		82CCBB442F81354000BD46EA /* HapticsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82CCBB0D2F81354000BD46EA /* HapticsManager.swift */; };
+		82CCBB452F81354000BD46EA /* ImportHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82CCBB0E2F81354000BD46EA /* ImportHelper.swift */; };
+		82CCBB4E2F81354000BD46EA /* QuickStartHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82CCBB172F81354000BD46EA /* QuickStartHelper.swift */; };
+		82CCBB4F2F81354000BD46EA /* ReminderManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82CCBB182F81354000BD46EA /* ReminderManager.swift */; };
+		82CCBB512F81354000BD46EA /* ShareSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82CCBB1A2F81354000BD46EA /* ShareSheet.swift */; };
+		82CCBB5A2F81354000BD46EA /* WorkoutActivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82CCBB232F81354000BD46EA /* WorkoutActivityManager.swift */; };
+		82CCBB5F2F81354000BD46EA /* WorkoutShareCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82CCBB282F81354000BD46EA /* WorkoutShareCardView.swift */; };
+		82CCBB6C2F82C20700BD46EA /* HealthKitManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82CCBB6B2F82C20700BD46EA /* HealthKitManager.swift */; };
+		82CCBB892F8AD6AE00BD46EA /* WorkoutCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82CCBB882F8AD6AE00BD46EA /* WorkoutCardView.swift */; };
+		82CCBB8D2F8BF5CF00BD46EA /* FlowLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82CCBB8C2F8BF5CF00BD46EA /* FlowLayout.swift */; };
+		82CCBB922F8BF6CB00BD46EA /* QuickStartCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82CCBB912F8BF6CB00BD46EA /* QuickStartCard.swift */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		82A0C4CE2F58E8E200BD421B /* tracker.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = tracker.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		82CCBB032F81354000BD46EA /* AppShortcuts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppShortcuts.swift; sourceTree = "<group>"; };
+		82CCBB0B2F81354000BD46EA /* ExportHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportHelper.swift; sourceTree = "<group>"; };
+		82CCBB0D2F81354000BD46EA /* HapticsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HapticsManager.swift; sourceTree = "<group>"; };
+		82CCBB0E2F81354000BD46EA /* ImportHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportHelper.swift; sourceTree = "<group>"; };
+		82CCBB172F81354000BD46EA /* QuickStartHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickStartHelper.swift; sourceTree = "<group>"; };
+		82CCBB182F81354000BD46EA /* ReminderManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderManager.swift; sourceTree = "<group>"; };
+		82CCBB1A2F81354000BD46EA /* ShareSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareSheet.swift; sourceTree = "<group>"; };
+		82CCBB232F81354000BD46EA /* WorkoutActivityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutActivityManager.swift; sourceTree = "<group>"; };
+		82CCBB282F81354000BD46EA /* WorkoutShareCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutShareCardView.swift; sourceTree = "<group>"; };
+		82CCBB6B2F82C20700BD46EA /* HealthKitManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitManager.swift; sourceTree = "<group>"; };
+		82CCBB882F8AD6AE00BD46EA /* WorkoutCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutCardView.swift; sourceTree = "<group>"; };
+		82CCBB8C2F8BF5CF00BD46EA /* FlowLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowLayout.swift; sourceTree = "<group>"; };
+		82CCBB912F8BF6CB00BD46EA /* QuickStartCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickStartCard.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -47,6 +76,9 @@
 			children = (
 				82A0C4D02F58E8E200BD421B /* tracker */,
 				82A0C4CF2F58E8E200BD421B /* Products */,
+				82CCBB8E2F8BF6A200BD46EA /* Services */,
+				82CCBB8F2F8BF6A200BD46EA /* Helpers */,
+				82CCBB902F8BF6A300BD46EA /* Components */,
 			);
 			sourceTree = "<group>";
 		};
@@ -56,6 +88,40 @@
 				82A0C4CE2F58E8E200BD421B /* tracker.app */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		82CCBB8E2F8BF6A200BD46EA /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				82CCBB0D2F81354000BD46EA /* HapticsManager.swift */,
+				82CCBB6B2F82C20700BD46EA /* HealthKitManager.swift */,
+				82CCBB232F81354000BD46EA /* WorkoutActivityManager.swift */,
+				82CCBB182F81354000BD46EA /* ReminderManager.swift */,
+				82CCBB032F81354000BD46EA /* AppShortcuts.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		82CCBB8F2F8BF6A200BD46EA /* Helpers */ = {
+			isa = PBXGroup;
+			children = (
+				82CCBB0B2F81354000BD46EA /* ExportHelper.swift */,
+				82CCBB0E2F81354000BD46EA /* ImportHelper.swift */,
+				82CCBB172F81354000BD46EA /* QuickStartHelper.swift */,
+			);
+			path = Helpers;
+			sourceTree = "<group>";
+		};
+		82CCBB902F8BF6A300BD46EA /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				82CCBB8C2F8BF5CF00BD46EA /* FlowLayout.swift */,
+				82CCBB1A2F81354000BD46EA /* ShareSheet.swift */,
+				82CCBB882F8AD6AE00BD46EA /* WorkoutCardView.swift */,
+				82CCBB282F81354000BD46EA /* WorkoutShareCardView.swift */,
+				82CCBB912F8BF6CB00BD46EA /* QuickStartCard.swift */,
+			);
+			path = Components;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -132,6 +198,19 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				82CCBB3A2F81354000BD46EA /* AppShortcuts.swift in Sources */,
+				82CCBB422F81354000BD46EA /* ExportHelper.swift in Sources */,
+				82CCBB892F8AD6AE00BD46EA /* WorkoutCardView.swift in Sources */,
+				82CCBB442F81354000BD46EA /* HapticsManager.swift in Sources */,
+				82CCBB452F81354000BD46EA /* ImportHelper.swift in Sources */,
+				82CCBB8D2F8BF5CF00BD46EA /* FlowLayout.swift in Sources */,
+				82CCBB4E2F81354000BD46EA /* QuickStartHelper.swift in Sources */,
+				82CCBB4F2F81354000BD46EA /* ReminderManager.swift in Sources */,
+				82CCBB512F81354000BD46EA /* ShareSheet.swift in Sources */,
+				82CCBB6C2F82C20700BD46EA /* HealthKitManager.swift in Sources */,
+				82CCBB922F8BF6CB00BD46EA /* QuickStartCard.swift in Sources */,
+				82CCBB5A2F81354000BD46EA /* WorkoutActivityManager.swift in Sources */,
+				82CCBB5F2F81354000BD46EA /* WorkoutShareCardView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
