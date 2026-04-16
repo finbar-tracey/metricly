@@ -70,11 +70,12 @@ enum RecoveryEngine {
     static func evaluate(
         workouts: [Workout],
         health: HealthSignals = .init(),
+        externalWorkouts: [ExternalWorkout] = [],
         now: Date = .now
     ) -> RecoveryResult {
         let healthMultiplier = computeHealthMultiplier(health: health)
 
-        let muscleResults: [MuscleFatigueResult] = trainableGroups.map { group in
+        var muscleResults: [MuscleFatigueResult] = trainableGroups.map { group in
             computeMuscleFatigue(
                 for: group,
                 workouts: workouts,
@@ -83,6 +84,13 @@ enum RecoveryEngine {
                 now: now
             )
         }
+
+        // Apply systemic fatigue from external workouts (runs, rides, etc.)
+        muscleResults = applyExternalWorkoutFatigue(
+            muscleResults: muscleResults,
+            externalWorkouts: externalWorkouts,
+            now: now
+        )
 
         let readinessScore = computeReadinessScore(
             muscleResults: muscleResults,
@@ -337,6 +345,42 @@ enum RecoveryEngine {
         }
 
         return min(1.0, max(0.0, score))
+    }
+
+    // MARK: - External Workout Fatigue
+
+    private static func applyExternalWorkoutFatigue(
+        muscleResults: [MuscleFatigueResult],
+        externalWorkouts: [ExternalWorkout],
+        now: Date
+    ) -> [MuscleFatigueResult] {
+        let external = externalWorkouts.filter { !$0.isFromThisApp }
+        guard !external.isEmpty else { return muscleResults }
+
+        // Only consider workouts from the last 48 hours
+        let cutoff = now.addingTimeInterval(-48 * 3600)
+        let recentExternal = external.filter { $0.endDate >= cutoff }
+        guard !recentExternal.isEmpty else { return muscleResults }
+
+        // Sum fatigue weighted by recency
+        var totalExternalFatigue = 0.0
+        for workout in recentExternal {
+            let hoursSince = now.timeIntervalSince(workout.endDate) / 3600
+            let recencyFactor = max(0, 1.0 - hoursSince / 48.0)
+            totalExternalFatigue += workout.estimatedFatigueScore * recencyFactor
+        }
+
+        // Cap impact at 30% freshness reduction
+        let fatigueImpact = min(0.3, totalExternalFatigue * 0.15)
+
+        return muscleResults.map { result in
+            MuscleFatigueResult(
+                group: result.group,
+                freshness: max(0, result.freshness - fatigueImpact),
+                lastTrained: result.lastTrained,
+                effectiveRecoveryHours: result.effectiveRecoveryHours
+            )
+        }
     }
 
     // MARK: - Suggested Workout Type

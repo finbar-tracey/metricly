@@ -86,7 +86,7 @@ struct WeeklyMonthlyReportView: View {
 
     private var totalSets: Int {
         periodWorkouts.reduce(0) { total, workout in
-            total + workout.exercises.reduce(0) { $0 + $1.sets.filter { !$0.isWarmUp }.count }
+            total + workout.exercises.reduce(0) { $0 + $1.sets.filter { !$0.isWarmUp && !$0.isCardio }.count }
         }
     }
 
@@ -188,22 +188,7 @@ struct WeeklyMonthlyReportView: View {
     // MARK: - Consistency
 
     private var currentStreak: Int {
-        let calendar = Calendar.current
-        let workoutDays = Set(allWorkouts.map { calendar.startOfDay(for: $0.date) })
-        guard !workoutDays.isEmpty else { return 0 }
-
-        var streak = 0
-        var checkDate = calendar.startOfDay(for: .now)
-        if !workoutDays.contains(checkDate) {
-            guard let yesterday = calendar.date(byAdding: .day, value: -1, to: checkDate) else { return 0 }
-            checkDate = yesterday
-        }
-        while workoutDays.contains(checkDate) {
-            streak += 1
-            guard let prev = calendar.date(byAdding: .day, value: -1, to: checkDate) else { break }
-            checkDate = prev
-        }
-        return streak
+        Workout.currentStreak(from: allWorkouts)
     }
 
     private var workoutsPerWeekAverage: Double? {

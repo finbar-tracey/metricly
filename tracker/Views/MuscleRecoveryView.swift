@@ -6,6 +6,7 @@ struct MuscleRecoveryView: View {
            sort: \Workout.date, order: .reverse)
     private var workouts: [Workout]
     @Query private var settingsArray: [UserSettings]
+    @Environment(\.weightUnit) private var weightUnit
 
     @State private var lastNightSleep: Double = 0
     @State private var latestHRV: Double?
@@ -13,6 +14,7 @@ struct MuscleRecoveryView: View {
     @State private var todayRestingHR: Double?
     @State private var averageRestingHR: Double?
     @State private var healthDataLoaded = false
+    @State private var externalWorkouts: [ExternalWorkout] = []
 
     private var recoveryResult: RecoveryResult {
         RecoveryEngine.evaluate(
@@ -23,7 +25,8 @@ struct MuscleRecoveryView: View {
                 todayRestingHR: todayRestingHR,
                 averageRestingHR: averageRestingHR,
                 sleepMinutes: healthDataLoaded ? lastNightSleep : nil
-            )
+            ),
+            externalWorkouts: externalWorkouts
         )
     }
 
@@ -81,6 +84,43 @@ struct MuscleRecoveryView: View {
                 }
             }
 
+            if !externalWorkouts.isEmpty {
+                Section("External Activity") {
+                    ForEach(externalWorkouts.prefix(5)) { workout in
+                        HStack(spacing: 12) {
+                            Image(systemName: workout.icon)
+                                .font(.title3)
+                                .foregroundStyle(.tint)
+                                .frame(width: 28)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(workout.displayName)
+                                    .font(.subheadline.weight(.medium))
+                                HStack(spacing: 8) {
+                                    Text(workout.sourceName)
+                                        .font(.caption2)
+                                        .foregroundStyle(.secondary)
+                                    if workout.duration > 0 {
+                                        Text(formatDuration(workout.duration))
+                                            .font(.caption2)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                    if let distance = workout.totalDistance, distance > 0 {
+                                        Text(String(format: "%.1f %@", weightUnit.distanceUnit.display(distance / 1000), weightUnit.distanceUnit.label))
+                                            .font(.caption2)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                }
+                            }
+                            Spacer()
+                            Text(workout.startDate, style: .relative)
+                                .font(.caption2)
+                                .foregroundStyle(.tertiary)
+                        }
+                        .padding(.vertical, 2)
+                    }
+                }
+            }
+
             Section("By Muscle Group") {
                 ForEach(recoveryResult.muscleResults) { result in
                     muscleRow(result)
@@ -111,6 +151,7 @@ struct MuscleRecoveryView: View {
             async let sleepResult = hk.fetchSleep(for: .now)
             async let rhrResult = hk.fetchRestingHeartRate(for: .now)
             async let rhrHistoryResult = hk.fetchDailyRestingHeartRate(days: 7)
+            async let externalResult = hk.fetchExternalWorkouts(days: 7)
 
             latestHRV = try? await hrvResult
             let hrvHistory = (try? await hrvHistoryResult) ?? []
@@ -124,6 +165,7 @@ struct MuscleRecoveryView: View {
             if !rhrHistory.isEmpty {
                 averageRestingHR = rhrHistory.map(\.bpm).reduce(0, +) / Double(rhrHistory.count)
             }
+            externalWorkouts = (try? await externalResult) ?? []
             healthDataLoaded = true
         }
     }
@@ -188,6 +230,18 @@ struct MuscleRecoveryView: View {
                     .foregroundStyle(.secondary)
             }
         }
+    }
+
+    // MARK: - Helpers
+
+    private func formatDuration(_ seconds: TimeInterval) -> String {
+        let mins = Int(seconds) / 60
+        if mins >= 60 {
+            let h = mins / 60
+            let m = mins % 60
+            return "\(h)h \(m)m"
+        }
+        return "\(mins)m"
     }
 
     // MARK: - Muscle Row

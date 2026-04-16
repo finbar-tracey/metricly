@@ -1,4 +1,5 @@
 import SwiftUI
+import UserNotifications
 
 enum TimerMode: String, CaseIterable {
     case emom = "EMOM"
@@ -23,6 +24,7 @@ enum TimerMode: String, CaseIterable {
 }
 
 struct WorkoutTimerView: View {
+    @Environment(\.scenePhase) private var scenePhase
     @State private var selectedMode: TimerMode = .emom
     @State private var isRunning = false
 
@@ -46,6 +48,10 @@ struct WorkoutTimerView: View {
     @State private var isWorkPhase: Bool = true
     @State private var timer: Timer?
     @State private var roundsCompleted: Int = 0
+
+    // Date-based tracking for background survival
+    @State private var timerEndDate: Date?
+    @State private var phaseEndDate: Date?
 
     var body: some View {
         ScrollView {
@@ -72,6 +78,19 @@ struct WorkoutTimerView: View {
         .navigationTitle("Workout Timers")
         .onDisappear {
             stopTimer()
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            if newPhase == .active && isRunning {
+                guard let overallEnd = timerEndDate else { return }
+                if overallEnd.timeIntervalSinceNow <= 0 {
+                    finishTimer()
+                    return
+                }
+                recalculateTimerState()
+                if timer == nil {
+                    startDisplayTimer()
+                }
+            }
         }
     }
 
@@ -203,68 +222,134 @@ struct WorkoutTimerView: View {
         return String(format: "%d:%02d", m, s)
     }
 
+    // MARK: - Timer Control
+
     private func startTimer() {
+        let now = Date.now
         switch selectedMode {
         case .emom:
             totalTime = emomMinutes * 60
             timeRemaining = emomIntervalSeconds
             totalRounds = emomMinutes * 60 / emomIntervalSeconds
             currentRound = 1
+            timerEndDate = now.addingTimeInterval(TimeInterval(totalTime))
+            phaseEndDate = now.addingTimeInterval(TimeInterval(emomIntervalSeconds))
         case .amrap:
             totalTime = amrapMinutes * 60
             timeRemaining = totalTime
             roundsCompleted = 0
+            timerEndDate = now.addingTimeInterval(TimeInterval(totalTime))
+            phaseEndDate = timerEndDate
         case .tabata:
             totalRounds = tabataRounds
             currentRound = 1
             isWorkPhase = true
             timeRemaining = tabataWork
             totalTime = tabataRounds * (tabataWork + tabataRest)
+            timerEndDate = now.addingTimeInterval(TimeInterval(totalTime))
+            phaseEndDate = now.addingTimeInterval(TimeInterval(tabataWork))
         }
 
         isRunning = true
-        timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
+        scheduleTimerNotification(seconds: totalTime)
+        startDisplayTimer()
+    }
+
+    private func startDisplayTimer() {
+        timer?.invalidate()
+        timer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { _ in
             tick()
         }
     }
 
     private func tick() {
-        guard timeRemaining > 0 else { return }
-        timeRemaining -= 1
+        guard let phaseEnd = phaseEndDate, let overallEnd = timerEndDate else { return }
 
-        if timeRemaining <= 0 {
-            switch selectedMode {
-            case .emom:
+        let overallRemaining = overallEnd.timeIntervalSinceNow
+        if overallRemaining <= 0 {
+            finishTimer()
+            return
+        }
+
+        let phaseRemaining = Int(ceil(phaseEnd.timeIntervalSinceNow))
+
+        if phaseRemaining <= 0 {
+            advancePhase()
+        } else {
+            timeRemaining = phaseRemaining
+            if phaseRemaining <= 3 && phaseRemaining > 0 {
+                playCountdownBeep()
+            }
+        }
+    }
+
+    private func advancePhase() {
+        let now = Date.now
+        switch selectedMode {
+        case .emom:
+            if currentRound < totalRounds {
+                currentRound += 1
+                phaseEndDate = now.addingTimeInterval(TimeInterval(emomIntervalSeconds))
+                timeRemaining = emomIntervalSeconds
+                playBeep()
+            } else {
+                finishTimer()
+            }
+        case .amrap:
+            finishTimer()
+        case .tabata:
+            if isWorkPhase {
+                isWorkPhase = false
+                phaseEndDate = now.addingTimeInterval(TimeInterval(tabataRest))
+                timeRemaining = tabataRest
+                playBeep()
+            } else {
                 if currentRound < totalRounds {
                     currentRound += 1
-                    timeRemaining = emomIntervalSeconds
+                    isWorkPhase = true
+                    phaseEndDate = now.addingTimeInterval(TimeInterval(tabataWork))
+                    timeRemaining = tabataWork
                     playBeep()
                 } else {
                     finishTimer()
                 }
-            case .amrap:
-                finishTimer()
-            case .tabata:
-                if isWorkPhase {
-                    isWorkPhase = false
-                    timeRemaining = tabataRest
-                    playBeep()
-                } else {
-                    if currentRound < totalRounds {
-                        currentRound += 1
-                        isWorkPhase = true
-                        timeRemaining = tabataWork
-                        playBeep()
-                    } else {
-                        finishTimer()
-                    }
-                }
             }
         }
+    }
 
-        // Beep at 3, 2, 1
-        if timeRemaining <= 3 && timeRemaining > 0 {
-            playCountdownBeep()
+    private func recalculateTimerState() {
+        guard let overallEnd = timerEndDate else { return }
+        let overallRemaining = overallEnd.timeIntervalSinceNow
+        let elapsed = TimeInterval(totalTime) - overallRemaining
+
+        switch selectedMode {
+        case .amrap:
+            timeRemaining = max(0, Int(ceil(overallRemaining)))
+            phaseEndDate = overallEnd
+        case .emom:
+            let intervalSecs = TimeInterval(emomIntervalSeconds)
+            let completedRounds = Int(elapsed / intervalSecs)
+            currentRound = min(completedRounds + 1, totalRounds)
+            let phaseElapsed = elapsed - TimeInterval(completedRounds) * intervalSecs
+            let phaseLeft = intervalSecs - phaseElapsed
+            phaseEndDate = Date.now.addingTimeInterval(phaseLeft)
+            timeRemaining = max(0, Int(ceil(phaseLeft)))
+        case .tabata:
+            let cycleDuration = TimeInterval(tabataWork + tabataRest)
+            let completedCycles = Int(elapsed / cycleDuration)
+            let cycleElapsed = elapsed - TimeInterval(completedCycles) * cycleDuration
+            currentRound = min(completedCycles + 1, totalRounds)
+            if cycleElapsed < TimeInterval(tabataWork) {
+                isWorkPhase = true
+                let phaseLeft = TimeInterval(tabataWork) - cycleElapsed
+                phaseEndDate = Date.now.addingTimeInterval(phaseLeft)
+                timeRemaining = max(0, Int(ceil(phaseLeft)))
+            } else {
+                isWorkPhase = false
+                let phaseLeft = cycleDuration - cycleElapsed
+                phaseEndDate = Date.now.addingTimeInterval(phaseLeft)
+                timeRemaining = max(0, Int(ceil(phaseLeft)))
+            }
         }
     }
 
@@ -276,8 +361,37 @@ struct WorkoutTimerView: View {
     private func stopTimer() {
         timer?.invalidate()
         timer = nil
+        timerEndDate = nil
+        phaseEndDate = nil
         isRunning = false
+        cancelTimerNotification()
     }
+
+    // MARK: - Notifications
+
+    private static let workoutTimerNotificationID = "workoutTimerComplete"
+
+    private func scheduleTimerNotification(seconds: Int) {
+        let center = UNUserNotificationCenter.current()
+        center.requestAuthorization(options: [.alert, .sound]) { _, _ in }
+        center.removePendingNotificationRequests(withIdentifiers: [Self.workoutTimerNotificationID])
+
+        let content = UNMutableNotificationContent()
+        content.title = "\(selectedMode.rawValue) Complete"
+        content.body = "Your workout timer has finished!"
+        content.sound = .default
+
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: max(1, TimeInterval(seconds)), repeats: false)
+        let request = UNNotificationRequest(identifier: Self.workoutTimerNotificationID, content: content, trigger: trigger)
+        center.add(request)
+    }
+
+    private func cancelTimerNotification() {
+        UNUserNotificationCenter.current()
+            .removePendingNotificationRequests(withIdentifiers: [Self.workoutTimerNotificationID])
+    }
+
+    // MARK: - Haptics
 
     private func playBeep() {
         #if os(iOS)

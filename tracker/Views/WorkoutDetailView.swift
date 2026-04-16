@@ -5,6 +5,7 @@ import UIKit
 struct WorkoutDetailView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.weightUnit) private var weightUnit
+    @Environment(\.scenePhase) private var scenePhase
     @Query private var allExercises: [Exercise]
     let workout: Workout
     @State private var newExerciseName = ""
@@ -19,6 +20,8 @@ struct WorkoutDetailView: View {
     @State private var showingFinishSheet = false
     @State private var showingShare = false
     @State private var shareItems: [Any] = []
+    @State private var showDeleteConfirm = false
+    @Environment(\.dismiss) private var dismiss
 
     private var suggestions: [String] {
         let history = Set(allExercises.map(\.name))
@@ -339,6 +342,14 @@ struct WorkoutDetailView: View {
                     } label: {
                         Label("Share as Image", systemImage: "photo")
                     }
+
+                    Divider()
+
+                    Button(role: .destructive) {
+                        showDeleteConfirm = true
+                    } label: {
+                        Label("Delete Workout", systemImage: "trash")
+                    }
                 } label: {
                     Image(systemName: "ellipsis.circle")
                 }
@@ -379,6 +390,14 @@ struct WorkoutDetailView: View {
                 Text("Are you sure you want to delete \"\(exercise.name)\" and all its sets?")
             }
         }
+        .confirmationDialog("Delete Workout?", isPresented: $showDeleteConfirm, titleVisibility: .visible) {
+            Button("Delete \"\(workout.name)\"", role: .destructive) {
+                modelContext.delete(workout)
+                dismiss()
+            }
+        } message: {
+            Text("This will permanently delete this workout and all its data. This cannot be undone.")
+        }
         .sheet(item: $linkingSupersetFor) { sourceExercise in
             supersetPickerSheet(for: sourceExercise)
         }
@@ -389,6 +408,14 @@ struct WorkoutDetailView: View {
         }
         .onDisappear {
             stopDurationTimer()
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            if newPhase == .active && !workout.isFinished && !workout.isTemplate {
+                updateElapsedTime()
+                if durationTimer == nil {
+                    startDurationTimer()
+                }
+            }
         }
     }
 
@@ -412,7 +439,10 @@ struct WorkoutDetailView: View {
         let workingSets = sets.filter { !$0.isWarmUp }
         let warmUpCount = sets.filter(\.isWarmUp).count
         var parts = workingSets.map { s in
-            "\(s.reps)x\(weightUnit.formatShort(s.weight))"
+            if s.isCardio {
+                return [s.formattedDistance(unit: weightUnit.distanceUnit), s.formattedDuration].compactMap { $0 }.joined(separator: " in ")
+            }
+            return "\(s.reps)x\(weightUnit.formatShort(s.weight))"
         }
         if warmUpCount > 0 {
             parts.append("+\(warmUpCount)W")
@@ -502,7 +532,12 @@ struct WorkoutDetailView: View {
                 lines.append("  Warm-up: \(warmUpStr)")
             }
             for (i, s) in workingSets.enumerated() {
-                lines.append("  Set \(i + 1): \(s.reps) reps × \(weightUnit.format(s.weight))")
+                if s.isCardio {
+                    let detail = [s.formattedDistance(unit: weightUnit.distanceUnit), s.formattedDuration].compactMap { $0 }.joined(separator: " in ")
+                    lines.append("  Entry \(i + 1): \(detail)")
+                } else {
+                    lines.append("  Set \(i + 1): \(s.reps) reps × \(weightUnit.format(s.weight))")
+                }
             }
             lines.append("")
         }

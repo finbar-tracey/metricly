@@ -17,11 +17,11 @@ enum MuscleGroup: String, Codable, CaseIterable, Identifiable {
     var icon: String {
         switch self {
         case .chest: return "figure.strengthtraining.traditional"
-        case .back: return "figure.rowing"
-        case .shoulders: return "figure.arms.open"
-        case .biceps: return "figure.strengthtraining.functional"
-        case .triceps: return "figure.strengthtraining.functional"
-        case .legs: return "figure.walk"
+        case .back: return "figure.rower"
+        case .shoulders: return "figure.boxing"
+        case .biceps: return "figure.curling"
+        case .triceps: return "figure.highintensity.intervaltraining"
+        case .legs: return "figure.step.training"
         case .core: return "figure.core.training"
         case .cardio: return "figure.run"
         case .other: return "dumbbell"

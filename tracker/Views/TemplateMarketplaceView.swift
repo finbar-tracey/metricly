@@ -34,9 +34,12 @@ struct TemplateWorkout {
 
 struct TemplateMarketplaceView: View {
     @Environment(\.modelContext) private var modelContext
+    @Query(filter: #Predicate<Workout> { $0.isTemplate }, sort: \Workout.name)
+    private var existingTemplates: [Workout]
     @State private var selectedTemplate: ProgramTemplate?
     @State private var showingImportConfirm = false
     @State private var importedSuccessfully = false
+    @State private var alreadyImported = false
     @State private var selectedCategory = "All"
 
     private let categories = ["All", "Strength", "Hypertrophy", "Full Body", "Sport"]
@@ -91,6 +94,11 @@ struct TemplateMarketplaceView: View {
             Button("OK") {}
         } message: {
             Text("Templates have been added. You can find them when creating a new workout.")
+        }
+        .alert("Already Imported", isPresented: $alreadyImported) {
+            Button("OK") {}
+        } message: {
+            Text("All templates from this program have already been imported.")
         }
     }
 
@@ -164,7 +172,13 @@ struct TemplateMarketplaceView: View {
     }
 
     private func importTemplate(_ template: ProgramTemplate) {
-        for workout in template.workouts {
+        let existingNames = Set(existingTemplates.map(\.name))
+        let newWorkouts = template.workouts.filter { !existingNames.contains($0.name) }
+        if newWorkouts.isEmpty {
+            alreadyImported = true
+            return
+        }
+        for workout in newWorkouts {
             let w = Workout(name: workout.name, isTemplate: true)
             modelContext.insert(w)
             for (index, ex) in workout.exercises.enumerated() {

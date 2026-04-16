@@ -7,6 +7,7 @@ import AudioToolbox
 struct ExerciseDetailView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.weightUnit) private var weightUnit
+    @Environment(\.scenePhase) private var scenePhase
     @Query private var allExercises: [Exercise]
     @Query private var settingsArray: [UserSettings]
     @Query private var liftGoals: [LiftGoal]
@@ -39,6 +40,12 @@ struct ExerciseDetailView: View {
     @State private var timer: Timer?
     @State private var autoStartRest = false
     @State private var showRestPrompt = false
+    @State private var timerEndDate: Date?
+
+    // Cardio input
+    @State private var newDistance: Double = 5.0
+    @State private var newDurationMinutes: Int = 30
+    @State private var newDurationSeconds: Int = 0
 
     var body: some View {
         List {
@@ -207,7 +214,7 @@ struct ExerciseDetailView: View {
             Button("Cancel", role: .cancel) {}
         }
         .sheet(item: $editingSet) { exerciseSet in
-            EditSetSheet(exerciseSet: exerciseSet, reps: editReps, weight: editWeight)
+            EditSetSheet(exerciseSet: exerciseSet, reps: editReps, weight: editWeight, distanceUnit: weightUnit.distanceUnit)
         }
         .safeAreaInset(edge: .bottom) {
             VStack(spacing: 0) {
@@ -230,14 +237,46 @@ struct ExerciseDetailView: View {
             }
             if !hasPreFilled, let lastSession = previousSession,
                let firstSet = lastSession.sets.first {
-                newReps = firstSet.reps
-                newWeight = weightUnit.display(firstSet.weight)
+                if firstSet.isCardio {
+                    if let km = firstSet.distance {
+                        newDistance = weightUnit.distanceUnit.display(km)
+                    }
+                    if let secs = firstSet.durationSeconds {
+                        newDurationMinutes = secs / 60
+                        newDurationSeconds = secs % 60
+                    }
+                } else {
+                    newReps = firstSet.reps
+                    newWeight = weightUnit.display(firstSet.weight)
+                }
                 hasPreFilled = true
             }
         }
         .onDisappear {
+            isWeightFieldFocused = false
             stopTimer()
             cancelRestNotification()
+        }
+        .scrollDismissesKeyboard(.interactively)
+        .onChange(of: scenePhase) { _, newPhase in
+            if newPhase == .active, let endDate = timerEndDate {
+                let remaining = Int(ceil(endDate.timeIntervalSinceNow))
+                if remaining <= 0 {
+                    timer?.invalidate()
+                    timer = nil
+                    timerEndDate = nil
+                    restRemaining = 0
+                    timerActive = false
+                    UINotificationFeedbackGenerator().notificationOccurred(.success)
+                    AudioServicesPlayAlertSound(SystemSoundID(1005))
+                    cancelRestNotification()
+                } else {
+                    restRemaining = remaining
+                    if timer == nil {
+                        startDisplayTimer()
+                    }
+                }
+            }
         }
     }
 
@@ -263,9 +302,15 @@ struct ExerciseDetailView: View {
                     Text("Set \(index + 1)")
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(isLogged ? .secondary : .primary)
-                    Text("\(prevSet.reps) reps × \(weightUnit.format(prevSet.weight))")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                    if prevSet.isCardio {
+                        Text([prevSet.formattedDistance(unit: weightUnit.distanceUnit), prevSet.formattedDuration].compactMap { $0 }.joined(separator: " in "))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    } else {
+                        Text("\(prevSet.reps) reps × \(weightUnit.format(prevSet.weight))")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
                 }
                 Spacer()
                 if isLogged {
@@ -288,9 +333,15 @@ struct ExerciseDetailView: View {
     }
 
     private func isPR(_ exerciseSet: ExerciseSet) -> Bool {
-        !exerciseSet.isWarmUp
-        && historicalBestWeight > 0
-        && exerciseSet.weight > historicalBestWeight
+        guard !exerciseSet.isWarmUp,
+              historicalBestWeight > 0,
+              exerciseSet.weight > historicalBestWeight else { return false }
+        // Only the first set in this session that exceeds the historical best is a PR
+        for s in exercise.sets {
+            if s.persistentModelID == exerciseSet.persistentModelID { return true }
+            if !s.isWarmUp && s.weight > historicalBestWeight { return false }
+        }
+        return false
     }
 
     @ViewBuilder
@@ -338,24 +389,46 @@ struct ExerciseDetailView: View {
 
             Spacer()
 
-            // Reps × Weight + RPE
-            HStack(spacing: 4) {
-                Text("\(exerciseSet.reps)")
-                    .font(.system(size: 20, weight: .bold, design: .rounded))
-                    .foregroundStyle(exerciseSet.isWarmUp ? .secondary : .primary)
-                Text("×")
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
-                Text(weightUnit.format(exerciseSet.weight))
-                    .font(.system(size: 15, weight: .semibold, design: .rounded))
-                    .foregroundStyle(.secondary)
-                if let rpe = exerciseSet.rpe {
-                    Text("@\(rpe)")
-                        .font(.system(size: 11, weight: .bold, design: .rounded))
-                        .foregroundStyle(.purple)
-                        .padding(.horizontal, 5)
-                        .padding(.vertical, 2)
-                        .background(.purple.opacity(0.12), in: .capsule)
+            // Set data display
+            if exerciseSet.isCardio {
+                VStack(alignment: .trailing, spacing: 2) {
+                    if let dist = exerciseSet.formattedDistance(unit: weightUnit.distanceUnit) {
+                        Text(dist)
+                            .font(.system(size: 17, weight: .bold, design: .rounded))
+                    }
+                    if let dur = exerciseSet.formattedDuration {
+                        Text(dur)
+                            .font(.system(size: 13, weight: .semibold, design: .rounded))
+                            .foregroundStyle(.secondary)
+                    }
+                    if let rpe = exerciseSet.rpe {
+                        Text("@\(rpe)")
+                            .font(.system(size: 11, weight: .bold, design: .rounded))
+                            .foregroundStyle(.purple)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 2)
+                            .background(.purple.opacity(0.12), in: .capsule)
+                    }
+                }
+            } else {
+                HStack(spacing: 4) {
+                    Text("\(exerciseSet.reps)")
+                        .font(.system(size: 20, weight: .bold, design: .rounded))
+                        .foregroundStyle(exerciseSet.isWarmUp ? .secondary : .primary)
+                    Text("×")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                    Text(weightUnit.format(exerciseSet.weight))
+                        .font(.system(size: 15, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.secondary)
+                    if let rpe = exerciseSet.rpe {
+                        Text("@\(rpe)")
+                            .font(.system(size: 11, weight: .bold, design: .rounded))
+                            .foregroundStyle(.purple)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 2)
+                            .background(.purple.opacity(0.12), in: .capsule)
+                    }
                 }
             }
         }
@@ -407,160 +480,21 @@ struct ExerciseDetailView: View {
         weightUnit == .kg ? 2.5 : 5.0
     }
 
+    private var isCardioExercise: Bool {
+        exercise.category == .cardio
+    }
+
     private var newSetSection: some View {
         Section {
-            // Rest timer config
-            HStack {
-                Label {
-                    Text("Rest")
-                        .font(.subheadline)
-                } icon: {
-                    Image(systemName: "timer")
-                        .foregroundStyle(Color.accentColor)
-                }
-                Spacer()
-                Stepper("\(restDuration)s", value: $restDuration, in: 15...300, step: 15)
-                    .fixedSize()
-                if exercise.customRestDuration != restDuration {
-                    Button {
-                        exercise.customRestDuration = restDuration
-                        HapticsManager.lightTap()
-                    } label: {
-                        Text("Save")
-                            .font(.caption.bold())
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(Color.accentColor, in: .capsule)
-                            .foregroundStyle(.white)
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Save rest duration for this exercise")
-                }
+            if isCardioExercise {
+                cardioInputFields
+            } else {
+                strengthInputFields
             }
 
-            // Reps row
-            HStack {
-                Label {
-                    Text("Reps")
-                        .font(.subheadline)
-                } icon: {
-                    Image(systemName: "repeat")
-                        .foregroundStyle(Color.accentColor)
-                }
-                Spacer()
-                Stepper {
-                    Text("\(newReps)")
-                        .font(.system(.body, design: .rounded, weight: .bold))
-                        .monospacedDigit()
-                } onIncrement: {
-                    newReps = min(100, newReps + 1)
-                } onDecrement: {
-                    newReps = max(1, newReps - 1)
-                }
-                .fixedSize()
-            }
-
-            // Weight row
-            HStack {
-                Label {
-                    Text("Weight")
-                        .font(.subheadline)
-                } icon: {
-                    Image(systemName: "scalemass.fill")
-                        .foregroundStyle(Color.accentColor)
-                }
-                Spacer()
-                Button {
-                    newWeight = max(0, newWeight - weightIncrement)
-                } label: {
-                    Image(systemName: "minus.circle.fill")
-                        .font(.title2)
-                        .foregroundStyle(.secondary)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Decrease weight by \(weightUnit.formatShort(weightIncrement))")
-                Text(weightUnit.format(newWeight))
-                    .font(.system(.body, design: .rounded, weight: .bold))
-                    .monospacedDigit()
-                    .frame(minWidth: 80)
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        isWeightFieldFocused = true
-                    }
-                    .accessibilityLabel("Weight: \(weightUnit.format(newWeight))")
-                    .accessibilityHint("Double tap to type a custom weight")
-                    .overlay {
-                        TextField("", value: $newWeight, format: .number)
-                            .keyboardType(.decimalPad)
-                            .multilineTextAlignment(.center)
-                            .focused($isWeightFieldFocused)
-                            .opacity(isWeightFieldFocused ? 1 : 0)
-                            .frame(width: 80)
-                            .onChange(of: newWeight) {
-                                if newWeight < 0 { newWeight = 0 }
-                            }
-                    }
-                Button {
-                    newWeight += weightIncrement
-                } label: {
-                    Image(systemName: "plus.circle.fill")
-                        .font(.title2)
-                        .foregroundStyle(Color.accentColor)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Increase weight by \(weightUnit.formatShort(weightIncrement))")
-            }
-
-            // Warm-up toggle
-            Toggle(isOn: $newIsWarmUp) {
-                Label {
-                    Text("Warm-up Set")
-                        .font(.subheadline)
-                } icon: {
-                    Image(systemName: "flame.fill")
-                        .foregroundStyle(.orange)
-                }
-            }
-
-            // RPE picker
-            if !newIsWarmUp {
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack {
-                        Label {
-                            Text("RPE")
-                                .font(.subheadline)
-                        } icon: {
-                            Image(systemName: "gauge.with.needle")
-                                .foregroundStyle(.purple)
-                        }
-                        Spacer()
-                        if newRPE != nil {
-                            Button("Clear") {
-                                newRPE = nil
-                            }
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        }
-                    }
-                    HStack(spacing: 6) {
-                        ForEach(1...10, id: \.self) { value in
-                            Button {
-                                newRPE = value
-                            } label: {
-                                Text("\(value)")
-                                    .font(.system(size: 13, weight: .semibold, design: .rounded))
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.vertical, 8)
-                                    .background(newRPE == value ? Color.accentColor : Color(.tertiarySystemFill), in: RoundedRectangle(cornerRadius: 8))
-                                    .foregroundStyle(newRPE == value ? .white : .primary)
-                            }
-                            .buttonStyle(.plain)
-                        }
-                    }
-                    Text("Rate of Perceived Exertion (optional)")
-                        .font(.caption2)
-                        .foregroundStyle(.tertiary)
-                }
+            // RPE picker (shared)
+            if !newIsWarmUp || isCardioExercise {
+                rpePicker
             }
 
             // Add button
@@ -569,7 +503,7 @@ struct ExerciseDetailView: View {
             } label: {
                 HStack {
                     Spacer()
-                    Label(newIsWarmUp ? "Add Warm-up" : "Add Set", systemImage: "plus.circle.fill")
+                    Label(isCardioExercise ? "Add Entry" : (newIsWarmUp ? "Add Warm-up" : "Add Set"), systemImage: "plus.circle.fill")
                         .font(.headline)
                     Spacer()
                 }
@@ -581,6 +515,223 @@ struct ExerciseDetailView: View {
                     .foregroundStyle(Color.accentColor)
                 Text("New Set")
             }
+        }
+    }
+
+    @ViewBuilder
+    private var cardioInputFields: some View {
+        // Distance
+        HStack {
+            Label {
+                Text("Distance")
+                    .font(.subheadline)
+            } icon: {
+                Image(systemName: "point.bottomleft.forward.to.point.topright.scurvepath")
+                    .foregroundStyle(Color.accentColor)
+            }
+            Spacer()
+            Button {
+                newDistance = max(0.1, newDistance - weightUnit.distanceUnit.stepSize)
+            } label: {
+                Image(systemName: "minus.circle.fill")
+                    .font(.title2)
+                    .foregroundStyle(.secondary)
+            }
+            .buttonStyle(.plain)
+            Text(String(format: "%.1f %@", newDistance, weightUnit.distanceUnit.label))
+                .font(.system(.body, design: .rounded, weight: .bold))
+                .monospacedDigit()
+                .frame(minWidth: 80)
+            Button {
+                newDistance += weightUnit.distanceUnit.stepSize
+            } label: {
+                Image(systemName: "plus.circle.fill")
+                    .font(.title2)
+                    .foregroundStyle(Color.accentColor)
+            }
+            .buttonStyle(.plain)
+        }
+
+        // Duration
+        HStack {
+            Label {
+                Text("Duration")
+                    .font(.subheadline)
+            } icon: {
+                Image(systemName: "stopwatch")
+                    .foregroundStyle(Color.accentColor)
+            }
+            Spacer()
+            Picker("Min", selection: $newDurationMinutes) {
+                ForEach(0..<181) { m in
+                    Text("\(m)m").tag(m)
+                }
+            }
+            .pickerStyle(.menu)
+            .fixedSize()
+            Picker("Sec", selection: $newDurationSeconds) {
+                ForEach(Array(stride(from: 0, to: 60, by: 5)), id: \.self) { s in
+                    Text("\(s)s").tag(s)
+                }
+            }
+            .pickerStyle(.menu)
+            .fixedSize()
+        }
+    }
+
+    @ViewBuilder
+    private var strengthInputFields: some View {
+        // Rest timer config
+        HStack {
+            Label {
+                Text("Rest")
+                    .font(.subheadline)
+            } icon: {
+                Image(systemName: "timer")
+                    .foregroundStyle(Color.accentColor)
+            }
+            Spacer()
+            Stepper("\(restDuration)s", value: $restDuration, in: 15...300, step: 15)
+                .fixedSize()
+            if exercise.customRestDuration != restDuration {
+                Button {
+                    exercise.customRestDuration = restDuration
+                    HapticsManager.lightTap()
+                } label: {
+                    Text("Save")
+                        .font(.caption.bold())
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Color.accentColor, in: .capsule)
+                        .foregroundStyle(.white)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Save rest duration for this exercise")
+            }
+        }
+
+        // Reps row
+        HStack {
+            Label {
+                Text("Reps")
+                    .font(.subheadline)
+            } icon: {
+                Image(systemName: "repeat")
+                    .foregroundStyle(Color.accentColor)
+            }
+            Spacer()
+            Stepper {
+                Text("\(newReps)")
+                    .font(.system(.body, design: .rounded, weight: .bold))
+                    .monospacedDigit()
+            } onIncrement: {
+                newReps = min(100, newReps + 1)
+            } onDecrement: {
+                newReps = max(1, newReps - 1)
+            }
+            .fixedSize()
+        }
+
+        // Weight row
+        HStack {
+            Label {
+                Text("Weight")
+                    .font(.subheadline)
+            } icon: {
+                Image(systemName: "scalemass.fill")
+                    .foregroundStyle(Color.accentColor)
+            }
+            Spacer()
+            Button {
+                newWeight = max(0, newWeight - weightIncrement)
+            } label: {
+                Image(systemName: "minus.circle.fill")
+                    .font(.title2)
+                    .foregroundStyle(.secondary)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Decrease weight by \(weightUnit.formatShort(weightIncrement))")
+            Text(weightUnit.format(newWeight))
+                .font(.system(.body, design: .rounded, weight: .bold))
+                .monospacedDigit()
+                .frame(minWidth: 80)
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    isWeightFieldFocused = true
+                }
+                .accessibilityLabel("Weight: \(weightUnit.format(newWeight))")
+                .accessibilityHint("Double tap to type a custom weight")
+                .overlay {
+                    TextField("", value: $newWeight, format: .number)
+                        .keyboardType(.decimalPad)
+                        .multilineTextAlignment(.center)
+                        .focused($isWeightFieldFocused)
+                        .opacity(isWeightFieldFocused ? 1 : 0)
+                        .frame(width: 80)
+                        .onChange(of: newWeight) {
+                            if newWeight < 0 { newWeight = 0 }
+                        }
+                }
+            Button {
+                newWeight += weightIncrement
+            } label: {
+                Image(systemName: "plus.circle.fill")
+                    .font(.title2)
+                    .foregroundStyle(Color.accentColor)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Increase weight by \(weightUnit.formatShort(weightIncrement))")
+        }
+
+        // Warm-up toggle
+        Toggle(isOn: $newIsWarmUp) {
+            Label {
+                Text("Warm-up Set")
+                    .font(.subheadline)
+            } icon: {
+                Image(systemName: "flame.fill")
+                    .foregroundStyle(.orange)
+            }
+        }
+    }
+
+    private var rpePicker: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Label {
+                    Text("RPE")
+                        .font(.subheadline)
+                } icon: {
+                    Image(systemName: "gauge.with.needle")
+                        .foregroundStyle(.purple)
+                }
+                Spacer()
+                if newRPE != nil {
+                    Button("Clear") {
+                        newRPE = nil
+                    }
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                }
+            }
+            HStack(spacing: 6) {
+                ForEach(1...10, id: \.self) { value in
+                    Button {
+                        newRPE = value
+                    } label: {
+                        Text("\(value)")
+                            .font(.system(size: 13, weight: .semibold, design: .rounded))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 8)
+                            .background(newRPE == value ? Color.accentColor : Color(.tertiarySystemFill), in: RoundedRectangle(cornerRadius: 8))
+                            .foregroundStyle(newRPE == value ? .white : .primary)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            Text("Rate of Perceived Exertion (optional)")
+                .font(.caption2)
+                .foregroundStyle(.tertiary)
         }
     }
 
@@ -781,19 +932,31 @@ struct ExerciseDetailView: View {
         timer?.invalidate()
         timer = nil
 
+        let endDate = Date.now.addingTimeInterval(TimeInterval(restDuration))
+        timerEndDate = endDate
         restRemaining = restDuration
         timerActive = true
         showRestPrompt = false
 
         scheduleRestNotification(seconds: restDuration)
 
-        timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { t in
-            if restRemaining > 1 {
-                restRemaining -= 1
+        startDisplayTimer()
+    }
+
+    private func startDisplayTimer() {
+        timer?.invalidate()
+        timer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { t in
+            guard let endDate = timerEndDate else {
+                t.invalidate()
+                return
+            }
+            let remaining = Int(ceil(endDate.timeIntervalSinceNow))
+            if remaining > 0 {
+                restRemaining = remaining
             } else {
-                // Timer complete — invalidate immediately to prevent re-entry
                 t.invalidate()
                 timer = nil
+                timerEndDate = nil
                 restRemaining = 0
                 timerActive = false
                 UINotificationFeedbackGenerator().notificationOccurred(.success)
@@ -806,15 +969,20 @@ struct ExerciseDetailView: View {
     private func stopTimer() {
         timer?.invalidate()
         timer = nil
+        timerEndDate = nil
         timerActive = false
         showRestPrompt = false
         cancelRestNotification()
     }
 
     private func adjustRest(_ amount: Int) {
-        restRemaining = max(0, restRemaining + amount)
+        if let endDate = timerEndDate {
+            timerEndDate = endDate.addingTimeInterval(TimeInterval(amount))
+            restRemaining = max(0, Int(ceil(timerEndDate!.timeIntervalSinceNow)))
+        } else {
+            restRemaining = max(0, restRemaining + amount)
+        }
         restDuration = max(15, restDuration + amount)
-        // Reschedule notification with updated time
         if timerActive {
             scheduleRestNotification(seconds: restRemaining)
         }
@@ -857,7 +1025,9 @@ struct ExerciseDetailView: View {
     }
 
     private func checkForPR(weight: Double, isWarmUp: Bool) {
-        if !isWarmUp && historicalBestWeight > 0 && weight > historicalBestWeight {
+        // Only celebrate if this is the first set in the session to exceed the historical best
+        let alreadyBeaten = exercise.sets.dropLast().contains { !$0.isWarmUp && $0.weight > historicalBestWeight }
+        if !isWarmUp && historicalBestWeight > 0 && weight > historicalBestWeight && !alreadyBeaten {
             withAnimation(.spring(duration: 0.5, bounce: 0.3)) {
                 showPRBanner = true
                 prScale = 1.15
@@ -891,23 +1061,40 @@ struct ExerciseDetailView: View {
     }
 
     private func addSet() {
-        let weightInKg = weightUnit.toKg(newWeight)
-        let exerciseSet = ExerciseSet(
-            reps: newReps,
-            weight: weightInKg,
-            isWarmUp: newIsWarmUp,
-            rpe: newIsWarmUp ? nil : newRPE,
-            exercise: exercise
-        )
-        withAnimation(.spring(duration: 0.3)) {
-            modelContext.insert(exerciseSet)
-            exercise.sets.append(exerciseSet)
-        }
-        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-        checkForPR(weight: weightInKg, isWarmUp: newIsWarmUp)
-        showUndoSnackbar(for: exerciseSet)
-        if !newIsWarmUp {
-            triggerRestTimer()
+        if isCardioExercise {
+            let totalSeconds = newDurationMinutes * 60 + newDurationSeconds
+            let distanceKm = weightUnit.distanceUnit.toKm(newDistance)
+            let exerciseSet = ExerciseSet(
+                rpe: newRPE,
+                distance: distanceKm,
+                durationSeconds: totalSeconds > 0 ? totalSeconds : nil,
+                exercise: exercise
+            )
+            withAnimation(.spring(duration: 0.3)) {
+                modelContext.insert(exerciseSet)
+                exercise.sets.append(exerciseSet)
+            }
+            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+            showUndoSnackbar(for: exerciseSet)
+        } else {
+            let weightInKg = weightUnit.toKg(newWeight)
+            let exerciseSet = ExerciseSet(
+                reps: newReps,
+                weight: weightInKg,
+                isWarmUp: newIsWarmUp,
+                rpe: newIsWarmUp ? nil : newRPE,
+                exercise: exercise
+            )
+            withAnimation(.spring(duration: 0.3)) {
+                modelContext.insert(exerciseSet)
+                exercise.sets.append(exerciseSet)
+            }
+            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+            checkForPR(weight: weightInKg, isWarmUp: newIsWarmUp)
+            showUndoSnackbar(for: exerciseSet)
+            if !newIsWarmUp {
+                triggerRestTimer()
+            }
         }
     }
 
@@ -915,6 +1102,8 @@ struct ExerciseDetailView: View {
         let newSet = ExerciseSet(
             reps: source.reps,
             weight: source.weight,
+            distance: source.distance,
+            durationSeconds: source.durationSeconds,
             exercise: exercise
         )
         withAnimation(.spring(duration: 0.3)) {
@@ -922,15 +1111,19 @@ struct ExerciseDetailView: View {
             exercise.sets.append(newSet)
         }
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-        checkForPR(weight: source.weight, isWarmUp: false)
+        if !source.isCardio {
+            checkForPR(weight: source.weight, isWarmUp: false)
+            triggerRestTimer()
+        }
         showUndoSnackbar(for: newSet)
-        triggerRestTimer()
     }
 
     private func duplicateSet(_ source: ExerciseSet) {
         let newSet = ExerciseSet(
             reps: source.reps,
             weight: source.weight,
+            distance: source.distance,
+            durationSeconds: source.durationSeconds,
             exercise: exercise
         )
         withAnimation(.spring(duration: 0.3)) {
@@ -939,7 +1132,9 @@ struct ExerciseDetailView: View {
         }
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
         showUndoSnackbar(for: newSet)
-        triggerRestTimer()
+        if !source.isCardio {
+            triggerRestTimer()
+        }
     }
 
     private func deleteSets(at offsets: IndexSet) {

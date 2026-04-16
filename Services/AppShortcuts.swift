@@ -15,7 +15,12 @@ struct StartWorkoutIntent: AppIntent {
     @MainActor
     func perform() async throws -> some IntentResult & ProvidesDialog {
         let name = workoutName ?? defaultName()
-        return .result(dialog: "Starting \"\(name)\". Open Metricly to add exercises.")
+        let container = try ModelContainer(for: Workout.self, UserSettings.self, BodyWeightEntry.self, TrainingProgram.self)
+        let context = container.mainContext
+        let workout = Workout(name: name, date: .now)
+        context.insert(workout)
+        try context.save()
+        return .result(dialog: "Started \"\(name)\". Open Metricly to add exercises.")
     }
 
     private func defaultName() -> String {
@@ -47,19 +52,7 @@ struct GetWorkoutStatsIntent: AppIntent {
         let weekStart = calendar.dateInterval(of: .weekOfYear, for: .now)?.start ?? .now
         let thisWeek = workouts.filter { $0.date >= weekStart }.count
 
-        // Streak
-        let workoutDays = Set(workouts.map { calendar.startOfDay(for: $0.date) })
-        var streak = 0
-        var checkDate = calendar.startOfDay(for: .now)
-        if !workoutDays.contains(checkDate),
-           let yesterday = calendar.date(byAdding: .day, value: -1, to: checkDate) {
-            checkDate = yesterday
-        }
-        while workoutDays.contains(checkDate) {
-            streak += 1
-            guard let prev = calendar.date(byAdding: .day, value: -1, to: checkDate) else { break }
-            checkDate = prev
-        }
+        let streak = Workout.currentStreak(from: workouts)
 
         return .result(dialog: "You've done \(total) total workouts, \(thisWeek) this week, with a \(streak)-day streak.")
     }

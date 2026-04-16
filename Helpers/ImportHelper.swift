@@ -120,7 +120,9 @@ struct ImportHelper {
                     else { continue }
 
                     let rpe: Int? = if let rpeStr = row[safe: 10], let val = Int(rpeStr), (1...10).contains(val) { val } else { nil }
-                    let set = ExerciseSet(reps: reps, weight: weight, rpe: rpe, exercise: exercise)
+                    let dist: Double? = if let distStr = row[safe: 11], let val = Double(distStr), val > 0 { val } else { nil }
+                    let durSecs: Int? = if let durStr = row[safe: 12], let val = Int(durStr), val > 0 { val } else { nil }
+                    let set = ExerciseSet(reps: reps, weight: weight, rpe: rpe, distance: dist, durationSeconds: durSecs, exercise: exercise)
                     context.insert(set)
                     exercise.sets.append(set)
                 }

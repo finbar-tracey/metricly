@@ -2,12 +2,17 @@ import SwiftUI
 import SwiftData
 
 struct SmartSuggestionsView: View {
+    @Environment(\.modelContext) private var modelContext
     @Query(filter: #Predicate<Workout> { !$0.isTemplate && $0.endTime != nil },
            sort: \Workout.date, order: .reverse)
     private var workouts: [Workout]
+    @Query private var settingsArray: [UserSettings]
+
+    @State private var externalWorkouts: [ExternalWorkout] = []
+    @State private var createdWorkout: Workout?
 
     private var recoveryResult: RecoveryResult {
-        RecoveryEngine.evaluate(workouts: workouts)
+        RecoveryEngine.evaluate(workouts: workouts, externalWorkouts: externalWorkouts)
     }
 
     private var muscleReadiness: [(MuscleGroup, Double)] {
@@ -99,6 +104,17 @@ struct SmartSuggestionsView: View {
                         }
                         .padding(.vertical, 2)
                     }
+
+                    Button {
+                        createWorkoutFromSuggestions()
+                    } label: {
+                        Label("Create Workout", systemImage: "plus.circle.fill")
+                            .font(.subheadline.bold())
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 8)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
                 }
             }
 
@@ -112,6 +128,14 @@ struct SmartSuggestionsView: View {
             }
         }
         .navigationTitle("Smart Suggestions")
+        .navigationDestination(item: $createdWorkout) { workout in
+            WorkoutDetailView(workout: workout)
+        }
+        .task {
+            guard settingsArray.first?.healthKitEnabled == true else { return }
+            let hk = HealthKitManager.shared
+            externalWorkouts = (try? await hk.fetchExternalWorkouts(days: 7)) ?? []
+        }
     }
 
     private func infoRow(icon: String, text: String) -> some View {
@@ -139,6 +163,18 @@ struct SmartSuggestionsView: View {
             return "Last trained \(days) days ago"
         }
         return "Not recently trained"
+    }
+
+    private func createWorkoutFromSuggestions() {
+        let workout = Workout(name: suggestedWorkoutType, date: .now)
+        modelContext.insert(workout)
+        for (index, suggestion) in suggestedExercises.enumerated() {
+            let exercise = Exercise(name: suggestion.name, workout: workout, category: suggestion.group)
+            exercise.order = index
+            modelContext.insert(exercise)
+            workout.exercises.append(exercise)
+        }
+        createdWorkout = workout
     }
 
     private func exercisesForGroup(_ group: MuscleGroup) -> [String] {

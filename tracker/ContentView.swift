@@ -37,6 +37,7 @@ struct ContentView: View {
         case plateCalculator = "Plate Calculator"
         case oneRepMax = "1RM Calculator"
         case workoutTimers = "Workout Timers"
+        case caffeineTracker = "Caffeine Tracker"
         case bodyFat = "Body Fat %"
         case health = "Health"
         case settings = "Settings"
@@ -58,6 +59,7 @@ struct ContentView: View {
             case .plateCalculator: return "circle.grid.cross"
             case .oneRepMax: return "function"
             case .workoutTimers: return "timer"
+            case .caffeineTracker: return "cup.and.saucer.fill"
             case .bodyFat: return "percent"
             case .health: return "heart.text.square"
             case .settings: return "gearshape"
@@ -66,12 +68,7 @@ struct ContentView: View {
     }
 
     private var settings: UserSettings {
-        if let existing = settingsArray.first {
-            return existing
-        }
-        let new = UserSettings()
-        modelContext.insert(new)
-        return new
+        settingsArray.first ?? UserSettings()
     }
 
     private var weightUnit: WeightUnit {
@@ -194,6 +191,8 @@ struct ContentView: View {
                         .tag(SidebarItem.oneRepMax)
                     Label("Workout Timers", systemImage: "timer")
                         .tag(SidebarItem.workoutTimers)
+                    Label("Caffeine Tracker", systemImage: "cup.and.saucer.fill")
+                        .tag(SidebarItem.caffeineTracker)
                 }
                 Section {
                     Label("Settings", systemImage: "gearshape")
@@ -239,6 +238,8 @@ struct ContentView: View {
                     OneRepMaxView()
                 case .workoutTimers:
                     WorkoutTimerView()
+                case .caffeineTracker:
+                    CaffeineTrackerView()
                 case .bodyFat:
                     BodyFatEstimateView()
                 case .health:
@@ -491,6 +492,13 @@ struct ContentView: View {
                     hubRow(icon: "timer", color: .red, title: "Workout Timers", subtitle: "EMOM, AMRAP, and Tabata")
                 }
             }
+            Section("Tracking") {
+                NavigationLink {
+                    CaffeineTrackerView()
+                } label: {
+                    hubRow(icon: "cup.and.saucer.fill", color: .brown, title: "Caffeine Tracker", subtitle: "Half-life decay & sleep readiness")
+                }
+            }
         }
         .navigationTitle("Tools")
     }
@@ -516,28 +524,8 @@ struct ContentView: View {
         .padding(.vertical, 2)
     }
 
-    // MARK: - Streak Helpers
-
     private var currentStreak: Int {
-        let calendar = Calendar.current
-        let workoutDays = Set(workouts.map { calendar.startOfDay(for: $0.date) })
-        guard !workoutDays.isEmpty else { return 0 }
-
-        var streak = 0
-        var checkDate = calendar.startOfDay(for: .now)
-
-        // If no workout today, start checking from yesterday
-        if !workoutDays.contains(checkDate) {
-            guard let yesterday = calendar.date(byAdding: .day, value: -1, to: checkDate) else { return 0 }
-            checkDate = yesterday
-        }
-
-        while workoutDays.contains(checkDate) {
-            streak += 1
-            guard let prev = calendar.date(byAdding: .day, value: -1, to: checkDate) else { break }
-            checkDate = prev
-        }
-        return streak
+        Workout.currentStreak(from: workouts)
     }
 
     // MARK: - Actions

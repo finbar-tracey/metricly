@@ -26,8 +26,10 @@ final class HealthKitManager {
             HKObjectType.quantityType(forIdentifier: .restingHeartRate)!,
             HKObjectType.quantityType(forIdentifier: .heartRateVariabilitySDNN)!,
             HKObjectType.quantityType(forIdentifier: .activeEnergyBurned)!,
+            HKObjectType.quantityType(forIdentifier: .distanceWalkingRunning)!,
             HKObjectType.quantityType(forIdentifier: .vo2Max)!,
-            HKObjectType.categoryType(forIdentifier: .sleepAnalysis)!
+            HKObjectType.categoryType(forIdentifier: .sleepAnalysis)!,
+            HKObjectType.workoutType()
         ]
 
         try await store.requestAuthorization(toShare: typesToShare, read: typesToRead)
@@ -64,6 +66,82 @@ final class HealthKitManager {
         collection.enumerateStatistics(from: start, to: end) { statistics, _ in
             let steps = statistics.sumQuantity()?.doubleValue(for: .count()) ?? 0
             results.append((statistics.startDate, steps))
+        }
+        return results
+    }
+
+    func fetchHourlySteps(for date: Date) async throws -> [(hour: Int, steps: Double)] {
+        let type = HKQuantityType(.stepCount)
+        let calendar = Calendar.current
+        let start = calendar.startOfDay(for: date)
+        let end = calendar.date(byAdding: .day, value: 1, to: start)!
+        let predicate = HKQuery.predicateForSamples(withStart: start, end: end)
+        let descriptor = HKStatisticsCollectionQueryDescriptor(
+            predicate: .quantitySample(type: type, predicate: predicate),
+            options: .cumulativeSum,
+            anchorDate: start,
+            intervalComponents: DateComponents(hour: 1)
+        )
+        let collection = try await descriptor.result(for: store)
+        var results: [(hour: Int, steps: Double)] = []
+        collection.enumerateStatistics(from: start, to: end) { stats, _ in
+            let hour = calendar.component(.hour, from: stats.startDate)
+            let steps = stats.sumQuantity()?.doubleValue(for: .count()) ?? 0
+            results.append((hour, steps))
+        }
+        return results
+    }
+
+    func fetchDistance(for date: Date) async throws -> Double {
+        let type = HKQuantityType(.distanceWalkingRunning)
+        let interval = Calendar.current.dateInterval(of: .day, for: date)!
+        let predicate = HKQuery.predicateForSamples(withStart: interval.start, end: interval.end)
+        let descriptor = HKStatisticsQueryDescriptor(
+            predicate: .quantitySample(type: type, predicate: predicate),
+            options: .cumulativeSum
+        )
+        let result = try await descriptor.result(for: store)
+        return result?.sumQuantity()?.doubleValue(for: .meterUnit(with: .kilo)) ?? 0
+    }
+
+    func fetchDailyDistance(days: Int) async throws -> [(date: Date, km: Double)] {
+        let type = HKQuantityType(.distanceWalkingRunning)
+        let calendar = Calendar.current
+        let start = calendar.startOfDay(for: calendar.date(byAdding: .day, value: -days, to: .now)!)
+        let end = calendar.startOfDay(for: calendar.date(byAdding: .day, value: 1, to: .now)!)
+        let predicate = HKQuery.predicateForSamples(withStart: start, end: end)
+        let descriptor = HKStatisticsCollectionQueryDescriptor(
+            predicate: .quantitySample(type: type, predicate: predicate),
+            options: .cumulativeSum,
+            anchorDate: start,
+            intervalComponents: DateComponents(day: 1)
+        )
+        let collection = try await descriptor.result(for: store)
+        var results: [(date: Date, km: Double)] = []
+        collection.enumerateStatistics(from: start, to: end) { stats, _ in
+            let km = stats.sumQuantity()?.doubleValue(for: .meterUnit(with: .kilo)) ?? 0
+            results.append((stats.startDate, km))
+        }
+        return results
+    }
+
+    func fetchDailyActiveEnergy(days: Int) async throws -> [(date: Date, kcal: Double)] {
+        let type = HKQuantityType(.activeEnergyBurned)
+        let calendar = Calendar.current
+        let start = calendar.startOfDay(for: calendar.date(byAdding: .day, value: -days, to: .now)!)
+        let end = calendar.startOfDay(for: calendar.date(byAdding: .day, value: 1, to: .now)!)
+        let predicate = HKQuery.predicateForSamples(withStart: start, end: end)
+        let descriptor = HKStatisticsCollectionQueryDescriptor(
+            predicate: .quantitySample(type: type, predicate: predicate),
+            options: .cumulativeSum,
+            anchorDate: start,
+            intervalComponents: DateComponents(day: 1)
+        )
+        let collection = try await descriptor.result(for: store)
+        var results: [(date: Date, kcal: Double)] = []
+        collection.enumerateStatistics(from: start, to: end) { stats, _ in
+            let kcal = stats.sumQuantity()?.doubleValue(for: .kilocalorie()) ?? 0
+            results.append((stats.startDate, kcal))
         }
         return results
     }
@@ -123,6 +201,28 @@ final class HealthKitManager {
             }
         }
         return results
+    }
+
+    func fetchDailyHeartRateRange(days: Int) async throws -> [(date: Date, min: Double, max: Double)] {
+        let type = HKQuantityType(.heartRate)
+        let calendar = Calendar.current
+        let bpmUnit = HKUnit.count().unitDivided(by: .minute())
+        var results: [(date: Date, min: Double, max: Double)] = []
+        for offset in 0..<days {
+            guard let date = calendar.date(byAdding: .day, value: -offset, to: calendar.startOfDay(for: .now)) else { continue }
+            let interval = calendar.dateInterval(of: .day, for: date)!
+            let predicate = HKQuery.predicateForSamples(withStart: interval.start, end: interval.end)
+            let descriptor = HKStatisticsQueryDescriptor(
+                predicate: .quantitySample(type: type, predicate: predicate),
+                options: [.discreteMin, .discreteMax]
+            )
+            if let result = try await descriptor.result(for: store),
+               let minVal = result.minimumQuantity()?.doubleValue(for: bpmUnit),
+               let maxVal = result.maximumQuantity()?.doubleValue(for: bpmUnit) {
+                results.append((date, minVal, maxVal))
+            }
+        }
+        return results.reversed()
     }
 
     // MARK: - HRV
@@ -246,6 +346,25 @@ final class HealthKitManager {
         return results.reversed()
     }
 
+    func fetchDailySleepDetailed(days: Int) async throws -> [DailySleepDetail] {
+        var results: [DailySleepDetail] = []
+        let calendar = Calendar.current
+        for offset in 0..<days {
+            guard let date = calendar.date(byAdding: .day, value: -offset, to: calendar.startOfDay(for: .now)) else { continue }
+            let sleep = try await fetchSleep(for: date)
+            if sleep.totalMinutes > 0 {
+                results.append(DailySleepDetail(
+                    date: date,
+                    totalMinutes: sleep.totalMinutes,
+                    inBed: sleep.inBed,
+                    wakeUp: sleep.wakeUp,
+                    stages: sleep.stages
+                ))
+            }
+        }
+        return results.reversed()
+    }
+
     // MARK: - Active Energy
 
     func fetchActiveEnergy(for date: Date) async throws -> Double {
@@ -300,6 +419,43 @@ final class HealthKitManager {
         let sample = HKQuantitySample(type: quantityType, quantity: quantity, start: date, end: date)
         try await store.save(sample)
     }
+
+    // MARK: - External Workouts
+
+    func fetchExternalWorkouts(days: Int) async throws -> [ExternalWorkout] {
+        guard isAvailable else { return [] }
+
+        let calendar = Calendar.current
+        let start = calendar.startOfDay(for: calendar.date(byAdding: .day, value: -days, to: .now)!)
+        let predicate = HKQuery.predicateForSamples(withStart: start, end: .now)
+
+        let descriptor = HKSampleQueryDescriptor(
+            predicates: [.workout(predicate)],
+            sortDescriptors: [SortDescriptor(\.endDate, order: .reverse)]
+        )
+
+        let samples = try await descriptor.result(for: store)
+
+        return samples.map { workout in
+            let calories = workout.statistics(for: HKQuantityType(.activeEnergyBurned))?
+                .sumQuantity()?.doubleValue(for: .kilocalorie())
+            let distance = workout.statistics(for: HKQuantityType(.distanceWalkingRunning))?
+                .sumQuantity()?.doubleValue(for: .meter())
+                ?? workout.statistics(for: HKQuantityType(.distanceCycling))?
+                .sumQuantity()?.doubleValue(for: .meter())
+
+            return ExternalWorkout(
+                id: workout.uuid,
+                workoutType: workout.workoutActivityType,
+                startDate: workout.startDate,
+                endDate: workout.endDate,
+                duration: workout.duration,
+                totalCalories: calories,
+                totalDistance: distance,
+                sourceName: workout.sourceRevision.source.name
+            )
+        }
+    }
 }
 
 // MARK: - Sleep Stage Type
@@ -331,4 +487,12 @@ struct SleepStage: Identifiable {
     var durationMinutes: Double {
         end.timeIntervalSince(start) / 60
     }
+}
+
+struct DailySleepDetail {
+    let date: Date
+    let totalMinutes: Double
+    let inBed: Date?
+    let wakeUp: Date?
+    let stages: [SleepStage]
 }

@@ -4,6 +4,26 @@ import UserNotifications
 struct ReminderManager {
     private static let categoryID = "workoutReminder"
 
+    /// Register the notification category with action buttons.
+    static func registerCategory() {
+        let startAction = UNNotificationAction(
+            identifier: "startWorkout",
+            title: "Start Workout",
+            options: .foreground
+        )
+        let category = UNNotificationCategory(
+            identifier: categoryID,
+            actions: [startAction],
+            intentIdentifiers: []
+        )
+        UNUserNotificationCenter.current().setNotificationCategories([category])
+    }
+
+    /// Check current notification authorization status.
+    static func checkAuthorizationStatus() async -> UNAuthorizationStatus {
+        await UNUserNotificationCenter.current().notificationSettings().authorizationStatus
+    }
+
     static func scheduleReminders(days: [Int], hour: Int, minute: Int) {
         let center = UNUserNotificationCenter.current()
 
@@ -14,8 +34,13 @@ struct ReminderManager {
 
         guard !days.isEmpty else { return }
 
-        center.requestAuthorization(options: [.alert, .sound, .badge]) { granted, _ in
+        center.requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
+            if let error {
+                print("Notification authorization error: \(error.localizedDescription)")
+            }
             guard granted else { return }
+
+            registerCategory()
 
             let messages = [
                 "Time to hit the gym! Your muscles are waiting.",
@@ -50,7 +75,11 @@ struct ReminderManager {
                     trigger: trigger
                 )
 
-                center.add(request)
+                center.add(request) { error in
+                    if let error {
+                        print("Failed to schedule reminder for day \(day): \(error.localizedDescription)")
+                    }
+                }
             }
         }
     }

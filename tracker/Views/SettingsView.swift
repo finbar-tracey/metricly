@@ -1,6 +1,8 @@
 import SwiftUI
 import SwiftData
 import UniformTypeIdentifiers
+import UserNotifications
+import StoreKit
 
 struct SettingsView: View {
     @Environment(\.modelContext) private var modelContext
@@ -18,14 +20,11 @@ struct SettingsView: View {
     @State private var showImportError = false
     @State private var importErrorMessage = ""
     @State private var templateToDelete: Workout?
+    @State private var notificationStatus: UNAuthorizationStatus?
+    @Environment(\.requestReview) private var requestReview
 
     private var settings: UserSettings {
-        if let existing = settingsArray.first {
-            return existing
-        }
-        let new = UserSettings()
-        modelContext.insert(new)
-        return new
+        settingsArray.first ?? UserSettings()
     }
 
     var body: some View {
@@ -200,6 +199,27 @@ struct SettingsView: View {
                         updateReminders()
                     }
                 ), displayedComponents: .hourAndMinute)
+                if notificationStatus == .denied {
+                    HStack(spacing: 10) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundStyle(.yellow)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Notifications Disabled")
+                                .font(.subheadline.weight(.semibold))
+                            Text("Enable in Settings to receive reminders.")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Button("Open Settings") {
+                            if let url = URL(string: UIApplication.openSettingsURLString) {
+                                UIApplication.shared.open(url)
+                            }
+                        }
+                        .font(.caption.bold())
+                    }
+                    .padding(.vertical, 4)
+                }
             } header: {
                 Text("Workout Reminders")
             } footer: {
@@ -299,6 +319,64 @@ struct SettingsView: View {
             } header: {
                 Text("Data")
             }
+
+            Section {
+                Button {
+                    sendFeedbackEmail()
+                } label: {
+                    HStack(spacing: 12) {
+                        settingsIcon("envelope.fill", color: .blue)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Send Feedback")
+                                .font(.subheadline.weight(.semibold))
+                            Text("Report bugs or suggest features")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+                Button {
+                    requestReview()
+                } label: {
+                    HStack(spacing: 12) {
+                        settingsIcon("star.fill", color: .yellow)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Rate on App Store")
+                                .font(.subheadline.weight(.semibold))
+                            Text("Help us with a quick review")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+                // TODO: Replace with your actual GitHub issues URL
+                Link(destination: URL(string: "https://github.com/metricly/issues")!) {
+                    HStack(spacing: 12) {
+                        settingsIcon("ladybug.fill", color: .green)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Report an Issue")
+                                .font(.subheadline.weight(.semibold))
+                            Text("Open a GitHub issue")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Image(systemName: "arrow.up.right")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            } header: {
+                Text("Feedback")
+            } footer: {
+                Text("We read every piece of feedback. Thank you for helping improve Metricly!")
+            }
+        }
+        .task {
+            notificationStatus = await ReminderManager.checkAuthorizationStatus()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
+            Task { notificationStatus = await ReminderManager.checkAuthorizationStatus() }
         }
         .navigationTitle("Settings")
         .navigationDestination(for: Workout.self) { template in
@@ -400,6 +478,15 @@ struct SettingsView: View {
             showingExport = true
         } catch {
             showExportError = true
+        }
+    }
+
+    private func sendFeedbackEmail() {
+        // TODO: Replace with your actual feedback email
+        let subject = "Metricly Feedback"
+        let urlString = "mailto:feedback@metricly.app?subject=\(subject.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? subject)"
+        if let url = URL(string: urlString) {
+            UIApplication.shared.open(url)
         }
     }
 

@@ -19,6 +19,7 @@ struct HomeDashboardView: View {
     @State private var activeCalories: Double = 0
     @State private var averageRestingHR: Double?
     @State private var healthDataLoaded = false
+    @State private var externalWorkouts: [ExternalWorkout] = []
 
     // MARK: - Animation State
     @State private var animateRings = false
@@ -30,12 +31,7 @@ struct HomeDashboardView: View {
     // MARK: - Computed Helpers
 
     private var settings: UserSettings {
-        if let existing = settingsArray.first {
-            return existing
-        }
-        let new = UserSettings()
-        modelContext.insert(new)
-        return new
+        settingsArray.first ?? UserSettings()
     }
 
     private var healthKitEnabled: Bool {
@@ -49,22 +45,7 @@ struct HomeDashboardView: View {
     }
 
     private var currentStreak: Int {
-        let calendar = Calendar.current
-        let workoutDays = Set(allWorkouts.map { calendar.startOfDay(for: $0.date) })
-        guard !workoutDays.isEmpty else { return 0 }
-
-        var streak = 0
-        var checkDate = calendar.startOfDay(for: .now)
-        if !workoutDays.contains(checkDate) {
-            guard let yesterday = calendar.date(byAdding: .day, value: -1, to: checkDate) else { return 0 }
-            checkDate = yesterday
-        }
-        while workoutDays.contains(checkDate) {
-            streak += 1
-            guard let prev = calendar.date(byAdding: .day, value: -1, to: checkDate) else { break }
-            checkDate = prev
-        }
-        return streak
+        Workout.currentStreak(from: allWorkouts)
     }
 
     // MARK: - Greeting
@@ -94,7 +75,8 @@ struct HomeDashboardView: View {
                 todayRestingHR: restingHR,
                 averageRestingHR: averageRestingHR,
                 sleepMinutes: healthDataLoaded ? sleepMinutes : nil
-            )
+            ),
+            externalWorkouts: externalWorkouts
         )
     }
 
@@ -598,7 +580,13 @@ struct HomeDashboardView: View {
                 VStack(spacing: 0) {
                     ForEach(Array(allWorkouts.prefix(5).enumerated()), id: \.element.id) { index, workout in
                         NavigationLink(value: workout) {
-                            WorkoutCardView(workout: workout)
+                            HStack {
+                                WorkoutCardView(workout: workout)
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .font(.caption2.weight(.semibold))
+                                    .foregroundStyle(.tertiary)
+                            }
                         }
                         .buttonStyle(.plain)
 
@@ -704,6 +692,7 @@ struct HomeDashboardView: View {
         async let hrvResult = hk.fetchHRV(for: today)
         async let hrvHistoryResult = hk.fetchDailyHRV(days: 7)
         async let rhrHistoryResult = hk.fetchDailyRestingHeartRate(days: 7)
+        async let externalResult = hk.fetchExternalWorkouts(days: 7)
 
         todaySteps = (try? await stepsResult) ?? 0
         restingHR = try? await hrResult
@@ -719,6 +708,7 @@ struct HomeDashboardView: View {
             averageRestingHR = rhrHistory.map(\.bpm).reduce(0, +) / Double(rhrHistory.count)
         }
 
+        externalWorkouts = (try? await externalResult) ?? []
         healthDataLoaded = true
     }
 

@@ -43,4 +43,27 @@ final class Workout {
     var isFinished: Bool {
         endTime != nil
     }
+
+    /// Calculate the current consecutive-day workout streak.
+    static func currentStreak(from workouts: [Workout]) -> Int {
+        let calendar = Calendar.current
+        let workoutDays = Set(workouts.map { calendar.startOfDay(for: $0.date) })
+        guard !workoutDays.isEmpty else { return 0 }
+
+        var streak = 0
+        var checkDate = calendar.startOfDay(for: .now)
+
+        // If no workout today, start checking from yesterday
+        if !workoutDays.contains(checkDate) {
+            guard let yesterday = calendar.date(byAdding: .day, value: -1, to: checkDate) else { return 0 }
+            checkDate = yesterday
+        }
+
+        while workoutDays.contains(checkDate) {
+            streak += 1
+            guard let prev = calendar.date(byAdding: .day, value: -1, to: checkDate) else { break }
+            checkDate = prev
+        }
+        return streak
+    }
 }
