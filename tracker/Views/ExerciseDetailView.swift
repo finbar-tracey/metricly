@@ -39,8 +39,10 @@ struct ExerciseDetailView: View {
     @State private var timerActive = false
     @State private var timer: Timer?
     @State private var autoStartRest = false
-    @State private var showRestPrompt = false
     @State private var timerEndDate: Date?
+
+    // Toolbar sheets
+    @State private var showRestTimer = false
 
     // Cardio input
     @State private var newDistance: Double = 5.0
@@ -158,7 +160,19 @@ struct ExerciseDetailView: View {
                     isWeightFieldFocused = false
                 }
             }
-            ToolbarItem(placement: .topBarTrailing) {
+            ToolbarItemGroup(placement: .topBarTrailing) {
+                Button {
+                    showRestTimer = true
+                } label: {
+                    Image(systemName: "stopwatch")
+                }
+                .accessibilityLabel("Rest Timer")
+
+                NavigationLink(value: PlateCalcDestination()) {
+                    Image(systemName: "circle.grid.2x2")
+                }
+                .accessibilityLabel("Plate Calculator")
+
                 Menu {
                     NavigationLink(value: exercise.name) {
                         Label("History", systemImage: "chart.bar")
@@ -216,6 +230,19 @@ struct ExerciseDetailView: View {
         .sheet(item: $editingSet) { exerciseSet in
             EditSetSheet(exerciseSet: exerciseSet, reps: editReps, weight: editWeight, distanceUnit: weightUnit.distanceUnit)
         }
+        .sheet(isPresented: $showRestTimer) {
+            NavigationStack {
+                WorkoutTimerView()
+                    .toolbar {
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("Done") { showRestTimer = false }
+                        }
+                    }
+            }
+        }
+        .navigationDestination(for: PlateCalcDestination.self) { _ in
+            PlateCalculatorView()
+        }
         .safeAreaInset(edge: .bottom) {
             VStack(spacing: 0) {
                 if showUndo {
@@ -223,8 +250,6 @@ struct ExerciseDetailView: View {
                 }
                 if timerActive {
                     timerBar
-                } else if showRestPrompt {
-                    restPromptBar
                 }
             }
         }
@@ -254,10 +279,11 @@ struct ExerciseDetailView: View {
         }
         .onDisappear {
             isWeightFieldFocused = false
+            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
             stopTimer()
             cancelRestNotification()
         }
-        .scrollDismissesKeyboard(.interactively)
+        .scrollDismissesKeyboard(.immediately)
         .onChange(of: scenePhase) { _, newPhase in
             if newPhase == .active, let endDate = timerEndDate {
                 let remaining = Int(ceil(endDate.timeIntervalSinceNow))
@@ -791,39 +817,6 @@ struct ExerciseDetailView: View {
         .background(.regularMaterial)
     }
 
-    private var restPromptBar: some View {
-        HStack {
-            Button {
-                startTimer()
-            } label: {
-                HStack {
-                    Image(systemName: "timer")
-                    Text("Start Rest (\(restDuration)s)")
-                }
-                .font(.subheadline.bold())
-                .padding(.horizontal, 16)
-                .padding(.vertical, 10)
-                .background(Color.accentColor, in: .capsule)
-                .foregroundStyle(.white)
-            }
-            .accessibilityLabel("Start \(restDuration) second rest timer")
-            Spacer()
-            Button {
-                showRestPrompt = false
-            } label: {
-                Text("Dismiss")
-                    .font(.caption.bold())
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(.ultraThinMaterial, in: .capsule)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Dismiss rest prompt")
-        }
-        .padding()
-        .background(.regularMaterial)
-    }
-
     private var undoBar: some View {
         HStack {
             Image(systemName: "arrow.uturn.backward.circle.fill")
@@ -936,7 +929,6 @@ struct ExerciseDetailView: View {
         timerEndDate = endDate
         restRemaining = restDuration
         timerActive = true
-        showRestPrompt = false
 
         scheduleRestNotification(seconds: restDuration)
 
@@ -971,7 +963,6 @@ struct ExerciseDetailView: View {
         timer = nil
         timerEndDate = nil
         timerActive = false
-        showRestPrompt = false
         cancelRestNotification()
     }
 
@@ -1019,8 +1010,6 @@ struct ExerciseDetailView: View {
     private func triggerRestTimer() {
         if autoStartRest {
             startTimer()
-        } else {
-            showRestPrompt = true
         }
     }
 
@@ -1128,7 +1117,11 @@ struct ExerciseDetailView: View {
         )
         withAnimation(.spring(duration: 0.3)) {
             modelContext.insert(newSet)
-            exercise.sets.append(newSet)
+            if let sourceIndex = exercise.sets.firstIndex(where: { $0.persistentModelID == source.persistentModelID }) {
+                exercise.sets.insert(newSet, at: exercise.sets.index(after: sourceIndex))
+            } else {
+                exercise.sets.append(newSet)
+            }
         }
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
         showUndoSnackbar(for: newSet)
@@ -1148,3 +1141,5 @@ struct ExerciseDetailView: View {
 struct SubstitutionsDestination: Hashable {
     let exerciseName: String
 }
+struct PlateCalcDestination: Hashable {}
+

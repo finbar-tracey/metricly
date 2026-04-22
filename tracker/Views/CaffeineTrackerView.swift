@@ -9,6 +9,9 @@ struct CaffeineTrackerView: View {
     @State private var selectedSource = "Coffee"
     @State private var customMg = ""
     @State private var entryToDelete: CaffeineEntry?
+    @State private var editingEntry: CaffeineEntry?
+    @State private var editMg: String = ""
+    @State private var editSource: String = ""
     @FocusState private var isMgFocused: Bool
 
     // MARK: - Computed
@@ -115,12 +118,38 @@ struct CaffeineTrackerView: View {
         } message: {
             Text("Remove this caffeine entry?")
         }
+        .alert("Edit Entry", isPresented: Binding(
+            get: { editingEntry != nil },
+            set: { if !$0 { editingEntry = nil } }
+        )) {
+            TextField("mg", text: $editMg)
+                .keyboardType(.decimalPad)
+            Button("Save") {
+                if let entry = editingEntry, let mg = Double(editMg), mg > 0 {
+                    entry.milligrams = mg
+                    entry.source = editSource
+                }
+                editingEntry = nil
+            }
+            Button("Delete", role: .destructive) {
+                if let entry = editingEntry {
+                    modelContext.delete(entry)
+                }
+                editingEntry = nil
+            }
+            Button("Cancel", role: .cancel) { editingEntry = nil }
+        } message: {
+            if let entry = editingEntry {
+                Text("Edit \(entry.source) — \(Int(entry.milligrams)) mg")
+            }
+        }
     }
 
     // MARK: - Current Status
 
     private func currentStatusView(remaining: Double, readiness: (label: String, color: Color, icon: String)) -> some View {
-        VStack(spacing: 16) {
+        let now = Date.now
+        return VStack(spacing: 16) {
             ZStack {
                 Circle()
                     .stroke(.quaternary, lineWidth: 8)
@@ -150,34 +179,92 @@ struct CaffeineTrackerView: View {
             .padding(.horizontal, 14)
             .padding(.vertical, 6)
             .background(readiness.color.opacity(0.1), in: Capsule())
+
+            if let clearTime = caffeineClearTime(from: now), remaining >= 25 {
+                HStack(spacing: 6) {
+                    Image(systemName: "moon.zzz.fill")
+                        .font(.caption)
+                        .foregroundStyle(.green)
+                    Text("Sleep-ready by ")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    + Text(clearTime, format: .dateTime.hour().minute())
+                        .font(.caption.bold())
+                        .foregroundStyle(.green)
+                }
+            }
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 8)
     }
 
+    // MARK: - Caffeine Clear Time
+
+    private func caffeineClearTime(from now: Date) -> Date? {
+        let remaining = totalRemainingMg(at: now)
+        guard remaining >= 25 else { return nil }
+        var lo: TimeInterval = 0
+        var hi: TimeInterval = 24 * 3600
+        for _ in 0..<30 {
+            let mid = (lo + hi) / 2
+            if totalRemainingMg(at: now.addingTimeInterval(mid)) > 25 {
+                lo = mid
+            } else {
+                hi = mid
+            }
+        }
+        return now.addingTimeInterval(hi)
+    }
+
     // MARK: - Decay Chart
 
     private func decayChartView(from now: Date) -> some View {
-        Chart(decayCurveData(from: now)) { point in
-            LineMark(
-                x: .value("Time", point.date),
-                y: .value("Caffeine", point.mg)
-            )
-            .interpolationMethod(.catmullRom)
-            .foregroundStyle(Color.brown)
+        let data = decayCurveData(from: now)
+        let clearTime = caffeineClearTime(from: now)
+        return Chart {
+            ForEach(data) { point in
+                LineMark(
+                    x: .value("Time", point.date),
+                    y: .value("Caffeine", point.mg)
+                )
+                .interpolationMethod(.catmullRom)
+                .foregroundStyle(Color.brown)
 
-            AreaMark(
-                x: .value("Time", point.date),
-                y: .value("Caffeine", point.mg)
-            )
-            .interpolationMethod(.catmullRom)
-            .foregroundStyle(Color.brown.opacity(0.15).gradient)
+                AreaMark(
+                    x: .value("Time", point.date),
+                    y: .value("Caffeine", point.mg)
+                )
+                .interpolationMethod(.catmullRom)
+                .foregroundStyle(Color.brown.opacity(0.15).gradient)
+            }
+
+            // Sleep-ready threshold line
+            RuleMark(y: .value("Sleep Ready", 25))
+                .lineStyle(StrokeStyle(lineWidth: 1, dash: [5, 3]))
+                .foregroundStyle(.green.opacity(0.6))
+                .annotation(position: .leading, alignment: .leading) {
+                    Text("Sleep")
+                        .font(.caption2)
+                        .foregroundStyle(.green)
+                }
+
+            // Clear-by time annotation
+            if let clearTime {
+                RuleMark(x: .value("Clear", clearTime))
+                    .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 3]))
+                    .foregroundStyle(.green.opacity(0.5))
+                    .annotation(position: .top, alignment: .center) {
+                        Text(clearTime, format: .dateTime.hour().minute())
+                            .font(.caption2.bold())
+                            .foregroundStyle(.green)
+                    }
+            }
         }
         .chartYAxisLabel("mg")
         .chartXAxis {
-            AxisMarks(values: .stride(by: .hour, count: 3)) { _ in
+            AxisMarks(values: .stride(by: .hour, count: 2)) { _ in
                 AxisGridLine()
-                AxisValueLabel(format: .dateTime.hour())
+                AxisValueLabel(format: .dateTime.hour().minute())
             }
         }
     }
@@ -262,34 +349,41 @@ struct CaffeineTrackerView: View {
     // MARK: - Intake Row
 
     private func intakeRow(_ entry: CaffeineEntry) -> some View {
-        HStack {
-            let preset = CaffeineEntry.presets.first { $0.name == entry.source }
-            Image(systemName: preset?.icon ?? "pill.fill")
-                .foregroundStyle(.brown)
-                .frame(width: 24)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(entry.source)
-                    .font(.subheadline.weight(.semibold))
-                Text(entry.date, format: .dateTime.weekday(.abbreviated).month(.abbreviated).day().hour().minute())
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            Spacer()
-            VStack(alignment: .trailing, spacing: 2) {
-                Text("\(Int(entry.milligrams)) mg")
-                    .font(.subheadline.bold().monospacedDigit())
-                let remaining = entry.remainingCaffeine()
-                if remaining > 0.5 {
-                    Text("\(Int(remaining)) mg left")
+        Button {
+            editMg = "\(Int(entry.milligrams))"
+            editSource = entry.source
+            editingEntry = entry
+        } label: {
+            HStack {
+                let preset = CaffeineEntry.presets.first { $0.name == entry.source }
+                Image(systemName: preset?.icon ?? "pill.fill")
+                    .foregroundStyle(.brown)
+                    .frame(width: 24)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(entry.source)
+                        .font(.subheadline.weight(.semibold))
+                    Text(entry.date, format: .dateTime.weekday(.abbreviated).month(.abbreviated).day().hour().minute())
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                } else {
-                    Text("Fully metabolized")
-                        .font(.caption)
-                        .foregroundStyle(.green)
+                }
+                Spacer()
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text("\(Int(entry.milligrams)) mg")
+                        .font(.subheadline.bold().monospacedDigit())
+                    let remaining = entry.remainingCaffeine()
+                    if remaining > 0.5 {
+                        Text("\(Int(remaining)) mg left")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    } else {
+                        Text("Fully metabolized")
+                            .font(.caption)
+                            .foregroundStyle(.green)
+                    }
                 }
             }
         }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Actions

@@ -9,6 +9,20 @@ struct ExerciseLibraryView: View {
     private var allExercises: [ExerciseInfo] {
         var seen: [String: ExerciseInfo] = [:]
 
+        // Seed with built-in exercise guide database
+        for guide in ExerciseGuide.database {
+            let key = guide.name.lowercased()
+            seen[key] = ExerciseInfo(
+                name: guide.name,
+                category: guide.category,
+                bestWeight: 0,
+                totalSets: 0,
+                sessionCount: 0,
+                lastUsed: .distantPast
+            )
+        }
+
+        // Overlay with actual workout data
         for workout in workouts {
             for exercise in workout.exercises {
                 let key = exercise.name.lowercased()
@@ -58,13 +72,7 @@ struct ExerciseLibraryView: View {
 
     var body: some View {
         List {
-            if allExercises.isEmpty {
-                ContentUnavailableView {
-                    Label("No Exercises", systemImage: "dumbbell")
-                } description: {
-                    Text("Exercises will appear here once you log your first workout.")
-                }
-            } else if filteredExercises.isEmpty {
+            if filteredExercises.isEmpty {
                 ContentUnavailableView.search(text: searchText)
             } else {
                 ForEach(groupedExercises, id: \.0) { group, exercises in
@@ -100,22 +108,30 @@ struct ExerciseLibraryView: View {
                             .foregroundStyle(.tint)
                     }
                 }
-                HStack(spacing: 8) {
-                    Text("\(exercise.sessionCount) sessions")
-                    Text("·")
-                    Text("\(exercise.totalSets) sets")
-                    if exercise.bestWeight > 0 {
+                if exercise.sessionCount > 0 {
+                    HStack(spacing: 8) {
+                        Text("\(exercise.sessionCount) sessions")
                         Text("·")
-                        Text("Best: \(weightUnit.formatShort(exercise.bestWeight))")
+                        Text("\(exercise.totalSets) sets")
+                        if exercise.bestWeight > 0 {
+                            Text("·")
+                            Text("Best: \(weightUnit.formatShort(exercise.bestWeight))")
+                        }
                     }
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                } else {
+                    Text("No history yet")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
                 }
-                .font(.caption)
-                .foregroundStyle(.secondary)
             }
             Spacer()
-            Text(exercise.lastUsed, format: .dateTime.month(.abbreviated).day())
-                .font(.caption2)
-                .foregroundStyle(.tertiary)
+            if exercise.sessionCount > 0 {
+                Text(exercise.lastUsed, format: .dateTime.month(.abbreviated).day())
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+            }
         }
         .padding(.vertical, 2)
         .accessibilityElement(children: .combine)

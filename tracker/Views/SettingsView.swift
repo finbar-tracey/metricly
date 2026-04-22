@@ -56,10 +56,17 @@ struct SettingsView: View {
                         set: { settings.autoStartRestTimer = $0 }
                     ))
                 }
+                HStack(spacing: 12) {
+                    settingsIcon("moon.circle.fill", color: .indigo)
+                    Toggle("Focus Mode Reminder", isOn: Binding(
+                        get: { settings.focusModeReminder },
+                        set: { settings.focusModeReminder = $0 }
+                    ))
+                }
             } header: {
                 Text("General")
             } footer: {
-                Text("When off, a \"Start Rest\" button appears after each set instead of starting automatically.")
+                Text("When Focus reminder is on, you'll be prompted to enable your Fitness Focus when starting a workout, and reminded to disable it when finishing.")
             }
 
             Section {

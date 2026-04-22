@@ -18,7 +18,7 @@ struct ContentView: View {
     @State private var selectedTab: AppTab = .home
 
     enum AppTab: Hashable {
-        case home, progress, insights, tools, settings
+        case home, training, health, more
     }
 
     enum SidebarItem: String, Hashable, CaseIterable {
@@ -260,9 +260,11 @@ struct ContentView: View {
 
     // MARK: - iPhone Layout (TabView)
 
+    @State private var showingSettings = false
+
     private var iPhoneLayout: some View {
         TabView(selection: $selectedTab) {
-            Tab("Home", systemImage: "dumbbell", value: .home) {
+            Tab("Home", systemImage: "house", value: .home) {
                 NavigationStack {
                     HomeDashboardView()
                         .navigationDestination(for: Workout.self) { workout in
@@ -273,52 +275,53 @@ struct ContentView: View {
                         }
                         .toolbar {
                             ToolbarItem(placement: .topBarLeading) {
-                                Menu {
-                                    NavigationLink {
-                                        WorkoutCalendarView()
-                                    } label: {
-                                        Label("Calendar", systemImage: "calendar")
-                                    }
-                                    NavigationLink {
-                                        TrainingProgramsView()
-                                    } label: {
-                                        Label("Programs", systemImage: "calendar.badge.clock")
-                                    }
+                                Button {
+                                    showingSettings = true
                                 } label: {
-                                    Label("More", systemImage: "calendar")
+                                    Image(systemName: "gearshape")
                                 }
                             }
                         }
                 }
             }
 
-            Tab("Progress", systemImage: "trophy", value: .progress) {
+            Tab("Training", systemImage: "figure.strengthtraining.traditional", value: .training) {
                 NavigationStack {
-                    progressHubView
+                    trainingHubView
+                        .navigationDestination(for: Workout.self) { workout in
+                            WorkoutDetailView(workout: workout)
+                        }
+                        .navigationDestination(for: String.self) { exerciseName in
+                            ExerciseHistoryView(exerciseName: exerciseName)
+                        }
                 }
             }
 
-            Tab("Insights", systemImage: "chart.bar", value: .insights) {
+            Tab("Health", systemImage: "heart.text.square", value: .health) {
                 NavigationStack {
-                    InsightsView()
+                    healthHubView
                 }
             }
 
-            Tab("Tools", systemImage: "wrench.and.screwdriver", value: .tools) {
+            Tab("More", systemImage: "ellipsis.circle", value: .more) {
                 NavigationStack {
-                    toolsHubView
+                    moreHubView
                 }
             }
-
-            Tab("Settings", systemImage: "gearshape", value: .settings) {
-                NavigationStack {
-                    SettingsView()
-                }
+        }
+        .sheet(isPresented: $showingSettings) {
+            NavigationStack {
+                SettingsView()
+                    .toolbar {
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("Done") { showingSettings = false }
+                        }
+                    }
             }
         }
     }
 
-    // MARK: - Progress Hub
+    // MARK: - Training Hub
 
     private var totalFinishedWorkouts: Int {
         workouts.filter { $0.endTime != nil }.count
@@ -328,9 +331,8 @@ struct ContentView: View {
         Set(workouts.filter { $0.endTime != nil }.flatMap { $0.exercises.map { $0.name.lowercased() } }).count
     }
 
-    private var progressHubView: some View {
+    private var trainingHubView: some View {
         List {
-            // Quick stats overview
             Section {
                 HStack(spacing: 0) {
                     progressStat(value: "\(totalFinishedWorkouts)", label: "Workouts", icon: "figure.strengthtraining.traditional", color: .blue)
@@ -342,17 +344,43 @@ struct ContentView: View {
                 .padding(.vertical, 8)
             }
 
-            Section {
+            Section("Workouts") {
                 NavigationLink {
-                    HealthDashboardView()
+                    FullWorkoutListView()
                 } label: {
-                    hubRow(icon: "heart.text.square", color: .red, title: "Health", subtitle: "Steps, heart rate, sleep & more")
+                    hubRow(icon: "dumbbell", color: .blue, title: "All Workouts", subtitle: "Complete workout history")
                 }
                 NavigationLink {
-                    AchievementsView()
+                    TrainingProgramsView()
                 } label: {
-                    hubRow(icon: "medal", color: .yellow, title: "Achievements", subtitle: "Badges and milestones")
+                    hubRow(icon: "calendar.badge.clock", color: .purple, title: "Programs", subtitle: "Structured training plans")
                 }
+                NavigationLink {
+                    WorkoutCalendarView()
+                } label: {
+                    hubRow(icon: "calendar", color: .teal, title: "Calendar", subtitle: "Monthly training view")
+                }
+            }
+
+            Section("Analyze") {
+                NavigationLink {
+                    InsightsView()
+                } label: {
+                    hubRow(icon: "chart.bar", color: .green, title: "Insights", subtitle: "Training analytics & trends")
+                }
+                NavigationLink {
+                    WorkoutComparisonView()
+                } label: {
+                    hubRow(icon: "arrow.left.arrow.right", color: .indigo, title: "Compare Workouts", subtitle: "Side-by-side analysis")
+                }
+                NavigationLink {
+                    SmartSuggestionsView()
+                } label: {
+                    hubRow(icon: "brain.head.profile", color: .purple, title: "Smart Suggestions", subtitle: "AI-driven workout ideas")
+                }
+            }
+
+            Section("Progress") {
                 NavigationLink {
                     PersonalRecordsView()
                 } label: {
@@ -364,23 +392,13 @@ struct ContentView: View {
                     hubRow(icon: "flame", color: .red, title: "Streak", subtitle: "Workout consistency")
                 }
                 NavigationLink {
-                    ProgressPhotosView()
-                } label: {
-                    hubRow(icon: "camera", color: .blue, title: "Progress Photos", subtitle: "Visual transformation")
-                }
-                NavigationLink {
-                    BodyMeasurementsView()
-                } label: {
-                    hubRow(icon: "ruler", color: .teal, title: "Measurements", subtitle: "Body circumference tracking")
-                }
-                NavigationLink {
                     LiftGoalsView()
                 } label: {
                     hubRow(icon: "target", color: .green, title: "Lift Goals", subtitle: "Progressive overload targets")
                 }
             }
         }
-        .navigationTitle("Progress")
+        .navigationTitle("Training")
     }
 
     private func progressStat(value: String, label: String, icon: String, color: Color) -> some View {
@@ -397,65 +415,63 @@ struct ContentView: View {
         .frame(maxWidth: .infinity)
     }
 
-    // MARK: - Tools Hub
+    // MARK: - Health Hub
 
-    private var toolsSuggestionTeaser: String {
-        let calendar = Calendar.current
-        let finishedWorkouts = workouts.filter { $0.endTime != nil }
-
-        // Simple logic: check which broad category is most rested
-        let pushGroups: Set<MuscleGroup> = [.chest, .shoulders, .triceps]
-        let pullGroups: Set<MuscleGroup> = [.back, .biceps]
-        let legGroups: Set<MuscleGroup> = [.legs]
-
-        func daysSinceLast(_ groups: Set<MuscleGroup>) -> Int {
-            for w in finishedWorkouts.sorted(by: { $0.date > $1.date }) {
-                if w.exercises.contains(where: { groups.contains($0.category ?? .other) }) {
-                    return calendar.dateComponents([.day], from: w.date, to: .now).day ?? 999
+    private var healthHubView: some View {
+        List {
+            Section("Health") {
+                NavigationLink {
+                    HealthDashboardView()
+                } label: {
+                    hubRow(icon: "heart.text.square", color: .red, title: "Health Dashboard", subtitle: "Steps, heart rate, sleep & more")
+                }
+                NavigationLink {
+                    CaffeineTrackerView()
+                } label: {
+                    hubRow(icon: "cup.and.saucer.fill", color: .brown, title: "Caffeine Tracker", subtitle: "Half-life decay & sleep readiness")
+                }
+                NavigationLink {
+                    WaterTrackerView()
+                } label: {
+                    hubRow(icon: "drop.fill", color: .cyan, title: "Water Tracker", subtitle: "Daily hydration tracking")
+                }
+                NavigationLink {
+                    CreatineTrackerView()
+                } label: {
+                    hubRow(icon: "pill.fill", color: .blue, title: "Creatine Tracker", subtitle: "Daily supplement tracking")
                 }
             }
-            return 999
+
+            Section("Body") {
+                NavigationLink {
+                    BodyWeightView()
+                } label: {
+                    hubRow(icon: "scalemass", color: .blue, title: "Body Weight", subtitle: "Weigh-ins & trend line")
+                }
+                NavigationLink {
+                    BodyMeasurementsView()
+                } label: {
+                    hubRow(icon: "ruler", color: .teal, title: "Measurements", subtitle: "Body circumference tracking")
+                }
+                NavigationLink {
+                    BodyFatEstimateView()
+                } label: {
+                    hubRow(icon: "percent", color: .indigo, title: "Body Fat %", subtitle: "Navy method estimation")
+                }
+                NavigationLink {
+                    ProgressPhotosView()
+                } label: {
+                    hubRow(icon: "camera", color: .blue, title: "Progress Photos", subtitle: "Visual transformation")
+                }
+            }
         }
-
-        let pushDays = daysSinceLast(pushGroups)
-        let pullDays = daysSinceLast(pullGroups)
-        let legDays = daysSinceLast(legGroups)
-        let maxDays = max(pushDays, pullDays, legDays)
-
-        if maxDays == 999 { return "Start training to get suggestions" }
-        if maxDays == legDays { return "Legs are most rested — leg day?" }
-        if maxDays == pullDays { return "Pull muscles are fresh — back & biceps?" }
-        return "Push muscles are ready — chest & shoulders?"
+        .navigationTitle("Health")
     }
 
-    private var toolsHubView: some View {
-        List {
-            // Quick suggestion teaser
-            Section {
-                NavigationLink {
-                    SmartSuggestionsView()
-                } label: {
-                    HStack(spacing: 12) {
-                        ZStack {
-                            Circle()
-                                .fill(Color.purple.opacity(0.15))
-                                .frame(width: 44, height: 44)
-                            Image(systemName: "brain.head.profile")
-                                .font(.system(size: 18, weight: .semibold))
-                                .foregroundStyle(.purple)
-                        }
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Today's Suggestion")
-                                .font(.subheadline.weight(.semibold))
-                            Text(toolsSuggestionTeaser)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                    .padding(.vertical, 4)
-                }
-            }
+    // MARK: - More Hub
 
+    private var moreHubView: some View {
+        List {
             Section("Library") {
                 NavigationLink {
                     ExerciseLibraryView()
@@ -463,11 +479,12 @@ struct ContentView: View {
                     hubRow(icon: "books.vertical", color: .blue, title: "Exercise Library", subtitle: "All your exercises")
                 }
                 NavigationLink {
-                    WorkoutComparisonView()
+                    AchievementsView()
                 } label: {
-                    hubRow(icon: "arrow.left.arrow.right", color: .green, title: "Compare Workouts", subtitle: "Side-by-side analysis")
+                    hubRow(icon: "medal", color: .yellow, title: "Achievements", subtitle: "Badges and milestones")
                 }
             }
+
             Section("Calculators") {
                 NavigationLink {
                     PlateCalculatorView()
@@ -479,12 +496,8 @@ struct ContentView: View {
                 } label: {
                     hubRow(icon: "function", color: .teal, title: "1RM Calculator", subtitle: "Estimated one-rep max")
                 }
-                NavigationLink {
-                    BodyFatEstimateView()
-                } label: {
-                    hubRow(icon: "percent", color: .indigo, title: "Body Fat %", subtitle: "Navy method estimation")
-                }
             }
+
             Section("Timers") {
                 NavigationLink {
                     WorkoutTimerView()
@@ -492,15 +505,8 @@ struct ContentView: View {
                     hubRow(icon: "timer", color: .red, title: "Workout Timers", subtitle: "EMOM, AMRAP, and Tabata")
                 }
             }
-            Section("Tracking") {
-                NavigationLink {
-                    CaffeineTrackerView()
-                } label: {
-                    hubRow(icon: "cup.and.saucer.fill", color: .brown, title: "Caffeine Tracker", subtitle: "Half-life decay & sleep readiness")
-                }
-            }
         }
-        .navigationTitle("Tools")
+        .navigationTitle("More")
     }
 
     private func hubRow(icon: String, color: Color, title: String, subtitle: String) -> some View {

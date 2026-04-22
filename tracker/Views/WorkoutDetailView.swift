@@ -21,7 +21,14 @@ struct WorkoutDetailView: View {
     @State private var showingShare = false
     @State private var shareItems: [Any] = []
     @State private var showDeleteConfirm = false
+    @State private var showFocusPrompt = false
+    @State private var showFocusEndReminder = false
+    @Query private var settingsArray: [UserSettings]
     @Environment(\.dismiss) private var dismiss
+
+    private var settings: UserSettings {
+        settingsArray.first ?? UserSettings()
+    }
 
     private var suggestions: [String] {
         let history = Set(allExercises.map(\.name))
@@ -310,7 +317,7 @@ struct WorkoutDetailView: View {
             ExerciseDetailView(exercise: exercise)
         }
         .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
+            ToolbarItemGroup(placement: .topBarTrailing) {
                 Menu {
                     Button {
                         showingEditWorkout = true
@@ -362,6 +369,9 @@ struct WorkoutDetailView: View {
             stopDurationTimer()
             if workout.isFinished {
                 UINotificationFeedbackGenerator().notificationOccurred(.success)
+                if settings.focusModeReminder {
+                    showFocusEndReminder = true
+                }
             }
         } content: {
             FinishWorkoutSheet(workout: workout)
@@ -398,6 +408,26 @@ struct WorkoutDetailView: View {
         } message: {
             Text("This will permanently delete this workout and all its data. This cannot be undone.")
         }
+        .alert("Enable Focus Mode?", isPresented: $showFocusPrompt) {
+            Button("Open Settings") {
+                if let url = URL(string: "App-prefs:FOCUS") {
+                    UIApplication.shared.open(url)
+                }
+            }
+            Button("Not Now", role: .cancel) {}
+        } message: {
+            Text("Enable your Fitness Focus to silence notifications during your workout.")
+        }
+        .alert("Workout Complete!", isPresented: $showFocusEndReminder) {
+            Button("Open Settings") {
+                if let url = URL(string: "App-prefs:FOCUS") {
+                    UIApplication.shared.open(url)
+                }
+            }
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("Don't forget to turn off your Fitness Focus mode now that your workout is done.")
+        }
         .sheet(item: $linkingSupersetFor) { sourceExercise in
             supersetPickerSheet(for: sourceExercise)
         }
@@ -405,6 +435,9 @@ struct WorkoutDetailView: View {
             updateElapsedTime()
             startDurationTimer()
             startLiveActivityIfNeeded()
+            if settings.focusModeReminder && !workout.isFinished && !workout.isTemplate {
+                showFocusPrompt = true
+            }
         }
         .onDisappear {
             stopDurationTimer()

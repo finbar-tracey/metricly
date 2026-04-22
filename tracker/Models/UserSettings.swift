@@ -17,6 +17,7 @@ final class UserSettings {
     var heightCm: Double = 0
     var biologicalSex: String = "" // "male" or "female"
     var userName: String = ""
+    var focusModeReminder: Bool = false
 
     init(useKilograms: Bool = true, defaultRestDuration: Int = 90, autoStartRestTimer: Bool = false) {
         self.useKilograms = useKilograms
@@ -33,5 +34,6 @@ final class UserSettings {
         self.heightCm = 0
         self.biologicalSex = ""
         self.userName = ""
+        self.focusModeReminder = false
     }
 }

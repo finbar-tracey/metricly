@@ -8,6 +8,7 @@ struct HomeDashboardView: View {
     @Query(filter: #Predicate<Workout> { !$0.isTemplate }, sort: \Workout.date, order: .reverse)
     private var allWorkouts: [Workout]
     @Query private var settingsArray: [UserSettings]
+    @Query(sort: \CaffeineEntry.date, order: .reverse) private var caffeineEntries: [CaffeineEntry]
     @Environment(\.weightUnit) private var weightUnit
 
     // MARK: - HealthKit State
@@ -20,6 +21,45 @@ struct HomeDashboardView: View {
     @State private var averageRestingHR: Double?
     @State private var healthDataLoaded = false
     @State private var externalWorkouts: [ExternalWorkout] = []
+
+    // MARK: - Caffeine Helpers
+
+    private func totalCaffeineMg(at time: Date) -> Double {
+        caffeineEntries.reduce(0) { $0 + $1.remainingCaffeine(at: time) }
+    }
+
+    /// Time when caffeine drops below 25mg (sleep-ready threshold)
+    private func caffeineClearTime(from now: Date) -> Date? {
+        let remaining = totalCaffeineMg(at: now)
+        guard remaining >= 25 else { return nil }
+        // Binary search for when it drops below 25mg, up to 24 hours out
+        var lo: TimeInterval = 0
+        var hi: TimeInterval = 24 * 3600
+        for _ in 0..<30 {
+            let mid = (lo + hi) / 2
+            let mgAtMid = totalCaffeineMg(at: now.addingTimeInterval(mid))
+            if mgAtMid > 25 {
+                lo = mid
+            } else {
+                hi = mid
+            }
+        }
+        return now.addingTimeInterval(hi)
+    }
+
+    /// Suggested bedtime: 10 PM unless caffeine pushes it later
+    private func suggestedBedtime(from now: Date) -> (time: Date, delayedByCaffeine: Bool) {
+        let calendar = Calendar.current
+        var defaultBedtime = calendar.startOfDay(for: now)
+        defaultBedtime = calendar.date(bySettingHour: 22, minute: 0, second: 0, of: defaultBedtime)!
+        if defaultBedtime < now {
+            defaultBedtime = calendar.date(byAdding: .day, value: 1, to: defaultBedtime)!
+        }
+        if let clearTime = caffeineClearTime(from: now), clearTime > defaultBedtime {
+            return (clearTime, true)
+        }
+        return (defaultBedtime, false)
+    }
 
     // MARK: - Animation State
     @State private var animateRings = false
@@ -178,6 +218,10 @@ struct HomeDashboardView: View {
                     healthGlanceSection
                 }
 
+                if !caffeineEntries.isEmpty && totalCaffeineMg(at: .now) >= 25 {
+                    bedtimeSuggestionSection
+                }
+
                 if !todaysWorkouts.isEmpty {
                     todayWorkoutSection
                 }
@@ -300,6 +344,20 @@ struct HomeDashboardView: View {
                         )
                     }
                     .buttonStyle(.plain)
+
+                    if !caffeineEntries.isEmpty {
+                        let caffeineMg = totalCaffeineMg(at: .now)
+                        if caffeineMg > 0.5 {
+                            NavigationLink { CaffeineTrackerView() } label: {
+                                compactHealthCard(
+                                    icon: "cup.and.saucer.fill", color: .brown,
+                                    value: "\(Int(caffeineMg)) mg", label: "Caffeine",
+                                    progress: min(1.0, caffeineMg / 400)
+                                )
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
                 }
             }
         }
@@ -342,6 +400,52 @@ struct HomeDashboardView: View {
         .frame(width: 100)
         .padding(.vertical, 10)
         .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12))
+    }
+
+    // MARK: - Bedtime Suggestion
+
+    private var bedtimeSuggestionSection: some View {
+        let bedtime = suggestedBedtime(from: .now)
+        return NavigationLink { CaffeineTrackerView() } label: {
+            HStack(spacing: 12) {
+                ZStack {
+                    Circle()
+                        .fill(bedtime.delayedByCaffeine ? Color.orange.opacity(0.15) : Color.indigo.opacity(0.15))
+                        .frame(width: 40, height: 40)
+                    Image(systemName: bedtime.delayedByCaffeine ? "moon.fill" : "moon.zzz.fill")
+                        .font(.system(size: 16))
+                        .foregroundStyle(bedtime.delayedByCaffeine ? .orange : .indigo)
+                }
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Suggested Bedtime")
+                        .font(.subheadline.weight(.semibold))
+                    HStack(spacing: 4) {
+                        Text(bedtime.time, format: .dateTime.hour().minute())
+                            .font(.caption.weight(.medium))
+                        if bedtime.delayedByCaffeine {
+                            Text("Caffeine still active")
+                                .font(.caption)
+                                .foregroundStyle(.orange)
+                        }
+                    }
+                    .foregroundStyle(.secondary)
+                }
+                Spacer()
+                if let clearTime = caffeineClearTime(from: .now) {
+                    VStack(alignment: .trailing, spacing: 2) {
+                        Text("Clear by")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                        Text(clearTime, format: .dateTime.hour().minute())
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.brown)
+                    }
+                }
+            }
+            .padding()
+            .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12))
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Section 2: Training Status

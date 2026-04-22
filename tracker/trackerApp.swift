@@ -16,7 +16,7 @@ struct trackerApp: App {
     init() {
         MetriclyShortcutsProvider.updateAppShortcutParameters()
 
-        let container = try! ModelContainer(for: Workout.self, UserSettings.self, BodyWeightEntry.self, TrainingProgram.self, BodyMeasurement.self, LiftGoal.self, ProgressPhoto.self, CaffeineEntry.self)
+        let container = try! ModelContainer(for: Workout.self, Exercise.self, ExerciseSet.self, UserSettings.self, BodyWeightEntry.self, TrainingProgram.self, ProgramDay.self, ProgramExercise.self, BodyMeasurement.self, LiftGoal.self, ProgressPhoto.self, CaffeineEntry.self, WaterEntry.self, CreatineEntry.self)
         // Seed UserSettings once so views never need to insert from computed properties
         let context = container.mainContext
         let descriptor = FetchDescriptor<UserSettings>()
