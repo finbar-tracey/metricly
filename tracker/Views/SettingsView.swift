@@ -71,6 +71,81 @@ struct SettingsView: View {
 
             Section {
                 HStack(spacing: 12) {
+                    settingsIcon("cup.and.saucer.fill", color: .brown)
+                    Picker("Sensitivity", selection: Binding(
+                        get: { settings.caffeineSensitivityEnum },
+                        set: { settings.caffeineSensitivityEnum = $0 }
+                    )) {
+                        ForEach(CaffeineEntry.Sensitivity.allCases) { level in
+                            Text(level.rawValue).tag(level)
+                        }
+                    }
+                }
+                HStack(spacing: 12) {
+                    settingsIcon("gauge.open.with.lines.needle.33percent.and.arrowtriangle", color: .orange)
+                    Stepper(
+                        "Daily Limit: \(settings.dailyCaffeineLimit) mg",
+                        value: Binding(
+                            get: { settings.dailyCaffeineLimit },
+                            set: { settings.dailyCaffeineLimit = $0 }
+                        ),
+                        in: 100...800,
+                        step: 50
+                    )
+                }
+            } header: {
+                Text("Caffeine")
+            } footer: {
+                Text("Sensitivity affects how fast caffeine decays. The FDA recommends ≤400 mg/day for most adults.")
+            }
+
+            Section {
+                HStack(spacing: 12) {
+                    settingsIcon("drop.fill", color: .cyan)
+                    Stepper(
+                        "Daily Goal: \(settings.dailyWaterGoalMl) ml",
+                        value: Binding(
+                            get: { settings.dailyWaterGoalMl },
+                            set: { settings.dailyWaterGoalMl = $0 }
+                        ),
+                        in: 1000...5000,
+                        step: 250
+                    )
+                }
+            } header: {
+                Text("Water")
+            } footer: {
+                Text("General guideline is ~2,500 ml (84 oz) per day. Adjust based on your body size and activity level.")
+            }
+
+            Section {
+                HStack(spacing: 12) {
+                    settingsIcon("pill.fill", color: .blue)
+                    Stepper(
+                        "Daily Dose: \(String(format: "%.0f", settings.creatineDailyDose))g",
+                        value: Binding(
+                            get: { settings.creatineDailyDose },
+                            set: { settings.creatineDailyDose = $0 }
+                        ),
+                        in: 1...25,
+                        step: 1
+                    )
+                }
+                HStack(spacing: 12) {
+                    settingsIcon("bolt.fill", color: .yellow)
+                    Toggle("Loading Phase", isOn: Binding(
+                        get: { settings.creatineLoadingPhase },
+                        set: { settings.creatineLoadingPhase = $0 }
+                    ))
+                }
+            } header: {
+                Text("Creatine")
+            } footer: {
+                Text("Loading phase uses 20g/day (split into 4 doses) for 5–7 days, then switches to the maintenance dose.")
+            }
+
+            Section {
+                HStack(spacing: 12) {
                     settingsIcon("person.text.rectangle", color: .cyan)
                     TextField("Your Name", text: Binding(
                         get: { settings.userName },

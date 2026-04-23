@@ -9,6 +9,8 @@ struct HomeDashboardView: View {
     private var allWorkouts: [Workout]
     @Query private var settingsArray: [UserSettings]
     @Query(sort: \CaffeineEntry.date, order: .reverse) private var caffeineEntries: [CaffeineEntry]
+    @Query(sort: \WaterEntry.date, order: .reverse) private var waterEntries: [WaterEntry]
+    @Query(sort: \CreatineEntry.date, order: .reverse) private var creatineEntries: [CreatineEntry]
     @Environment(\.weightUnit) private var weightUnit
 
     // MARK: - HealthKit State
@@ -24,8 +26,13 @@ struct HomeDashboardView: View {
 
     // MARK: - Caffeine Helpers
 
+    private var caffeineHalfLife: Double {
+        settings.caffeineHalfLife
+    }
+
     private func totalCaffeineMg(at time: Date) -> Double {
-        caffeineEntries.reduce(0) { $0 + $1.remainingCaffeine(at: time) }
+        let hl = caffeineHalfLife
+        return caffeineEntries.reduce(0) { $0 + $1.remainingCaffeine(at: time, halfLifeHours: hl) }
     }
 
     /// Time when caffeine drops below 25mg (sleep-ready threshold)
@@ -59,6 +66,28 @@ struct HomeDashboardView: View {
             return (clearTime, true)
         }
         return (defaultBedtime, false)
+    }
+
+    // MARK: - Water Helpers
+
+    private var waterGoalMl: Double {
+        Double(settings.dailyWaterGoalMl)
+    }
+
+    private var todayWaterMl: Double {
+        let start = Calendar.current.startOfDay(for: .now)
+        return waterEntries.filter { $0.date >= start }.reduce(0) { $0 + $1.milliliters }
+    }
+
+    private var waterProgress: Double {
+        waterGoalMl > 0 ? min(1.0, todayWaterMl / waterGoalMl) : 0
+    }
+
+    // MARK: - Creatine Helpers
+
+    private var creatineTakenToday: Bool {
+        let start = Calendar.current.startOfDay(for: .now)
+        return creatineEntries.contains { $0.date >= start }
     }
 
     // MARK: - Animation State
@@ -358,6 +387,24 @@ struct HomeDashboardView: View {
                             .buttonStyle(.plain)
                         }
                     }
+
+                    NavigationLink { WaterTrackerView() } label: {
+                        compactHealthCard(
+                            icon: "drop.fill", color: .cyan,
+                            value: "\(Int(todayWaterMl)) ml", label: "Water",
+                            progress: waterProgress
+                        )
+                    }
+                    .buttonStyle(.plain)
+
+                    NavigationLink { CreatineTrackerView() } label: {
+                        compactHealthCard(
+                            icon: "pill.fill", color: .blue,
+                            value: creatineTakenToday ? "Taken" : "Not yet", label: "Creatine",
+                            progress: creatineTakenToday ? 1.0 : 0
+                        )
+                    }
+                    .buttonStyle(.plain)
                 }
             }
         }

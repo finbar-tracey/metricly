@@ -18,6 +18,20 @@ final class UserSettings {
     var biologicalSex: String = "" // "male" or "female"
     var userName: String = ""
     var focusModeReminder: Bool = false
+    var caffeineSensitivity: String = "Normal" // Slow / Normal / Fast
+    var dailyCaffeineLimit: Int = 400 // mg
+    var dailyWaterGoalMl: Int = 2500 // ml
+    var creatineDailyDose: Double = 5.0 // grams
+    var creatineLoadingPhase: Bool = false // loading phase = 20g/day for first week
+
+    var caffeineSensitivityEnum: CaffeineEntry.Sensitivity {
+        get { CaffeineEntry.Sensitivity(rawValue: caffeineSensitivity) ?? .normal }
+        set { caffeineSensitivity = newValue.rawValue }
+    }
+
+    var caffeineHalfLife: Double {
+        caffeineSensitivityEnum.halfLifeHours
+    }
 
     init(useKilograms: Bool = true, defaultRestDuration: Int = 90, autoStartRestTimer: Bool = false) {
         self.useKilograms = useKilograms
@@ -35,5 +49,10 @@ final class UserSettings {
         self.biologicalSex = ""
         self.userName = ""
         self.focusModeReminder = false
+        self.caffeineSensitivity = "Normal"
+        self.dailyCaffeineLimit = 400
+        self.dailyWaterGoalMl = 2500
+        self.creatineDailyDose = 5.0
+        self.creatineLoadingPhase = false
     }
 }
