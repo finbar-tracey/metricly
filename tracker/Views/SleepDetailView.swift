@@ -25,33 +25,35 @@ struct SleepDetailView: View {
     // MARK: - Body
 
     var body: some View {
-        List {
-            if isLoading && todaySleep.totalMinutes == 0 {
-                Section {
+        ScrollView {
+            LazyVStack(spacing: AppTheme.sectionSpacing) {
+                if isLoading && todaySleep.totalMinutes == 0 {
                     ProgressView()
                         .frame(maxWidth: .infinity, minHeight: 200)
-                }
-            } else if todaySleep.totalMinutes == 0 && !isLoading {
-                Section {
+                } else if todaySleep.totalMinutes == 0 && !isLoading {
                     ContentUnavailableView(
                         "No Sleep Data",
                         systemImage: "bed.double.fill",
                         description: Text("No sleep data recorded for last night.")
                     )
+                    .padding(.top, 60)
+                } else {
+                    scoreSection
+                    if !todaySleep.stages.isEmpty {
+                        timelineSection
+                        stageCardsSection
+                    }
+                    durationTrendSection
+                    weeklyComparisonSection
+                    consistencySection
+                    sleepDebtSection
+                    statsSection
                 }
-            } else {
-                scoreSection
-                if !todaySleep.stages.isEmpty {
-                    timelineSection
-                    stageCardsSection
-                }
-                durationTrendSection
-                weeklyComparisonSection
-                consistencySection
-                sleepDebtSection
-                statsSection
             }
+            .padding(.horizontal)
+            .padding(.bottom, 36)
         }
+        .background(Color(.systemGroupedBackground))
         .navigationTitle("Sleep")
         .navigationBarTitleDisplayMode(.inline)
         .task(id: timeRange) {
@@ -59,108 +61,144 @@ struct SleepDetailView: View {
         }
     }
 
-    // MARK: - Section 1: Sleep Score
+    // MARK: - Section 1: Sleep Score Hero
 
     private var scoreSection: some View {
-        Section {
-            VStack(spacing: 16) {
-                ZStack {
-                    Circle()
-                        .stroke(.quaternary, lineWidth: 10)
-                    Circle()
-                        .trim(from: 0, to: min(1.0, todaySleep.totalMinutes / 480))
-                        .stroke(sleepScoreColor.gradient, style: StrokeStyle(lineWidth: 10, lineCap: .round))
-                        .rotationEffect(.degrees(-90))
-                        .animation(.easeInOut(duration: 0.8), value: sleepScore)
-                    VStack(spacing: 2) {
-                        Text("\(sleepScore)")
-                            .font(.system(.largeTitle, design: .rounded, weight: .bold))
-                        Text(sleepScoreLabel)
-                            .font(.caption.bold())
-                            .foregroundStyle(sleepScoreColor)
+        ZStack(alignment: .topLeading) {
+            LinearGradient(
+                colors: [Color.indigo, Color.indigo.opacity(0.55)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+
+            Circle()
+                .fill(.white.opacity(0.07))
+                .frame(width: 220)
+                .offset(x: 170, y: -65)
+            Circle()
+                .fill(.white.opacity(0.04))
+                .frame(width: 130)
+                .offset(x: 250, y: 60)
+
+            VStack(alignment: .leading, spacing: 20) {
+                HStack(alignment: .center, spacing: 20) {
+                    ZStack {
+                        Circle()
+                            .stroke(.white.opacity(0.20), lineWidth: 8)
+                        Circle()
+                            .trim(from: 0, to: min(1.0, todaySleep.totalMinutes / 480))
+                            .stroke(.white, style: StrokeStyle(lineWidth: 8, lineCap: .round))
+                            .rotationEffect(.degrees(-90))
+                            .animation(.easeInOut(duration: 0.8), value: sleepScore)
+                        VStack(spacing: 1) {
+                            Text("\(sleepScore)")
+                                .font(.system(size: 30, weight: .black, design: .rounded))
+                                .foregroundStyle(.white)
+                                .monospacedDigit()
+                            Text(sleepScoreLabel)
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundStyle(.white.opacity(0.80))
+                        }
+                    }
+                    .frame(width: 86, height: 86)
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel("Sleep score \(sleepScore), \(sleepScoreLabel)")
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(HealthFormatters.formatSleepShort(todaySleep.totalMinutes))
+                            .font(.system(size: 38, weight: .black, design: .rounded))
+                            .foregroundStyle(.white)
+                        Text("Last night")
+                            .font(.subheadline)
+                            .foregroundStyle(.white.opacity(0.72))
                     }
                 }
-                .frame(width: 130, height: 130)
-                .accessibilityElement(children: .ignore)
-                .accessibilityLabel("Sleep score \(sleepScore) out of 100, \(sleepScoreLabel)")
 
-                Text(HealthFormatters.formatSleepShort(todaySleep.totalMinutes))
-                    .font(.title3.bold())
-
-                HStack(spacing: 24) {
+                HStack(spacing: 0) {
                     if let inBed = todaySleep.inBed {
-                        VStack(spacing: 2) {
-                            Image(systemName: "bed.double.fill")
-                                .foregroundStyle(.indigo)
-                            Text(inBed, format: .dateTime.hour().minute())
-                                .font(.subheadline.bold().monospacedDigit())
-                            Text("Bedtime")
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
-                        }
+                        sleepStatColumn(
+                            icon: "bed.double.fill",
+                            label: "Bedtime",
+                            value: inBed.formatted(.dateTime.hour().minute())
+                        )
                     }
                     if let wake = todaySleep.wakeUp {
-                        VStack(spacing: 2) {
-                            Image(systemName: "sun.horizon.fill")
-                                .foregroundStyle(.orange)
-                            Text(wake, format: .dateTime.hour().minute())
-                                .font(.subheadline.bold().monospacedDigit())
-                            Text("Wake Up")
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
-                        }
+                        sleepStatColumn(
+                            icon: "sun.horizon.fill",
+                            label: "Wake",
+                            value: wake.formatted(.dateTime.hour().minute())
+                        )
                     }
-                    if let efficiency = sleepEfficiency {
-                        VStack(spacing: 2) {
-                            Image(systemName: "gauge.with.needle.fill")
-                                .foregroundStyle(.indigo)
-                            Text("\(Int(efficiency))%")
-                                .font(.subheadline.bold().monospacedDigit())
-                            Text("Efficiency")
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
-                        }
+                    if let eff = sleepEfficiency {
+                        sleepStatColumn(
+                            icon: "gauge.with.needle.fill",
+                            label: "Efficiency",
+                            value: "\(Int(eff))%"
+                        )
                     }
                 }
             }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 8)
+            .padding(20)
         }
+        .heroCard()
+    }
+
+    private func sleepStatColumn(icon: String, label: String, value: String) -> some View {
+        VStack(spacing: 5) {
+            Image(systemName: icon)
+                .font(.system(size: 14))
+                .foregroundStyle(.white.opacity(0.75))
+            Text(value)
+                .font(.system(size: 15, weight: .bold, design: .rounded))
+                .foregroundStyle(.white)
+                .monospacedDigit()
+            Text(label)
+                .font(.caption2)
+                .foregroundStyle(.white.opacity(0.60))
+        }
+        .frame(maxWidth: .infinity)
     }
 
     // MARK: - Section 2: Sleep Timeline
 
     private var timelineSection: some View {
-        Section("Sleep Timeline") {
-            Chart(todaySleep.stages) { stage in
-                RectangleMark(
-                    xStart: .value("Start", stage.start),
-                    xEnd: .value("End", stage.end),
-                    yStart: .value("StageStart", stageDepth(stage.type)),
-                    yEnd: .value("StageEnd", stageDepth(stage.type) + 0.8)
-                )
-                .foregroundStyle(stage.type.color)
-                .clipShape(RoundedRectangle(cornerRadius: 2))
-            }
-            .chartYScale(domain: -0.2...3.8)
-            .chartYAxis {
-                AxisMarks(values: [0.4, 1.4, 2.4, 3.4]) { value in
-                    AxisValueLabel {
-                        if let v = value.as(Double.self) {
-                            Text(stageLabelForDepth(v))
-                                .font(.caption2)
+        VStack(alignment: .leading, spacing: 12) {
+            SectionHeader(title: "Sleep Timeline", icon: "waveform.path.ecg", color: .indigo)
+
+            VStack(spacing: 8) {
+                Chart(todaySleep.stages) { stage in
+                    RectangleMark(
+                        xStart: .value("Start", stage.start),
+                        xEnd: .value("End", stage.end),
+                        yStart: .value("StageStart", stageDepth(stage.type)),
+                        yEnd: .value("StageEnd", stageDepth(stage.type) + 0.8)
+                    )
+                    .foregroundStyle(stage.type.color)
+                    .clipShape(RoundedRectangle(cornerRadius: 3))
+                }
+                .chartYScale(domain: -0.2...3.8)
+                .chartYAxis {
+                    AxisMarks(values: [0.4, 1.4, 2.4, 3.4]) { value in
+                        AxisValueLabel {
+                            if let v = value.as(Double.self) {
+                                Text(stageLabelForDepth(v))
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
                         }
                     }
                 }
-            }
-            .chartXAxis {
-                AxisMarks(values: .stride(by: .hour, count: 1)) { _ in
-                    AxisGridLine()
-                    AxisValueLabel(format: .dateTime.hour())
+                .chartXAxis {
+                    AxisMarks(values: .stride(by: .hour, count: 1)) { _ in
+                        AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
+                            .foregroundStyle(.secondary.opacity(0.3))
+                        AxisValueLabel(format: .dateTime.hour())
+                            .font(.caption2)
+                    }
                 }
+                .frame(height: 150)
             }
-            .frame(height: 160)
-            .padding(.vertical, 8)
+            .appCard()
         }
     }
 
@@ -171,8 +209,10 @@ struct SleepDetailView: View {
         let totalMinutes = todaySleep.stages.filter { $0.type != .awake }.reduce(0.0) { $0 + $1.durationMinutes }
         let stageOrder: [SleepStage.StageType] = [.deep, .core, .rem, .awake]
 
-        return Section("Sleep Stages") {
-            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+        return VStack(alignment: .leading, spacing: 12) {
+            SectionHeader(title: "Sleep Stages", icon: "chart.pie.fill", color: .indigo)
+
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
                 ForEach(stageOrder, id: \.rawValue) { stageType in
                     let minutes = grouped[stageType]?.reduce(0.0) { $0 + $1.durationMinutes } ?? 0
                     if minutes > 0 {
@@ -184,43 +224,73 @@ struct SleepDetailView: View {
                     }
                 }
             }
-            .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
         }
     }
 
     private func stageCard(type: SleepStage.StageType, minutes: Double, percentage: Double) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Circle().fill(type.color).frame(width: 10, height: 10)
-                Text(type.rawValue).font(.subheadline.bold())
-                Spacer()
-            }
-            Text(HealthFormatters.formatSleepShort(minutes))
-                .font(.title3.bold().monospacedDigit())
-            HStack {
-                Text("\(Int(percentage))%")
-                    .font(.caption)
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 6) {
+                Circle()
+                    .fill(type.color)
+                    .frame(width: 8, height: 8)
+                Text(type.rawValue)
+                    .font(.caption.weight(.semibold))
                     .foregroundStyle(.secondary)
                 Spacer()
                 comparisonBadge(actual: percentage, recommended: recommendedRange(for: type))
             }
-            ProgressView(value: min(percentage, 100), total: 100)
-                .tint(type.color)
+
+            Text(HealthFormatters.formatSleepShort(minutes))
+                .font(.system(size: 22, weight: .bold, design: .rounded))
+                .monospacedDigit()
+
+            GradientProgressBar(value: percentage / 100, color: type.color, height: 6)
+
+            Text("\(Int(percentage))% of sleep")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
         }
-        .padding(12)
-        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 10))
+        .padding(14)
+        .background(Color(.secondarySystemGroupedBackground))
+        .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardRadius))
+        .shadow(color: .black.opacity(0.07), radius: 10, x: 0, y: 3)
         .accessibilityElement(children: .combine)
     }
 
     // MARK: - Section 4: Duration Trend
 
     private var durationTrendSection: some View {
-        Section("Duration Trend") {
-            Picker("Range", selection: $timeRange) {
-                ForEach(TimeRange.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+        VStack(alignment: .leading, spacing: 12) {
+            SectionHeader(title: "Duration Trend", icon: "chart.bar.fill", color: .indigo)
+
+            // Pill range picker
+            HStack(spacing: 8) {
+                ForEach(TimeRange.allCases, id: \.self) { range in
+                    Button {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                            timeRange = range
+                        }
+                    } label: {
+                        Text(range.rawValue)
+                            .font(.subheadline.weight(.semibold))
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 8)
+                            .background(
+                                timeRange == range
+                                    ? AnyShapeStyle(Color.indigo)
+                                    : AnyShapeStyle(Color(.secondarySystemGroupedBackground)),
+                                in: Capsule()
+                            )
+                            .foregroundStyle(timeRange == range ? .white : .secondary)
+                            .shadow(
+                                color: timeRange == range ? Color.indigo.opacity(0.35) : .clear,
+                                radius: 6, x: 0, y: 3
+                            )
+                    }
+                    .buttonStyle(.plain)
+                }
+                Spacer()
             }
-            .pickerStyle(.segmented)
-            .listRowSeparator(.hidden)
 
             if !chartSleep.isEmpty {
                 Chart {
@@ -229,26 +299,34 @@ struct SleepDetailView: View {
                             x: .value("Date", point.date, unit: .day),
                             y: .value("Hours", point.minutes / 60)
                         )
-                        .foregroundStyle(.indigo.gradient)
-                        .cornerRadius(4)
+                        .foregroundStyle(Color.indigo.gradient)
+                        .cornerRadius(5)
                     }
                     RuleMark(y: .value("Target", 8))
                         .lineStyle(StrokeStyle(dash: [5, 3]))
                         .foregroundStyle(.secondary.opacity(0.5))
                         .annotation(position: .top, alignment: .trailing) {
-                            Text("8h")
+                            Text("8h target")
                                 .font(.caption2)
                                 .foregroundStyle(.secondary)
                         }
                 }
                 .chartYAxisLabel("hours")
+                .chartXAxis {
+                    AxisMarks { _ in
+                        AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
+                            .foregroundStyle(.secondary.opacity(0.3))
+                        AxisValueLabel()
+                            .font(.caption2)
+                    }
+                }
                 .frame(height: 200)
-                .padding(.vertical, 8)
+                .appCard()
             } else if !isLoading {
                 Text("No sleep data available.")
                     .foregroundStyle(.secondary)
-                    .frame(height: 200)
-                    .frame(maxWidth: .infinity)
+                    .frame(maxWidth: .infinity, minHeight: 120)
+                    .appCard()
             }
         }
     }
@@ -258,40 +336,44 @@ struct SleepDetailView: View {
     @ViewBuilder
     private var weeklyComparisonSection: some View {
         if lastWeekAvg > 0 {
-            Section("This Week vs Last Week") {
-                HStack(spacing: 16) {
-                    VStack(spacing: 4) {
+            let delta = thisWeekAvg - lastWeekAvg
+            VStack(alignment: .leading, spacing: 12) {
+                SectionHeader(title: "This Week vs Last Week", icon: "arrow.left.arrow.right", color: .indigo)
+
+                HStack(spacing: 0) {
+                    VStack(spacing: 6) {
                         Text("This Week")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                         Text(HealthFormatters.formatSleepShort(thisWeekAvg))
-                            .font(.title3.bold().monospacedDigit())
+                            .font(.system(size: 24, weight: .bold, design: .rounded))
+                            .monospacedDigit()
                     }
                     .frame(maxWidth: .infinity)
 
-                    let delta = thisWeekAvg - lastWeekAvg
-                    VStack(spacing: 2) {
-                        Image(systemName: delta >= 0 ? "arrow.up.right" : "arrow.down.right")
-                            .font(.title3)
+                    VStack(spacing: 6) {
+                        Image(systemName: delta >= 0 ? "arrow.up.right.circle.fill" : "arrow.down.right.circle.fill")
+                            .font(.title2)
                             .foregroundStyle(delta >= 0 ? .green : .orange)
                         Text(HealthFormatters.formatSleepShort(abs(delta)))
-                            .font(.caption.bold())
+                            .font(.caption.weight(.bold))
                             .foregroundStyle(delta >= 0 ? .green : .orange)
                     }
 
-                    VStack(spacing: 4) {
+                    VStack(spacing: 6) {
                         Text("Last Week")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                         Text(HealthFormatters.formatSleepShort(lastWeekAvg))
-                            .font(.title3.bold().monospacedDigit())
+                            .font(.system(size: 24, weight: .bold, design: .rounded))
+                            .monospacedDigit()
                             .foregroundStyle(.secondary)
                     }
                     .frame(maxWidth: .infinity)
                 }
-                .padding(.vertical, 8)
-                .accessibilityElement(children: .combine)
+                .appCard()
             }
+            .accessibilityElement(children: .combine)
         }
     }
 
@@ -301,54 +383,59 @@ struct SleepDetailView: View {
     private var consistencySection: some View {
         let consistencyData = detailedSleep.filter { $0.inBed != nil && $0.wakeUp != nil }
         if consistencyData.count >= 3 {
-            Section("Bedtime Consistency") {
-                Chart(consistencyData, id: \.date) { day in
-                    BarMark(
-                        x: .value("Date", day.date, unit: .day),
-                        yStart: .value("Bed", shiftedMinutes(day.inBed!)),
-                        yEnd: .value("Wake", shiftedMinutes(day.wakeUp!))
-                    )
-                    .foregroundStyle(.indigo.opacity(0.25))
-                    .cornerRadius(4)
+            VStack(alignment: .leading, spacing: 12) {
+                SectionHeader(title: "Bedtime Consistency", icon: "clock.fill", color: .indigo)
 
-                    PointMark(
-                        x: .value("Date", day.date, unit: .day),
-                        y: .value("Bed", shiftedMinutes(day.inBed!))
-                    )
-                    .foregroundStyle(.indigo)
-                    .symbolSize(30)
+                VStack(spacing: 12) {
+                    Chart(consistencyData, id: \.date) { day in
+                        BarMark(
+                            x: .value("Date", day.date, unit: .day),
+                            yStart: .value("Bed", shiftedMinutes(day.inBed!)),
+                            yEnd: .value("Wake", shiftedMinutes(day.wakeUp!))
+                        )
+                        .foregroundStyle(Color.indigo.opacity(0.20))
+                        .cornerRadius(4)
 
-                    PointMark(
-                        x: .value("Date", day.date, unit: .day),
-                        y: .value("Wake", shiftedMinutes(day.wakeUp!))
-                    )
-                    .foregroundStyle(.orange)
-                    .symbolSize(30)
-                }
-                .chartYAxis {
-                    AxisMarks(values: .stride(by: 60)) { value in
-                        AxisGridLine()
-                        AxisValueLabel {
-                            if let mins = value.as(Double.self) {
-                                Text(formatShiftedMinutes(mins))
-                                    .font(.caption2)
+                        PointMark(
+                            x: .value("Date", day.date, unit: .day),
+                            y: .value("Bed", shiftedMinutes(day.inBed!))
+                        )
+                        .foregroundStyle(Color.indigo)
+                        .symbolSize(35)
+
+                        PointMark(
+                            x: .value("Date", day.date, unit: .day),
+                            y: .value("Wake", shiftedMinutes(day.wakeUp!))
+                        )
+                        .foregroundStyle(Color.orange)
+                        .symbolSize(35)
+                    }
+                    .chartYAxis {
+                        AxisMarks(values: .stride(by: 60)) { value in
+                            AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
+                                .foregroundStyle(.secondary.opacity(0.3))
+                            AxisValueLabel {
+                                if let mins = value.as(Double.self) {
+                                    Text(formatShiftedMinutes(mins))
+                                        .font(.caption2)
+                                }
                             }
                         }
                     }
-                }
-                .frame(height: 180)
-                .padding(.vertical, 8)
+                    .frame(height: 170)
 
-                HStack(spacing: 16) {
-                    HStack(spacing: 4) {
-                        Circle().fill(.indigo).frame(width: 8, height: 8)
-                        Text("Bedtime").font(.caption2).foregroundStyle(.secondary)
-                    }
-                    HStack(spacing: 4) {
-                        Circle().fill(.orange).frame(width: 8, height: 8)
-                        Text("Wake up").font(.caption2).foregroundStyle(.secondary)
+                    HStack(spacing: 16) {
+                        HStack(spacing: 5) {
+                            Circle().fill(Color.indigo).frame(width: 8, height: 8)
+                            Text("Bedtime").font(.caption2).foregroundStyle(.secondary)
+                        }
+                        HStack(spacing: 5) {
+                            Circle().fill(Color.orange).frame(width: 8, height: 8)
+                            Text("Wake up").font(.caption2).foregroundStyle(.secondary)
+                        }
                     }
                 }
+                .appCard()
             }
         }
     }
@@ -363,14 +450,24 @@ struct SleepDetailView: View {
                 debt + max(0, targetMinutes - day.totalMinutes)
             }
             let debtHours = totalDebt / 60
+            let debtColor: Color = debtHours > 5 ? .red : debtHours > 2 ? .orange : .green
 
-            Section("Sleep Debt") {
-                VStack(spacing: 12) {
-                    HStack {
+            VStack(alignment: .leading, spacing: 12) {
+                SectionHeader(title: "Sleep Debt", icon: "moon.zzz.fill", color: .indigo)
+
+                VStack(spacing: 16) {
+                    HStack(alignment: .bottom) {
                         VStack(alignment: .leading, spacing: 4) {
-                            Text(String(format: "%.1fh", debtHours))
-                                .font(.title.bold().monospacedDigit())
-                                .foregroundStyle(debtHours > 5 ? .red : debtHours > 2 ? .orange : .green)
+                            HStack(alignment: .lastTextBaseline, spacing: 4) {
+                                Text(String(format: "%.1f", debtHours))
+                                    .font(.system(size: 44, weight: .black, design: .rounded))
+                                    .foregroundStyle(debtColor)
+                                    .monospacedDigit()
+                                Text("hrs")
+                                    .font(.title3.weight(.semibold))
+                                    .foregroundStyle(debtColor.opacity(0.75))
+                                    .padding(.bottom, 6)
+                            }
                             Text("accumulated over 7 days")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
@@ -381,14 +478,16 @@ struct SleepDetailView: View {
                         }
                         .gaugeStyle(.accessoryCircular)
                         .tint(Gradient(colors: [.green, .yellow, .orange, .red]))
-                        .frame(width: 60, height: 60)
+                        .frame(width: 58, height: 58)
                     }
+
+                    GradientProgressBar(value: min(debtHours / 10, 1), color: debtColor, height: 8)
 
                     Text("Based on an 8-hour target. Each night short of the target adds to your debt.")
                         .font(.caption2)
                         .foregroundStyle(.tertiary)
                 }
-                .padding(.vertical, 4)
+                .appCard()
             }
         }
     }
@@ -396,19 +495,27 @@ struct SleepDetailView: View {
     // MARK: - Section 8: Stats
 
     private var statsSection: some View {
-        Section("Stats") {
-            statsRow("Average", value: HealthFormatters.formatSleepShort(averageSleep))
-            statsRow("Best Night", value: HealthFormatters.formatSleepShort(dailySleep.map(\.minutes).max() ?? 0))
-            statsRow("Worst Night", value: HealthFormatters.formatSleepShort(dailySleep.map(\.minutes).min() ?? 0))
-            statsRow("Nights Tracked", value: "\(dailySleep.count)")
+        VStack(alignment: .leading, spacing: 12) {
+            SectionHeader(title: "Stats", icon: "list.bullet.rectangle", color: .indigo)
+
+            VStack(spacing: 0) {
+                statsRow("Average", value: HealthFormatters.formatSleepShort(averageSleep))
+                Divider().padding(.leading, 16)
+                statsRow("Best Night", value: HealthFormatters.formatSleepShort(dailySleep.map(\.minutes).max() ?? 0))
+                Divider().padding(.leading, 16)
+                statsRow("Worst Night", value: HealthFormatters.formatSleepShort(dailySleep.map(\.minutes).min() ?? 0))
+                Divider().padding(.leading, 16)
+                statsRow("Nights Tracked", value: "\(dailySleep.count)")
+            }
+            .background(Color(.secondarySystemGroupedBackground))
+            .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardRadius))
+            .shadow(color: .black.opacity(0.07), radius: 10, x: 0, y: 3)
         }
     }
 
     // MARK: - Sleep Score
 
-    private var sleepScore: Int {
-        computeSleepScore()
-    }
+    private var sleepScore: Int { computeSleepScore() }
 
     private var sleepScoreColor: Color {
         if sleepScore >= 85 { return .green }
@@ -439,52 +546,40 @@ struct SleepDetailView: View {
         if mins >= 300 && mins < 360 { return Int(5 + (mins - 300) / 60 * 10) }
         if mins < 300 { return Int(max(0, mins / 300 * 5)) }
         if mins > 540 && mins <= 600 { return 20 }
-        return 15 // oversleeping
+        return 15
     }
 
     private func stageQualityScore() -> Int {
         let sleepStages = todaySleep.stages
         guard !sleepStages.isEmpty else { return 15 }
-
         let totalSleep = sleepStages.filter { $0.type != .awake }.reduce(0.0) { $0 + $1.durationMinutes }
         guard totalSleep > 0 else { return 15 }
-
         let deepMins = sleepStages.filter { $0.type == .deep }.reduce(0.0) { $0 + $1.durationMinutes }
         let remMins = sleepStages.filter { $0.type == .rem }.reduce(0.0) { $0 + $1.durationMinutes }
         let awakeMins = sleepStages.filter { $0.type == .awake }.reduce(0.0) { $0 + $1.durationMinutes }
         let totalAll = totalSleep + awakeMins
-
         let deepPct = deepMins / totalSleep * 100
         let remPct = remMins / totalSleep * 100
         let awakePct = totalAll > 0 ? awakeMins / totalAll * 100 : 0
-
-        // Deep: target 15-20%, max 10 pts
         var deepScore: Double = 10
         if deepPct < 15 { deepScore = max(0, deepPct / 15 * 10) }
         else if deepPct > 20 { deepScore = max(4, 10 - (deepPct - 20) / 10 * 6) }
-
-        // REM: target 20-25%, max 10 pts
         var remScore: Double = 10
         if remPct < 20 { remScore = max(0, remPct / 20 * 10) }
         else if remPct > 25 { remScore = max(4, 10 - (remPct - 25) / 10 * 6) }
-
-        // Awake: target <5%, max 5 pts
         var awakeScore: Double = 5
         if awakePct > 5 { awakeScore = max(0, 5 - (awakePct - 5) / 10 * 5) }
-
         return Int(deepScore + remScore + awakeScore)
     }
 
     private func consistencyScore() -> Int {
         let withTimes = detailedSleep.filter { $0.inBed != nil && $0.wakeUp != nil }
         guard withTimes.count >= 3 else { return 15 }
-
         let calendar = Calendar.current
         let bedMinutes = withTimes.compactMap { detail -> Double? in
             guard let bed = detail.inBed else { return nil }
             let h = calendar.component(.hour, from: bed)
             let m = calendar.component(.minute, from: bed)
-            // Shift so 6PM=0 to handle midnight wrap
             let total = Double(h * 60 + m)
             return total >= 1080 ? total - 1080 : total + 360
         }
@@ -495,11 +590,9 @@ struct SleepDetailView: View {
             let total = Double(h * 60 + m)
             return total >= 1080 ? total - 1080 : total + 360
         }
-
         let bedStdDev = standardDeviation(bedMinutes)
         let wakeStdDev = standardDeviation(wakeMinutes)
         let avgDev = (bedStdDev + wakeStdDev) / 2
-
         if avgDev <= 30 { return 25 }
         if avgDev <= 60 { return Int(15 + (60 - avgDev) / 30 * 10) }
         if avgDev <= 90 { return Int(5 + (90 - avgDev) / 30 * 10) }
@@ -588,21 +681,21 @@ struct SleepDetailView: View {
     private func comparisonBadge(actual: Double, recommended: ClosedRange<Double>) -> some View {
         if actual < recommended.lowerBound {
             Text("Low")
-                .font(.caption2.bold())
+                .font(.caption2.weight(.bold))
                 .padding(.horizontal, 6)
                 .padding(.vertical, 2)
                 .background(Color.orange.opacity(0.15), in: Capsule())
                 .foregroundStyle(.orange)
         } else if actual > recommended.upperBound {
             Text("High")
-                .font(.caption2.bold())
+                .font(.caption2.weight(.bold))
                 .padding(.horizontal, 6)
                 .padding(.vertical, 2)
                 .background(Color.yellow.opacity(0.15), in: Capsule())
                 .foregroundStyle(.yellow)
         } else {
             Text("Normal")
-                .font(.caption2.bold())
+                .font(.caption2.weight(.bold))
                 .padding(.horizontal, 6)
                 .padding(.vertical, 2)
                 .background(Color.green.opacity(0.15), in: Capsule())
@@ -612,8 +705,6 @@ struct SleepDetailView: View {
 
     // MARK: - Consistency Helpers
 
-    /// Shift time to a 6PM-anchored scale so bedtimes near midnight don't wrap.
-    /// 6PM → 0, midnight → 360, 6AM → 720, noon → 1080
     private func shiftedMinutes(_ date: Date) -> Double {
         let calendar = Calendar.current
         let hour = calendar.component(.hour, from: date)
@@ -661,10 +752,13 @@ struct SleepDetailView: View {
         HStack {
             Text(title)
                 .font(.subheadline)
+                .foregroundStyle(.secondary)
             Spacer()
             Text(value)
-                .font(.subheadline.bold().monospacedDigit())
-                .foregroundStyle(.secondary)
+                .font(.system(.subheadline, design: .rounded, weight: .bold))
+                .monospacedDigit()
         }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
     }
 }
