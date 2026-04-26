@@ -28,22 +28,35 @@ struct HeartRateDetailView: View {
     // MARK: - Body
 
     var body: some View {
-        List {
-            if isLoading && todayStats == nil {
-                Section {
+        ScrollView {
+            LazyVStack(spacing: AppTheme.sectionSpacing) {
+                if isLoading && todayStats == nil {
                     ProgressView()
                         .frame(maxWidth: .infinity, minHeight: 200)
+                } else {
+                    heroCard
+                    timeRangePicker
+                    if let stats = todayStats {
+                        zonesCard(stats: stats)
+                    }
+                    restingTrendCard
+                    if !dailyHRRange.isEmpty {
+                        hrRangeCard
+                    }
+                    if !dailyHRV.isEmpty {
+                        hrvCard
+                    }
+                    if lastWeekAvgResting > 0 {
+                        weeklyComparisonCard
+                    }
+                    statsCard
                 }
-            } else {
-                todaySummarySection
-                heartRateZonesSection
-                restingTrendSection
-                hrRangeSection
-                hrvSection
-                weeklyComparisonSection
-                statsSection
             }
+            .padding(.horizontal)
+            .padding(.top, 8)
+            .padding(.bottom, 36)
         }
+        .background(Color(.systemGroupedBackground))
         .navigationTitle("Heart Rate")
         .navigationBarTitleDisplayMode(.inline)
         .task(id: timeRange) {
@@ -51,79 +64,149 @@ struct HeartRateDetailView: View {
         }
     }
 
-    // MARK: - Section 1: Today Summary
+    // MARK: - Hero Card
 
-    private var todaySummarySection: some View {
-        Section {
-            VStack(spacing: 16) {
-                if let stats = todayStats {
-                    HStack(spacing: 0) {
-                        statColumn(label: "Min", value: "\(Int(stats.min))", unit: "bpm", color: .blue)
-                        Divider().frame(height: 50)
-                        statColumn(label: "Avg", value: "\(Int(stats.avg))", unit: "bpm", color: .red)
-                        Divider().frame(height: 50)
-                        statColumn(label: "Max", value: "\(Int(stats.max))", unit: "bpm", color: .orange)
+    private var heroCard: some View {
+        ZStack(alignment: .topLeading) {
+            LinearGradient(
+                colors: [Color(red: 0.88, green: 0.15, blue: 0.25), Color(red: 0.95, green: 0.35, blue: 0.35).opacity(0.75)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+
+            Circle()
+                .fill(.white.opacity(0.07))
+                .frame(width: 220)
+                .offset(x: 160, y: -70)
+
+            VStack(alignment: .leading, spacing: 20) {
+                // Top: icon + primary BPM
+                HStack(alignment: .center, spacing: 16) {
+                    ZStack {
+                        Circle()
+                            .fill(.white.opacity(0.20))
+                            .frame(width: 56, height: 56)
+                        Image(systemName: "heart.fill")
+                            .font(.system(size: 26, weight: .semibold))
+                            .foregroundStyle(.white)
                     }
-                } else {
-                    Text("No heart rate data today")
-                        .foregroundStyle(.secondary)
-                        .frame(maxWidth: .infinity)
+                    VStack(alignment: .leading, spacing: 4) {
+                        if let resting = todayResting {
+                            HStack(alignment: .firstTextBaseline, spacing: 4) {
+                                Text("\(Int(resting))")
+                                    .font(.system(size: 48, weight: .black, design: .rounded))
+                                    .foregroundStyle(.white)
+                                    .monospacedDigit()
+                                Text("bpm")
+                                    .font(.title3.weight(.semibold))
+                                    .foregroundStyle(.white.opacity(0.75))
+                            }
+                            Text("Resting Heart Rate")
+                                .font(.subheadline.weight(.medium))
+                                .foregroundStyle(.white.opacity(0.75))
+                        } else if let stats = todayStats {
+                            HStack(alignment: .firstTextBaseline, spacing: 4) {
+                                Text("\(Int(stats.avg))")
+                                    .font(.system(size: 48, weight: .black, design: .rounded))
+                                    .foregroundStyle(.white)
+                                    .monospacedDigit()
+                                Text("bpm")
+                                    .font(.title3.weight(.semibold))
+                                    .foregroundStyle(.white.opacity(0.75))
+                            }
+                            Text("Average Today")
+                                .font(.subheadline.weight(.medium))
+                                .foregroundStyle(.white.opacity(0.75))
+                        } else {
+                            Text("No Data")
+                                .font(.system(size: 32, weight: .black, design: .rounded))
+                                .foregroundStyle(.white)
+                        }
+                    }
                 }
 
-                HStack(spacing: 24) {
-                    if let resting = todayResting {
-                        VStack(spacing: 2) {
-                            Image(systemName: "heart.fill")
-                                .foregroundStyle(.pink)
-                            Text("\(Int(resting))")
-                                .font(.subheadline.bold().monospacedDigit())
-                            Text("Resting")
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
-                        }
+                // Stat columns
+                HStack(spacing: 0) {
+                    if let stats = todayStats {
+                        heroStatColumn(icon: "arrow.down.heart.fill", label: "Min", value: "\(Int(stats.min)) bpm")
+                        Divider().frame(height: 32).overlay(.white.opacity(0.30))
+                        heroStatColumn(icon: "arrow.up.heart.fill", label: "Max", value: "\(Int(stats.max)) bpm")
+                        Divider().frame(height: 32).overlay(.white.opacity(0.30))
                     }
                     if let hrv = todayHRV {
-                        VStack(spacing: 2) {
-                            Image(systemName: "waveform.path.ecg")
-                                .foregroundStyle(.purple)
-                            Text("\(Int(hrv)) ms")
-                                .font(.subheadline.bold().monospacedDigit())
-                            Text("HRV")
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
-                        }
+                        heroStatColumn(icon: "waveform.path.ecg", label: "HRV", value: "\(Int(hrv)) ms")
+                    } else {
+                        heroStatColumn(icon: "waveform.path.ecg", label: "HRV", value: "—")
                     }
                     if let stats = todayStats {
-                        VStack(spacing: 2) {
-                            Image(systemName: "arrow.up.arrow.down")
-                                .foregroundStyle(.teal)
-                            Text("\(Int(stats.max - stats.min))")
-                                .font(.subheadline.bold().monospacedDigit())
-                            Text("Range")
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
-                        }
+                        Divider().frame(height: 32).overlay(.white.opacity(0.30))
+                        heroStatColumn(icon: "arrow.up.arrow.down", label: "Range", value: "\(Int(stats.max - stats.min))")
                     }
                 }
             }
-            .padding(.vertical, 8)
-        } header: {
-            Text("Today")
+            .padding(20)
+        }
+        .heroCard()
+    }
+
+    private func heroStatColumn(icon: String, label: String, value: String) -> some View {
+        VStack(spacing: 3) {
+            Image(systemName: icon)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(.white.opacity(0.80))
+            Text(value)
+                .font(.system(size: 14, weight: .bold, design: .rounded))
+                .foregroundStyle(.white)
+                .monospacedDigit()
+            Text(label)
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(.white.opacity(0.65))
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    // MARK: - Time Range Picker
+
+    private var timeRangePicker: some View {
+        HStack(spacing: 6) {
+            ForEach(TimeRange.allCases, id: \.self) { range in
+                Button {
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+                        timeRange = range
+                    }
+                } label: {
+                    Text(range.rawValue)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(timeRange == range ? .white : .primary)
+                        .padding(.horizontal, 18)
+                        .padding(.vertical, 8)
+                        .background(
+                            timeRange == range
+                                ? AnyShapeStyle(Color(red: 0.88, green: 0.15, blue: 0.25))
+                                : AnyShapeStyle(Color(.secondarySystemGroupedBackground)),
+                            in: Capsule()
+                        )
+                        .shadow(color: timeRange == range ? Color.red.opacity(0.35) : .clear, radius: 8, x: 0, y: 3)
+                }
+                .buttonStyle(.plain)
+            }
+            Spacer()
         }
     }
 
-    // MARK: - Section 2: Heart Rate Zones
+    // MARK: - Zones Card
 
-    @ViewBuilder
-    private var heartRateZonesSection: some View {
-        if let stats = todayStats {
-            Section("Heart Rate Zones") {
-                let zones = heartRateZones(min: stats.min, max: stats.max, avg: stats.avg)
-                ForEach(zones, id: \.name) { zone in
-                    HStack(spacing: 12) {
+    private func zonesCard(stats: (min: Double, max: Double, avg: Double)) -> some View {
+        VStack(alignment: .leading, spacing: 14) {
+            SectionHeader(title: "Heart Rate Zones", icon: "heart.circle.fill", color: .red)
+
+            let zones = heartRateZones(min: stats.min, max: stats.max, avg: stats.avg)
+            VStack(spacing: 0) {
+                ForEach(Array(zones.enumerated()), id: \.element.name) { idx, zone in
+                    HStack(spacing: 14) {
                         RoundedRectangle(cornerRadius: 3)
-                            .fill(zone.color)
-                            .frame(width: 4, height: 32)
+                            .fill(zone.color.gradient)
+                            .frame(width: 4, height: 36)
                         VStack(alignment: .leading, spacing: 2) {
                             Text(zone.name)
                                 .font(.subheadline.weight(.semibold))
@@ -135,26 +218,30 @@ struct HeartRateDetailView: View {
                         if zone.isActive {
                             Text("Active")
                                 .font(.caption2.bold())
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 3)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 4)
                                 .background(zone.color.opacity(0.15), in: Capsule())
                                 .foregroundStyle(zone.color)
                         }
                     }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    if idx < zones.count - 1 {
+                        Divider().padding(.leading, 34)
+                    }
                 }
             }
+            .background(Color(.tertiarySystemGroupedBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 14))
         }
+        .appCard()
     }
 
-    // MARK: - Section 3: Resting HR Trend
+    // MARK: - Resting HR Trend Card
 
-    private var restingTrendSection: some View {
-        Section("Resting Heart Rate") {
-            Picker("Range", selection: $timeRange) {
-                ForEach(TimeRange.allCases, id: \.self) { Text($0.rawValue).tag($0) }
-            }
-            .pickerStyle(.segmented)
-            .listRowSeparator(.hidden)
+    private var restingTrendCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            SectionHeader(title: "Resting Heart Rate", icon: "heart.fill", color: .red)
 
             if !dailyRestingHR.isEmpty {
                 Chart(dailyRestingHR, id: \.date) { point in
@@ -182,182 +269,206 @@ struct HeartRateDetailView: View {
                 .chartYAxisLabel("bpm")
                 .chartYScale(domain: restingChartDomain)
                 .frame(height: 200)
-                .padding(.vertical, 8)
 
                 if let trend = restingTrend {
-                    HStack(spacing: 4) {
-                        Image(systemName: trend >= 0 ? "arrow.up.right" : "arrow.down.right")
+                    HStack(spacing: 6) {
+                        Image(systemName: trend <= 0 ? "arrow.down.right.circle.fill" : "arrow.up.right.circle.fill")
                             .font(.caption2)
                             .foregroundStyle(trend <= 0 ? .green : .orange)
                         Text("\(trend <= 0 ? "Improving" : "Increasing") — \(abs(Int(trend))) bpm vs start of period")
                             .font(.caption)
                             .foregroundStyle(.secondary)
+                        Spacer()
                     }
                 }
             } else if !isLoading {
                 Text("No resting heart rate data available.")
                     .foregroundStyle(.secondary)
-                    .frame(height: 200)
+                    .frame(height: 180)
                     .frame(maxWidth: .infinity)
             }
         }
+        .appCard()
     }
 
-    // MARK: - Section 4: Daily HR Range
+    // MARK: - Daily Range Card
 
-    @ViewBuilder
-    private var hrRangeSection: some View {
-        if !dailyHRRange.isEmpty {
-            Section("Daily Range") {
-                Chart(dailyHRRange, id: \.date) { point in
-                    BarMark(
-                        x: .value("Date", point.date, unit: .day),
-                        yStart: .value("Min", point.min),
-                        yEnd: .value("Max", point.max)
-                    )
-                    .foregroundStyle(.red.opacity(0.3).gradient)
-                    .cornerRadius(3)
+    private var hrRangeCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            SectionHeader(title: "Daily Range", icon: "arrow.up.arrow.down.circle.fill", color: .orange)
 
-                    PointMark(
-                        x: .value("Date", point.date, unit: .day),
-                        y: .value("Min", point.min)
-                    )
-                    .symbolSize(16)
-                    .foregroundStyle(.blue)
+            Chart(dailyHRRange, id: \.date) { point in
+                BarMark(
+                    x: .value("Date", point.date, unit: .day),
+                    yStart: .value("Min", point.min),
+                    yEnd: .value("Max", point.max)
+                )
+                .foregroundStyle(.red.opacity(0.3).gradient)
+                .cornerRadius(3)
 
-                    PointMark(
-                        x: .value("Date", point.date, unit: .day),
-                        y: .value("Max", point.max)
-                    )
-                    .symbolSize(16)
-                    .foregroundStyle(.orange)
+                PointMark(
+                    x: .value("Date", point.date, unit: .day),
+                    y: .value("Min", point.min)
+                )
+                .symbolSize(16)
+                .foregroundStyle(.blue)
+
+                PointMark(
+                    x: .value("Date", point.date, unit: .day),
+                    y: .value("Max", point.max)
+                )
+                .symbolSize(16)
+                .foregroundStyle(.orange)
+            }
+            .chartYAxisLabel("bpm")
+            .chartYScale(domain: rangeChartDomain)
+            .frame(height: 180)
+
+            HStack(spacing: 16) {
+                HStack(spacing: 5) {
+                    Circle().fill(.blue).frame(width: 7, height: 7)
+                    Text("Min").font(.caption2).foregroundStyle(.secondary)
                 }
-                .chartYAxisLabel("bpm")
-                .chartYScale(domain: rangeChartDomain)
-                .frame(height: 180)
-                .padding(.vertical, 8)
-
-                HStack(spacing: 16) {
-                    HStack(spacing: 4) {
-                        Circle().fill(.blue).frame(width: 8, height: 8)
-                        Text("Min").font(.caption2).foregroundStyle(.secondary)
-                    }
-                    HStack(spacing: 4) {
-                        Circle().fill(.orange).frame(width: 8, height: 8)
-                        Text("Max").font(.caption2).foregroundStyle(.secondary)
-                    }
+                HStack(spacing: 5) {
+                    Circle().fill(.orange).frame(width: 7, height: 7)
+                    Text("Max").font(.caption2).foregroundStyle(.secondary)
                 }
+                Spacer()
             }
         }
+        .appCard()
     }
 
-    // MARK: - Section 5: HRV Trend
+    // MARK: - HRV Card
 
-    @ViewBuilder
-    private var hrvSection: some View {
-        if !dailyHRV.isEmpty {
-            Section("Heart Rate Variability") {
-                Chart(dailyHRV, id: \.date) { point in
-                    AreaMark(
-                        x: .value("Date", point.date, unit: .day),
-                        y: .value("HRV", point.ms)
-                    )
-                    .interpolationMethod(.catmullRom)
-                    .foregroundStyle(.purple.opacity(0.15).gradient)
+    private var hrvCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            SectionHeader(title: "Heart Rate Variability", icon: "waveform.path.ecg", color: .purple)
 
-                    LineMark(
-                        x: .value("Date", point.date, unit: .day),
-                        y: .value("HRV", point.ms)
-                    )
-                    .interpolationMethod(.catmullRom)
-                    .foregroundStyle(.purple)
+            Chart(dailyHRV, id: \.date) { point in
+                AreaMark(
+                    x: .value("Date", point.date, unit: .day),
+                    y: .value("HRV", point.ms)
+                )
+                .interpolationMethod(.catmullRom)
+                .foregroundStyle(.purple.opacity(0.15).gradient)
 
-                    PointMark(
-                        x: .value("Date", point.date, unit: .day),
-                        y: .value("HRV", point.ms)
-                    )
-                    .symbolSize(20)
-                    .foregroundStyle(.purple)
-                }
-                .chartYAxisLabel("ms")
-                .chartYScale(domain: hrvChartDomain)
-                .frame(height: 160)
-                .padding(.vertical, 8)
+                LineMark(
+                    x: .value("Date", point.date, unit: .day),
+                    y: .value("HRV", point.ms)
+                )
+                .interpolationMethod(.catmullRom)
+                .foregroundStyle(.purple)
 
-                let avgHRV = dailyHRV.map(\.ms).reduce(0, +) / Double(dailyHRV.count)
-                HStack {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Average: \(Int(avgHRV)) ms")
-                            .font(.caption.bold())
-                        Text(hrvInterpretation(avgHRV))
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                    Spacer()
+                PointMark(
+                    x: .value("Date", point.date, unit: .day),
+                    y: .value("HRV", point.ms)
+                )
+                .symbolSize(20)
+                .foregroundStyle(.purple)
+            }
+            .chartYAxisLabel("ms")
+            .chartYScale(domain: hrvChartDomain)
+            .frame(height: 160)
+
+            let avgHRV = dailyHRV.map(\.ms).reduce(0, +) / Double(dailyHRV.count)
+            HStack(spacing: 12) {
+                ZStack {
+                    Circle()
+                        .fill(Color.purple.opacity(0.12))
+                        .frame(width: 38, height: 38)
                     Image(systemName: "waveform.path.ecg")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(.purple)
+                }
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Average \(Int(avgHRV)) ms")
+                        .font(.subheadline.bold())
+                    Text(hrvInterpretation(avgHRV))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+            }
+        }
+        .appCard()
+    }
+
+    // MARK: - Weekly Comparison Card
+
+    private var weeklyComparisonCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            SectionHeader(title: "Week vs Last Week", icon: "arrow.left.arrow.right", color: .red)
+
+            let delta = thisWeekAvgResting - lastWeekAvgResting
+            HStack(spacing: 0) {
+                VStack(spacing: 4) {
+                    Text("This Week")
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(.secondary)
+                    Text("\(Int(thisWeekAvgResting))")
+                        .font(.system(size: 22, weight: .bold, design: .rounded))
+                        .monospacedDigit()
+                    Text("bpm avg")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                }
+                .frame(maxWidth: .infinity)
+
+                VStack(spacing: 4) {
+                    // Lower resting HR is better → down arrow is green
+                    Image(systemName: delta <= 0 ? "arrow.down.right.circle.fill" : "arrow.up.right.circle.fill")
                         .font(.title2)
-                        .foregroundStyle(.purple.opacity(0.5))
+                        .foregroundStyle(delta <= 0 ? .green : .orange)
+                    Text("\(abs(Int(delta))) bpm")
+                        .font(.caption.bold().monospacedDigit())
+                        .foregroundStyle(delta <= 0 ? .green : .orange)
                 }
+
+                VStack(spacing: 4) {
+                    Text("Last Week")
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(.secondary)
+                    Text("\(Int(lastWeekAvgResting))")
+                        .font(.system(size: 22, weight: .bold, design: .rounded))
+                        .monospacedDigit()
+                        .foregroundStyle(.secondary)
+                    Text("bpm avg")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                }
+                .frame(maxWidth: .infinity)
             }
+            .padding(.vertical, 4)
         }
+        .appCard()
     }
 
-    // MARK: - Section 6: Weekly Comparison
+    // MARK: - Stats Card
 
-    @ViewBuilder
-    private var weeklyComparisonSection: some View {
-        if lastWeekAvgResting > 0 {
-            Section("This Week vs Last Week") {
-                HStack(spacing: 16) {
-                    VStack(spacing: 4) {
-                        Text("This Week")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        Text("\(Int(thisWeekAvgResting)) bpm")
-                            .font(.title3.bold().monospacedDigit())
-                    }
-                    .frame(maxWidth: .infinity)
+    private var statsCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            SectionHeader(title: "Stats", icon: "list.number", color: .secondary)
 
-                    let delta = thisWeekAvgResting - lastWeekAvgResting
-                    VStack(spacing: 2) {
-                        // Lower resting HR is better
-                        Image(systemName: delta <= 0 ? "arrow.down.right" : "arrow.up.right")
-                            .font(.title3)
-                            .foregroundStyle(delta <= 0 ? .green : .orange)
-                        Text("\(abs(Int(delta))) bpm")
-                            .font(.caption.bold())
-                            .foregroundStyle(delta <= 0 ? .green : .orange)
-                    }
-
-                    VStack(spacing: 4) {
-                        Text("Last Week")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        Text("\(Int(lastWeekAvgResting)) bpm")
-                            .font(.title3.bold().monospacedDigit())
-                            .foregroundStyle(.secondary)
-                    }
-                    .frame(maxWidth: .infinity)
+            VStack(spacing: 0) {
+                statsRow("Current Resting", value: todayResting.map { "\(Int($0)) bpm" } ?? "—")
+                Divider().padding(.leading, 16)
+                statsRow("Average Resting", value: averageResting.map { "\(Int($0)) bpm" } ?? "—")
+                Divider().padding(.leading, 16)
+                statsRow("Lowest Resting", value: lowestResting.map { "\(Int($0)) bpm" } ?? "—")
+                Divider().padding(.leading, 16)
+                statsRow("Highest Resting", value: highestResting.map { "\(Int($0)) bpm" } ?? "—")
+                if let avgHRV = averageHRV {
+                    Divider().padding(.leading, 16)
+                    statsRow("Average HRV", value: "\(Int(avgHRV)) ms")
                 }
-                .padding(.vertical, 8)
-                .accessibilityElement(children: .combine)
+                Divider().padding(.leading, 16)
+                statsRow("Data Points", value: "\(dailyRestingHR.count) days")
             }
+            .background(Color(.tertiarySystemGroupedBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 14))
         }
-    }
-
-    // MARK: - Section 7: Stats
-
-    private var statsSection: some View {
-        Section("Stats") {
-            statsRow("Current Resting", value: todayResting.map { "\(Int($0)) bpm" } ?? "—")
-            statsRow("Average Resting", value: averageResting.map { "\(Int($0)) bpm" } ?? "—")
-            statsRow("Lowest Resting", value: lowestResting.map { "\(Int($0)) bpm" } ?? "—")
-            statsRow("Highest Resting", value: highestResting.map { "\(Int($0)) bpm" } ?? "—")
-            if let avgHRV = averageHRV {
-                statsRow("Average HRV", value: "\(Int(avgHRV)) ms")
-            }
-            statsRow("Data Points", value: "\(dailyRestingHR.count) days")
-        }
+        .appCard()
     }
 
     // MARK: - Heart Rate Zones
@@ -370,8 +481,6 @@ struct HeartRateDetailView: View {
     }
 
     private func heartRateZones(min: Double, max: Double, avg: Double) -> [HRZone] {
-        // Estimated max HR (220 - age). Using avg resting as proxy: lower resting → fitter → higher max.
-        // Default to 190 as a reasonable estimate without age data.
         let estimatedMax = 190.0
         let restZone = estimatedMax * 0.5
         let fatBurnLow = estimatedMax * 0.5
@@ -381,30 +490,10 @@ struct HeartRateDetailView: View {
         let peakLow = estimatedMax * 0.85
 
         return [
-            HRZone(
-                name: "Rest",
-                range: "< \(Int(restZone)) bpm",
-                color: .blue,
-                isActive: min < restZone
-            ),
-            HRZone(
-                name: "Fat Burn",
-                range: "\(Int(fatBurnLow))–\(Int(fatBurnHigh)) bpm",
-                color: .green,
-                isActive: max >= fatBurnLow && min <= fatBurnHigh
-            ),
-            HRZone(
-                name: "Cardio",
-                range: "\(Int(cardioLow))–\(Int(cardioHigh)) bpm",
-                color: .yellow,
-                isActive: max >= cardioLow && min <= cardioHigh
-            ),
-            HRZone(
-                name: "Peak",
-                range: "> \(Int(peakLow)) bpm",
-                color: .red,
-                isActive: max >= peakLow
-            )
+            HRZone(name: "Rest", range: "< \(Int(restZone)) bpm", color: .blue, isActive: min < restZone),
+            HRZone(name: "Fat Burn", range: "\(Int(fatBurnLow))–\(Int(fatBurnHigh)) bpm", color: .green, isActive: max >= fatBurnLow && min <= fatBurnHigh),
+            HRZone(name: "Cardio", range: "\(Int(cardioLow))–\(Int(cardioHigh)) bpm", color: .yellow, isActive: max >= cardioLow && min <= cardioHigh),
+            HRZone(name: "Peak", range: "> \(Int(peakLow)) bpm", color: .red, isActive: max >= peakLow)
         ]
     }
 
@@ -415,13 +504,8 @@ struct HeartRateDetailView: View {
         return dailyRestingHR.map(\.bpm).reduce(0, +) / Double(dailyRestingHR.count)
     }
 
-    private var lowestResting: Double? {
-        dailyRestingHR.map(\.bpm).min()
-    }
-
-    private var highestResting: Double? {
-        dailyRestingHR.map(\.bpm).max()
-    }
+    private var lowestResting: Double? { dailyRestingHR.map(\.bpm).min() }
+    private var highestResting: Double? { dailyRestingHR.map(\.bpm).max() }
 
     private var averageHRV: Double? {
         guard !dailyHRV.isEmpty else { return nil }
@@ -484,6 +568,20 @@ struct HeartRateDetailView: View {
         return "Low — prioritize rest and recovery"
     }
 
+    private func statsRow(_ title: String, value: String) -> some View {
+        HStack {
+            Text(title)
+                .font(.subheadline)
+                .foregroundStyle(.primary)
+            Spacer()
+            Text(value)
+                .font(.subheadline.bold().monospacedDigit())
+                .foregroundStyle(.secondary)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 11)
+    }
+
     // MARK: - Data Loading
 
     private func loadData() async {
@@ -503,35 +601,5 @@ struct HeartRateDetailView: View {
         todayStats = try? await statsData
         todayResting = try? await restingData
         todayHRV = try? await hrvToday
-    }
-
-    // MARK: - Shared Helpers
-
-    private func statColumn(label: String, value: String, unit: String, color: Color) -> some View {
-        VStack(spacing: 4) {
-            Text(label)
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-            Text(value)
-                .font(.title2.bold().monospacedDigit())
-                .foregroundStyle(color)
-            Text(unit)
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(label): \(value) \(unit)")
-    }
-
-    private func statsRow(_ title: String, value: String) -> some View {
-        HStack {
-            Text(title)
-                .font(.subheadline)
-            Spacer()
-            Text(value)
-                .font(.subheadline.bold().monospacedDigit())
-                .foregroundStyle(.secondary)
-        }
     }
 }
