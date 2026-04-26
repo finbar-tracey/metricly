@@ -327,92 +327,90 @@ struct HomeDashboardView: View {
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(.secondary)
 
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 12) {
-                    NavigationLink { StepsDetailView() } label: {
-                        compactHealthCard(
-                            icon: "figure.walk", color: .green,
-                            value: HealthFormatters.formatSteps(todaySteps), label: "Steps",
-                            progress: todaySteps / 10_000
-                        )
-                    }
-                    .buttonStyle(.plain)
-
-                    NavigationLink { SleepDetailView() } label: {
-                        compactHealthCard(
-                            icon: "bed.double.fill", color: .indigo,
-                            value: HealthFormatters.formatSleepShort(sleepMinutes), label: "Sleep",
-                            progress: sleepMinutes / 480
-                        )
-                    }
-                    .buttonStyle(.plain)
-
-                    NavigationLink { HeartRateDetailView() } label: {
-                        compactHealthCard(
-                            icon: "heart.fill", color: .red,
-                            value: restingHR.map { "\(Int($0))" } ?? "—", label: "Resting HR",
-                            progress: nil
-                        )
-                    }
-                    .buttonStyle(.plain)
-
-                    NavigationLink { HealthDashboardView() } label: {
-                        compactHealthCard(
-                            icon: "waveform.path.ecg", color: .purple,
-                            value: hrv.map { "\(Int($0)) ms" } ?? "—", label: "HRV",
-                            progress: nil
-                        )
-                    }
-                    .buttonStyle(.plain)
-
-                    NavigationLink { HealthDashboardView() } label: {
-                        compactHealthCard(
-                            icon: "flame.fill", color: .orange,
-                            value: "\(Int(activeCalories))", label: "Active Cal",
-                            progress: nil
-                        )
-                    }
-                    .buttonStyle(.plain)
-
-                    if !caffeineEntries.isEmpty {
-                        let caffeineMg = totalCaffeineMg(at: .now)
-                        if caffeineMg > 0.5 {
-                            NavigationLink { CaffeineTrackerView() } label: {
-                                compactHealthCard(
-                                    icon: "cup.and.saucer.fill", color: .brown,
-                                    value: "\(Int(caffeineMg)) mg", label: "Caffeine",
-                                    progress: min(1.0, caffeineMg / 400)
-                                )
-                            }
-                            .buttonStyle(.plain)
-                        }
-                    }
-
-                    NavigationLink { WaterTrackerView() } label: {
-                        compactHealthCard(
-                            icon: "drop.fill", color: .cyan,
-                            value: "\(Int(todayWaterMl)) ml", label: "Water",
-                            progress: waterProgress
-                        )
-                    }
-                    .buttonStyle(.plain)
-
-                    NavigationLink { CreatineTrackerView() } label: {
-                        compactHealthCard(
-                            icon: "pill.fill", color: .blue,
-                            value: creatineTakenToday ? "Taken" : "Not yet", label: "Creatine",
-                            progress: creatineTakenToday ? 1.0 : 0
-                        )
-                    }
-                    .buttonStyle(.plain)
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+                NavigationLink { StepsDetailView() } label: {
+                    compactHealthCard(
+                        icon: "figure.walk", color: .green,
+                        value: HealthFormatters.formatSteps(todaySteps), label: "Steps",
+                        progress: todaySteps / 10_000
+                    )
                 }
+                .buttonStyle(.plain)
+
+                NavigationLink { SleepDetailView() } label: {
+                    compactHealthCard(
+                        icon: "bed.double.fill", color: .indigo,
+                        value: HealthFormatters.formatSleepShort(sleepMinutes), label: "Sleep",
+                        progress: sleepMinutes / 480
+                    )
+                }
+                .buttonStyle(.plain)
+
+                NavigationLink { HeartRateDetailView() } label: {
+                    compactHealthCard(
+                        icon: "heart.fill", color: .red,
+                        value: restingHR.map { "\(Int($0))" } ?? "—", label: "Resting HR",
+                        progress: nil
+                    )
+                }
+                .buttonStyle(.plain)
+
+                NavigationLink { HealthDashboardView() } label: {
+                    compactHealthCard(
+                        icon: "waveform.path.ecg", color: .purple,
+                        value: hrv.map { "\(Int($0)) ms" } ?? "—", label: "HRV",
+                        progress: nil
+                    )
+                }
+                .buttonStyle(.plain)
+
+                NavigationLink { HealthDashboardView() } label: {
+                    compactHealthCard(
+                        icon: "flame.fill", color: .orange,
+                        value: "\(Int(activeCalories))", label: "Active Cal",
+                        progress: nil
+                    )
+                }
+                .buttonStyle(.plain)
+
+                NavigationLink { WaterTrackerView() } label: {
+                    compactHealthCard(
+                        icon: "drop.fill", color: .cyan,
+                        value: "\(Int(todayWaterMl)) ml", label: "Water",
+                        progress: waterProgress
+                    )
+                }
+                .buttonStyle(.plain)
+
+                if !caffeineEntries.isEmpty {
+                    let caffeineMg = totalCaffeineMg(at: .now)
+                    if caffeineMg > 0.5 {
+                        NavigationLink { CaffeineTrackerView() } label: {
+                            compactHealthCard(
+                                icon: "cup.and.saucer.fill", color: .brown,
+                                value: "\(Int(caffeineMg)) mg", label: "Caffeine",
+                                progress: min(1.0, caffeineMg / Double(settings.dailyCaffeineLimit))
+                            )
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+
+                NavigationLink { CreatineTrackerView() } label: {
+                    compactHealthCard(
+                        icon: "pill.fill", color: .blue,
+                        value: creatineTakenToday ? "Taken" : "Not yet", label: "Creatine",
+                        progress: creatineTakenToday ? 1.0 : 0
+                    )
+                }
+                .buttonStyle(.plain)
             }
         }
         .padding(.top, 4)
     }
 
     private func compactHealthCard(icon: String, color: Color, value: String, label: String, progress: Double?) -> some View {
-        VStack(spacing: 6) {
+        HStack(spacing: 10) {
             if let progress {
                 ZStack {
                     Circle()
@@ -437,15 +435,17 @@ struct HomeDashboardView: View {
                 }
                 .frame(width: 32, height: 32)
             }
-            Text(value)
-                .font(.system(.subheadline, design: .rounded, weight: .bold))
-                .monospacedDigit()
-            Text(label)
-                .font(.caption2)
-                .foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(value)
+                    .font(.system(.subheadline, design: .rounded, weight: .bold))
+                    .monospacedDigit()
+                Text(label)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
         }
-        .frame(width: 100)
-        .padding(.vertical, 10)
+        .padding(10)
         .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12))
     }
 

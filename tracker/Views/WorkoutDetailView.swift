@@ -21,6 +21,7 @@ struct WorkoutDetailView: View {
     @State private var showingShare = false
     @State private var shareItems: [Any] = []
     @State private var showDeleteConfirm = false
+    @State private var showWorkoutTimer = false
     @State private var showFocusPrompt = false
     @State private var showFocusEndReminder = false
     @Query private var settingsArray: [UserSettings]
@@ -198,6 +199,14 @@ struct WorkoutDetailView: View {
                                                 .font(.caption)
                                                 .foregroundStyle(.orange)
                                         }
+                                        if let avgRPE = averageRPE(for: exercise) {
+                                            Text("RPE \(String(format: "%.0f", avgRPE))")
+                                                .font(.caption2.weight(.semibold))
+                                                .foregroundStyle(.purple)
+                                                .padding(.horizontal, 5)
+                                                .padding(.vertical, 2)
+                                                .background(.purple.opacity(0.12), in: .capsule)
+                                        }
                                     }
                                     if let category = exercise.category {
                                         Text(category.rawValue)
@@ -318,6 +327,13 @@ struct WorkoutDetailView: View {
         }
         .toolbar {
             ToolbarItemGroup(placement: .topBarTrailing) {
+                Button {
+                    showWorkoutTimer = true
+                } label: {
+                    Image(systemName: "stopwatch")
+                }
+                .accessibilityLabel("Workout Timers")
+
                 Menu {
                     Button {
                         showingEditWorkout = true
@@ -364,6 +380,11 @@ struct WorkoutDetailView: View {
         }
         .sheet(isPresented: $showingEditWorkout) {
             EditWorkoutSheet(workout: workout)
+        }
+        .sheet(isPresented: $showWorkoutTimer) {
+            NavigationStack {
+                WorkoutTimerView()
+            }
         }
         .sheet(isPresented: $showingFinishSheet) {
             stopDurationTimer()
@@ -450,6 +471,12 @@ struct WorkoutDetailView: View {
                 }
             }
         }
+    }
+
+    private func averageRPE(for exercise: Exercise) -> Double? {
+        let rpes = exercise.sets.filter { !$0.isWarmUp }.compactMap(\.rpe)
+        guard !rpes.isEmpty else { return nil }
+        return Double(rpes.reduce(0, +)) / Double(rpes.count)
     }
 
     private func exerciseAccessibilityLabel(_ exercise: Exercise) -> String {

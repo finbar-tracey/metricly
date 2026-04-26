@@ -2,6 +2,7 @@ import SwiftUI
 import SwiftData
 
 struct ExerciseLibraryView: View {
+    @Environment(\.modelContext) private var modelContext
     @Query(filter: #Predicate<Workout> { !$0.isTemplate }) private var workouts: [Workout]
     @Environment(\.weightUnit) private var weightUnit
     @State private var searchText = ""
@@ -81,6 +82,24 @@ struct ExerciseLibraryView: View {
                             NavigationLink(value: exercise.name) {
                                 exerciseRow(exercise)
                             }
+                            .contextMenu {
+                                Menu {
+                                    ForEach(MuscleGroup.allCases) { newGroup in
+                                        Button {
+                                            updateCategory(exerciseName: exercise.name, to: newGroup)
+                                        } label: {
+                                            HStack {
+                                                Label(newGroup.rawValue, systemImage: newGroup.icon)
+                                                if exercise.category == newGroup {
+                                                    Image(systemName: "checkmark")
+                                                }
+                                            }
+                                        }
+                                    }
+                                } label: {
+                                    Label("Change Category", systemImage: "folder")
+                                }
+                            }
                         }
                     } header: {
                         Label(group.rawValue, systemImage: group.icon)
@@ -136,6 +155,16 @@ struct ExerciseLibraryView: View {
         .padding(.vertical, 2)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(exercise.name), \(exercise.sessionCount) sessions, best \(weightUnit.format(exercise.bestWeight))")
+    }
+
+    private func updateCategory(exerciseName: String, to newCategory: MuscleGroup) {
+        // Update all exercises with this name across all workouts
+        for workout in workouts {
+            for exercise in workout.exercises where exercise.name.lowercased() == exerciseName.lowercased() {
+                exercise.category = newCategory
+            }
+        }
+        HapticsManager.lightTap()
     }
 }
 

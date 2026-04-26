@@ -431,14 +431,13 @@ struct SettingsView: View {
                         }
                     }
                 }
-                // TODO: Replace with your actual GitHub issues URL
-                Link(destination: URL(string: "https://github.com/metricly/issues")!) {
+                Link(destination: URL(string: "https://apps.apple.com/ie/app/metricly/id6760858258")!) {
                     HStack(spacing: 12) {
-                        settingsIcon("ladybug.fill", color: .green)
+                        settingsIcon("arrow.up.forward.app.fill", color: .accentColor)
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("Report an Issue")
+                            Text("View on App Store")
                                 .font(.subheadline.weight(.semibold))
-                            Text("Open a GitHub issue")
+                            Text("Share with friends")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
@@ -564,9 +563,8 @@ struct SettingsView: View {
     }
 
     private func sendFeedbackEmail() {
-        // TODO: Replace with your actual feedback email
         let subject = "Metricly Feedback"
-        let urlString = "mailto:feedback@metricly.app?subject=\(subject.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? subject)"
+        let urlString = "mailto:finbartracey@gmail.com?subject=\(subject.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? subject)"
         if let url = URL(string: urlString) {
             UIApplication.shared.open(url)
         }

@@ -498,6 +498,14 @@ struct ContentView: View {
                 }
             }
 
+            Section("Activity") {
+                NavigationLink {
+                    ActivityLogView()
+                } label: {
+                    hubRow(icon: "figure.walk", color: .green, title: "Activity Log", subtitle: "Walks, rides, stretching, and more")
+                }
+            }
+
             Section("Timers") {
                 NavigationLink {
                     WorkoutTimerView()

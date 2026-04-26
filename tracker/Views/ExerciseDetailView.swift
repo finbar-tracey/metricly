@@ -24,6 +24,7 @@ struct ExerciseDetailView: View {
     @State private var loggedPreviousIndices: Set<Int> = []
     @State private var hasPreFilled = false
     @State private var showProgression = true
+    @State private var showQuickLog = true
     @State private var showPRBanner = false
     @State private var prScale = 1.0
     @State private var lastAddedSet: ExerciseSet?
@@ -38,7 +39,6 @@ struct ExerciseDetailView: View {
     @State private var restRemaining = 0
     @State private var timerActive = false
     @State private var timer: Timer?
-    @State private var autoStartRest = false
     @State private var timerEndDate: Date?
 
     // Toolbar sheets
@@ -52,7 +52,7 @@ struct ExerciseDetailView: View {
     var body: some View {
         List {
             if let lastSession = previousSession, !lastSession.sets.isEmpty {
-                Section {
+                Section(isExpanded: $showQuickLog) {
                     ForEach(Array(lastSession.sets.enumerated()), id: \.offset) { index, prevSet in
                         quickAddRow(index: index, prevSet: prevSet)
                     }
@@ -60,10 +60,18 @@ struct ExerciseDetailView: View {
                     HStack {
                         Image(systemName: "clock.arrow.circlepath")
                         Text("Quick Log")
+                        Spacer()
+                        Image(systemName: showQuickLog ? "chevron.up" : "chevron.down")
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
                     }
                     .font(.subheadline)
-                } footer: {
-                    Text("Tap to log each set from your last session.")
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        withAnimation {
+                            showQuickLog.toggle()
+                        }
+                    }
                 }
             }
 
@@ -180,31 +188,11 @@ struct ExerciseDetailView: View {
                     NavigationLink(value: FormGuideDestination(exerciseName: exercise.name)) {
                         Label("Form Guide", systemImage: "text.book.closed")
                     }
-                    NavigationLink(value: SubstitutionsDestination(exerciseName: exercise.name)) {
-                        Label("Substitutions", systemImage: "arrow.triangle.2.circlepath")
-                    }
                     Button {
                         editedName = exercise.name
                         isEditingName = true
                     } label: {
                         Label("Rename", systemImage: "pencil")
-                    }
-                    Menu {
-                        ForEach(MuscleGroup.allCases) { group in
-                            Button {
-                                exercise.category = group
-                                HapticsManager.lightTap()
-                            } label: {
-                                HStack {
-                                    Label(group.rawValue, systemImage: group.icon)
-                                    if exercise.category == group {
-                                        Image(systemName: "checkmark")
-                                    }
-                                }
-                            }
-                        }
-                    } label: {
-                        Label("Change Category", systemImage: "folder")
                     }
                 } label: {
                     Image(systemName: "ellipsis.circle")
@@ -214,9 +202,7 @@ struct ExerciseDetailView: View {
         .navigationDestination(for: String.self) { name in
             ExerciseHistoryView(exerciseName: name)
         }
-        .navigationDestination(for: SubstitutionsDestination.self) { dest in
-            ExerciseSubstitutionsView(exerciseName: dest.exerciseName)
-        }
+
         .navigationDestination(for: FormGuideDestination.self) { dest in
             ExerciseGuideView(exerciseName: dest.exerciseName)
         }
@@ -257,7 +243,6 @@ struct ExerciseDetailView: View {
             if !hasLoadedSettings, let settings = settingsArray.first {
                 // Prefer exercise-specific rest duration, then fall back to global
                 restDuration = exercise.customRestDuration ?? settings.defaultRestDuration
-                autoStartRest = settings.autoStartRestTimer
                 hasLoadedSettings = true
             }
             if !hasPreFilled, let lastSession = previousSession,
@@ -1007,11 +992,7 @@ struct ExerciseDetailView: View {
         exercise.sets.prefix(index).filter(\.isWarmUp).count
     }
 
-    private func triggerRestTimer() {
-        if autoStartRest {
-            startTimer()
-        }
-    }
+
 
     private func checkForPR(weight: Double, isWarmUp: Bool) {
         // Only celebrate if this is the first set in the session to exceed the historical best
@@ -1081,9 +1062,6 @@ struct ExerciseDetailView: View {
             UIImpactFeedbackGenerator(style: .medium).impactOccurred()
             checkForPR(weight: weightInKg, isWarmUp: newIsWarmUp)
             showUndoSnackbar(for: exerciseSet)
-            if !newIsWarmUp {
-                triggerRestTimer()
-            }
         }
     }
 
@@ -1102,7 +1080,6 @@ struct ExerciseDetailView: View {
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
         if !source.isCardio {
             checkForPR(weight: source.weight, isWarmUp: false)
-            triggerRestTimer()
         }
         showUndoSnackbar(for: newSet)
     }
@@ -1125,9 +1102,6 @@ struct ExerciseDetailView: View {
         }
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
         showUndoSnackbar(for: newSet)
-        if !source.isCardio {
-            triggerRestTimer()
-        }
     }
 
     private func deleteSets(at offsets: IndexSet) {
@@ -1138,8 +1112,5 @@ struct ExerciseDetailView: View {
     }
 }
 
-struct SubstitutionsDestination: Hashable {
-    let exerciseName: String
-}
 struct PlateCalcDestination: Hashable {}
 
