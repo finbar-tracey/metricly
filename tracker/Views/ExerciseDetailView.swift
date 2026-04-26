@@ -91,8 +91,7 @@ struct ExerciseDetailView: View {
                             Text("Current best: \(weightUnit.format(currentBest)) (\(Int(progress * 100))%)")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
-                            ProgressView(value: progress)
-                                .tint(Color.accentColor)
+                            GradientProgressBar(value: progress, color: .accentColor, height: 8)
                         }
                     }
                     .padding(.vertical, 4)
@@ -512,20 +511,27 @@ struct ExerciseDetailView: View {
             Button {
                 addSet()
             } label: {
-                HStack {
-                    Spacer()
-                    Label(isCardioExercise ? "Add Entry" : (newIsWarmUp ? "Add Warm-up" : "Add Set"), systemImage: "plus.circle.fill")
-                        .font(.headline)
-                    Spacer()
-                }
-                .padding(.vertical, 4)
+                Label(
+                    isCardioExercise ? "Add Entry" : (newIsWarmUp ? "Add Warm-up" : "Add Set"),
+                    systemImage: "plus.circle.fill"
+                )
+                .font(.headline)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+                .background(
+                    newIsWarmUp
+                        ? AnyShapeStyle(LinearGradient(colors: [.orange, Color(red: 0.9, green: 0.5, blue: 0.1)], startPoint: .leading, endPoint: .trailing))
+                        : AnyShapeStyle(LinearGradient(colors: [Color.accentColor, Color.accentColor.opacity(0.7)], startPoint: .leading, endPoint: .trailing))
+                )
+                .foregroundStyle(.white)
+                .clipShape(RoundedRectangle(cornerRadius: 14))
+                .shadow(color: (newIsWarmUp ? Color.orange : Color.accentColor).opacity(0.30), radius: 8, x: 0, y: 4)
             }
+            .buttonStyle(.plain)
+            .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+            .listRowBackground(Color.clear)
         } header: {
-            HStack {
-                Image(systemName: "plus.square.fill")
-                    .foregroundStyle(Color.accentColor)
-                Text("New Set")
-            }
+            SectionHeader(title: "New Set", icon: "plus.circle.fill", color: .accentColor)
         }
     }
 
@@ -748,10 +754,12 @@ struct ExerciseDetailView: View {
 
     private var timerBar: some View {
         VStack(spacing: 8) {
-            ProgressView(value: Double(restDuration - restRemaining), total: Double(restDuration))
-                .tint(restRemaining <= 10 ? .red : .blue)
-                .accessibilityLabel("Rest timer progress")
-                .accessibilityValue("\(restRemaining) seconds remaining")
+            GradientProgressBar(
+                value: Double(restDuration - restRemaining) / Double(max(1, restDuration)),
+                color: restRemaining <= 10 ? .red : .blue,
+                height: 6
+            )
+            .accessibilityLabel("Rest timer: \(restRemaining) seconds remaining")
 
             HStack {
                 Button {

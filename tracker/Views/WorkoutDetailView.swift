@@ -84,23 +84,28 @@ struct WorkoutDetailView: View {
                             workoutStatPill(
                                 icon: "figure.strengthtraining.functional",
                                 value: "\(workout.exercises.count)",
-                                label: "exercises"
+                                label: "Exercises",
+                                color: .accentColor
                             )
-                            Divider().frame(height: 28)
+                            Divider().frame(height: 44)
                             workoutStatPill(
                                 icon: "repeat",
                                 value: "\(workout.exercises.flatMap(\.sets).filter { !$0.isWarmUp }.count)",
-                                label: "sets"
+                                label: "Sets",
+                                color: .purple
                             )
-                            Divider().frame(height: 28)
+                            Divider().frame(height: 44)
                             workoutStatPill(
                                 icon: "clock",
                                 value: workout.isFinished ? (workout.formattedDuration ?? "-") : elapsedTime,
-                                label: "duration"
+                                label: "Duration",
+                                color: .orange
                             )
                         }
-                        .padding(.vertical, 4)
-                        .background(Color(.tertiarySystemFill), in: .rect(cornerRadius: 10))
+                        .padding(.vertical, 10)
+                        .background(Color(.secondarySystemGroupedBackground))
+                        .clipShape(RoundedRectangle(cornerRadius: 16))
+                        .shadow(color: .black.opacity(0.06), radius: 10, x: 0, y: 3)
                     }
                     .padding(.vertical, 4)
                     .accessibilityElement(children: .combine)
@@ -110,17 +115,28 @@ struct WorkoutDetailView: View {
                         Button {
                             showingFinishSheet = true
                         } label: {
-                            HStack {
+                            HStack(spacing: 8) {
                                 Image(systemName: "checkmark.circle.fill")
+                                    .font(.system(size: 16, weight: .semibold))
                                 Text("Finish Workout")
                                     .font(.headline)
                             }
                             .frame(maxWidth: .infinity)
-                            .padding(.vertical, 6)
+                            .padding(.vertical, 14)
+                            .background(
+                                LinearGradient(
+                                    colors: [Color.green, Color(red: 0.1, green: 0.72, blue: 0.35)],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                            .foregroundStyle(.white)
+                            .clipShape(RoundedRectangle(cornerRadius: 14))
+                            .shadow(color: .green.opacity(0.35), radius: 10, x: 0, y: 4)
                         }
-                        .tint(.green)
-                        .buttonStyle(.borderedProminent)
+                        .buttonStyle(.plain)
                         .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                        .listRowBackground(Color.clear)
                     }
                 }
             }
@@ -255,7 +271,7 @@ struct WorkoutDetailView: View {
                 .onMove(perform: moveExercises)
             } header: {
                 if !workout.exercises.isEmpty {
-                    Text("Exercises")
+                    SectionHeader(title: "Exercises", icon: "dumbbell.fill", color: .accentColor)
                 }
             }
 
@@ -314,11 +330,7 @@ struct WorkoutDetailView: View {
                     }
                 }
             } header: {
-                HStack {
-                    Image(systemName: "plus.square.fill")
-                        .foregroundStyle(Color.accentColor)
-                    Text("Add Exercise")
-                }
+                SectionHeader(title: "Add Exercise", icon: "plus.circle.fill", color: .accentColor)
             }
         }
         .navigationTitle(workout.name)
@@ -526,19 +538,24 @@ struct WorkoutDetailView: View {
         showingSuggestions = false
     }
 
-    private func workoutStatPill(icon: String, value: String, label: String) -> some View {
-        VStack(spacing: 2) {
-            HStack(spacing: 4) {
+    private func workoutStatPill(icon: String, value: String, label: String, color: Color = .accentColor) -> some View {
+        VStack(spacing: 6) {
+            ZStack {
+                Circle()
+                    .fill(color.opacity(0.12))
+                    .frame(width: 34, height: 34)
                 Image(systemName: icon)
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-                Text(value)
-                    .font(.system(.subheadline, design: .rounded, weight: .bold))
-                    .monospacedDigit()
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(color)
             }
+            Text(value)
+                .font(.system(size: 18, weight: .bold, design: .rounded))
+                .monospacedDigit()
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
             Text(label)
-                .font(.caption2)
-                .foregroundStyle(.tertiary)
+                .font(.caption2.weight(.medium))
+                .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity)
     }

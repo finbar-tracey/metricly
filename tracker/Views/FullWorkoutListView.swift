@@ -185,10 +185,11 @@ struct FullWorkoutListView: View {
                     }
                 } header: {
                     HStack {
-                        Text(hasActiveFilters ? "Filtered Workouts" : "All Workouts")
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(.secondary)
-                            .textCase(nil)
+                        SectionHeader(
+                            title: hasActiveFilters ? "Filtered Workouts" : "All Workouts",
+                            icon: "dumbbell.fill",
+                            color: .accentColor
+                        )
                         if hasActiveFilters {
                             Spacer()
                             Text("\(filteredWorkouts.count)")
