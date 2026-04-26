@@ -27,20 +27,40 @@ struct InsightsView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            Picker("Section", selection: $selectedTab) {
-                ForEach(InsightsTab.allCases) { tab in
-                    Image(systemName: tab.icon).tag(tab)
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(InsightsTab.allCases) { tab in
+                        Button {
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                selectedTab = tab
+                            }
+                        } label: {
+                            HStack(spacing: 5) {
+                                Image(systemName: tab.icon)
+                                    .font(.system(size: 12, weight: .semibold))
+                                Text(tab.rawValue)
+                                    .font(.subheadline.weight(.semibold))
+                            }
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 8)
+                            .background(
+                                selectedTab == tab
+                                    ? AnyShapeStyle(Color.accentColor)
+                                    : AnyShapeStyle(Color(.secondarySystemGroupedBackground)),
+                                in: Capsule()
+                            )
+                            .foregroundStyle(selectedTab == tab ? .white : .secondary)
+                            .shadow(
+                                color: selectedTab == tab ? Color.accentColor.opacity(0.35) : .clear,
+                                radius: 6, x: 0, y: 3
+                            )
+                        }
+                        .buttonStyle(.plain)
+                    }
                 }
+                .padding(.horizontal)
+                .padding(.vertical, 10)
             }
-            .pickerStyle(.segmented)
-            .padding(.horizontal)
-            .padding(.top, 8)
-
-            // Show selected tab name
-            Text(selectedTab.rawValue)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .padding(.top, 6)
 
             switch selectedTab {
             case .volume:

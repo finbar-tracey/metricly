@@ -242,7 +242,9 @@ struct HomeDashboardView: View {
 
     var body: some View {
         ScrollView {
-            LazyVStack(spacing: 20) {
+            LazyVStack(spacing: AppTheme.sectionSpacing) {
+                heroSection
+
                 if healthKitEnabled && healthDataLoaded {
                     healthGlanceSection
                 }
@@ -266,7 +268,7 @@ struct HomeDashboardView: View {
                 quickLinksSection
             }
             .padding(.horizontal)
-            .padding(.bottom, 20)
+            .padding(.bottom, 36)
         }
         .background(Color(.systemGroupedBackground))
         .navigationTitle(greeting)
@@ -323,9 +325,7 @@ struct HomeDashboardView: View {
 
     private var healthGlanceSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Health")
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(.secondary)
+            SectionHeader(title: "Health", icon: "heart.circle.fill", color: .red)
 
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
                 NavigationLink { StepsDetailView() } label: {
@@ -410,43 +410,47 @@ struct HomeDashboardView: View {
     }
 
     private func compactHealthCard(icon: String, color: Color, value: String, label: String, progress: Double?) -> some View {
-        HStack(spacing: 10) {
-            if let progress {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack {
                 ZStack {
                     Circle()
-                        .stroke(.quaternary, lineWidth: 4)
-                    Circle()
-                        .trim(from: 0, to: animateRings ? min(1.0, progress) : 0)
-                        .stroke(color.gradient, style: StrokeStyle(lineWidth: 4, lineCap: .round))
-                        .rotationEffect(.degrees(-90))
-                        .animation(.easeOut(duration: 0.8), value: animateRings)
+                        .fill(color.opacity(0.15))
+                    if let progress {
+                        Circle()
+                            .trim(from: 0, to: animateRings ? min(1.0, progress) : 0)
+                            .stroke(color.gradient, style: StrokeStyle(lineWidth: 3.5, lineCap: .round))
+                            .rotationEffect(.degrees(-90))
+                            .animation(.easeOut(duration: 0.8), value: animateRings)
+                    }
                     Image(systemName: icon)
-                        .font(.caption)
+                        .font(.system(size: 15, weight: .semibold))
                         .foregroundStyle(color)
                 }
-                .frame(width: 32, height: 32)
-            } else {
-                ZStack {
-                    Circle()
-                        .fill(color.opacity(0.12))
-                    Image(systemName: icon)
-                        .font(.caption)
-                        .foregroundStyle(color)
+                .frame(width: 40, height: 40)
+                Spacer()
+                if let progress {
+                    Text("\(Int(min(1, progress) * 100))%")
+                        .font(.system(size: 11, weight: .bold, design: .rounded))
+                        .foregroundStyle(color.opacity(0.8))
+                        .monospacedDigit()
                 }
-                .frame(width: 32, height: 32)
             }
             VStack(alignment: .leading, spacing: 2) {
                 Text(value)
-                    .font(.system(.subheadline, design: .rounded, weight: .bold))
+                    .font(.system(size: 22, weight: .bold, design: .rounded))
                     .monospacedDigit()
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
                 Text(label)
-                    .font(.caption2)
+                    .font(.caption2.weight(.medium))
                     .foregroundStyle(.secondary)
             }
-            Spacer()
         }
-        .padding(10)
-        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12))
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(14)
+        .background(Color(.secondarySystemGroupedBackground))
+        .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardRadius))
+        .shadow(color: .black.opacity(0.08), radius: 12, x: 0, y: 3)
     }
 
     // MARK: - Bedtime Suggestion
@@ -490,7 +494,8 @@ struct HomeDashboardView: View {
                 }
             }
             .padding()
-            .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12))
+            .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 14))
+            .shadow(color: .black.opacity(0.06), radius: 8, x: 0, y: 2)
         }
         .buttonStyle(.plain)
     }
@@ -499,26 +504,25 @@ struct HomeDashboardView: View {
 
     private var trainingStatusSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Training")
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(.secondary)
+            SectionHeader(title: "Training", icon: "dumbbell.fill", color: .accentColor)
 
             VStack(spacing: 12) {
                 if settings.weeklyGoal > 0 {
+                    let weekProgress = min(1.0, Double(workoutsThisWeek) / Double(settings.weeklyGoal))
+                    let weekDone = workoutsThisWeek >= settings.weeklyGoal
                     HStack {
                         Image(systemName: "target")
-                            .foregroundStyle(Color.accentColor)
+                            .foregroundStyle(weekDone ? Color.green : Color.accentColor)
                         Text("\(workoutsThisWeek)/\(settings.weeklyGoal) workouts this week")
                             .font(.subheadline)
                         Spacer()
-                        if workoutsThisWeek >= settings.weeklyGoal {
+                        if weekDone {
                             Text("Done!")
                                 .font(.caption.bold())
                                 .foregroundStyle(.green)
                         }
                     }
-                    ProgressView(value: Double(workoutsThisWeek), total: Double(settings.weeklyGoal))
-                        .tint(workoutsThisWeek >= settings.weeklyGoal ? .green : .accentColor)
+                    GradientProgressBar(value: weekProgress, color: weekDone ? .green : .accentColor, height: 9)
                 }
 
                 if healthKitEnabled && healthDataLoaded {
@@ -527,20 +531,23 @@ struct HomeDashboardView: View {
                     HStack(spacing: 12) {
                         Image(systemName: "battery.100.bolt")
                             .foregroundStyle(RecoveryEngine.readinessColor(recoveryResult.readinessScore))
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Recovery Readiness")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                            HStack(spacing: 6) {
-                                ProgressView(value: recoveryResult.readinessScore)
-                                    .tint(RecoveryEngine.readinessColor(recoveryResult.readinessScore))
-                                    .frame(maxWidth: 120)
+                        VStack(alignment: .leading, spacing: 6) {
+                            HStack {
+                                Text("Recovery Readiness")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                Spacer()
                                 Text("\(Int(recoveryResult.readinessScore * 100))%")
                                     .font(.subheadline.weight(.bold).monospacedDigit())
                                     .foregroundStyle(RecoveryEngine.readinessColor(recoveryResult.readinessScore))
                             }
+                            GradientProgressBar(
+                                value: recoveryResult.readinessScore,
+                                color: RecoveryEngine.readinessColor(recoveryResult.readinessScore),
+                                height: 9
+                            )
                         }
-                        Spacer()
+                        .frame(maxWidth: .infinity)
                     }
                 }
 
@@ -585,7 +592,8 @@ struct HomeDashboardView: View {
                 }
             }
             .padding()
-            .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12))
+            .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 14))
+            .shadow(color: .black.opacity(0.06), radius: 8, x: 0, y: 2)
         }
     }
 
@@ -593,9 +601,7 @@ struct HomeDashboardView: View {
 
     private var todayWorkoutSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Today")
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(.secondary)
+            SectionHeader(title: "Today", icon: "calendar.circle.fill", color: .orange)
 
             VStack(spacing: 12) {
                 HStack(spacing: 16) {
@@ -650,7 +656,8 @@ struct HomeDashboardView: View {
                 }
             }
             .padding()
-            .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12))
+            .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 14))
+            .shadow(color: .black.opacity(0.06), radius: 8, x: 0, y: 2)
         }
     }
 
@@ -696,7 +703,8 @@ struct HomeDashboardView: View {
                     }
                 }
             }
-            .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12))
+            .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 14))
+            .shadow(color: .black.opacity(0.06), radius: 8, x: 0, y: 2)
         }
     }
 
@@ -704,9 +712,7 @@ struct HomeDashboardView: View {
 
     private var recentWorkoutsSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Recent Workouts")
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(.secondary)
+            SectionHeader(title: "Recent Workouts", icon: "clock.fill", color: .green)
 
             if allWorkouts.isEmpty {
                 VStack(spacing: 8) {
@@ -726,7 +732,8 @@ struct HomeDashboardView: View {
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 24)
-                .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12))
+                .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 14))
+            .shadow(color: .black.opacity(0.06), radius: 8, x: 0, y: 2)
             } else {
                 VStack(spacing: 0) {
                     ForEach(Array(allWorkouts.prefix(5).enumerated()), id: \.element.id) { index, workout in
@@ -747,7 +754,8 @@ struct HomeDashboardView: View {
                     }
                 }
                 .padding(.horizontal)
-                .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12))
+                .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 14))
+            .shadow(color: .black.opacity(0.06), radius: 8, x: 0, y: 2)
 
                 if allWorkouts.count > 5 {
                     NavigationLink {
@@ -765,7 +773,8 @@ struct HomeDashboardView: View {
                                 .foregroundStyle(.tertiary)
                         }
                         .padding()
-                        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12))
+                        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 14))
+            .shadow(color: .black.opacity(0.06), radius: 8, x: 0, y: 2)
                     }
                     .buttonStyle(.plain)
                 }
@@ -777,9 +786,7 @@ struct HomeDashboardView: View {
 
     private var quickLinksSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Quick Access")
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(.secondary)
+            SectionHeader(title: "Quick Access", icon: "bolt.circle.fill", color: .yellow)
 
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
                 if let active = inProgressWorkout {
@@ -817,17 +824,26 @@ struct HomeDashboardView: View {
     }
 
     private func quickLinkCard(icon: String, color: Color, title: String) -> some View {
-        HStack(spacing: 10) {
-            Image(systemName: icon)
-                .font(.title3)
-                .foregroundStyle(color)
-                .frame(width: 28)
+        VStack(alignment: .leading, spacing: 12) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(color.gradient)
+                    .frame(width: 46, height: 46)
+                Image(systemName: icon)
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundStyle(.white)
+            }
             Text(title)
-                .font(.subheadline.weight(.medium))
-            Spacer()
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.primary)
+                .lineLimit(2)
+                .multilineTextAlignment(.leading)
         }
-        .padding(12)
-        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12))
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(14)
+        .background(Color(.secondarySystemGroupedBackground))
+        .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardRadius))
+        .shadow(color: .black.opacity(0.07), radius: 12, x: 0, y: 3)
     }
 
     // MARK: - HealthKit Loading
@@ -883,6 +899,99 @@ struct HomeDashboardView: View {
             workout.exercises.append(exercise)
         }
         try? modelContext.save()
+    }
+
+    // MARK: - Hero Section
+
+    private var heroSection: some View {
+        ZStack(alignment: .topLeading) {
+            LinearGradient(
+                colors: [Color.accentColor, Color.accentColor.opacity(0.55)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+
+            // Decorative circles for depth
+            Circle()
+                .fill(.white.opacity(0.07))
+                .frame(width: 220)
+                .offset(x: 180, y: -70)
+            Circle()
+                .fill(.white.opacity(0.04))
+                .frame(width: 140)
+                .offset(x: 260, y: 60)
+
+            VStack(alignment: .leading, spacing: 20) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(greeting)
+                        .font(.title3.weight(.semibold))
+                        .foregroundStyle(.white)
+                    Text(Date.now, format: .dateTime.weekday(.wide).month().day())
+                        .font(.subheadline)
+                        .foregroundStyle(.white.opacity(0.72))
+                }
+
+                if healthKitEnabled && healthDataLoaded {
+                    VStack(alignment: .leading, spacing: 2) {
+                        HStack(alignment: .lastTextBaseline, spacing: 2) {
+                            Text("\(Int(recoveryResult.readinessScore * 100))")
+                                .font(.system(size: 56, weight: .black, design: .rounded))
+                                .foregroundStyle(.white)
+                                .monospacedDigit()
+                            Text("%")
+                                .font(.title.weight(.bold))
+                                .foregroundStyle(.white.opacity(0.70))
+                                .padding(.bottom, 6)
+                        }
+                        Text("Recovery Readiness")
+                            .font(.subheadline.weight(.medium))
+                            .foregroundStyle(.white.opacity(0.80))
+                    }
+                } else {
+                    VStack(alignment: .leading, spacing: 2) {
+                        HStack(alignment: .lastTextBaseline, spacing: 10) {
+                            Image(systemName: "flame.fill")
+                                .font(.system(size: 38, weight: .bold))
+                                .foregroundStyle(.white.opacity(0.88))
+                            Text("\(currentStreak)")
+                                .font(.system(size: 56, weight: .black, design: .rounded))
+                                .foregroundStyle(.white)
+                                .monospacedDigit()
+                        }
+                        Text("Day Streak")
+                            .font(.subheadline.weight(.medium))
+                            .foregroundStyle(.white.opacity(0.80))
+                    }
+                }
+
+                HStack(spacing: 8) {
+                    heroPill(icon: "flame.fill", text: "\(currentStreak) streak")
+                    if settings.weeklyGoal > 0 {
+                        heroPill(icon: "dumbbell.fill", text: "\(workoutsThisWeek)/\(settings.weeklyGoal) this week")
+                    }
+                    if let last = allWorkouts.first {
+                        heroPill(icon: "clock", text: last.date.formatted(.relative(presentation: .named)))
+                    }
+                }
+            }
+            .padding(20)
+        }
+        .heroCard()
+    }
+
+    private func heroPill(icon: String, text: String) -> some View {
+        HStack(spacing: 4) {
+            Image(systemName: icon)
+                .font(.system(size: 10, weight: .semibold))
+            Text(text)
+                .font(.caption.weight(.semibold))
+                .lineLimit(1)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(.white.opacity(0.20))
+        .clipShape(Capsule())
+        .foregroundStyle(.white)
     }
 
     // MARK: - Formatting
