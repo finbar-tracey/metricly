@@ -336,12 +336,12 @@ struct ContentView: View {
             Section {
                 HStack(spacing: 0) {
                     progressStat(value: "\(totalFinishedWorkouts)", label: "Workouts", icon: "figure.strengthtraining.traditional", color: .blue)
-                    Divider().frame(height: 32)
+                    Divider().frame(height: 40)
                     progressStat(value: "\(currentStreak)", label: "Streak", icon: "flame.fill", color: .orange)
-                    Divider().frame(height: 32)
+                    Divider().frame(height: 40)
                     progressStat(value: "\(uniqueExerciseCount)", label: "Exercises", icon: "dumbbell.fill", color: .purple)
                 }
-                .padding(.vertical, 8)
+                .padding(.vertical, 10)
             }
 
             Section("Workouts") {
@@ -402,14 +402,20 @@ struct ContentView: View {
     }
 
     private func progressStat(value: String, label: String, icon: String, color: Color) -> some View {
-        VStack(spacing: 4) {
-            Image(systemName: icon)
-                .font(.caption)
-                .foregroundStyle(color)
+        VStack(spacing: 6) {
+            ZStack {
+                Circle()
+                    .fill(color.opacity(0.12))
+                    .frame(width: 36, height: 36)
+                Image(systemName: icon)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(color)
+            }
             Text(value)
-                .font(.title3.bold().monospacedDigit())
+                .font(.system(size: 22, weight: .black, design: .rounded))
+                .monospacedDigit()
             Text(label)
-                .font(.caption2)
+                .font(.caption2.weight(.medium))
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity)
@@ -520,11 +526,11 @@ struct ContentView: View {
     private func hubRow(icon: String, color: Color, title: String, subtitle: String) -> some View {
         HStack(spacing: 14) {
             ZStack {
-                RoundedRectangle(cornerRadius: 10)
+                RoundedRectangle(cornerRadius: 11)
                     .fill(color.gradient)
-                    .frame(width: 36, height: 36)
+                    .frame(width: 40, height: 40)
                 Image(systemName: icon)
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(.system(size: 17, weight: .semibold))
                     .foregroundStyle(.white)
             }
             VStack(alignment: .leading, spacing: 2) {
@@ -535,7 +541,7 @@ struct ContentView: View {
                     .foregroundStyle(.secondary)
             }
         }
-        .padding(.vertical, 2)
+        .padding(.vertical, 3)
     }
 
     private var currentStreak: Int {
