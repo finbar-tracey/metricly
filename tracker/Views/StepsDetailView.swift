@@ -31,22 +31,33 @@ struct StepsDetailView: View {
     // MARK: - Body
 
     var body: some View {
-        List {
-            if isLoading && todaySteps == 0 {
-                Section {
+        ScrollView {
+            LazyVStack(spacing: AppTheme.sectionSpacing) {
+                if isLoading && todaySteps == 0 {
                     ProgressView()
                         .frame(maxWidth: .infinity, minHeight: 200)
+                } else {
+                    heroCard
+                    timeRangePicker
+                    trendCard
+                    if !hourlySteps.isEmpty && hourlySteps.contains(where: { $0.steps > 0 }) {
+                        hourlyCard
+                    }
+                    if lastWeekAvg > 0 {
+                        weeklyComparisonCard
+                    }
+                    distanceTrendCard
+                    if currentGoalStreak > 0 {
+                        streakCard
+                    }
+                    statsCard
                 }
-            } else {
-                todaySummarySection
-                hourlyBreakdownSection
-                trendSection
-                weeklyComparisonSection
-                distanceTrendSection
-                streakSection
-                statsSection
             }
+            .padding(.horizontal)
+            .padding(.top, 8)
+            .padding(.bottom, 36)
         }
+        .background(Color(.systemGroupedBackground))
         .navigationTitle("Steps")
         .navigationBarTitleDisplayMode(.inline)
         .task(id: timeRange) {
@@ -54,132 +65,135 @@ struct StepsDetailView: View {
         }
     }
 
-    // MARK: - Section 1: Today Summary
+    // MARK: - Hero Card
 
-    private var todaySummarySection: some View {
-        Section {
-            VStack(spacing: 16) {
-                ZStack {
-                    Circle()
-                        .stroke(.quaternary, lineWidth: 10)
-                    Circle()
-                        .trim(from: 0, to: min(1.0, todaySteps / stepGoal))
-                        .stroke(stepProgressColor.gradient, style: StrokeStyle(lineWidth: 10, lineCap: .round))
-                        .rotationEffect(.degrees(-90))
-                        .animation(.easeInOut(duration: 0.8), value: todaySteps)
-                    VStack(spacing: 2) {
+    private var heroCard: some View {
+        ZStack(alignment: .topLeading) {
+            LinearGradient(
+                colors: [Color.green, Color(red: 0.1, green: 0.72, blue: 0.35).opacity(0.75)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+
+            Circle()
+                .fill(.white.opacity(0.07))
+                .frame(width: 220)
+                .offset(x: 160, y: -70)
+
+            VStack(alignment: .leading, spacing: 20) {
+                // Top: ring + step count
+                HStack(alignment: .center, spacing: 20) {
+                    ZStack {
+                        Circle()
+                            .stroke(.white.opacity(0.25), lineWidth: 8)
+                        Circle()
+                            .trim(from: 0, to: min(1.0, todaySteps / stepGoal))
+                            .stroke(.white, style: StrokeStyle(lineWidth: 8, lineCap: .round))
+                            .rotationEffect(.degrees(-90))
+                            .animation(.easeInOut(duration: 0.8), value: todaySteps)
+                    }
+                    .frame(width: 64, height: 64)
+
+                    VStack(alignment: .leading, spacing: 4) {
                         Text(HealthFormatters.formatSteps(todaySteps))
-                            .font(.system(.largeTitle, design: .rounded, weight: .bold))
-                        Text("of \(HealthFormatters.formatSteps(stepGoal))")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .font(.system(size: 42, weight: .black, design: .rounded))
+                            .foregroundStyle(.white)
+                            .monospacedDigit()
+                        Text("of \(HealthFormatters.formatSteps(stepGoal)) goal")
+                            .font(.subheadline.weight(.medium))
+                            .foregroundStyle(.white.opacity(0.75))
                     }
                 }
-                .frame(width: 130, height: 130)
-                .accessibilityElement(children: .ignore)
-                .accessibilityLabel("\(HealthFormatters.formatSteps(todaySteps)) steps of \(HealthFormatters.formatSteps(stepGoal)) goal")
 
+                // Status badge
                 if todaySteps >= stepGoal {
                     HStack(spacing: 6) {
                         Image(systemName: "checkmark.circle.fill")
-                            .foregroundStyle(.green)
+                            .font(.caption.bold())
                         Text("Goal Reached!")
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(.green)
+                            .font(.caption.bold())
                     }
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 6)
-                    .background(Color.green.opacity(0.1), in: Capsule())
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 5)
+                    .background(.white.opacity(0.20), in: Capsule())
                 } else {
                     let remaining = stepGoal - todaySteps
                     Text("\(HealthFormatters.formatSteps(remaining)) to go")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.white.opacity(0.80))
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 5)
+                        .background(.white.opacity(0.15), in: Capsule())
                 }
 
-                HStack(spacing: 24) {
-                    VStack(spacing: 2) {
-                        Image(systemName: "figure.walk")
-                            .foregroundStyle(.green)
-                        Text(HealthFormatters.formatDistance(todayDistance))
-                            .font(.subheadline.bold().monospacedDigit())
-                        Text("Distance")
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                    }
-                    VStack(spacing: 2) {
-                        Image(systemName: "flame.fill")
-                            .foregroundStyle(.orange)
-                        Text(HealthFormatters.formatCalories(todayEnergy))
-                            .font(.subheadline.bold().monospacedDigit())
-                        Text("Active Energy")
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                    }
+                // Stat columns
+                HStack(spacing: 0) {
+                    heroStatColumn(icon: "figure.walk", label: "Distance", value: HealthFormatters.formatDistance(todayDistance))
+                    Divider().frame(height: 32).overlay(.white.opacity(0.30))
+                    heroStatColumn(icon: "flame.fill", label: "Active Cal", value: HealthFormatters.formatCalories(todayEnergy))
+                    Divider().frame(height: 32).overlay(.white.opacity(0.30))
+                    let pct = Int(min(100, max(0, todaySteps / stepGoal * 100)))
+                    heroStatColumn(icon: "target", label: "Goal %", value: "\(pct)%")
                 }
             }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 8)
+            .padding(20)
+        }
+        .heroCard()
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(HealthFormatters.formatSteps(todaySteps)) steps of \(HealthFormatters.formatSteps(stepGoal)) goal")
+    }
+
+    private func heroStatColumn(icon: String, label: String, value: String) -> some View {
+        VStack(spacing: 3) {
+            Image(systemName: icon)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(.white.opacity(0.80))
+            Text(value)
+                .font(.system(size: 15, weight: .bold, design: .rounded))
+                .foregroundStyle(.white)
+                .monospacedDigit()
+            Text(label)
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(.white.opacity(0.65))
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    // MARK: - Time Range Picker
+
+    private var timeRangePicker: some View {
+        HStack(spacing: 6) {
+            ForEach(TimeRange.allCases, id: \.self) { range in
+                Button {
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+                        timeRange = range
+                    }
+                } label: {
+                    Text(range.rawValue)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(timeRange == range ? .white : .primary)
+                        .padding(.horizontal, 18)
+                        .padding(.vertical, 8)
+                        .background(
+                            timeRange == range
+                                ? AnyShapeStyle(Color.green)
+                                : AnyShapeStyle(Color(.secondarySystemGroupedBackground)),
+                            in: Capsule()
+                        )
+                        .shadow(color: timeRange == range ? Color.green.opacity(0.35) : .clear, radius: 8, x: 0, y: 3)
+                }
+                .buttonStyle(.plain)
+            }
+            Spacer()
         }
     }
 
-    // MARK: - Section 2: Hourly Breakdown
+    // MARK: - Trend Card
 
-    @ViewBuilder
-    private var hourlyBreakdownSection: some View {
-        if !hourlySteps.isEmpty && hourlySteps.contains(where: { $0.steps > 0 }) {
-            Section("Today by Hour") {
-                Chart(hourlySteps, id: \.hour) { point in
-                    BarMark(
-                        x: .value("Hour", point.hour),
-                        y: .value("Steps", point.steps)
-                    )
-                    .foregroundStyle(.green.gradient)
-                    .cornerRadius(2)
-                }
-                .chartXAxis {
-                    AxisMarks(values: .stride(by: 4)) { value in
-                        AxisGridLine()
-                        AxisValueLabel {
-                            if let h = value.as(Int.self) {
-                                Text(hourLabel(h))
-                                    .font(.caption2)
-                            }
-                        }
-                    }
-                }
-                .chartYAxis {
-                    AxisMarks(position: .leading) { _ in
-                        AxisGridLine()
-                        AxisValueLabel()
-                    }
-                }
-                .frame(height: 150)
-                .padding(.vertical, 8)
-
-                if let peak = hourlySteps.max(by: { $0.steps < $1.steps }), peak.steps > 0 {
-                    HStack(spacing: 4) {
-                        Image(systemName: "clock.fill")
-                            .font(.caption2)
-                            .foregroundStyle(.green)
-                        Text("Peak: \(HealthFormatters.formatSteps(peak.steps)) steps at \(hourLabel(peak.hour))")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-            }
-        }
-    }
-
-    // MARK: - Section 3: Step Trend
-
-    private var trendSection: some View {
-        Section("Step Trend") {
-            Picker("Range", selection: $timeRange) {
-                ForEach(TimeRange.allCases, id: \.self) { Text($0.rawValue).tag($0) }
-            }
-            .pickerStyle(.segmented)
-            .listRowSeparator(.hidden)
+    private var trendCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            SectionHeader(title: "Step Trend", icon: "chart.bar.fill", color: .green)
 
             if !chartSteps.isEmpty {
                 Chart {
@@ -202,75 +216,133 @@ struct StepsDetailView: View {
                 }
                 .chartYAxisLabel("steps")
                 .frame(height: 200)
-                .padding(.vertical, 8)
 
                 let daysMetGoal = chartSteps.filter { $0.steps >= stepGoal }.count
-                HStack(spacing: 4) {
+                HStack(spacing: 6) {
                     Image(systemName: "checkmark.circle.fill")
                         .font(.caption2)
                         .foregroundStyle(.green)
                     Text("Goal met \(daysMetGoal) of \(chartSteps.count) days")
                         .font(.caption)
                         .foregroundStyle(.secondary)
+                    Spacer()
                 }
-            } else if !isLoading {
+            } else {
                 Text("No step data available.")
                     .foregroundStyle(.secondary)
                     .frame(height: 200)
                     .frame(maxWidth: .infinity)
             }
         }
+        .appCard()
     }
 
-    // MARK: - Section 4: Weekly Comparison
+    // MARK: - Hourly Card
 
-    @ViewBuilder
-    private var weeklyComparisonSection: some View {
-        if lastWeekAvg > 0 {
-            Section("This Week vs Last Week") {
-                HStack(spacing: 16) {
-                    VStack(spacing: 4) {
-                        Text("This Week")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        Text(HealthFormatters.formatSteps(thisWeekAvg))
-                            .font(.title3.bold().monospacedDigit())
-                    }
-                    .frame(maxWidth: .infinity)
+    private var hourlyCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            SectionHeader(title: "Today by Hour", icon: "clock.fill", color: .green)
 
-                    let delta = thisWeekAvg - lastWeekAvg
-                    VStack(spacing: 2) {
-                        Image(systemName: delta >= 0 ? "arrow.up.right" : "arrow.down.right")
-                            .font(.title3)
-                            .foregroundStyle(delta >= 0 ? .green : .orange)
-                        Text(HealthFormatters.formatSteps(abs(delta)))
-                            .font(.caption.bold())
-                            .foregroundStyle(delta >= 0 ? .green : .orange)
+            Chart(hourlySteps, id: \.hour) { point in
+                BarMark(
+                    x: .value("Hour", point.hour),
+                    y: .value("Steps", point.steps)
+                )
+                .foregroundStyle(.green.gradient)
+                .cornerRadius(2)
+            }
+            .chartXAxis {
+                AxisMarks(values: .stride(by: 4)) { value in
+                    AxisGridLine()
+                    AxisValueLabel {
+                        if let h = value.as(Int.self) {
+                            Text(hourLabel(h))
+                                .font(.caption2)
+                        }
                     }
-
-                    VStack(spacing: 4) {
-                        Text("Last Week")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        Text(HealthFormatters.formatSteps(lastWeekAvg))
-                            .font(.title3.bold().monospacedDigit())
-                            .foregroundStyle(.secondary)
-                    }
-                    .frame(maxWidth: .infinity)
                 }
-                .padding(.vertical, 8)
-                .accessibilityElement(children: .combine)
+            }
+            .chartYAxis {
+                AxisMarks(position: .leading) { _ in
+                    AxisGridLine()
+                    AxisValueLabel()
+                }
+            }
+            .frame(height: 150)
+
+            if let peak = hourlySteps.max(by: { $0.steps < $1.steps }), peak.steps > 0 {
+                HStack(spacing: 6) {
+                    Image(systemName: "clock.fill")
+                        .font(.caption2)
+                        .foregroundStyle(.green)
+                    Text("Peak: \(HealthFormatters.formatSteps(peak.steps)) steps at \(hourLabel(peak.hour))")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                }
             }
         }
+        .appCard()
     }
 
-    // MARK: - Section 5: Distance Trend
+    // MARK: - Weekly Comparison Card
+
+    private var weeklyComparisonCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            SectionHeader(title: "Week vs Last Week", icon: "arrow.left.arrow.right", color: .green)
+
+            let delta = thisWeekAvg - lastWeekAvg
+            HStack(spacing: 0) {
+                VStack(spacing: 4) {
+                    Text("This Week")
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(.secondary)
+                    Text(HealthFormatters.formatSteps(thisWeekAvg))
+                        .font(.system(size: 22, weight: .bold, design: .rounded))
+                        .monospacedDigit()
+                    Text("avg / day")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                }
+                .frame(maxWidth: .infinity)
+
+                VStack(spacing: 4) {
+                    Image(systemName: delta >= 0 ? "arrow.up.right.circle.fill" : "arrow.down.right.circle.fill")
+                        .font(.title2)
+                        .foregroundStyle(delta >= 0 ? .green : .orange)
+                    Text(HealthFormatters.formatSteps(abs(delta)))
+                        .font(.caption.bold().monospacedDigit())
+                        .foregroundStyle(delta >= 0 ? .green : .orange)
+                }
+
+                VStack(spacing: 4) {
+                    Text("Last Week")
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(.secondary)
+                    Text(HealthFormatters.formatSteps(lastWeekAvg))
+                        .font(.system(size: 22, weight: .bold, design: .rounded))
+                        .monospacedDigit()
+                        .foregroundStyle(.secondary)
+                    Text("avg / day")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                }
+                .frame(maxWidth: .infinity)
+            }
+            .padding(.vertical, 4)
+        }
+        .appCard()
+    }
+
+    // MARK: - Distance Card
 
     @ViewBuilder
-    private var distanceTrendSection: some View {
+    private var distanceTrendCard: some View {
         let chartDistance = Array(dailyDistance.suffix(dayCount))
         if !chartDistance.isEmpty && chartDistance.contains(where: { $0.km > 0.01 }) {
-            Section("Distance") {
+            VStack(alignment: .leading, spacing: 14) {
+                SectionHeader(title: "Distance", icon: "figure.walk", color: .teal)
+
                 Chart(chartDistance, id: \.date) { point in
                     AreaMark(
                         x: .value("Date", point.date, unit: .day),
@@ -295,10 +367,12 @@ struct StepsDetailView: View {
                 }
                 .chartYAxisLabel("km")
                 .frame(height: 160)
-                .padding(.vertical, 8)
 
                 let avgDist = chartDistance.map(\.km).reduce(0, +) / Double(max(1, chartDistance.count))
                 HStack {
+                    Image(systemName: "ruler")
+                        .font(.caption2)
+                        .foregroundStyle(.teal)
                     Text("Daily Average")
                         .font(.caption)
                         .foregroundStyle(.secondary)
@@ -308,56 +382,83 @@ struct StepsDetailView: View {
                         .foregroundStyle(.teal)
                 }
             }
+            .appCard()
         }
     }
 
-    // MARK: - Section 6: Goal Streak
+    // MARK: - Streak Card
 
-    @ViewBuilder
-    private var streakSection: some View {
+    private var streakCard: some View {
         let streak = currentGoalStreak
-        if streak > 0 {
-            Section("Goal Streak") {
-                HStack {
-                    VStack(alignment: .leading, spacing: 4) {
-                        HStack(alignment: .firstTextBaseline, spacing: 4) {
-                            Text("\(streak)")
-                                .font(.title.bold().monospacedDigit())
-                                .foregroundStyle(.green)
-                            Text(streak == 1 ? "day" : "days")
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                        }
-                        Text("consecutive days at \(HealthFormatters.formatSteps(stepGoal))+ steps")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+        return ZStack(alignment: .topLeading) {
+            LinearGradient(
+                colors: [Color.orange, Color.red.opacity(0.7)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+
+            Circle()
+                .fill(.white.opacity(0.07))
+                .frame(width: 160)
+                .offset(x: 200, y: -50)
+
+            HStack(alignment: .center, spacing: 20) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Goal Streak")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.white.opacity(0.75))
+                    HStack(alignment: .firstTextBaseline, spacing: 6) {
+                        Text("\(streak)")
+                            .font(.system(size: 52, weight: .black, design: .rounded))
+                            .foregroundStyle(.white)
+                            .monospacedDigit()
+                        Text(streak == 1 ? "day" : "days")
+                            .font(.title3.weight(.semibold))
+                            .foregroundStyle(.white.opacity(0.80))
                     }
-                    Spacer()
-                    Image(systemName: "flame.fill")
-                        .font(.largeTitle)
-                        .foregroundStyle(.orange.gradient)
+                    Text("consecutive days at \(HealthFormatters.formatSteps(stepGoal))+ steps")
+                        .font(.caption)
+                        .foregroundStyle(.white.opacity(0.75))
                 }
-                .padding(.vertical, 4)
+                Spacer()
+                Image(systemName: "flame.fill")
+                    .font(.system(size: 52, weight: .bold))
+                    .foregroundStyle(.white.opacity(0.30))
             }
+            .padding(20)
         }
+        .heroCard()
     }
 
-    // MARK: - Section 7: Stats
+    // MARK: - Stats Card
 
-    private var statsSection: some View {
-        Section("Stats") {
-            statsRow("Today", value: HealthFormatters.formatSteps(todaySteps))
-            statsRow("Daily Average", value: HealthFormatters.formatSteps(average))
-            statsRow("Best Day", value: HealthFormatters.formatSteps(dailySteps.map(\.steps).max() ?? 0))
-            statsRow("Least Active", value: HealthFormatters.formatSteps(
-                dailySteps.filter { $0.steps > 0 }.map(\.steps).min() ?? 0
-            ))
-            statsRow("Total Steps", value: HealthFormatters.formatSteps(dailySteps.map(\.steps).reduce(0, +)))
-            statsRow("Total Distance", value: HealthFormatters.formatDistance(
-                dailyDistance.map(\.km).reduce(0, +)
-            ))
-            statsRow("Days Tracked", value: "\(dailySteps.filter { $0.steps > 0 }.count)")
+    private var statsCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            SectionHeader(title: "Stats", icon: "list.number", color: .secondary)
+
+            VStack(spacing: 0) {
+                statsRow("Today", value: HealthFormatters.formatSteps(todaySteps))
+                Divider().padding(.leading, 16)
+                statsRow("Daily Average", value: HealthFormatters.formatSteps(average))
+                Divider().padding(.leading, 16)
+                statsRow("Best Day", value: HealthFormatters.formatSteps(dailySteps.map(\.steps).max() ?? 0))
+                Divider().padding(.leading, 16)
+                statsRow("Least Active", value: HealthFormatters.formatSteps(
+                    dailySteps.filter { $0.steps > 0 }.map(\.steps).min() ?? 0
+                ))
+                Divider().padding(.leading, 16)
+                statsRow("Total Steps", value: HealthFormatters.formatSteps(dailySteps.map(\.steps).reduce(0, +)))
+                Divider().padding(.leading, 16)
+                statsRow("Total Distance", value: HealthFormatters.formatDistance(
+                    dailyDistance.map(\.km).reduce(0, +)
+                ))
+                Divider().padding(.leading, 16)
+                statsRow("Days Tracked", value: "\(dailySteps.filter { $0.steps > 0 }.count)")
+            }
+            .background(Color(.tertiarySystemGroupedBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 14))
         }
+        .appCard()
     }
 
     // MARK: - Computed Properties
@@ -418,6 +519,20 @@ struct StepsDetailView: View {
         return "\(h) \(ampm)"
     }
 
+    private func statsRow(_ title: String, value: String) -> some View {
+        HStack {
+            Text(title)
+                .font(.subheadline)
+                .foregroundStyle(.primary)
+            Spacer()
+            Text(value)
+                .font(.subheadline.bold().monospacedDigit())
+                .foregroundStyle(.secondary)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 11)
+    }
+
     // MARK: - Data Loading
 
     private func loadData() async {
@@ -439,18 +554,5 @@ struct StepsDetailView: View {
         todaySteps = (try? await todayStepsData) ?? 0
         todayDistance = (try? await todayDistData) ?? 0
         todayEnergy = (try? await todayEnergyData) ?? 0
-    }
-
-    // MARK: - Shared Helpers
-
-    private func statsRow(_ title: String, value: String) -> some View {
-        HStack {
-            Text(title)
-                .font(.subheadline)
-            Spacer()
-            Text(value)
-                .font(.subheadline.bold().monospacedDigit())
-                .foregroundStyle(.secondary)
-        }
     }
 }
