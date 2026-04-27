@@ -15,21 +15,14 @@ struct HealthDashboardView: View {
     @State private var vo2Max: Double?
     @State private var isLoading = true
 
-    private var healthKitEnabled: Bool {
-        settingsArray.first?.healthKitEnabled ?? false
-    }
-
-    private let columns = [
-        GridItem(.flexible(), spacing: 12),
-        GridItem(.flexible(), spacing: 12)
-    ]
+    private var healthKitEnabled: Bool { settingsArray.first?.healthKitEnabled ?? false }
 
     var body: some View {
         Group {
             if !healthKitEnabled {
                 healthKitDisabledView
             } else {
-                healthDataList
+                healthContent
             }
         }
         .navigationTitle("Health")
@@ -38,199 +31,203 @@ struct HealthDashboardView: View {
             guard healthKitEnabled else { return }
             await loadHealthData()
         }
-        .refreshable {
-            await loadHealthData()
-        }
+        .refreshable { await loadHealthData() }
     }
 
     // MARK: - Main Content
 
-    private var healthDataList: some View {
-        List {
-            Section {
-                LazyVGrid(columns: columns, spacing: 12) {
-                    stepsCard
-                    heartRateCard
-                    sleepCard
-                    caloriesCard
-                }
-                .padding(.vertical, 4)
-            }
-
-            Section("Vitals") {
-                HStack {
-                    Label("HRV", systemImage: "waveform.path.ecg")
-                    Spacer()
-                    Text(hrv.map { "\(Int($0)) ms" } ?? "—")
-                        .foregroundStyle(.secondary)
-                        .monospacedDigit()
-                }
-                HStack {
-                    Label("VO2 Max", systemImage: "lungs.fill")
-                    Spacer()
-                    Text(vo2Max.map { String(format: "%.1f", $0) } ?? "—")
-                        .foregroundStyle(.secondary)
-                        .monospacedDigit()
+    private var healthContent: some View {
+        ScrollView {
+            LazyVStack(spacing: AppTheme.sectionSpacing) {
+                if isLoading {
+                    ProgressView()
+                        .frame(maxWidth: .infinity, minHeight: 120)
+                } else {
+                    summaryGrid
+                    vitalsCard
+                    detailLinksCard
                 }
             }
+            .padding(.horizontal)
+            .padding(.top, 8)
+            .padding(.bottom, 36)
+        }
+        .background(Color(.systemGroupedBackground))
+    }
 
-            Section("Details") {
-                NavigationLink {
-                    StepsDetailView()
-                } label: {
+    // MARK: - Summary Grid
+
+    private var summaryGrid: some View {
+        LazyVGrid(columns: [GridItem(.flexible(), spacing: 14), GridItem(.flexible(), spacing: 14)], spacing: 14) {
+            healthMetricCard(
+                icon: "figure.walk",
+                color: .green,
+                value: HealthFormatters.formatSteps(todaySteps),
+                label: "Steps",
+                ring: min(1.0, todaySteps / 10_000),
+                ringColor: .green
+            )
+            healthMetricCard(
+                icon: "heart.fill",
+                color: .red,
+                value: restingHR.map { "\(Int($0))" } ?? "—",
+                label: "Resting BPM",
+                ring: nil,
+                ringColor: .red
+            )
+            healthMetricCard(
+                icon: "bed.double.fill",
+                color: .indigo,
+                value: HealthFormatters.formatSleepShort(sleepMinutes),
+                label: "Sleep",
+                ring: min(1.0, sleepMinutes / 480),
+                ringColor: .indigo
+            )
+            healthMetricCard(
+                icon: "flame.fill",
+                color: .orange,
+                value: "\(Int(activeCalories))",
+                label: "Active kcal",
+                ring: nil,
+                ringColor: .orange
+            )
+        }
+    }
+
+    private func healthMetricCard(
+        icon: String,
+        color: Color,
+        value: String,
+        label: String,
+        ring: Double?,
+        ringColor: Color
+    ) -> some View {
+        VStack(spacing: 14) {
+            ZStack {
+                if let ring = ring {
+                    Circle()
+                        .stroke(.quaternary, lineWidth: 6)
+                    Circle()
+                        .trim(from: 0, to: ring)
+                        .stroke(ringColor.gradient, style: StrokeStyle(lineWidth: 6, lineCap: .round))
+                        .rotationEffect(.degrees(-90))
+                        .animation(.easeInOut(duration: 0.6), value: ring)
+                } else {
+                    Circle().fill(color.opacity(0.12))
+                }
+                Image(systemName: icon)
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundStyle(color)
+            }
+            .frame(width: 56, height: 56)
+
+            VStack(spacing: 3) {
+                Text(value)
+                    .font(.system(size: 22, weight: .bold, design: .rounded))
+                    .monospacedDigit()
+                Text(label)
+                    .font(.caption2.weight(.medium))
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 20)
+        .background(Color(.secondarySystemGroupedBackground))
+        .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardRadius))
+        .shadow(color: .black.opacity(0.07), radius: 14, x: 0, y: 4)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(label): \(value)")
+    }
+
+    // MARK: - Vitals Card
+
+    private var vitalsCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            SectionHeader(title: "Vitals", icon: "waveform.path.ecg", color: .purple)
+
+            VStack(spacing: 0) {
+                vitalsRow(icon: "waveform.path.ecg", color: .purple, label: "HRV",
+                          value: hrv.map { "\(Int($0)) ms" } ?? "—")
+                Divider().padding(.leading, 16)
+                vitalsRow(icon: "lungs.fill", color: .teal, label: "VO2 Max",
+                          value: vo2Max.map { String(format: "%.1f ml/kg/min", $0) } ?? "—")
+                if let stats = hrStats {
+                    Divider().padding(.leading, 16)
+                    vitalsRow(icon: "arrow.up.arrow.down", color: .orange, label: "HR Range Today",
+                              value: "\(Int(stats.min))–\(Int(stats.max)) bpm")
+                }
+            }
+            .background(Color(.tertiarySystemGroupedBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+        }
+        .appCard()
+    }
+
+    private func vitalsRow(icon: String, color: Color, label: String, value: String) -> some View {
+        HStack(spacing: 12) {
+            ZStack {
+                Circle().fill(color.opacity(0.12)).frame(width: 34, height: 34)
+                Image(systemName: icon)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(color)
+            }
+            Text(label)
+                .font(.subheadline)
+            Spacer()
+            Text(value)
+                .font(.subheadline.bold().monospacedDigit())
+                .foregroundStyle(.secondary)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+    }
+
+    // MARK: - Detail Links Card
+
+    private var detailLinksCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            SectionHeader(title: "Details", icon: "chart.line.uptrend.xyaxis", color: .accentColor)
+
+            VStack(spacing: 0) {
+                NavigationLink { StepsDetailView() } label: {
                     detailRow(icon: "figure.walk", color: .green, title: "Steps", subtitle: "Daily activity tracking")
                 }
-                NavigationLink {
-                    HeartRateDetailView()
-                } label: {
+                Divider().padding(.leading, 66)
+                NavigationLink { HeartRateDetailView() } label: {
                     detailRow(icon: "heart.fill", color: .red, title: "Heart Rate", subtitle: "Resting heart rate trends")
                 }
-                NavigationLink {
-                    SleepDetailView()
-                } label: {
+                Divider().padding(.leading, 66)
+                NavigationLink { SleepDetailView() } label: {
                     detailRow(icon: "bed.double.fill", color: .indigo, title: "Sleep", subtitle: "Duration and stages")
                 }
             }
-
-            if isLoading {
-                Section {
-                    HStack {
-                        Spacer()
-                        ProgressView()
-                        Spacer()
-                    }
-                }
-            }
+            .background(Color(.tertiarySystemGroupedBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 14))
         }
+        .appCard()
     }
-
-    // MARK: - Summary Cards
-
-    private var stepsCard: some View {
-        VStack(spacing: 8) {
-            ZStack {
-                Circle()
-                    .stroke(.quaternary, lineWidth: 6)
-                Circle()
-                    .trim(from: 0, to: min(1.0, todaySteps / 10_000))
-                    .stroke(Color.green.gradient, style: StrokeStyle(lineWidth: 6, lineCap: .round))
-                    .rotationEffect(.degrees(-90))
-                Image(systemName: "figure.walk")
-                    .font(.title3)
-                    .foregroundStyle(.green)
-            }
-            .frame(width: 52, height: 52)
-
-            Text(HealthFormatters.formatSteps(todaySteps))
-                .font(.system(.title3, design: .rounded, weight: .bold))
-                .monospacedDigit()
-            Text("Steps")
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 8)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("Steps: \(Int(todaySteps))")
-    }
-
-    private var heartRateCard: some View {
-        VStack(spacing: 8) {
-            ZStack {
-                Circle()
-                    .fill(.red.opacity(0.12))
-                Image(systemName: "heart.fill")
-                    .font(.title3)
-                    .foregroundStyle(.red)
-            }
-            .frame(width: 52, height: 52)
-
-            Text(restingHR.map { "\(Int($0))" } ?? "—")
-                .font(.system(.title3, design: .rounded, weight: .bold))
-                .monospacedDigit()
-            Text("Resting BPM")
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 8)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("Resting heart rate: \(restingHR.map { "\(Int($0)) BPM" } ?? "no data")")
-    }
-
-    private var sleepCard: some View {
-        VStack(spacing: 8) {
-            ZStack {
-                Circle()
-                    .stroke(.quaternary, lineWidth: 6)
-                Circle()
-                    .trim(from: 0, to: min(1.0, sleepMinutes / 480))
-                    .stroke(Color.indigo.gradient, style: StrokeStyle(lineWidth: 6, lineCap: .round))
-                    .rotationEffect(.degrees(-90))
-                Image(systemName: "bed.double.fill")
-                    .font(.title3)
-                    .foregroundStyle(.indigo)
-            }
-            .frame(width: 52, height: 52)
-
-            Text(HealthFormatters.formatSleepShort(sleepMinutes))
-                .font(.system(.title3, design: .rounded, weight: .bold))
-                .monospacedDigit()
-            Text("Sleep")
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 8)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("Sleep: \(HealthFormatters.formatSleepDuration(sleepMinutes))")
-    }
-
-    private var caloriesCard: some View {
-        VStack(spacing: 8) {
-            ZStack {
-                Circle()
-                    .fill(.orange.opacity(0.12))
-                Image(systemName: "flame.fill")
-                    .font(.title3)
-                    .foregroundStyle(.orange)
-            }
-            .frame(width: 52, height: 52)
-
-            Text("\(Int(activeCalories))")
-                .font(.system(.title3, design: .rounded, weight: .bold))
-                .monospacedDigit()
-            Text("Active kcal")
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 8)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("Active calories: \(Int(activeCalories))")
-    }
-
-    // MARK: - Detail Row
 
     private func detailRow(icon: String, color: Color, title: String, subtitle: String) -> some View {
         HStack(spacing: 14) {
             ZStack {
                 RoundedRectangle(cornerRadius: 10)
                     .fill(color.gradient)
-                    .frame(width: 36, height: 36)
+                    .frame(width: 40, height: 40)
                 Image(systemName: icon)
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(.system(size: 17, weight: .semibold))
                     .foregroundStyle(.white)
             }
             VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(.subheadline.weight(.semibold))
-                Text(subtitle)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                Text(title).font(.subheadline.weight(.semibold))
+                Text(subtitle).font(.caption).foregroundStyle(.secondary)
             }
+            Spacer()
+            Image(systemName: "chevron.right")
+                .font(.caption.bold())
+                .foregroundStyle(.tertiary)
         }
-        .padding(.vertical, 2)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
     }
 
     // MARK: - Disabled State

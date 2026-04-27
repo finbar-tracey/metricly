@@ -188,26 +188,31 @@ struct SettingsView: View {
                     ("pink", .pink), ("red", .red), ("orange", .orange),
                     ("green", .green), ("teal", .teal)
                 ]
-                VStack(alignment: .leading, spacing: 10) {
+                VStack(alignment: .leading, spacing: 12) {
                     Label("Accent Color", systemImage: "paintpalette")
-                        .font(.subheadline)
-                    HStack(spacing: 12) {
+                        .font(.subheadline.weight(.medium))
+                    HStack(spacing: 10) {
                         ForEach(accentColors, id: \.name) { item in
                             Button {
-                                settings.accentColorName = item.name
+                                withAnimation(.spring(response: 0.3, dampingFraction: 0.65)) {
+                                    settings.accentColorName = item.name
+                                }
                             } label: {
-                                Circle()
-                                    .fill(item.color.gradient)
-                                    .frame(width: 30, height: 30)
-                                    .overlay {
-                                        if settings.accentColorName == item.name {
-                                            Image(systemName: "checkmark")
-                                                .font(.caption.bold())
-                                                .foregroundStyle(.white)
-                                        }
+                                ZStack {
+                                    Circle()
+                                        .fill(item.color.gradient)
+                                        .frame(width: 34, height: 34)
+                                        .shadow(color: settings.accentColorName == item.name ? item.color.opacity(0.5) : .clear, radius: 6, x: 0, y: 2)
+                                    if settings.accentColorName == item.name {
+                                        Circle()
+                                            .strokeBorder(.white, lineWidth: 2.5)
+                                            .frame(width: 34, height: 34)
+                                        Image(systemName: "checkmark")
+                                            .font(.system(size: 11, weight: .bold))
+                                            .foregroundStyle(.white)
                                     }
-                                    .scaleEffect(settings.accentColorName == item.name ? 1.15 : 1.0)
-                                    .animation(.spring(response: 0.3), value: settings.accentColorName)
+                                }
+                                .scaleEffect(settings.accentColorName == item.name ? 1.18 : 1.0)
                             }
                             .buttonStyle(.plain)
                             .accessibilityLabel(item.name)
@@ -215,7 +220,7 @@ struct SettingsView: View {
                         }
                     }
                 }
-                .padding(.vertical, 4)
+                .padding(.vertical, 6)
 
                 HStack(spacing: 12) {
                     settingsIcon("moon.fill", color: .indigo)
