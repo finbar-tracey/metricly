@@ -22,17 +22,9 @@ struct CaffeineTrackerView: View {
     @State private var sleepData: [(date: Date, minutes: Double)] = []
     @FocusState private var isMgFocused: Bool
 
-    private var settings: UserSettings {
-        settingsArray.first ?? UserSettings()
-    }
-
-    private var halfLife: Double {
-        settings.caffeineHalfLife
-    }
-
-    private var dailyLimit: Double {
-        Double(settings.dailyCaffeineLimit)
-    }
+    private var settings: UserSettings { settingsArray.first ?? UserSettings() }
+    private var halfLife: Double { settings.caffeineHalfLife }
+    private var dailyLimit: Double { Double(settings.dailyCaffeineLimit) }
 
     enum HistoryRange: String, CaseIterable {
         case week = "7D"
@@ -61,32 +53,26 @@ struct CaffeineTrackerView: View {
         return defaultMgForSource
     }
 
-    /// Today's total consumed mg (not remaining — total intake)
     private var todayTotalMg: Double {
         let startOfDay = Calendar.current.startOfDay(for: .now)
         return entries.filter { $0.date >= startOfDay }.reduce(0) { $0 + $1.milligrams }
     }
 
-    /// Top 3 most frequently logged sources
     private var frequentSources: [(name: String, mg: Double, icon: String, count: Int)] {
         let last30 = entries.filter { $0.date > Calendar.current.date(byAdding: .day, value: -30, to: .now)! }
         var counts: [String: Int] = [:]
-        for entry in last30 {
-            counts[entry.source, default: 0] += 1
-        }
+        for entry in last30 { counts[entry.source, default: 0] += 1 }
         return counts.sorted { $0.value > $1.value }
             .prefix(3)
             .compactMap { (source, count) in
                 if let preset = CaffeineEntry.presets.first(where: { $0.name == source }) {
                     return (name: preset.name, mg: preset.mg, icon: preset.icon, count: count)
                 }
-                // Custom source — find average mg
                 let avg = last30.filter { $0.source == source }.map(\.milligrams).reduce(0, +) / Double(count)
                 return (name: source, mg: avg, icon: "pill.fill", count: count)
             }
     }
 
-    /// Daily totals for history chart
     private func dailyTotals(days: Int) -> [(date: Date, mg: Double)] {
         let cal = Calendar.current
         let today = cal.startOfDay(for: .now)
@@ -98,34 +84,23 @@ struct CaffeineTrackerView: View {
         }
     }
 
-    /// Time-of-day breakdown
     private var timeOfDayBreakdown: [(period: String, icon: String, color: Color, mg: Double, count: Int)] {
         let last30 = entries.filter { $0.date > Calendar.current.date(byAdding: .day, value: -30, to: .now)! }
         let cal = Calendar.current
-
-        var morning: (mg: Double, count: Int) = (0, 0)   // 5-12
-        var afternoon: (mg: Double, count: Int) = (0, 0)  // 12-17
-        var evening: (mg: Double, count: Int) = (0, 0)    // 17-21
-        var night: (mg: Double, count: Int) = (0, 0)      // 21-5
+        var morning: (mg: Double, count: Int) = (0, 0)
+        var afternoon: (mg: Double, count: Int) = (0, 0)
+        var evening: (mg: Double, count: Int) = (0, 0)
+        var night: (mg: Double, count: Int) = (0, 0)
 
         for entry in last30 {
             let hour = cal.component(.hour, from: entry.date)
             switch hour {
-            case 5..<12:
-                morning.mg += entry.milligrams
-                morning.count += 1
-            case 12..<17:
-                afternoon.mg += entry.milligrams
-                afternoon.count += 1
-            case 17..<21:
-                evening.mg += entry.milligrams
-                evening.count += 1
-            default:
-                night.mg += entry.milligrams
-                night.count += 1
+            case 5..<12: morning.mg += entry.milligrams; morning.count += 1
+            case 12..<17: afternoon.mg += entry.milligrams; afternoon.count += 1
+            case 17..<21: evening.mg += entry.milligrams; evening.count += 1
+            default: night.mg += entry.milligrams; night.count += 1
             }
         }
-
         return [
             ("Morning", "sunrise.fill", .orange, morning.mg, morning.count),
             ("Afternoon", "sun.max.fill", .yellow, afternoon.mg, afternoon.count),
@@ -134,7 +109,6 @@ struct CaffeineTrackerView: View {
         ]
     }
 
-    /// Stats for the selected history range
     private func historyStats(days: Int) -> (avgPerDay: Double, total: Double, daysTracked: Int) {
         let data = dailyTotals(days: days)
         let daysWithData = data.filter { $0.mg > 0 }.count
@@ -143,7 +117,6 @@ struct CaffeineTrackerView: View {
         return (avg, total, daysWithData)
     }
 
-    /// Caffeine-free day streak (consecutive days ending today with 0mg logged)
     private var caffeineFreeStreak: Int {
         let cal = Calendar.current
         let today = cal.startOfDay(for: .now)
@@ -151,48 +124,34 @@ struct CaffeineTrackerView: View {
         for offset in 0..<90 {
             let day = cal.date(byAdding: .day, value: -offset, to: today)!
             let nextDay = cal.date(byAdding: .day, value: 1, to: day)!
-            let hadCaffeine = entries.contains { $0.date >= day && $0.date < nextDay }
-            if hadCaffeine { break }
+            if entries.contains(where: { $0.date >= day && $0.date < nextDay }) { break }
             streak += 1
         }
         return streak
     }
 
-    /// Days since last caffeine-free day (if currently on caffeine)
     private var daysSinceFreeDayText: String? {
         let cal = Calendar.current
         let today = cal.startOfDay(for: .now)
-        // If today is caffeine-free, don't show this
         let todayEnd = cal.date(byAdding: .day, value: 1, to: today)!
-        let hadCaffeineToday = entries.contains { $0.date >= today && $0.date < todayEnd }
-        guard hadCaffeineToday else { return nil }
+        guard entries.contains(where: { $0.date >= today && $0.date < todayEnd }) else { return nil }
         for offset in 1..<90 {
             let day = cal.date(byAdding: .day, value: -offset, to: today)!
             let nextDay = cal.date(byAdding: .day, value: 1, to: day)!
-            let hadCaffeine = entries.contains { $0.date >= day && $0.date < nextDay }
-            if !hadCaffeine {
+            if !entries.contains(where: { $0.date >= day && $0.date < nextDay }) {
                 return offset == 1 ? "Yesterday" : "\(offset) days ago"
             }
         }
         return nil
     }
 
-    /// Peak system caffeine time — most recent entry + ~45min absorption
     private var peakCaffeineInfo: (peakTime: Date, peakMg: Double)? {
         let now = Date.now
         let hl = halfLife
-        // Only consider entries from today that are still active
         let recentActive = entries.filter { $0.remainingCaffeine(at: now, halfLifeHours: hl) > 1 }
         guard let latest = recentActive.first else { return nil }
-
-        // Caffeine peaks ~45 min after ingestion
-        let absorptionMinutes: TimeInterval = 45 * 60
-        let peakTime = latest.date.addingTimeInterval(absorptionMinutes)
-
-        // If the peak is already past, don't show it
+        let peakTime = latest.date.addingTimeInterval(45 * 60)
         guard peakTime > now else { return nil }
-
-        // Estimate total system caffeine at peak time
         let peakMg = recentActive.reduce(0.0) { $0 + $1.remainingCaffeine(at: peakTime, halfLifeHours: hl) }
         return (peakTime, peakMg)
     }
@@ -213,6 +172,18 @@ struct CaffeineTrackerView: View {
         }
     }
 
+    private func caffeineClearTime(from now: Date) -> Date? {
+        let remaining = totalRemainingMg(at: now)
+        guard remaining >= 25 else { return nil }
+        var lo: TimeInterval = 0
+        var hi: TimeInterval = 24 * 3600
+        for _ in 0..<30 {
+            let mid = (lo + hi) / 2
+            if totalRemainingMg(at: now.addingTimeInterval(mid)) > 25 { lo = mid } else { hi = mid }
+        }
+        return now.addingTimeInterval(hi)
+    }
+
     // MARK: - Body
 
     var body: some View {
@@ -220,134 +191,44 @@ struct CaffeineTrackerView: View {
             let now = context.date
             let remaining = totalRemainingMg(at: now)
             let readiness = sleepReadiness(remaining)
-            List {
-                Section {
-                    currentStatusView(remaining: remaining, readiness: readiness)
-                }
 
-                // Quick Log (favorites)
-                if !frequentSources.isEmpty {
-                    Section {
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 10) {
-                                ForEach(frequentSources, id: \.name) { fav in
-                                    Button {
-                                        quickLog(source: fav.name, mg: fav.mg)
-                                    } label: {
-                                        HStack(spacing: 6) {
-                                            Image(systemName: fav.icon)
-                                                .font(.caption)
-                                            Text(fav.name)
-                                                .font(.caption.bold())
-                                            Text("\(Int(fav.mg))mg")
-                                                .font(.caption2)
-                                                .foregroundStyle(.secondary)
-                                        }
-                                        .padding(.horizontal, 12)
-                                        .padding(.vertical, 8)
-                                        .background(Color.brown.opacity(0.12), in: Capsule())
-                                    }
-                                    .buttonStyle(.plain)
-                                }
-                            }
-                        }
-                        .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
-                    } header: {
-                        HStack {
-                            Image(systemName: "bolt.heart.fill")
-                            Text("Quick Log")
-                        }
+            ScrollView {
+                LazyVStack(spacing: AppTheme.sectionSpacing) {
+                    heroCard(remaining: remaining, readiness: readiness, now: now)
+
+                    if !frequentSources.isEmpty {
+                        quickLogCard
+                    }
+
+                    dailyBudgetCard(remaining: remaining)
+
+                    if remaining > 0.5 {
+                        decayCard(from: now)
+                    }
+
+                    logCaffeineCard
+
+                    historyCard
+
+                    if entries.count >= 3 {
+                        timeOfDayCard
+                    }
+
+                    if caffeineFreeStreak > 0 || daysSinceFreeDayText != nil {
+                        streakCard
+                    }
+
+                    if !entries.isEmpty {
+                        recentIntakeCard
                     }
                 }
-
-                // Daily budget
-                Section {
-                    dailyBudgetView
-                }
-
-                // Caffeine-free streak
-                if caffeineFreeStreak > 0 || daysSinceFreeDayText != nil {
-                    Section {
-                        caffeineStreakView
-                    }
-                }
-
-                if remaining > 0.5 {
-                    Section("Caffeine Decay") {
-                        decayChartView(from: now)
-                            .frame(height: 200)
-                            .padding(.vertical, 8)
-                            .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
-                    }
-                }
-
-                Section("Log Caffeine") {
-                    sourcePickerView
-                        .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
-                    mgInputRow
-                    timestampRow
-                    logButton
-                }
-
-                // Weekly/monthly history
-                Section {
-                    Picker("Range", selection: $historyRange) {
-                        ForEach(HistoryRange.allCases, id: \.self) { range in
-                            Text(range.rawValue).tag(range)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                    .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 4, trailing: 16))
-
-                    historyStatsRow
-
-                    historyChartView
-                        .frame(height: 180)
-                        .padding(.vertical, 4)
-                        .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
-                } header: {
-                    Text("Daily History")
-                }
-
-                // Time-of-day pattern
-                if entries.count >= 3 {
-                    Section {
-                        timeOfDayView
-                    } header: {
-                        Text("When You Drink (30 Days)")
-                    }
-                }
-
-                // Sleep correlation
-                if !sleepData.isEmpty && entries.count >= 5 {
-                    Section {
-                        sleepCorrelationView
-                    } header: {
-                        HStack {
-                            Image(systemName: "moon.zzz.fill")
-                            Text("Sleep Impact")
-                        }
-                    }
-                }
-
-                Section("Recent Intake") {
-                    if entries.isEmpty {
-                        Text("No caffeine logged yet.")
-                            .foregroundStyle(.secondary)
-                    } else {
-                        ForEach(entries.prefix(20)) { entry in
-                            intakeRow(entry)
-                        }
-                        .onDelete { offsets in
-                            if let index = offsets.first {
-                                entryToDelete = Array(entries.prefix(20))[index]
-                            }
-                        }
-                    }
-                }
+                .padding(.horizontal)
+                .padding(.top, 8)
+                .padding(.bottom, 36)
             }
         }
-        .navigationTitle("Caffeine Tracker")
+        .background(Color(.systemGroupedBackground))
+        .navigationTitle("Caffeine")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItemGroup(placement: .keyboard) {
@@ -356,19 +237,14 @@ struct CaffeineTrackerView: View {
             }
         }
         .safeAreaInset(edge: .bottom) {
-            if showUndo {
-                undoBar
-            }
+            if showUndo { undoBar }
         }
         .alert("Delete Entry?", isPresented: Binding(
             get: { entryToDelete != nil },
             set: { if !$0 { entryToDelete = nil } }
         )) {
             Button("Delete", role: .destructive) {
-                if let entry = entryToDelete {
-                    modelContext.delete(entry)
-                    entryToDelete = nil
-                }
+                if let entry = entryToDelete { modelContext.delete(entry); entryToDelete = nil }
             }
             Button("Cancel", role: .cancel) { entryToDelete = nil }
         } message: {
@@ -378,441 +254,271 @@ struct CaffeineTrackerView: View {
             get: { editingEntry != nil },
             set: { if !$0 { editingEntry = nil } }
         )) {
-            TextField("mg", text: $editMg)
-                .keyboardType(.decimalPad)
+            TextField("mg", text: $editMg).keyboardType(.decimalPad)
             Button("Save") {
                 if let entry = editingEntry, let mg = Double(editMg), mg > 0 {
-                    entry.milligrams = mg
-                    entry.source = editSource
+                    entry.milligrams = mg; entry.source = editSource
                 }
                 editingEntry = nil
             }
             Button("Delete", role: .destructive) {
-                if let entry = editingEntry {
-                    modelContext.delete(entry)
-                }
+                if let entry = editingEntry { modelContext.delete(entry) }
                 editingEntry = nil
             }
             Button("Cancel", role: .cancel) { editingEntry = nil }
         } message: {
-            if let entry = editingEntry {
-                Text("Edit \(entry.source) — \(Int(entry.milligrams)) mg")
-            }
+            if let entry = editingEntry { Text("Edit \(entry.source) — \(Int(entry.milligrams)) mg") }
         }
-        .task {
-            await loadSleepData()
-        }
+        .task { await loadSleepData() }
     }
 
-    // MARK: - Current Status
+    // MARK: - Hero Card
 
-    private func currentStatusView(remaining: Double, readiness: (label: String, color: Color, icon: String)) -> some View {
-        let now = Date.now
-        return VStack(spacing: 16) {
-            ZStack {
-                Circle()
-                    .stroke(.quaternary, lineWidth: 8)
-                Circle()
-                    .trim(from: 0, to: min(1.0, remaining / dailyLimit))
-                    .stroke(readiness.color.gradient,
-                            style: StrokeStyle(lineWidth: 8, lineCap: .round))
-                    .rotationEffect(.degrees(-90))
-                    .animation(.easeInOut(duration: 0.8), value: remaining)
-                VStack(spacing: 2) {
-                    Text("\(Int(remaining))")
-                        .font(.title.bold().monospacedDigit())
-                    Text("mg remaining")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+    private func heroCard(remaining: Double, readiness: (label: String, color: Color, icon: String), now: Date) -> some View {
+        ZStack(alignment: .topLeading) {
+            LinearGradient(colors: [Color.brown, Color.orange.opacity(0.7)],
+                           startPoint: .topLeading, endPoint: .bottomTrailing)
+            Circle().fill(.white.opacity(0.07)).frame(width: 200).offset(x: 160, y: -60)
+
+            VStack(alignment: .leading, spacing: 18) {
+                HStack(alignment: .center, spacing: 20) {
+                    ZStack {
+                        Circle().stroke(.white.opacity(0.20), lineWidth: 8)
+                        Circle()
+                            .trim(from: 0, to: min(1.0, remaining / dailyLimit))
+                            .stroke(.white, style: StrokeStyle(lineWidth: 8, lineCap: .round))
+                            .rotationEffect(.degrees(-90))
+                            .animation(.easeInOut(duration: 0.8), value: remaining)
+                        VStack(spacing: 1) {
+                            Text("\(Int(remaining))")
+                                .font(.system(size: 26, weight: .black, design: .rounded))
+                                .foregroundStyle(.white).monospacedDigit()
+                            Text("mg").font(.system(size: 10, weight: .bold)).foregroundStyle(.white.opacity(0.80))
+                        }
+                    }
+                    .frame(width: 80, height: 80)
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("System Caffeine")
+                            .font(.caption.weight(.semibold)).foregroundStyle(.white.opacity(0.75))
+
+                        HStack(spacing: 5) {
+                            Image(systemName: readiness.icon).font(.caption)
+                            Text(readiness.label).font(.caption.weight(.semibold))
+                        }
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 10).padding(.vertical, 5)
+                        .background(.white.opacity(0.20), in: Capsule())
+
+                        if let clearTime = caffeineClearTime(from: now), remaining >= 25 {
+                            HStack(spacing: 4) {
+                                Image(systemName: "moon.zzz.fill").font(.caption2).foregroundStyle(.white.opacity(0.8))
+                                (Text("Clear by ") + Text(clearTime, format: .dateTime.hour().minute()).bold())
+                                    .font(.caption).foregroundStyle(.white.opacity(0.85))
+                            }
+                        }
+
+                        if let peak = peakCaffeineInfo {
+                            HStack(spacing: 4) {
+                                Image(systemName: "arrow.up.to.line").font(.caption2).foregroundStyle(.white.opacity(0.8))
+                                (Text("Peak ~\(Int(peak.peakMg))mg at ")
+                                 + Text(peak.peakTime, format: .dateTime.hour().minute()).bold())
+                                    .font(.caption).foregroundStyle(.white.opacity(0.85))
+                            }
+                        }
+                    }
+                    Spacer()
+                }
+
+                HStack(spacing: 0) {
+                    heroStatCol("Today", value: "\(Int(todayTotalMg))mg")
+                    Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 28)
+                    heroStatCol("Limit", value: "\(Int(dailyLimit))mg")
+                    Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 28)
+                    heroStatCol("Remaining", value: "\(Int(remaining))mg")
                 }
             }
-            .frame(width: 110, height: 110)
+            .padding(20)
+        }
+        .heroCard()
+    }
 
-            HStack(spacing: 6) {
-                Image(systemName: readiness.icon)
-                    .foregroundStyle(readiness.color)
-                Text(readiness.label)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(readiness.color)
-            }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 6)
-            .background(readiness.color.opacity(0.1), in: Capsule())
-
-            if let clearTime = caffeineClearTime(from: now), remaining >= 25 {
-                HStack(spacing: 6) {
-                    Image(systemName: "moon.zzz.fill")
-                        .font(.caption)
-                        .foregroundStyle(.green)
-                    Text("Sleep-ready by ")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    + Text(clearTime, format: .dateTime.hour().minute())
-                        .font(.caption.bold())
-                        .foregroundStyle(.green)
-                }
-            }
-
-            if let peak = peakCaffeineInfo {
-                HStack(spacing: 6) {
-                    Image(systemName: "arrow.up.to.line")
-                        .font(.caption)
-                        .foregroundStyle(.orange)
-                    Text("Peak ~\(Int(peak.peakMg))mg at ")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    + Text(peak.peakTime, format: .dateTime.hour().minute())
-                        .font(.caption.bold())
-                        .foregroundStyle(.orange)
-                }
-            }
+    private func heroStatCol(_ title: String, value: String) -> some View {
+        VStack(spacing: 3) {
+            Text(value).font(.system(size: 14, weight: .bold, design: .rounded))
+                .foregroundStyle(.white).monospacedDigit()
+            Text(title).font(.caption2).foregroundStyle(.white.opacity(0.70))
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 8)
     }
 
-    // MARK: - Daily Budget
+    // MARK: - Quick Log Card
 
-    private var dailyBudgetView: some View {
+    private var quickLogCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            SectionHeader(title: "Quick Log", icon: "bolt.heart.fill", color: .brown)
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(frequentSources, id: \.name) { fav in
+                        Button { quickLog(source: fav.name, mg: fav.mg) } label: {
+                            HStack(spacing: 6) {
+                                Image(systemName: fav.icon).font(.caption)
+                                Text(fav.name).font(.caption.bold())
+                                Text("\(Int(fav.mg))mg").font(.caption2).foregroundStyle(.secondary)
+                            }
+                            .padding(.horizontal, 14).padding(.vertical, 8)
+                            .background(Color.brown.opacity(0.12), in: Capsule())
+                            .foregroundStyle(Color.brown)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+        }
+        .appCard()
+    }
+
+    // MARK: - Daily Budget Card
+
+    private func dailyBudgetCard(remaining: Double) -> some View {
         let consumed = todayTotalMg
         let limit = dailyLimit
         let progress = min(1.0, consumed / limit)
         let overLimit = consumed > limit
         let color: Color = overLimit ? .red : (progress > 0.75 ? .orange : .brown)
 
-        return VStack(spacing: 10) {
+        return VStack(alignment: .leading, spacing: 14) {
             HStack {
-                Label("Today's Intake", systemImage: "chart.bar.fill")
-                    .font(.subheadline.weight(.semibold))
+                SectionHeader(title: "Daily Budget", icon: "chart.bar.fill", color: color)
                 Spacer()
                 Text("\(Int(consumed)) / \(Int(limit)) mg")
-                    .font(.subheadline.bold().monospacedDigit())
-                    .foregroundStyle(color)
+                    .font(.caption.bold().monospacedDigit()).foregroundStyle(color)
             }
-            ProgressView(value: progress)
-                .tint(color)
+
+            GradientProgressBar(value: progress, color: color, height: 8)
+
             if overLimit {
-                HStack(spacing: 4) {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .font(.caption2)
+                HStack(spacing: 5) {
+                    Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.red).font(.caption)
                     Text("Over daily limit by \(Int(consumed - limit)) mg")
-                        .font(.caption)
+                        .font(.caption).foregroundStyle(.red)
                 }
-                .foregroundStyle(.red)
             }
         }
-        .padding(.vertical, 4)
+        .appCard()
     }
 
-    // MARK: - Caffeine-Free Streak
+    // MARK: - Decay Card
 
-    private var caffeineStreakView: some View {
-        HStack(spacing: 12) {
-            let streak = caffeineFreeStreak
-            if streak > 0 {
-                ZStack {
-                    Circle()
-                        .fill(Color.green.opacity(0.15))
-                        .frame(width: 44, height: 44)
-                    Image(systemName: "leaf.fill")
-                        .foregroundStyle(.green)
-                }
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("\(streak) caffeine-free day\(streak == 1 ? "" : "s")")
-                        .font(.subheadline.weight(.semibold))
-                    Text("Keep it going!")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            } else if let lastFree = daysSinceFreeDayText {
-                ZStack {
-                    Circle()
-                        .fill(Color.brown.opacity(0.15))
-                        .frame(width: 44, height: 44)
-                    Image(systemName: "cup.and.saucer.fill")
-                        .foregroundStyle(.brown)
-                }
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Last caffeine-free day")
-                        .font(.subheadline.weight(.semibold))
-                    Text(lastFree)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
-            Spacer()
-        }
-        .padding(.vertical, 4)
-    }
-
-    // MARK: - History Stats
-
-    private var historyStatsRow: some View {
-        let days = historyRange == .week ? 7 : 30
-        let stats = historyStats(days: days)
-        return HStack(spacing: 0) {
-            VStack(spacing: 2) {
-                Text("\(Int(stats.avgPerDay))")
-                    .font(.system(.subheadline, design: .rounded, weight: .bold))
-                    .monospacedDigit()
-                Text("avg mg/day")
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
-            }
-            .frame(maxWidth: .infinity)
-
-            Divider().frame(height: 28)
-
-            VStack(spacing: 2) {
-                Text("\(Int(stats.total))")
-                    .font(.system(.subheadline, design: .rounded, weight: .bold))
-                    .monospacedDigit()
-                Text("total mg")
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
-            }
-            .frame(maxWidth: .infinity)
-
-            Divider().frame(height: 28)
-
-            VStack(spacing: 2) {
-                Text("\(stats.daysTracked)")
-                    .font(.system(.subheadline, design: .rounded, weight: .bold))
-                    .monospacedDigit()
-                Text("days tracked")
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
-            }
-            .frame(maxWidth: .infinity)
-        }
-        .padding(.vertical, 6)
-    }
-
-    // MARK: - Caffeine Clear Time
-
-    private func caffeineClearTime(from now: Date) -> Date? {
-        let remaining = totalRemainingMg(at: now)
-        guard remaining >= 25 else { return nil }
-        var lo: TimeInterval = 0
-        var hi: TimeInterval = 24 * 3600
-        for _ in 0..<30 {
-            let mid = (lo + hi) / 2
-            if totalRemainingMg(at: now.addingTimeInterval(mid)) > 25 {
-                lo = mid
-            } else {
-                hi = mid
-            }
-        }
-        return now.addingTimeInterval(hi)
-    }
-
-    // MARK: - Decay Chart
-
-    private func decayChartView(from now: Date) -> some View {
+    private func decayCard(from now: Date) -> some View {
         let data = decayCurveData(from: now)
         let clearTime = caffeineClearTime(from: now)
-        return Chart {
-            ForEach(data) { point in
-                LineMark(
-                    x: .value("Time", point.date),
-                    y: .value("Caffeine", point.mg)
-                )
-                .interpolationMethod(.catmullRom)
-                .foregroundStyle(Color.brown)
 
-                AreaMark(
-                    x: .value("Time", point.date),
-                    y: .value("Caffeine", point.mg)
-                )
-                .interpolationMethod(.catmullRom)
-                .foregroundStyle(Color.brown.opacity(0.15).gradient)
-            }
-
-            RuleMark(y: .value("Sleep Ready", 25))
-                .lineStyle(StrokeStyle(lineWidth: 1, dash: [5, 3]))
-                .foregroundStyle(.green.opacity(0.6))
-                .annotation(position: .leading, alignment: .leading) {
-                    Text("Sleep")
-                        .font(.caption2)
-                        .foregroundStyle(.green)
+        return VStack(alignment: .leading, spacing: 14) {
+            SectionHeader(title: "Caffeine Decay", icon: "waveform.path.ecg", color: .brown)
+            Chart {
+                ForEach(data) { point in
+                    LineMark(x: .value("Time", point.date), y: .value("Caffeine", point.mg))
+                        .interpolationMethod(.catmullRom).foregroundStyle(Color.brown)
+                    AreaMark(x: .value("Time", point.date), y: .value("Caffeine", point.mg))
+                        .interpolationMethod(.catmullRom).foregroundStyle(Color.brown.opacity(0.15).gradient)
                 }
-
-            if let clearTime {
-                RuleMark(x: .value("Clear", clearTime))
-                    .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 3]))
-                    .foregroundStyle(.green.opacity(0.5))
-                    .annotation(position: .top, alignment: .center) {
-                        Text(clearTime, format: .dateTime.hour().minute())
-                            .font(.caption2.bold())
-                            .foregroundStyle(.green)
+                RuleMark(y: .value("Sleep Ready", 25))
+                    .lineStyle(StrokeStyle(lineWidth: 1, dash: [5, 3]))
+                    .foregroundStyle(.green.opacity(0.6))
+                    .annotation(position: .leading, alignment: .leading) {
+                        Text("Sleep").font(.caption2).foregroundStyle(.green)
                     }
-            }
-        }
-        .chartYAxisLabel("mg")
-        .chartXAxis {
-            AxisMarks(values: .stride(by: .hour, count: 2)) { _ in
-                AxisGridLine()
-                AxisValueLabel(format: .dateTime.hour().minute())
-            }
-        }
-    }
-
-    // MARK: - History Chart
-
-    private var historyChartView: some View {
-        let days = historyRange == .week ? 7 : 30
-        let data = dailyTotals(days: days)
-        let limit = dailyLimit
-        return Chart {
-            ForEach(data, id: \.date) { point in
-                BarMark(
-                    x: .value("Date", point.date, unit: .day),
-                    y: .value("mg", point.mg)
-                )
-                .foregroundStyle(point.mg > limit ? Color.red.gradient : Color.brown.gradient)
-                .cornerRadius(4)
-            }
-
-            RuleMark(y: .value("Limit", limit))
-                .lineStyle(StrokeStyle(lineWidth: 1, dash: [5, 3]))
-                .foregroundStyle(.red.opacity(0.5))
-                .annotation(position: .trailing, alignment: .trailing) {
-                    Text("\(Int(limit))")
-                        .font(.caption2)
-                        .foregroundStyle(.red)
-                }
-        }
-        .chartYAxisLabel("mg")
-        .chartXAxis {
-            AxisMarks(values: .stride(by: .day, count: days <= 7 ? 1 : 5)) { _ in
-                AxisGridLine()
-                AxisValueLabel(format: days <= 7 ? .dateTime.weekday(.abbreviated) : .dateTime.month(.abbreviated).day())
-            }
-        }
-    }
-
-    // MARK: - Time of Day
-
-    private var timeOfDayView: some View {
-        let breakdown = timeOfDayBreakdown
-        let maxMg = breakdown.map(\.mg).max() ?? 1
-
-        return VStack(spacing: 8) {
-            ForEach(breakdown, id: \.period) { item in
-                HStack(spacing: 10) {
-                    Image(systemName: item.icon)
-                        .foregroundStyle(item.color)
-                        .frame(width: 20)
-                    Text(item.period)
-                        .font(.caption)
-                        .frame(width: 65, alignment: .leading)
-                    GeometryReader { geo in
-                        let width = max(0, geo.size.width * (maxMg > 0 ? item.mg / maxMg : 0))
-                        RoundedRectangle(cornerRadius: 4)
-                            .fill(item.color.gradient)
-                            .frame(width: width)
-                    }
-                    .frame(height: 16)
-                    Text("\(Int(item.mg))mg")
-                        .font(.caption2.monospacedDigit())
-                        .foregroundStyle(.secondary)
-                        .frame(width: 50, alignment: .trailing)
+                if let clearTime {
+                    RuleMark(x: .value("Clear", clearTime))
+                        .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 3]))
+                        .foregroundStyle(.green.opacity(0.5))
+                        .annotation(position: .top, alignment: .center) {
+                            Text(clearTime, format: .dateTime.hour().minute())
+                                .font(.caption2.bold()).foregroundStyle(.green)
+                        }
                 }
             }
+            .chartYAxisLabel("mg")
+            .chartXAxis {
+                AxisMarks(values: .stride(by: .hour, count: 2)) { _ in
+                    AxisGridLine()
+                    AxisValueLabel(format: .dateTime.hour().minute())
+                }
+            }
+            .frame(height: 200).padding(.vertical, 4)
         }
-        .padding(.vertical, 4)
+        .appCard()
     }
 
-    // MARK: - Sleep Correlation
+    // MARK: - Log Caffeine Card
 
-    private var sleepCorrelationView: some View {
-        let cal = Calendar.current
-        let last30 = entries.filter { $0.date > cal.date(byAdding: .day, value: -30, to: .now)! }
+    private var logCaffeineCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            SectionHeader(title: "Log Caffeine", icon: "plus.circle.fill", color: .brown)
 
-        // Split days into "afternoon caffeine" vs "morning only"
-        var afternoonDays: [Double] = []
-        var morningOnlyDays: [Double] = []
+            sourcePickerView.padding(.bottom, 4)
 
-        for sleepDay in sleepData {
-            guard sleepDay.minutes > 0 else { continue }
-            let dayStart = cal.startOfDay(for: sleepDay.date)
-            let noon = cal.date(bySettingHour: 14, minute: 0, second: 0, of: dayStart)!
-            let dayEnd = cal.date(byAdding: .day, value: 1, to: dayStart)!
-
-            let hadAfternoonCaffeine = last30.contains { $0.date >= noon && $0.date < dayEnd }
-            if hadAfternoonCaffeine {
-                afternoonDays.append(sleepDay.minutes)
-            } else {
-                morningOnlyDays.append(sleepDay.minutes)
-            }
-        }
-
-        let avgAfternoon = afternoonDays.isEmpty ? 0 : afternoonDays.reduce(0, +) / Double(afternoonDays.count)
-        let avgMorning = morningOnlyDays.isEmpty ? 0 : morningOnlyDays.reduce(0, +) / Double(morningOnlyDays.count)
-
-        let hasData = !afternoonDays.isEmpty && !morningOnlyDays.isEmpty
-        let diff = avgMorning - avgAfternoon
-
-        return VStack(alignment: .leading, spacing: 12) {
-            if hasData {
-                HStack(spacing: 16) {
-                    sleepStatPill(
-                        label: "Morning Only",
-                        hours: avgMorning / 60,
-                        color: .green,
-                        icon: "sunrise.fill"
+            VStack(spacing: 0) {
+                HStack {
+                    Text("Amount").foregroundStyle(.secondary).font(.subheadline)
+                    Spacer()
+                    TextField(
+                        selectedSource == "Other" ? "mg" : "\(Int(defaultMgForSource)) mg",
+                        text: $customMg
                     )
-                    sleepStatPill(
-                        label: "After 2 PM",
-                        hours: avgAfternoon / 60,
-                        color: .orange,
-                        icon: "sun.max.fill"
-                    )
+                    .keyboardType(.decimalPad).focused($isMgFocused)
+                    .multilineTextAlignment(.trailing).frame(width: 80).font(.subheadline)
+                    Text("mg").foregroundStyle(.secondary).font(.subheadline)
                 }
+                .padding(.horizontal, 16).padding(.vertical, 13)
 
-                if diff > 15 {
-                    HStack(spacing: 6) {
-                        Image(systemName: "info.circle.fill")
-                            .foregroundStyle(.orange)
-                        Text("Caffeine after 2 PM is linked to **\(Int(diff))min less** sleep on average.")
-                            .font(.caption)
+                Divider().padding(.leading, 16)
+
+                HStack {
+                    Text("Time").foregroundStyle(.secondary).font(.subheadline)
+                    Spacer()
+                    if showTimePicker {
+                        DatePicker("", selection: $customDate, in: ...Date.now,
+                                   displayedComponents: [.date, .hourAndMinute])
+                            .labelsHidden().fixedSize()
+                        Button("Now") { customDate = .now; showTimePicker = false }
+                            .font(.caption.bold()).foregroundStyle(.brown)
+                    } else {
+                        Button {
+                            customDate = .now; showTimePicker = true
+                        } label: {
+                            HStack(spacing: 4) {
+                                Text("Now").font(.subheadline)
+                                Image(systemName: "clock").font(.caption)
+                            }
                             .foregroundStyle(.secondary)
-                    }
-                } else {
-                    HStack(spacing: 6) {
-                        Image(systemName: "checkmark.circle.fill")
-                            .foregroundStyle(.green)
-                        Text("No significant sleep impact from afternoon caffeine detected.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                        }
                     }
                 }
-            } else {
-                Text("Need more data to analyze sleep impact. Keep logging!")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                .padding(.horizontal, 16).padding(.vertical, 13)
+
+                Divider().padding(.leading, 16)
+
+                Button { logCaffeine() } label: {
+                    HStack {
+                        Image(systemName: "plus.circle.fill")
+                        Text("Log \(Int(effectiveMg)) mg \(selectedSource)").font(.subheadline.bold())
+                    }
+                    .frame(maxWidth: .infinity).padding(.vertical, 14)
+                    .background(effectiveMg <= 0 ? Color(.systemFill) : Color.brown.opacity(0.9))
+                    .foregroundStyle(effectiveMg <= 0 ? Color.secondary : Color.white)
+                    .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardRadius))
+                }
+                .disabled(effectiveMg <= 0)
+                .buttonStyle(.plain)
+                .padding(.horizontal, 16).padding(.vertical, 12)
             }
+            .background(Color(.tertiarySystemGroupedBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 14))
         }
-        .padding(.vertical, 4)
+        .appCard()
     }
-
-    private func sleepStatPill(label: String, hours: Double, color: Color, icon: String) -> some View {
-        VStack(spacing: 4) {
-            Image(systemName: icon)
-                .font(.caption)
-                .foregroundStyle(color)
-            Text(String(format: "%.1fh", hours))
-                .font(.subheadline.bold().monospacedDigit())
-            Text(label)
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 8)
-        .background(color.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
-    }
-
-    // MARK: - Source Picker
 
     private var sourcePickerView: some View {
         ScrollView(.horizontal, showsIndicators: false) {
@@ -823,28 +529,20 @@ struct CaffeineTrackerView: View {
                         if preset.name != "Other" { customMg = "" }
                     } label: {
                         VStack(spacing: 4) {
-                            Image(systemName: preset.icon)
-                                .font(.system(size: 18))
-                            Text(preset.name)
-                                .font(.caption2)
-                                .lineLimit(1)
+                            Image(systemName: preset.icon).font(.system(size: 18))
+                            Text(preset.name).font(.caption2).lineLimit(1)
                             if preset.mg > 0 {
-                                Text("\(Int(preset.mg))mg")
-                                    .font(.caption2)
-                                    .foregroundStyle(.secondary)
+                                Text("\(Int(preset.mg))mg").font(.caption2).foregroundStyle(.secondary)
                             }
                         }
                         .frame(width: 70, height: 65)
                         .background(
                             RoundedRectangle(cornerRadius: 10)
-                                .fill(selectedSource == preset.name
-                                      ? Color.brown.opacity(0.15)
-                                      : Color(.systemGray6))
+                                .fill(selectedSource == preset.name ? Color.brown.opacity(0.15) : Color(.systemGray6))
                         )
                         .overlay(
                             RoundedRectangle(cornerRadius: 10)
-                                .stroke(selectedSource == preset.name
-                                        ? Color.brown : .clear, lineWidth: 1.5)
+                                .stroke(selectedSource == preset.name ? Color.brown : .clear, lineWidth: 1.5)
                         )
                     }
                     .buttonStyle(.plain)
@@ -853,138 +551,211 @@ struct CaffeineTrackerView: View {
         }
     }
 
-    // MARK: - mg Input
+    // MARK: - History Card
 
-    private var mgInputRow: some View {
-        HStack {
-            Text("Amount")
-                .foregroundStyle(.secondary)
-            Spacer()
-            TextField(
-                selectedSource == "Other" ? "mg" : "\(Int(defaultMgForSource)) mg",
-                text: $customMg
-            )
-            .keyboardType(.decimalPad)
-            .focused($isMgFocused)
-            .multilineTextAlignment(.trailing)
-            .frame(width: 100)
-            Text("mg")
-                .foregroundStyle(.secondary)
-        }
-    }
+    private var historyCard: some View {
+        let days = historyRange == .week ? 7 : 30
+        let stats = historyStats(days: days)
+        let data = dailyTotals(days: days)
+        let limit = dailyLimit
 
-    // MARK: - Timestamp Row
+        return VStack(alignment: .leading, spacing: 14) {
+            SectionHeader(title: "Daily History", icon: "chart.bar.fill", color: .brown)
 
-    private var timestampRow: some View {
-        HStack {
-            Text("Time")
-                .foregroundStyle(.secondary)
-            Spacer()
-            if showTimePicker {
-                DatePicker("", selection: $customDate, in: ...Date.now, displayedComponents: [.date, .hourAndMinute])
-                    .labelsHidden()
-                    .fixedSize()
-                Button("Now") {
-                    customDate = .now
-                    showTimePicker = false
-                }
-                .font(.caption.bold())
-                .foregroundStyle(.brown)
-            } else {
-                Button {
-                    customDate = .now
-                    showTimePicker = true
-                } label: {
-                    HStack(spacing: 4) {
-                        Text("Now")
-                            .font(.subheadline)
-                        Image(systemName: "clock")
-                            .font(.caption)
+            HStack(spacing: 8) {
+                ForEach(HistoryRange.allCases, id: \.self) { range in
+                    Button {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) { historyRange = range }
+                    } label: {
+                        Text(range.rawValue)
+                            .font(.caption.bold())
+                            .padding(.horizontal, 14).padding(.vertical, 7)
+                            .background(historyRange == range ? Color.brown : Color(.secondarySystemFill),
+                                        in: Capsule())
+                            .foregroundStyle(historyRange == range ? Color.white : Color.primary)
                     }
-                    .foregroundStyle(.secondary)
+                    .buttonStyle(.plain)
+                }
+                Spacer()
+            }
+
+            HStack(spacing: 0) {
+                historyStatCol("Avg/Day", value: "\(Int(stats.avgPerDay))mg")
+                Rectangle().fill(Color(.separator)).frame(width: 1, height: 28)
+                historyStatCol("Total", value: "\(Int(stats.total))mg")
+                Rectangle().fill(Color(.separator)).frame(width: 1, height: 28)
+                historyStatCol("Days", value: "\(stats.daysTracked)")
+            }
+            .padding(.vertical, 6)
+            .background(Color(.tertiarySystemGroupedBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+
+            Chart {
+                ForEach(data, id: \.date) { point in
+                    BarMark(x: .value("Date", point.date, unit: .day), y: .value("mg", point.mg))
+                        .foregroundStyle(point.mg > limit ? Color.red.gradient : Color.brown.gradient)
+                        .cornerRadius(4)
+                }
+                RuleMark(y: .value("Limit", limit))
+                    .lineStyle(StrokeStyle(lineWidth: 1, dash: [5, 3]))
+                    .foregroundStyle(.red.opacity(0.5))
+                    .annotation(position: .trailing, alignment: .trailing) {
+                        Text("\(Int(limit))").font(.caption2).foregroundStyle(.red)
+                    }
+            }
+            .chartYAxisLabel("mg")
+            .chartXAxis {
+                AxisMarks(values: .stride(by: .day, count: days <= 7 ? 1 : 5)) { _ in
+                    AxisGridLine()
+                    AxisValueLabel(format: days <= 7 ? .dateTime.weekday(.abbreviated) : .dateTime.month(.abbreviated).day())
+                }
+            }
+            .frame(height: 180).padding(.vertical, 4)
+        }
+        .appCard()
+    }
+
+    private func historyStatCol(_ title: String, value: String) -> some View {
+        VStack(spacing: 2) {
+            Text(value).font(.system(.subheadline, design: .rounded, weight: .bold)).monospacedDigit()
+            Text(title).font(.caption2).foregroundStyle(.tertiary)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    // MARK: - Time of Day Card
+
+    private var timeOfDayCard: some View {
+        let breakdown = timeOfDayBreakdown
+        let maxMg = breakdown.map(\.mg).max() ?? 1
+
+        return VStack(alignment: .leading, spacing: 14) {
+            SectionHeader(title: "When You Drink (30 Days)", icon: "clock.fill", color: .brown)
+
+            VStack(spacing: 10) {
+                ForEach(breakdown, id: \.period) { item in
+                    HStack(spacing: 10) {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 6).fill(item.color.opacity(0.12)).frame(width: 28, height: 28)
+                            Image(systemName: item.icon).font(.system(size: 11, weight: .semibold)).foregroundStyle(item.color)
+                        }
+                        Text(item.period).font(.caption).frame(width: 65, alignment: .leading)
+                        GeometryReader { geo in
+                            let width = max(0, geo.size.width * (maxMg > 0 ? item.mg / maxMg : 0))
+                            RoundedRectangle(cornerRadius: 4).fill(item.color.gradient).frame(width: width)
+                        }
+                        .frame(height: 16)
+                        Text("\(Int(item.mg))mg")
+                            .font(.caption2.monospacedDigit()).foregroundStyle(.secondary).frame(width: 50, alignment: .trailing)
+                    }
                 }
             }
         }
+        .appCard()
     }
 
-    // MARK: - Log Button
+    // MARK: - Streak Card
 
-    private var logButton: some View {
-        Button {
-            logCaffeine()
-        } label: {
-            HStack {
-                Spacer()
-                Image(systemName: "plus.circle.fill")
-                Text("Log \(Int(effectiveMg)) mg \(selectedSource)")
-                    .font(.subheadline.bold())
-                Spacer()
+    private var streakCard: some View {
+        let streak = caffeineFreeStreak
+        return HStack(spacing: 16) {
+            if streak > 0 {
+                ZStack {
+                    Circle().fill(Color.green.opacity(0.12)).frame(width: 48, height: 48)
+                    Image(systemName: "leaf.fill").font(.system(size: 20)).foregroundStyle(.green)
+                }
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("\(streak) caffeine-free day\(streak == 1 ? "" : "s")")
+                        .font(.subheadline.weight(.semibold))
+                    Text("Keep it going!").font(.caption).foregroundStyle(.secondary)
+                }
+            } else if let lastFree = daysSinceFreeDayText {
+                ZStack {
+                    Circle().fill(Color.brown.opacity(0.12)).frame(width: 48, height: 48)
+                    Image(systemName: "cup.and.saucer.fill").font(.system(size: 20)).foregroundStyle(.brown)
+                }
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Last caffeine-free day").font(.subheadline.weight(.semibold))
+                    Text(lastFree).font(.caption).foregroundStyle(.secondary)
+                }
+            }
+            Spacer()
+        }
+        .appCard()
+    }
+
+    // MARK: - Recent Intake Card
+
+    private var recentIntakeCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            SectionHeader(title: "Recent Intake", icon: "clock.fill", color: .secondary)
+
+            VStack(spacing: 0) {
+                ForEach(Array(entries.prefix(20).enumerated()), id: \.element.id) { idx, entry in
+                    Button {
+                        editMg = "\(Int(entry.milligrams))"; editSource = entry.source; editingEntry = entry
+                    } label: {
+                        intakeRowContent(entry)
+                    }
+                    .buttonStyle(.plain)
+                    .contextMenu {
+                        Button { editMg = "\(Int(entry.milligrams))"; editSource = entry.source; editingEntry = entry } label: {
+                            Label("Edit", systemImage: "pencil")
+                        }
+                        Button(role: .destructive) { entryToDelete = entry } label: {
+                            Label("Delete", systemImage: "trash")
+                        }
+                    }
+                    if idx < min(entries.count, 20) - 1 { Divider().padding(.leading, 62) }
+                }
+            }
+            .background(Color(.tertiarySystemGroupedBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+        }
+        .appCard()
+    }
+
+    private func intakeRowContent(_ entry: CaffeineEntry) -> some View {
+        let preset = CaffeineEntry.presets.first { $0.name == entry.source }
+        return HStack(spacing: 12) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 8).fill(Color.brown.opacity(0.12)).frame(width: 38, height: 38)
+                Image(systemName: preset?.icon ?? "pill.fill")
+                    .font(.system(size: 14, weight: .semibold)).foregroundStyle(.brown)
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                Text(entry.source).font(.subheadline.weight(.semibold)).foregroundStyle(.primary)
+                Text(entry.date, format: .dateTime.weekday(.abbreviated).month(.abbreviated).day().hour().minute())
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+            Spacer()
+            VStack(alignment: .trailing, spacing: 2) {
+                Text("\(Int(entry.milligrams)) mg").font(.subheadline.bold().monospacedDigit()).foregroundStyle(.primary)
+                let remaining = entry.remainingCaffeine(halfLifeHours: halfLife)
+                if remaining > 0.5 {
+                    Text("\(Int(remaining)) mg left").font(.caption).foregroundStyle(.secondary)
+                } else {
+                    Text("Metabolized").font(.caption).foregroundStyle(.green)
+                }
             }
         }
-        .disabled(effectiveMg <= 0)
+        .padding(.horizontal, 16).padding(.vertical, 12)
     }
 
     // MARK: - Undo Bar
 
     private var undoBar: some View {
         HStack {
-            Image(systemName: "cup.and.saucer.fill")
-                .foregroundStyle(.brown)
-            Text("Caffeine logged")
-                .font(.subheadline)
+            Image(systemName: "cup.and.saucer.fill").foregroundStyle(.brown)
+            Text("Caffeine logged").font(.subheadline)
             Spacer()
-            Button {
-                undoLastEntry()
-            } label: {
-                Text("Undo")
-                    .font(.subheadline.bold())
-                    .foregroundStyle(.brown)
+            Button { undoLastEntry() } label: {
+                Text("Undo").font(.subheadline.bold()).foregroundStyle(.brown)
             }
         }
-        .padding(.horizontal)
-        .padding(.vertical, 10)
+        .padding(.horizontal).padding(.vertical, 10)
         .background(.ultraThinMaterial)
         .transition(.move(edge: .bottom).combined(with: .opacity))
-    }
-
-    // MARK: - Intake Row
-
-    private func intakeRow(_ entry: CaffeineEntry) -> some View {
-        Button {
-            editMg = "\(Int(entry.milligrams))"
-            editSource = entry.source
-            editingEntry = entry
-        } label: {
-            HStack {
-                let preset = CaffeineEntry.presets.first { $0.name == entry.source }
-                Image(systemName: preset?.icon ?? "pill.fill")
-                    .foregroundStyle(.brown)
-                    .frame(width: 24)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(entry.source)
-                        .font(.subheadline.weight(.semibold))
-                    Text(entry.date, format: .dateTime.weekday(.abbreviated).month(.abbreviated).day().hour().minute())
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                Spacer()
-                VStack(alignment: .trailing, spacing: 2) {
-                    Text("\(Int(entry.milligrams)) mg")
-                        .font(.subheadline.bold().monospacedDigit())
-                    let remaining = entry.remainingCaffeine(halfLifeHours: halfLife)
-                    if remaining > 0.5 {
-                        Text("\(Int(remaining)) mg left")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    } else {
-                        Text("Fully metabolized")
-                            .font(.caption)
-                            .foregroundStyle(.green)
-                    }
-                }
-            }
-        }
-        .buttonStyle(.plain)
     }
 
     // MARK: - Actions
@@ -993,10 +764,7 @@ struct CaffeineTrackerView: View {
         let date = showTimePicker ? customDate : .now
         let entry = CaffeineEntry(date: date, milligrams: effectiveMg, source: selectedSource)
         modelContext.insert(entry)
-        customMg = ""
-        showTimePicker = false
-        customDate = .now
-        isMgFocused = false
+        customMg = ""; showTimePicker = false; customDate = .now; isMgFocused = false
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
         showUndoSnackbar(for: entry)
     }
@@ -1011,13 +779,9 @@ struct CaffeineTrackerView: View {
     private func showUndoSnackbar(for entry: CaffeineEntry) {
         lastAddedEntry = entry
         undoWorkItem?.cancel()
-        withAnimation(.easeInOut(duration: 0.25)) {
-            showUndo = true
-        }
+        withAnimation(.easeInOut(duration: 0.25)) { showUndo = true }
         let work = DispatchWorkItem {
-            withAnimation(.easeInOut(duration: 0.25)) {
-                showUndo = false
-            }
+            withAnimation(.easeInOut(duration: 0.25)) { showUndo = false }
             lastAddedEntry = nil
         }
         undoWorkItem = work
@@ -1029,9 +793,7 @@ struct CaffeineTrackerView: View {
         modelContext.delete(entry)
         lastAddedEntry = nil
         undoWorkItem?.cancel()
-        withAnimation(.easeInOut(duration: 0.25)) {
-            showUndo = false
-        }
+        withAnimation(.easeInOut(duration: 0.25)) { showUndo = false }
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
     }
 
@@ -1046,8 +808,6 @@ struct CaffeineTrackerView: View {
 }
 
 #Preview {
-    NavigationStack {
-        CaffeineTrackerView()
-    }
-    .modelContainer(for: [CaffeineEntry.self, UserSettings.self], inMemory: true)
+    NavigationStack { CaffeineTrackerView() }
+        .modelContainer(for: [CaffeineEntry.self, UserSettings.self], inMemory: true)
 }
