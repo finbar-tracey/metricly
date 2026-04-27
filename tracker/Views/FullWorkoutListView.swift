@@ -66,8 +66,35 @@ struct FullWorkoutListView: View {
         }
     }
 
+    private var thisWeekCount: Int {
+        let start = Calendar.current.dateInterval(of: .weekOfYear, for: .now)?.start ?? .now
+        return workouts.filter { $0.date >= start }.count
+    }
+
+    private var thisMonthCount: Int {
+        let start = Calendar.current.dateInterval(of: .month, for: .now)?.start ?? .now
+        return workouts.filter { $0.date >= start }.count
+    }
+
     var body: some View {
         List {
+            // Stats hero row
+            if !workouts.isEmpty {
+                Section {
+                    HStack(spacing: 0) {
+                        statPill("Total", value: "\(workouts.count)", icon: "dumbbell.fill", color: .accentColor)
+                        Rectangle().fill(Color(.separator)).frame(width: 1, height: 36)
+                        statPill("This Week", value: "\(thisWeekCount)", icon: "calendar", color: .blue)
+                        Rectangle().fill(Color(.separator)).frame(width: 1, height: 36)
+                        statPill("This Month", value: "\(thisMonthCount)", icon: "calendar.badge.clock", color: .purple)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 6)
+                }
+                .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
+                .listRowBackground(Color(.secondarySystemGroupedBackground))
+            }
+
             // Filter chips
             if !workouts.isEmpty {
                 Section {
@@ -185,10 +212,11 @@ struct FullWorkoutListView: View {
                     }
                 } header: {
                     HStack {
-                        Text(hasActiveFilters ? "Filtered Workouts" : "All Workouts")
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(.secondary)
-                            .textCase(nil)
+                        SectionHeader(
+                            title: hasActiveFilters ? "Filtered Workouts" : "All Workouts",
+                            icon: "dumbbell.fill",
+                            color: .accentColor
+                        )
                         if hasActiveFilters {
                             Spacer()
                             Text("\(filteredWorkouts.count)")
@@ -266,6 +294,20 @@ struct FullWorkoutListView: View {
         } message: {
             Text("This action cannot be undone.")
         }
+    }
+
+    // MARK: - Stat Pill
+
+    private func statPill(_ title: String, value: String, icon: String, color: Color) -> some View {
+        VStack(spacing: 4) {
+            HStack(spacing: 4) {
+                Image(systemName: icon).font(.system(size: 10, weight: .semibold)).foregroundStyle(color)
+                Text(value).font(.system(size: 17, weight: .bold, design: .rounded)).monospacedDigit()
+            }
+            Text(title).font(.caption2).foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 8)
     }
 
     // MARK: - Filter Chip Label
