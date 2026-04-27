@@ -89,46 +89,65 @@ struct AchievementsView: View {
     // MARK: - Summary
 
     private var summarySection: some View {
-        Section {
-            let all = allAchievements
-            let unlocked = all.filter(\.isUnlocked).count
-            let total = all.count
-            VStack(spacing: 12) {
-                HStack {
-                    Image(systemName: "medal.fill")
-                        .font(.title)
-                        .foregroundStyle(.yellow)
-                    VStack(alignment: .leading) {
-                        Text("\(unlocked) / \(total)")
-                            .font(.title2.bold())
-                        Text("Achievements Unlocked")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                    Spacer()
-                }
-                ProgressView(value: Double(unlocked), total: Double(total))
-                    .tint(.yellow)
+        let all = allAchievements
+        let unlocked = all.filter(\.isUnlocked).count
+        let total = all.count
 
-                // Category breakdown
-                HStack(spacing: 0) {
-                    ForEach(Achievement.Category.allCases, id: \.self) { cat in
-                        let catAchievements = all.filter { $0.category == cat }
-                        let catUnlocked = catAchievements.filter(\.isUnlocked).count
-                        VStack(spacing: 4) {
-                            Image(systemName: cat.icon)
-                                .font(.caption)
-                                .foregroundStyle(cat.color)
-                            Text("\(catUnlocked)/\(catAchievements.count)")
-                                .font(.caption2.bold().monospacedDigit())
-                                .foregroundStyle(.secondary)
+        return Section {
+            ZStack(alignment: .topLeading) {
+                LinearGradient(
+                    colors: [Color(red: 0.78, green: 0.60, blue: 0.08), Color.orange.opacity(0.70)],
+                    startPoint: .topLeading, endPoint: .bottomTrailing
+                )
+                Circle().fill(.white.opacity(0.07)).frame(width: 160).offset(x: 220, y: -40)
+
+                VStack(alignment: .leading, spacing: 16) {
+                    HStack(spacing: 14) {
+                        ZStack {
+                            Circle().fill(.white.opacity(0.20)).frame(width: 54, height: 54)
+                            Image(systemName: "medal.fill")
+                                .font(.system(size: 24, weight: .semibold))
+                                .foregroundStyle(.white)
                         }
-                        .frame(maxWidth: .infinity)
+                        VStack(alignment: .leading, spacing: 3) {
+                            HStack(alignment: .firstTextBaseline, spacing: 4) {
+                                Text("\(unlocked)")
+                                    .font(.system(size: 36, weight: .black, design: .rounded))
+                                    .foregroundStyle(.white)
+                                Text("/ \(total)")
+                                    .font(.title3.weight(.semibold))
+                                    .foregroundStyle(.white.opacity(0.75))
+                            }
+                            Text("Achievements Unlocked")
+                                .font(.subheadline.weight(.medium))
+                                .foregroundStyle(.white.opacity(0.75))
+                        }
+                        Spacer()
+                    }
+
+                    GradientProgressBar(value: Double(unlocked) / Double(max(1, total)), color: .white, height: 6)
+                        .opacity(0.80)
+
+                    HStack(spacing: 0) {
+                        ForEach(Achievement.Category.allCases, id: \.self) { cat in
+                            let catAll = all.filter { $0.category == cat }
+                            let catUnlocked = catAll.filter(\.isUnlocked).count
+                            VStack(spacing: 4) {
+                                Image(systemName: cat.icon)
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .foregroundStyle(.white.opacity(0.85))
+                                Text("\(catUnlocked)/\(catAll.count)")
+                                    .font(.caption2.bold().monospacedDigit())
+                                    .foregroundStyle(.white.opacity(0.70))
+                            }
+                            .frame(maxWidth: .infinity)
+                        }
                     }
                 }
-                .padding(.top, 4)
+                .padding(18)
             }
-            .padding(.vertical, 4)
+            .clipShape(RoundedRectangle(cornerRadius: AppTheme.heroRadius))
+            .listRowInsets(EdgeInsets(top: 12, leading: 16, bottom: 12, trailing: 16))
         }
     }
 
@@ -215,8 +234,7 @@ struct AchievementsView: View {
                         .font(.caption2)
                         .foregroundStyle(.tertiary)
                 } else if let progress = achievement.progress, !achievement.isUnlocked {
-                    ProgressView(value: progress)
-                        .tint(achievement.category.color)
+                    GradientProgressBar(value: progress, color: achievement.category.color, height: 5)
                         .frame(maxWidth: 120)
                 }
             }

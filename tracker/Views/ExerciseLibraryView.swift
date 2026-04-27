@@ -9,54 +9,31 @@ struct ExerciseLibraryView: View {
 
     private var allExercises: [ExerciseInfo] {
         var seen: [String: ExerciseInfo] = [:]
-
-        // Seed with built-in exercise guide database
         for guide in ExerciseGuide.database {
             let key = guide.name.lowercased()
-            seen[key] = ExerciseInfo(
-                name: guide.name,
-                category: guide.category,
-                bestWeight: 0,
-                totalSets: 0,
-                sessionCount: 0,
-                lastUsed: .distantPast
-            )
+            seen[key] = ExerciseInfo(name: guide.name, category: guide.category,
+                bestWeight: 0, totalSets: 0, sessionCount: 0, lastUsed: .distantPast)
         }
-
-        // Overlay with actual workout data
         for workout in workouts {
             for exercise in workout.exercises {
                 let key = exercise.name.lowercased()
                 let workingSets = exercise.sets.filter { !$0.isWarmUp }
                 let bestWeight = workingSets.map(\.weight).max() ?? 0
                 let totalSets = workingSets.count
-
                 if var existing = seen[key] {
                     existing.sessionCount += 1
                     existing.totalSets += totalSets
-                    if bestWeight > existing.bestWeight {
-                        existing.bestWeight = bestWeight
-                    }
-                    if exercise.category != nil {
-                        existing.category = exercise.category
-                    }
-                    if let date = exercise.workout?.date, date > existing.lastUsed {
-                        existing.lastUsed = date
-                    }
+                    if bestWeight > existing.bestWeight { existing.bestWeight = bestWeight }
+                    if exercise.category != nil { existing.category = exercise.category }
+                    if let date = exercise.workout?.date, date > existing.lastUsed { existing.lastUsed = date }
                     seen[key] = existing
                 } else {
-                    seen[key] = ExerciseInfo(
-                        name: exercise.name,
-                        category: exercise.category,
-                        bestWeight: bestWeight,
-                        totalSets: totalSets,
-                        sessionCount: 1,
-                        lastUsed: exercise.workout?.date ?? .distantPast
-                    )
+                    seen[key] = ExerciseInfo(name: exercise.name, category: exercise.category,
+                        bestWeight: bestWeight, totalSets: totalSets, sessionCount: 1,
+                        lastUsed: exercise.workout?.date ?? .distantPast)
                 }
             }
         }
-
         return seen.values.sorted { $0.name.lowercased() < $1.name.lowercased() }
     }
 
@@ -80,7 +57,7 @@ struct ExerciseLibraryView: View {
                     Section {
                         ForEach(exercises) { exercise in
                             NavigationLink(value: exercise.name) {
-                                exerciseRow(exercise)
+                                exerciseRow(exercise, group: group)
                             }
                             .contextMenu {
                                 Menu {
@@ -102,7 +79,19 @@ struct ExerciseLibraryView: View {
                             }
                         }
                     } header: {
-                        Label(group.rawValue, systemImage: group.icon)
+                        HStack(spacing: 6) {
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 5)
+                                    .fill(groupColor(group).gradient)
+                                    .frame(width: 18, height: 18)
+                                Image(systemName: group.icon)
+                                    .font(.system(size: 9, weight: .bold))
+                                    .foregroundStyle(.white)
+                            }
+                            Text(group.rawValue)
+                                .textCase(nil)
+                                .font(.system(size: 12, weight: .semibold))
+                        }
                     }
                 }
             }
@@ -115,50 +104,68 @@ struct ExerciseLibraryView: View {
         }
     }
 
-    private func exerciseRow(_ exercise: ExerciseInfo) -> some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 4) {
-                HStack(spacing: 6) {
-                    Text(exercise.name)
-                        .font(.headline)
+    private func exerciseRow(_ exercise: ExerciseInfo, group: MuscleGroup) -> some View {
+        HStack(spacing: 12) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(groupColor(group).opacity(0.12))
+                    .frame(width: 34, height: 34)
+                Image(systemName: group.icon)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(groupColor(group))
+            }
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(spacing: 5) {
+                    Text(exercise.name).font(.subheadline.weight(.medium))
                     if ExerciseGuide.find(exercise.name) != nil {
                         Image(systemName: "text.book.closed")
                             .font(.caption2)
-                            .foregroundStyle(.tint)
+                            .foregroundStyle(Color.accentColor)
                     }
                 }
                 if exercise.sessionCount > 0 {
-                    HStack(spacing: 8) {
+                    HStack(spacing: 4) {
                         Text("\(exercise.sessionCount) sessions")
-                        Text("·")
+                        Text("·").foregroundStyle(.tertiary)
                         Text("\(exercise.totalSets) sets")
                         if exercise.bestWeight > 0 {
-                            Text("·")
+                            Text("·").foregroundStyle(.tertiary)
                             Text("Best: \(weightUnit.formatShort(exercise.bestWeight))")
                         }
                     }
-                    .font(.caption)
+                    .font(.caption2)
                     .foregroundStyle(.secondary)
                 } else {
                     Text("No history yet")
-                        .font(.caption)
-                        .foregroundStyle(.tertiary)
+                        .font(.caption2).foregroundStyle(.tertiary)
                 }
             }
             Spacer()
             if exercise.sessionCount > 0 {
                 Text(exercise.lastUsed, format: .dateTime.month(.abbreviated).day())
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
+                    .font(.caption2).foregroundStyle(.tertiary)
             }
         }
         .padding(.vertical, 2)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(exercise.name), \(exercise.sessionCount) sessions, best \(weightUnit.format(exercise.bestWeight))")
+        .accessibilityLabel("\(exercise.name), \(exercise.sessionCount) sessions")
+    }
+
+    private func groupColor(_ group: MuscleGroup) -> Color {
+        switch group {
+        case .chest: return .blue
+        case .back: return .indigo
+        case .shoulders: return .purple
+        case .biceps: return .orange
+        case .triceps: return .red
+        case .legs: return .green
+        case .core: return .teal
+        case .cardio: return .pink
+        case .other: return .gray
+        }
     }
 
     private func updateCategory(exerciseName: String, to newCategory: MuscleGroup) {
-        // Update all exercises with this name across all workouts
         for workout in workouts {
             for exercise in workout.exercises where exercise.name.lowercased() == exerciseName.lowercased() {
                 exercise.category = newCategory

@@ -16,117 +16,41 @@ struct SmartSuggestionsView: View {
     }
 
     private var muscleReadiness: [(MuscleGroup, Double)] {
-        recoveryResult.muscleResults.map { ($0.group, $0.freshness) }
-            .sorted { $0.1 > $1.1 }
+        recoveryResult.muscleResults.map { ($0.group, $0.freshness) }.sorted { $0.1 > $1.1 }
     }
 
     private var readyMuscles: [MuscleGroup] {
         recoveryResult.muscleResults.filter { $0.freshness >= 0.7 }.map(\.group)
     }
 
-    private var suggestedWorkoutType: String {
-        recoveryResult.suggestedWorkoutType
-    }
+    private var suggestedWorkoutType: String { recoveryResult.suggestedWorkoutType }
 
     private var suggestedExercises: [SuggestedExercise] {
         var suggestions: [SuggestedExercise] = []
         let recentExercises = recentExerciseNames(days: 7)
-
         for group in readyMuscles.prefix(4) {
             let exercises = exercisesForGroup(group)
-            // Prefer exercises not done recently
             let fresh = exercises.filter { !recentExercises.contains($0.lowercased()) }
             let pick = fresh.first ?? exercises.first ?? group.rawValue
             suggestions.append(SuggestedExercise(name: pick, group: group, reason: reasonForGroup(group)))
         }
-
         return suggestions
     }
 
     var body: some View {
-        List {
-            Section {
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack {
-                        Image(systemName: "brain.head.profile")
-                            .font(.title2)
-                            .foregroundStyle(.tint)
-                        VStack(alignment: .leading) {
-                            Text("Suggested: \(suggestedWorkoutType)")
-                                .font(.headline)
-                            Text("Based on your recovery and training history")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-
-                    // Ready muscles chips
-                    FlowLayout(spacing: 6) {
-                        ForEach(muscleReadiness, id: \.0) { group, freshness in
-                            HStack(spacing: 4) {
-                                Circle()
-                                    .fill(RecoveryEngine.freshnessColor(freshness))
-                                    .frame(width: 8, height: 8)
-                                Text(group.rawValue)
-                                    .font(.caption2)
-                            }
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(RecoveryEngine.freshnessColor(freshness).opacity(0.1), in: Capsule())
-                        }
-                    }
+        ScrollView {
+            LazyVStack(spacing: AppTheme.sectionSpacing) {
+                heroCard
+                if !suggestedExercises.isEmpty {
+                    suggestionsCard
                 }
-                .padding(.vertical, 4)
+                whyCard
             }
-
-            if !suggestedExercises.isEmpty {
-                Section("Suggested Exercises") {
-                    ForEach(suggestedExercises) { suggestion in
-                        HStack(spacing: 14) {
-                            Image(systemName: suggestion.group.icon)
-                                .font(.title3)
-                                .foregroundStyle(.tint)
-                                .frame(width: 28)
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(suggestion.name)
-                                    .font(.subheadline.weight(.medium))
-                                HStack(spacing: 4) {
-                                    Text(suggestion.group.rawValue)
-                                        .font(.caption2)
-                                        .padding(.horizontal, 6)
-                                        .padding(.vertical, 2)
-                                        .background(Color(.systemFill), in: .capsule)
-                                    Text(suggestion.reason)
-                                        .font(.caption2)
-                                        .foregroundStyle(.secondary)
-                                }
-                            }
-                        }
-                        .padding(.vertical, 2)
-                    }
-
-                    Button {
-                        createWorkoutFromSuggestions()
-                    } label: {
-                        Label("Create Workout", systemImage: "plus.circle.fill")
-                            .font(.subheadline.bold())
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 8)
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
-                }
-            }
-
-            Section("Why These?") {
-                VStack(alignment: .leading, spacing: 8) {
-                    infoRow(icon: "heart.text.square", text: "Muscles with 70%+ recovery are prioritized")
-                    infoRow(icon: "clock.arrow.circlepath", text: "Exercises not done in the last 7 days are preferred")
-                    infoRow(icon: "chart.bar", text: "Suggestions update as you train")
-                }
-                .padding(.vertical, 4)
-            }
+            .padding(.horizontal)
+            .padding(.top, 8)
+            .padding(.bottom, 36)
         }
+        .background(Color(.systemGroupedBackground))
         .navigationTitle("Smart Suggestions")
         .navigationDestination(item: $createdWorkout) { workout in
             WorkoutDetailView(workout: workout)
@@ -138,21 +62,161 @@ struct SmartSuggestionsView: View {
         }
     }
 
-    private func infoRow(icon: String, text: String) -> some View {
-        HStack(spacing: 10) {
-            Image(systemName: icon)
-                .foregroundStyle(.secondary)
-                .frame(width: 20)
-            Text(text)
-                .font(.caption)
-                .foregroundStyle(.secondary)
+    // MARK: - Hero Card
+
+    private var heroCard: some View {
+        ZStack(alignment: .topLeading) {
+            LinearGradient(
+                colors: [Color.accentColor, Color.accentColor.opacity(0.65)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            Circle()
+                .fill(.white.opacity(0.07))
+                .frame(width: 200)
+                .offset(x: 160, y: -60)
+
+            VStack(alignment: .leading, spacing: 18) {
+                HStack(alignment: .center, spacing: 14) {
+                    ZStack {
+                        Circle()
+                            .fill(.white.opacity(0.20))
+                            .frame(width: 52, height: 52)
+                        Image(systemName: "brain.head.profile")
+                            .font(.system(size: 22, weight: .semibold))
+                            .foregroundStyle(.white)
+                    }
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("Suggested")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.white.opacity(0.75))
+                        Text(suggestedWorkoutType)
+                            .font(.title3.weight(.bold))
+                            .foregroundStyle(.white)
+                    }
+                    Spacer()
+                }
+
+                // Readiness chips
+                FlowLayout(spacing: 6) {
+                    ForEach(muscleReadiness, id: \.0) { group, freshness in
+                        HStack(spacing: 4) {
+                            Circle()
+                                .fill(RecoveryEngine.freshnessColor(freshness))
+                                .frame(width: 7, height: 7)
+                            Text(group.rawValue)
+                                .font(.caption2.weight(.medium))
+                        }
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(.white.opacity(0.15), in: Capsule())
+                        .foregroundStyle(.white)
+                    }
+                }
+
+                Text("Based on your recovery and training history")
+                    .font(.caption)
+                    .foregroundStyle(.white.opacity(0.70))
+            }
+            .padding(20)
         }
+        .heroCard()
     }
+
+    // MARK: - Suggestions Card
+
+    private var suggestionsCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            SectionHeader(title: "Suggested Exercises", icon: "sparkles", color: .accentColor)
+
+            VStack(spacing: 0) {
+                ForEach(Array(suggestedExercises.enumerated()), id: \.element.id) { idx, suggestion in
+                    HStack(spacing: 14) {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 10)
+                                .fill(Color.accentColor.opacity(0.12))
+                                .frame(width: 38, height: 38)
+                            Image(systemName: suggestion.group.icon)
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundStyle(Color.accentColor)
+                        }
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(suggestion.name)
+                                .font(.subheadline.weight(.semibold))
+                            HStack(spacing: 6) {
+                                Text(suggestion.group.rawValue)
+                                    .font(.caption2.bold())
+                                    .padding(.horizontal, 7).padding(.vertical, 2)
+                                    .background(Color.accentColor.opacity(0.12), in: Capsule())
+                                    .foregroundStyle(Color.accentColor)
+                                Text(suggestion.reason)
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                        Spacer()
+                    }
+                    .padding(.horizontal, 16).padding(.vertical, 12)
+                    if idx < suggestedExercises.count - 1 {
+                        Divider().padding(.leading, 68)
+                    }
+                }
+            }
+            .background(Color(.tertiarySystemGroupedBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+
+            Button { createWorkoutFromSuggestions() } label: {
+                Label("Create Workout from Suggestions", systemImage: "plus.circle.fill")
+                    .font(.subheadline.bold())
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(Color.accentColor.gradient)
+                    .foregroundStyle(.white)
+                    .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardRadius))
+            }
+            .buttonStyle(.plain)
+        }
+        .appCard()
+    }
+
+    // MARK: - Why Card
+
+    private var whyCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            SectionHeader(title: "How It Works", icon: "info.circle.fill", color: .secondary)
+
+            VStack(spacing: 0) {
+                infoRow(icon: "heart.text.square", color: .red, text: "Muscles with 70%+ recovery are prioritized")
+                Divider().padding(.leading, 50)
+                infoRow(icon: "clock.arrow.circlepath", color: .orange, text: "Exercises not done in the last 7 days are preferred")
+                Divider().padding(.leading, 50)
+                infoRow(icon: "chart.bar", color: .blue, text: "Suggestions update as you train more")
+            }
+            .background(Color(.tertiarySystemGroupedBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+        }
+        .appCard()
+    }
+
+    private func infoRow(icon: String, color: Color, text: String) -> some View {
+        HStack(spacing: 12) {
+            ZStack {
+                Circle().fill(color.opacity(0.12)).frame(width: 32, height: 32)
+                Image(systemName: icon)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(color)
+            }
+            Text(text).font(.caption).foregroundStyle(.secondary)
+            Spacer()
+        }
+        .padding(.horizontal, 16).padding(.vertical, 11)
+    }
+
+    // MARK: - Helpers
 
     private func recentExerciseNames(days: Int) -> Set<String> {
         let cutoff = Calendar.current.date(byAdding: .day, value: -days, to: .now) ?? .now
-        let recent = workouts.filter { $0.date >= cutoff }
-        return Set(recent.flatMap { $0.exercises.map { $0.name.lowercased() } })
+        return Set(workouts.filter { $0.date >= cutoff }.flatMap { $0.exercises.map { $0.name.lowercased() } })
     }
 
     private func reasonForGroup(_ group: MuscleGroup) -> String {
@@ -178,14 +242,9 @@ struct SmartSuggestionsView: View {
     }
 
     private func exercisesForGroup(_ group: MuscleGroup) -> [String] {
-        // Return historically used exercises for this muscle group
-        let used = workouts.flatMap(\.exercises)
-            .filter { $0.category == group }
-            .map(\.name)
+        let used = workouts.flatMap(\.exercises).filter { $0.category == group }.map(\.name)
         let unique = Array(Set(used))
         if !unique.isEmpty { return unique }
-
-        // Fallback defaults
         switch group {
         case .chest: return ["Bench Press", "Dumbbell Fly", "Incline Press"]
         case .back: return ["Barbell Row", "Lat Pulldown", "Dumbbell Row"]
@@ -207,11 +266,7 @@ struct SuggestedExercise: Identifiable {
     let reason: String
 }
 
-
-
 #Preview {
-    NavigationStack {
-        SmartSuggestionsView()
-    }
-    .modelContainer(for: Workout.self, inMemory: true)
+    NavigationStack { SmartSuggestionsView() }
+        .modelContainer(for: Workout.self, inMemory: true)
 }
