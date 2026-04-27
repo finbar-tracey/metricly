@@ -251,12 +251,29 @@ struct WeeklyMonthlyReportView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 16) {
-                Picker("Period", selection: $selectedPeriod) {
+                HStack(spacing: 6) {
                     ForEach(ReportPeriod.allCases, id: \.self) { period in
-                        Text(period.rawValue).tag(period)
+                        Button {
+                            withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+                                selectedPeriod = period
+                            }
+                        } label: {
+                            Text(period.rawValue)
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(selectedPeriod == period ? .white : .primary)
+                                .padding(.horizontal, 20).padding(.vertical, 9)
+                                .background(
+                                    selectedPeriod == period
+                                        ? AnyShapeStyle(Color.accentColor)
+                                        : AnyShapeStyle(Color(.secondarySystemGroupedBackground)),
+                                    in: Capsule()
+                                )
+                                .shadow(color: selectedPeriod == period ? Color.accentColor.opacity(0.35) : .clear, radius: 8, x: 0, y: 3)
+                        }
+                        .buttonStyle(.plain)
                     }
+                    Spacer()
                 }
-                .pickerStyle(.segmented)
                 .padding(.horizontal)
                 .padding(.top, 8)
 
@@ -343,23 +360,31 @@ struct WeeklyMonthlyReportView: View {
     @ViewBuilder
     private var prsSection: some View {
         if prsHitCount > 0 {
-            VStack(alignment: .leading, spacing: 8) {
-                HStack(spacing: 10) {
-                    Image(systemName: "star.fill")
-                        .font(.title2)
-                        .foregroundStyle(.yellow)
-                    VStack(alignment: .leading, spacing: 2) {
+            ZStack(alignment: .leading) {
+                LinearGradient(
+                    colors: [Color(red: 0.78, green: 0.60, blue: 0.08), Color.orange.opacity(0.75)],
+                    startPoint: .leading, endPoint: .trailing
+                )
+                HStack(spacing: 14) {
+                    ZStack {
+                        Circle().fill(.white.opacity(0.20)).frame(width: 46, height: 46)
+                        Image(systemName: "star.fill")
+                            .font(.system(size: 20, weight: .semibold))
+                            .foregroundStyle(.white)
+                    }
+                    VStack(alignment: .leading, spacing: 3) {
                         Text("\(prsHitCount) Personal Record\(prsHitCount == 1 ? "" : "s")")
-                            .font(.headline)
+                            .font(.headline).foregroundStyle(.white)
                         Text(prExerciseNames.joined(separator: ", "))
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
+                            .font(.caption).foregroundStyle(.white.opacity(0.80))
+                            .lineLimit(2)
                     }
                     Spacer()
                 }
+                .padding(16)
             }
-            .padding()
-            .background(Color.yellow.opacity(0.12), in: RoundedRectangle(cornerRadius: 12))
+            .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardRadius))
+            .shadow(color: Color.orange.opacity(0.30), radius: 12, x: 0, y: 4)
             .padding(.horizontal)
         }
     }
@@ -367,9 +392,9 @@ struct WeeklyMonthlyReportView: View {
     @ViewBuilder
     private var muscleGroupsSection: some View {
         if !muscleGroupSetCounts.isEmpty {
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Muscle Groups Trained")
-                    .font(.headline)
+            VStack(alignment: .leading, spacing: 10) {
+                SectionHeader(title: "Muscle Groups Trained", icon: "figure.strengthtraining.traditional", color: .accentColor)
+                    .padding(.horizontal)
                 FlowLayout(spacing: 8) {
                     ForEach(muscleGroupSetCounts, id: \.group) { item in
                         HStack(spacing: 4) {
@@ -491,14 +516,18 @@ struct WeeklyMonthlyReportView: View {
     // MARK: - Helper Views
 
     private func statCard(icon: String, value: String, label: String, color: Color, change: Double? = nil) -> some View {
-        VStack(spacing: 8) {
-            Image(systemName: icon)
-                .font(.title2)
-                .foregroundStyle(color)
+        VStack(spacing: 10) {
+            ZStack {
+                Circle().fill(color.opacity(0.12)).frame(width: 40, height: 40)
+                Image(systemName: icon)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(color)
+            }
             Text(value)
-                .font(.title3.bold().monospacedDigit())
+                .font(.system(size: 20, weight: .bold, design: .rounded))
+                .monospacedDigit()
             Text(label)
-                .font(.caption)
+                .font(.caption2.weight(.medium))
                 .foregroundStyle(.secondary)
             if let change {
                 HStack(spacing: 2) {
@@ -511,8 +540,10 @@ struct WeeklyMonthlyReportView: View {
             }
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 14)
-        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12))
+        .padding(.vertical, 16)
+        .background(Color(.secondarySystemGroupedBackground))
+        .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardRadius))
+        .shadow(color: .black.opacity(0.07), radius: 12, x: 0, y: 3)
     }
 
     private func healthStatCard(icon: String, value: String, label: String, color: Color, current: Double, previous: Double?, higherIsBetter: Bool) -> some View {
