@@ -18,34 +18,17 @@ struct WaterTrackerView: View {
         case month = "30D"
     }
 
-    private var settings: UserSettings {
-        settingsArray.first ?? UserSettings()
-    }
-
-    private var goalMl: Double {
-        Double(settings.dailyWaterGoalMl)
-    }
-
-    // MARK: - Today
+    private var settings: UserSettings { settingsArray.first ?? UserSettings() }
+    private var goalMl: Double { Double(settings.dailyWaterGoalMl) }
 
     private var todayEntries: [WaterEntry] {
         let start = Calendar.current.startOfDay(for: .now)
         return allEntries.filter { $0.date >= start }
     }
 
-    private var todayTotalMl: Double {
-        todayEntries.reduce(0) { $0 + $1.milliliters }
-    }
-
-    private var progress: Double {
-        min(1.0, todayTotalMl / goalMl)
-    }
-
-    // MARK: - Daily Totals
-
-    private var dayCount: Int {
-        timeRange == .week ? 7 : 30
-    }
+    private var todayTotalMl: Double { todayEntries.reduce(0) { $0 + $1.milliliters } }
+    private var progress: Double { min(1.0, todayTotalMl / goalMl) }
+    private var dayCount: Int { timeRange == .week ? 7 : 30 }
 
     private func dailyTotals(days: Int) -> [(date: Date, ml: Double)] {
         let calendar = Calendar.current
@@ -58,8 +41,6 @@ struct WaterTrackerView: View {
         }
     }
 
-    // MARK: - Weekly Stats
-
     private func weeklyStats(days: Int) -> (avg: Double, daysMetGoal: Int, totalDays: Int) {
         let totals = dailyTotals(days: days)
         guard !totals.isEmpty else { return (0, 0, 0) }
@@ -69,19 +50,14 @@ struct WaterTrackerView: View {
         return (avg, metGoal, totals.count)
     }
 
-    // MARK: - Hydration Streak
-
     private var hydrationStreak: Int {
         let calendar = Calendar.current
         var streak = 0
         var checkDate = calendar.startOfDay(for: .now)
-
-        // If today's goal not yet met, start from yesterday
         if todayTotalMl < goalMl {
             guard let yesterday = calendar.date(byAdding: .day, value: -1, to: checkDate) else { return 0 }
             checkDate = yesterday
         }
-
         while true {
             let dayStart = checkDate
             guard let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart) else { break }
@@ -90,30 +66,18 @@ struct WaterTrackerView: View {
                 streak += 1
                 guard let prev = calendar.date(byAdding: .day, value: -1, to: checkDate) else { break }
                 checkDate = prev
-            } else {
-                break
-            }
+            } else { break }
         }
         return streak
     }
 
-    // MARK: - Time-of-Day Breakdown
-
     private struct TimeBlock: Identifiable {
-        let id = UUID()
-        let label: String
-        let icon: String
-        let ml: Double
-        let color: Color
+        let id = UUID(); let label: String; let icon: String; let ml: Double; let color: Color
     }
 
     private var timeOfDayBreakdown: [TimeBlock] {
         let calendar = Calendar.current
-        var morning: Double = 0
-        var afternoon: Double = 0
-        var evening: Double = 0
-        var night: Double = 0
-
+        var morning: Double = 0, afternoon: Double = 0, evening: Double = 0, night: Double = 0
         for entry in todayEntries {
             let hour = calendar.component(.hour, from: entry.date)
             switch hour {
@@ -123,7 +87,6 @@ struct WaterTrackerView: View {
             default: night += entry.milliliters
             }
         }
-
         return [
             TimeBlock(label: "Morning", icon: "sunrise.fill", ml: morning, color: .orange),
             TimeBlock(label: "Afternoon", icon: "sun.max.fill", ml: afternoon, color: .yellow),
@@ -135,20 +98,28 @@ struct WaterTrackerView: View {
     // MARK: - Body
 
     var body: some View {
-        List {
-            progressSection
-            quickAddSection
-            statsRow
-            if hydrationStreak > 0 || todayTotalMl >= goalMl {
-                streakSection
+        ScrollView {
+            LazyVStack(spacing: AppTheme.sectionSpacing) {
+                heroCard
+                quickAddCard
+                statsCard
+                if hydrationStreak > 0 || todayTotalMl >= goalMl {
+                    streakCard
+                }
+                if !todayEntries.isEmpty {
+                    timeOfDayCard
+                }
+                chartCard
+                if !todayEntries.isEmpty {
+                    todayLogCard
+                }
             }
-            if !todayEntries.isEmpty {
-                timeOfDaySection
-            }
-            chartSection
-            todayEntriesSection
+            .padding(.horizontal)
+            .padding(.top, 8)
+            .padding(.bottom, 36)
         }
-        .navigationTitle("Water Tracker")
+        .background(Color(.systemGroupedBackground))
+        .navigationTitle("Water")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItemGroup(placement: .keyboard) {
@@ -157,96 +128,125 @@ struct WaterTrackerView: View {
             }
         }
         .safeAreaInset(edge: .bottom) {
-            if undoEntry != nil {
-                undoBar
-            }
+            if undoEntry != nil { undoBar }
         }
     }
 
-    // MARK: - Section: Progress Ring
+    // MARK: - Hero Card
 
-    private var progressSection: some View {
-        Section {
-            VStack(spacing: 16) {
-                ZStack {
-                    Circle()
-                        .stroke(.quaternary, lineWidth: 10)
-                    Circle()
-                        .trim(from: 0, to: progress)
-                        .stroke(Color.cyan.gradient,
-                                style: StrokeStyle(lineWidth: 10, lineCap: .round))
-                        .rotationEffect(.degrees(-90))
-                        .animation(.easeInOut(duration: 0.6), value: progress)
-                    VStack(spacing: 2) {
-                        Text("\(Int(todayTotalMl))")
-                            .font(.title.bold().monospacedDigit())
-                        Text("/ \(Int(goalMl)) ml")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+    private var heroCard: some View {
+        ZStack(alignment: .topLeading) {
+            LinearGradient(
+                colors: [Color.cyan, Color(red: 0.0, green: 0.75, blue: 0.85).opacity(0.75)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            Circle()
+                .fill(.white.opacity(0.07))
+                .frame(width: 200)
+                .offset(x: 160, y: -60)
+
+            VStack(alignment: .leading, spacing: 20) {
+                HStack(alignment: .center, spacing: 20) {
+                    ZStack {
+                        Circle()
+                            .stroke(.white.opacity(0.25), lineWidth: 8)
+                        Circle()
+                            .trim(from: 0, to: progress)
+                            .stroke(.white, style: StrokeStyle(lineWidth: 8, lineCap: .round))
+                            .rotationEffect(.degrees(-90))
+                            .animation(.easeInOut(duration: 0.6), value: progress)
+                    }
+                    .frame(width: 64, height: 64)
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack(alignment: .firstTextBaseline, spacing: 4) {
+                            Text("\(Int(todayTotalMl))")
+                                .font(.system(size: 42, weight: .black, design: .rounded))
+                                .foregroundStyle(.white)
+                                .monospacedDigit()
+                            Text("ml")
+                                .font(.title3.weight(.semibold))
+                                .foregroundStyle(.white.opacity(0.75))
+                        }
+                        Text("of \(Int(goalMl)) ml goal")
+                            .font(.subheadline.weight(.medium))
+                            .foregroundStyle(.white.opacity(0.75))
                     }
                 }
-                .frame(width: 120, height: 120)
 
                 if progress >= 1.0 {
                     HStack(spacing: 6) {
-                        Image(systemName: "checkmark.circle.fill")
-                            .foregroundStyle(.green)
-                        Text("Goal reached!")
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(.green)
+                        Image(systemName: "checkmark.circle.fill").font(.caption.bold())
+                        Text("Goal Reached!")
+                            .font(.caption.bold())
                     }
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 6)
-                    .background(.green.opacity(0.1), in: Capsule())
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 12).padding(.vertical, 5)
+                    .background(.white.opacity(0.20), in: Capsule())
                 } else {
                     Text("\(Int(goalMl - todayTotalMl)) ml remaining")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.white.opacity(0.80))
+                        .padding(.horizontal, 12).padding(.vertical, 5)
+                        .background(.white.opacity(0.15), in: Capsule())
                 }
+
+                GradientProgressBar(value: progress, color: .white, height: 6)
+                    .opacity(0.7)
             }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 8)
+            .padding(20)
         }
+        .heroCard()
     }
 
-    // MARK: - Section: Quick Add
+    // MARK: - Quick Add Card
 
-    private var quickAddSection: some View {
-        Section("Log Water") {
+    private var quickAddCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            SectionHeader(title: "Log Water", icon: "drop.fill", color: .cyan)
+
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 10) {
                     ForEach(WaterEntry.presets, id: \.label) { preset in
-                        Button {
-                            addEntry(ml: preset.ml)
-                        } label: {
-                            VStack(spacing: 4) {
-                                Image(systemName: preset.icon)
-                                    .font(.system(size: 18))
-                                    .foregroundStyle(.cyan)
+                        Button { addEntry(ml: preset.ml) } label: {
+                            VStack(spacing: 6) {
+                                ZStack {
+                                    Circle()
+                                        .fill(Color.cyan.opacity(0.12))
+                                        .frame(width: 40, height: 40)
+                                    Image(systemName: preset.icon)
+                                        .font(.system(size: 17, weight: .semibold))
+                                        .foregroundStyle(.cyan)
+                                }
                                 Text(preset.label)
-                                    .font(.caption2)
+                                    .font(.caption2.weight(.medium))
                                 Text("\(Int(preset.ml)) ml")
-                                    .font(.caption2)
+                                    .font(.system(size: 10))
                                     .foregroundStyle(.secondary)
                             }
-                            .frame(width: 80, height: 65)
-                            .background(Color(.systemGray6), in: RoundedRectangle(cornerRadius: 10))
+                            .frame(width: 72)
+                            .padding(.vertical, 10)
+                            .background(Color(.secondarySystemGroupedBackground))
+                            .clipShape(RoundedRectangle(cornerRadius: 14))
                         }
                         .buttonStyle(.plain)
                     }
                 }
             }
-            .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
 
-            HStack {
-                Text("Custom")
-                    .foregroundStyle(.secondary)
-                Spacer()
-                TextField("ml", text: $customMl)
+            HStack(spacing: 12) {
+                ZStack {
+                    Circle()
+                        .fill(Color.cyan.opacity(0.10))
+                        .frame(width: 36, height: 36)
+                    Image(systemName: "pencil")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(.cyan)
+                }
+                TextField("Custom amount", text: $customMl)
                     .keyboardType(.numberPad)
                     .focused($isMlFocused)
-                    .multilineTextAlignment(.trailing)
-                    .frame(width: 80)
                 Text("ml")
                     .foregroundStyle(.secondary)
                 Button {
@@ -258,130 +258,146 @@ struct WaterTrackerView: View {
                 } label: {
                     Image(systemName: "plus.circle.fill")
                         .font(.title2)
+                        .foregroundStyle(.cyan)
                 }
                 .disabled(Double(customMl) ?? 0 <= 0)
             }
+            .padding(14)
+            .background(Color(.secondarySystemGroupedBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 14))
         }
+        .appCard()
     }
 
-    // MARK: - Section: Stats Row
+    // MARK: - Stats Card
 
-    private var statsRow: some View {
-        Section {
+    private var statsCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
             let stats = weeklyStats(days: dayCount)
-            HStack {
-                VStack(spacing: 4) {
-                    Text("\(Int(stats.avg))")
-                        .font(.title3.bold().monospacedDigit())
-                    Text("Avg ml/day")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                }
-                .frame(maxWidth: .infinity)
+            SectionHeader(title: "Stats (\(timeRange.rawValue))", icon: "chart.bar.fill", color: .cyan)
 
-                Divider().frame(height: 36)
-
-                VStack(spacing: 4) {
-                    Text("\(stats.daysMetGoal)/\(stats.totalDays)")
-                        .font(.title3.bold().monospacedDigit())
-                        .foregroundStyle(stats.daysMetGoal > stats.totalDays / 2 ? .green : .primary)
-                    Text("Days at Goal")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                }
-                .frame(maxWidth: .infinity)
-
-                Divider().frame(height: 36)
-
-                VStack(spacing: 4) {
-                    Text("\(hydrationStreak)")
-                        .font(.title3.bold().monospacedDigit())
-                        .foregroundStyle(hydrationStreak >= 3 ? .cyan : .primary)
-                    Text("Day Streak")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                }
-                .frame(maxWidth: .infinity)
-            }
-            .padding(.vertical, 8)
-        } header: {
-            Text("Stats (\(timeRange.rawValue))")
-        }
-    }
-
-    // MARK: - Section: Streak
-
-    private var streakSection: some View {
-        Section {
-            HStack(spacing: 12) {
-                ZStack {
-                    Circle()
-                        .fill(Color.cyan.opacity(0.15))
-                        .frame(width: 44, height: 44)
-                    Image(systemName: hydrationStreak >= 7 ? "drop.circle.fill" : "drop.fill")
-                        .font(.title3)
-                        .foregroundStyle(.cyan)
-                }
-                VStack(alignment: .leading, spacing: 2) {
-                    if hydrationStreak > 0 {
-                        Text("\(hydrationStreak)-day hydration streak!")
-                            .font(.subheadline.weight(.semibold))
-                        Text("Keep hitting your daily goal")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    } else if todayTotalMl >= goalMl {
-                        Text("Goal met today!")
-                            .font(.subheadline.weight(.semibold))
-                        Text("Start a streak by hitting your goal again tomorrow")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-                Spacer()
+            HStack(spacing: 0) {
+                statColumn(value: "\(Int(stats.avg))", label: "Avg ml/day", color: .cyan)
+                Divider().frame(height: 44)
+                statColumn(
+                    value: "\(stats.daysMetGoal)/\(stats.totalDays)",
+                    label: "Days at Goal",
+                    color: stats.daysMetGoal > stats.totalDays / 2 ? .green : .primary
+                )
+                Divider().frame(height: 44)
+                statColumn(
+                    value: "\(hydrationStreak)",
+                    label: "Day Streak",
+                    color: hydrationStreak >= 3 ? .cyan : .primary
+                )
             }
         }
+        .appCard()
     }
 
-    // MARK: - Section: Time of Day
+    private func statColumn(value: String, label: String, color: Color) -> some View {
+        VStack(spacing: 4) {
+            Text(value)
+                .font(.system(size: 22, weight: .bold, design: .rounded))
+                .foregroundStyle(color)
+                .monospacedDigit()
+            Text(label)
+                .font(.caption2.weight(.medium))
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+    }
 
-    private var timeOfDaySection: some View {
-        Section("Hydration by Time of Day") {
+    // MARK: - Streak Card
+
+    private var streakCard: some View {
+        HStack(spacing: 14) {
+            ZStack {
+                Circle()
+                    .fill(Color.cyan.opacity(0.15))
+                    .frame(width: 50, height: 50)
+                Image(systemName: hydrationStreak >= 7 ? "drop.circle.fill" : "drop.fill")
+                    .font(.title2)
+                    .foregroundStyle(.cyan)
+            }
+            VStack(alignment: .leading, spacing: 3) {
+                if hydrationStreak > 0 {
+                    Text("\(hydrationStreak)-day hydration streak!")
+                        .font(.subheadline.weight(.semibold))
+                    Text("Keep hitting your daily goal")
+                        .font(.caption).foregroundStyle(.secondary)
+                } else {
+                    Text("Goal met today!")
+                        .font(.subheadline.weight(.semibold))
+                    Text("Start a streak by hitting your goal again tomorrow")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+            }
+            Spacer()
+        }
+        .appCard()
+    }
+
+    // MARK: - Time of Day Card
+
+    private var timeOfDayCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            SectionHeader(title: "Hydration by Time of Day", icon: "clock.fill", color: .cyan)
+
             HStack(spacing: 8) {
                 ForEach(timeOfDayBreakdown) { block in
                     VStack(spacing: 6) {
-                        Image(systemName: block.icon)
-                            .font(.caption)
-                            .foregroundStyle(block.color)
+                        ZStack {
+                            Circle()
+                                .fill(block.ml > 0 ? block.color.opacity(0.12) : Color(.systemFill))
+                                .frame(width: 36, height: 36)
+                            Image(systemName: block.icon)
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundStyle(block.ml > 0 ? block.color : .secondary)
+                        }
                         Text("\(Int(block.ml))")
-                            .font(.system(.caption, design: .rounded, weight: .bold))
+                            .font(.system(size: 13, weight: .bold, design: .rounded))
                             .monospacedDigit()
                         Text("ml")
-                            .font(.system(size: 9))
-                            .foregroundStyle(.secondary)
+                            .font(.system(size: 9)).foregroundStyle(.secondary)
                         Text(block.label)
-                            .font(.system(size: 9))
-                            .foregroundStyle(.secondary)
+                            .font(.system(size: 9)).foregroundStyle(.secondary)
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 8)
-                    .background(block.ml > 0 ? block.color.opacity(0.08) : Color.clear, in: RoundedRectangle(cornerRadius: 8))
+                    .background(block.ml > 0 ? block.color.opacity(0.06) : Color.clear, in: RoundedRectangle(cornerRadius: 10))
                 }
             }
-            .padding(.vertical, 4)
         }
+        .appCard()
     }
 
-    // MARK: - Section: Chart
+    // MARK: - Chart Card
 
-    private var chartSection: some View {
-        Section {
-            Picker("Range", selection: $timeRange) {
+    private var chartCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            SectionHeader(title: "History", icon: "chart.bar.fill", color: .cyan)
+
+            HStack(spacing: 6) {
                 ForEach(TimeRange.allCases, id: \.self) { range in
-                    Text(range.rawValue).tag(range)
+                    Button {
+                        withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) { timeRange = range }
+                    } label: {
+                        Text(range.rawValue)
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(timeRange == range ? .white : .primary)
+                            .padding(.horizontal, 14).padding(.vertical, 6)
+                            .background(
+                                timeRange == range
+                                    ? AnyShapeStyle(Color.cyan)
+                                    : AnyShapeStyle(Color(.tertiarySystemGroupedBackground)),
+                                in: Capsule()
+                            )
+                    }
+                    .buttonStyle(.plain)
                 }
+                Spacer()
             }
-            .pickerStyle(.segmented)
-            .listRowSeparator(.hidden)
 
             let totals = dailyTotals(days: dayCount)
             if !totals.isEmpty {
@@ -397,9 +413,7 @@ struct WaterTrackerView: View {
                         .lineStyle(StrokeStyle(lineWidth: 1, dash: [5, 3]))
                         .foregroundStyle(.cyan.opacity(0.5))
                         .annotation(position: .trailing, alignment: .leading) {
-                            Text("\(Int(goalMl))")
-                                .font(.system(size: 9))
-                                .foregroundStyle(.cyan)
+                            Text("\(Int(goalMl))").font(.system(size: 9)).foregroundStyle(.cyan)
                         }
                 }
                 .chartYAxisLabel("ml")
@@ -417,51 +431,51 @@ struct WaterTrackerView: View {
                     }
                 }
                 .frame(height: 180)
-                .padding(.vertical, 8)
             }
-        } header: {
-            Text("History")
         }
+        .appCard()
     }
 
-    // MARK: - Section: Today's Entries
+    // MARK: - Today Log Card
 
-    private var todayEntriesSection: some View {
-        Section("Today's Entries") {
-            if todayEntries.isEmpty {
-                Text("No water logged today.")
-                    .foregroundStyle(.secondary)
-            } else {
-                ForEach(todayEntries) { entry in
-                    HStack {
-                        Image(systemName: "drop.fill")
-                            .foregroundStyle(.cyan)
-                            .frame(width: 24)
+    private var todayLogCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            SectionHeader(title: "Today's Entries", icon: "list.bullet", color: .secondary)
+
+            VStack(spacing: 0) {
+                ForEach(Array(todayEntries.enumerated()), id: \.element.id) { idx, entry in
+                    HStack(spacing: 12) {
+                        ZStack {
+                            Circle().fill(Color.cyan.opacity(0.12)).frame(width: 32, height: 32)
+                            Image(systemName: "drop.fill")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundStyle(.cyan)
+                        }
                         VStack(alignment: .leading, spacing: 2) {
                             Text("\(Int(entry.milliliters)) ml")
                                 .font(.subheadline.weight(.semibold))
                             Text(entry.date, format: .dateTime.hour().minute())
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
+                                .font(.caption).foregroundStyle(.secondary)
                         }
                         Spacer()
                     }
-                }
-                .onDelete { offsets in
-                    for index in offsets {
-                        modelContext.delete(todayEntries[index])
+                    .padding(.horizontal, 16).padding(.vertical, 10)
+                    if idx < todayEntries.count - 1 {
+                        Divider().padding(.leading, 60)
                     }
                 }
             }
+            .background(Color(.tertiarySystemGroupedBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 14))
         }
+        .appCard()
     }
 
     // MARK: - Undo Bar
 
     private var undoBar: some View {
         HStack(spacing: 12) {
-            Image(systemName: "drop.fill")
-                .foregroundStyle(.cyan)
+            Image(systemName: "drop.fill").foregroundStyle(.cyan)
             Text("Added \(Int(undoEntry?.milliliters ?? 0)) ml")
                 .font(.subheadline.weight(.medium))
             Spacer()
@@ -472,11 +486,9 @@ struct WaterTrackerView: View {
                     undoEntry = nil
                 }
             }
-            .font(.subheadline.bold())
-            .foregroundStyle(.cyan)
+            .font(.subheadline.bold()).foregroundStyle(.cyan)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
+        .padding(.horizontal, 16).padding(.vertical, 10)
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
         .padding(.horizontal)
         .transition(.move(edge: .bottom).combined(with: .opacity))
@@ -488,16 +500,10 @@ struct WaterTrackerView: View {
         let entry = WaterEntry(milliliters: ml)
         modelContext.insert(entry)
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
-
-        // Undo support
         undoWorkItem?.cancel()
-        withAnimation(.spring(duration: 0.3)) {
-            undoEntry = entry
-        }
+        withAnimation(.spring(duration: 0.3)) { undoEntry = entry }
         let work = DispatchWorkItem {
-            withAnimation(.spring(duration: 0.3)) {
-                undoEntry = nil
-            }
+            withAnimation(.spring(duration: 0.3)) { undoEntry = nil }
         }
         undoWorkItem = work
         DispatchQueue.main.asyncAfter(deadline: .now() + 5, execute: work)
@@ -505,8 +511,6 @@ struct WaterTrackerView: View {
 }
 
 #Preview {
-    NavigationStack {
-        WaterTrackerView()
-    }
-    .modelContainer(for: [WaterEntry.self, UserSettings.self], inMemory: true)
+    NavigationStack { WaterTrackerView() }
+        .modelContainer(for: [WaterEntry.self, UserSettings.self], inMemory: true)
 }

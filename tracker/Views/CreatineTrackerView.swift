@@ -10,62 +10,32 @@ struct CreatineTrackerView: View {
     @State private var undoEntry: CreatineEntry?
     @State private var undoWorkItem: DispatchWorkItem?
 
-    private var settings: UserSettings {
-        settingsArray.first ?? UserSettings()
-    }
-
-    private var dose: Double {
-        settings.creatineLoadingPhase ? 5.0 : settings.creatineDailyDose
-    }
-
-    private var isLoadingPhase: Bool {
-        settings.creatineLoadingPhase
-    }
-
+    private var settings: UserSettings { settingsArray.first ?? UserSettings() }
+    private var dose: Double { settings.creatineLoadingPhase ? 5.0 : settings.creatineDailyDose }
+    private var isLoadingPhase: Bool { settings.creatineLoadingPhase }
     private var loadingDosesPerDay: Int { 4 }
-
-    private var dailyTargetGrams: Double {
-        isLoadingPhase ? 20.0 : settings.creatineDailyDose
-    }
-
-    // MARK: - Today
+    private var dailyTargetGrams: Double { isLoadingPhase ? 20.0 : settings.creatineDailyDose }
 
     private var todayEntries: [CreatineEntry] {
         let start = Calendar.current.startOfDay(for: .now)
         return entries.filter { $0.date >= start }
     }
-
-    private var todayTotalGrams: Double {
-        todayEntries.reduce(0) { $0 + $1.grams }
-    }
-
-    private var hasTakenToday: Bool {
-        !todayEntries.isEmpty
-    }
-
-    private var todayComplete: Bool {
-        todayTotalGrams >= dailyTargetGrams
-    }
-
+    private var todayTotalGrams: Double { todayEntries.reduce(0) { $0 + $1.grams } }
+    private var hasTakenToday: Bool { !todayEntries.isEmpty }
+    private var todayComplete: Bool { todayTotalGrams >= dailyTargetGrams }
     private var dosesRemainingToday: Int {
-        if isLoadingPhase {
-            return max(0, loadingDosesPerDay - todayEntries.count)
-        }
+        if isLoadingPhase { return max(0, loadingDosesPerDay - todayEntries.count) }
         return todayComplete ? 0 : 1
     }
-
-    // MARK: - Streaks
 
     private var currentStreak: Int {
         let calendar = Calendar.current
         var streak = 0
         var checkDate = calendar.startOfDay(for: .now)
-
         if !hasTakenToday {
             guard let yesterday = calendar.date(byAdding: .day, value: -1, to: checkDate) else { return 0 }
             checkDate = yesterday
         }
-
         while true {
             let dayStart = checkDate
             guard let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart) else { break }
@@ -73,9 +43,7 @@ struct CreatineTrackerView: View {
                 streak += 1
                 guard let prev = calendar.date(byAdding: .day, value: -1, to: checkDate) else { break }
                 checkDate = prev
-            } else {
-                break
-            }
+            } else { break }
         }
         return streak
     }
@@ -84,44 +52,26 @@ struct CreatineTrackerView: View {
         let calendar = Calendar.current
         let sortedDates = Set(entries.map { calendar.startOfDay(for: $0.date) }).sorted(by: >)
         guard !sortedDates.isEmpty else { return 0 }
-
-        var longest = 1
-        var current = 1
-
+        var longest = 1, current = 1
         for i in 1..<sortedDates.count {
             let diff = calendar.dateComponents([.day], from: sortedDates[i], to: sortedDates[i - 1]).day ?? 0
-            if diff == 1 {
-                current += 1
-                longest = max(longest, current)
-            } else {
-                current = 1
-            }
+            if diff == 1 { current += 1; longest = max(longest, current) } else { current = 1 }
         }
         return longest
     }
-
-    // MARK: - Weekly Compliance
 
     private var weeklyCompliance: (taken: Int, total: Int, percentage: Double) {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: .now)
         var taken = 0
-        let total = 7
-
         for offset in 0..<7 {
             guard let date = calendar.date(byAdding: .day, value: -offset, to: today) else { continue }
-            let dayStart = date
-            guard let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart) else { continue }
-            if entries.contains(where: { $0.date >= dayStart && $0.date < dayEnd }) {
-                taken += 1
-            }
+            guard let dayEnd = calendar.date(byAdding: .day, value: 1, to: date) else { continue }
+            if entries.contains(where: { $0.date >= date && $0.date < dayEnd }) { taken += 1 }
         }
-
-        let pct = total > 0 ? Double(taken) / Double(total) * 100 : 0
-        return (taken, total, pct)
+        let pct = Double(taken) / 7.0 * 100
+        return (taken, 7, pct)
     }
-
-    // MARK: - Calendar Data
 
     private var last28Days: [(date: Date, taken: Bool, grams: Double)] {
         let calendar = Calendar.current
@@ -134,8 +84,6 @@ struct CreatineTrackerView: View {
             return (date: date, taken: !dayEntries.isEmpty, grams: grams)
         }
     }
-
-    // MARK: - Monthly Chart Data
 
     private var last30DailyGrams: [(date: Date, grams: Double)] {
         let calendar = Calendar.current
@@ -151,246 +99,248 @@ struct CreatineTrackerView: View {
     // MARK: - Body
 
     var body: some View {
-        List {
-            todaySection
-            if isLoadingPhase {
-                loadingPhaseSection
+        ScrollView {
+            LazyVStack(spacing: AppTheme.sectionSpacing) {
+                heroCard
+                if isLoadingPhase { loadingPhaseCard }
+                streakCard
+                complianceCard
+                calendarCard
+                chartCard
+                recentHistoryCard
             }
-            streakSection
-            complianceSection
-            calendarSection
-            chartSection
-            recentHistorySection
+            .padding(.horizontal)
+            .padding(.top, 8)
+            .padding(.bottom, 36)
         }
-        .navigationTitle("Creatine Tracker")
+        .background(Color(.systemGroupedBackground))
+        .navigationTitle("Creatine")
         .navigationBarTitleDisplayMode(.inline)
         .safeAreaInset(edge: .bottom) {
-            if undoEntry != nil {
-                undoBar
-            }
+            if undoEntry != nil { undoBar }
         }
     }
 
-    // MARK: - Section: Today's Status
+    // MARK: - Hero Card
 
-    private var todaySection: some View {
-        Section {
-            VStack(spacing: 16) {
-                ZStack {
-                    Circle()
-                        .fill(todayComplete ? Color.green.opacity(0.15) : hasTakenToday ? Color.blue.opacity(0.15) : Color(.systemGray5))
-                        .frame(width: 100, height: 100)
-                    if todayComplete {
-                        Image(systemName: "checkmark.circle.fill")
-                            .font(.system(size: 40))
-                            .foregroundStyle(.green)
-                    } else if isLoadingPhase {
-                        VStack(spacing: 2) {
-                            Text("\(todayEntries.count)/\(loadingDosesPerDay)")
-                                .font(.title2.bold().monospacedDigit())
-                            Text("doses")
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
+    private var heroCard: some View {
+        ZStack(alignment: .topLeading) {
+            LinearGradient(
+                colors: todayComplete
+                    ? [Color.green, Color(red: 0.1, green: 0.72, blue: 0.35).opacity(0.75)]
+                    : [Color(red: 0.22, green: 0.45, blue: 0.95), Color.blue.opacity(0.75)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            Circle()
+                .fill(.white.opacity(0.07))
+                .frame(width: 200)
+                .offset(x: 160, y: -60)
+
+            VStack(alignment: .leading, spacing: 20) {
+                HStack(alignment: .center, spacing: 20) {
+                    ZStack {
+                        Circle()
+                            .fill(.white.opacity(0.20))
+                            .frame(width: 72, height: 72)
+                        if todayComplete {
+                            Image(systemName: "checkmark.circle.fill")
+                                .font(.system(size: 36, weight: .semibold))
+                                .foregroundStyle(.white)
+                        } else if isLoadingPhase {
+                            VStack(spacing: 1) {
+                                Text("\(todayEntries.count)/\(loadingDosesPerDay)")
+                                    .font(.system(size: 18, weight: .black, design: .rounded))
+                                    .foregroundStyle(.white)
+                                Text("doses")
+                                    .font(.system(size: 10, weight: .medium))
+                                    .foregroundStyle(.white.opacity(0.75))
+                            }
+                        } else {
+                            Image(systemName: hasTakenToday ? "checkmark.circle.fill" : "pill.fill")
+                                .font(.system(size: 34, weight: .semibold))
+                                .foregroundStyle(.white)
                         }
-                    } else {
-                        Image(systemName: hasTakenToday ? "checkmark.circle.fill" : "pill.fill")
-                            .font(.system(size: 40))
-                            .foregroundStyle(hasTakenToday ? .green : .secondary)
                     }
-                }
 
-                if todayComplete {
-                    Text(isLoadingPhase ? "All doses taken today" : "Taken today")
-                        .font(.headline)
-                        .foregroundStyle(.green)
-                } else if isLoadingPhase && hasTakenToday {
-                    Text("\(dosesRemainingToday) dose\(dosesRemainingToday == 1 ? "" : "s") remaining")
-                        .font(.headline)
-                        .foregroundStyle(.blue)
-                } else {
-                    Text(hasTakenToday ? "Taken today" : "Not taken yet")
-                        .font(.headline)
-                        .foregroundStyle(hasTakenToday ? .green : .secondary)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(todayComplete
+                             ? (isLoadingPhase ? "All doses taken!" : "Taken today")
+                             : (hasTakenToday && isLoadingPhase
+                                ? "\(dosesRemainingToday) dose\(dosesRemainingToday == 1 ? "" : "s") left"
+                                : (hasTakenToday ? "Taken today" : "Not taken yet")))
+                            .font(.system(size: 26, weight: .black, design: .rounded))
+                            .foregroundStyle(.white)
+                        Text(isLoadingPhase
+                             ? "Loading Phase — \(String(format: "%.0f", todayTotalGrams))g / \(String(format: "%.0f", dailyTargetGrams))g"
+                             : "\(String(format: "%.0f", dose))g daily dose")
+                            .font(.subheadline.weight(.medium))
+                            .foregroundStyle(.white.opacity(0.75))
+                    }
                 }
 
                 if !todayComplete {
-                    Button {
-                        logCreatine()
-                    } label: {
-                        HStack {
+                    Button { logCreatine() } label: {
+                        HStack(spacing: 8) {
                             Image(systemName: "plus.circle.fill")
+                                .font(.subheadline.bold())
                             Text("Log \(String(format: "%.0f", dose))g Creatine")
                                 .font(.subheadline.bold())
                         }
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 6)
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .tint(.blue)
-                }
-
-                if isLoadingPhase {
-                    Text("Loading Phase — \(String(format: "%.0f", todayTotalGrams))g of \(String(format: "%.0f", dailyTargetGrams))g today")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 8)
-        }
-    }
-
-    // MARK: - Section: Loading Phase
-
-    private var loadingPhaseSection: some View {
-        Section {
-            VStack(alignment: .leading, spacing: 8) {
-                HStack(spacing: 8) {
-                    Image(systemName: "bolt.fill")
-                        .foregroundStyle(.yellow)
-                    Text("Loading Phase Active")
-                        .font(.subheadline.weight(.semibold))
-                }
-
-                Text("Take \(String(format: "%.0f", dose))g × \(loadingDosesPerDay) times/day (20g total) to saturate your muscles quickly. Typically lasts 5–7 days.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-
-                // Progress for today's doses
-                HStack(spacing: 6) {
-                    ForEach(0..<loadingDosesPerDay, id: \.self) { index in
-                        Circle()
-                            .fill(index < todayEntries.count ? Color.blue : Color(.systemGray4))
-                            .frame(width: 20, height: 20)
-                            .overlay {
-                                if index < todayEntries.count {
-                                    Image(systemName: "checkmark")
-                                        .font(.system(size: 9, weight: .bold))
-                                        .foregroundStyle(.white)
-                                }
-                            }
-                    }
-                    Spacer()
-                    Text("\(todayEntries.count)/\(loadingDosesPerDay)")
-                        .font(.caption.bold().monospacedDigit())
-                        .foregroundStyle(.secondary)
-                }
-            }
-            .padding(.vertical, 4)
-        }
-    }
-
-    // MARK: - Section: Streak
-
-    private var streakSection: some View {
-        Section("Streak") {
-            HStack {
-                VStack(spacing: 4) {
-                    Text("\(currentStreak)")
-                        .font(.title.bold().monospacedDigit())
-                        .foregroundStyle(currentStreak >= 7 ? .blue : .primary)
-                    Text("Current")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                }
-                .frame(maxWidth: .infinity)
-
-                Divider().frame(height: 36)
-
-                VStack(spacing: 4) {
-                    Text("\(longestStreak)")
-                        .font(.title.bold().monospacedDigit())
                         .foregroundStyle(.blue)
-                    Text("Longest")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(.white, in: Capsule())
+                    }
+                    .buttonStyle(.plain)
                 }
-                .frame(maxWidth: .infinity)
-
-                Divider().frame(height: 36)
-
-                VStack(spacing: 4) {
-                    Text("\(entries.count)")
-                        .font(.title.bold().monospacedDigit())
-                    Text("Total Days")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                }
-                .frame(maxWidth: .infinity)
             }
-            .padding(.vertical, 8)
+            .padding(20)
         }
+        .heroCard()
     }
 
-    // MARK: - Section: Weekly Compliance
+    // MARK: - Loading Phase Card
 
-    private var complianceSection: some View {
-        Section {
-            let compliance = weeklyCompliance
-            VStack(spacing: 10) {
-                HStack {
-                    Text("Weekly Compliance")
-                        .font(.subheadline.weight(.semibold))
-                    Spacer()
-                    Text("\(Int(compliance.percentage))%")
-                        .font(.title3.bold().monospacedDigit())
-                        .foregroundStyle(compliance.percentage >= 85 ? .green : compliance.percentage >= 50 ? .orange : .red)
+    private var loadingPhaseCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(spacing: 10) {
+                ZStack {
+                    Circle().fill(Color.yellow.opacity(0.15)).frame(width: 36, height: 36)
+                    Image(systemName: "bolt.fill")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(.yellow)
                 }
+                Text("Loading Phase Active")
+                    .font(.subheadline.weight(.semibold))
+                Spacer()
+            }
 
-                ProgressView(value: compliance.percentage, total: 100)
-                    .tint(compliance.percentage >= 85 ? .green : compliance.percentage >= 50 ? .orange : .red)
+            Text("Take \(String(format: "%.0f", dose))g × \(loadingDosesPerDay) times/day (20g total) to saturate your muscles quickly. Typically lasts 5–7 days.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
 
-                HStack {
-                    Text("\(compliance.taken)/\(compliance.total) days this week")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    Spacer()
-                    if compliance.percentage >= 85 {
-                        HStack(spacing: 4) {
-                            Image(systemName: "star.fill")
-                                .font(.caption2)
-                            Text("Consistent")
+            HStack(spacing: 8) {
+                ForEach(0..<loadingDosesPerDay, id: \.self) { index in
+                    ZStack {
+                        Circle()
+                            .fill(index < todayEntries.count ? Color.blue : Color(.systemGray5))
+                            .frame(width: 28, height: 28)
+                        if index < todayEntries.count {
+                            Image(systemName: "checkmark")
+                                .font(.system(size: 11, weight: .bold))
+                                .foregroundStyle(.white)
                         }
-                        .font(.caption.weight(.medium))
-                        .foregroundStyle(.green)
                     }
                 }
+                Spacer()
+                Text("\(todayEntries.count)/\(loadingDosesPerDay)")
+                    .font(.caption.bold().monospacedDigit())
+                    .foregroundStyle(.secondary)
             }
-            .padding(.vertical, 4)
         }
+        .appCard()
     }
 
-    // MARK: - Section: Calendar Grid
+    // MARK: - Streak Card
 
-    private var calendarSection: some View {
-        Section("Last 28 Days") {
+    private var streakCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            SectionHeader(title: "Streak", icon: "flame.fill", color: .orange)
+
+            HStack(spacing: 0) {
+                streakColumn(value: "\(currentStreak)", label: "Current", color: currentStreak >= 7 ? .blue : .primary)
+                Divider().frame(height: 44)
+                streakColumn(value: "\(longestStreak)", label: "Longest", color: .blue)
+                Divider().frame(height: 44)
+                streakColumn(value: "\(entries.count)", label: "Total Days", color: .primary)
+            }
+        }
+        .appCard()
+    }
+
+    private func streakColumn(value: String, label: String, color: Color) -> some View {
+        VStack(spacing: 4) {
+            Text(value)
+                .font(.system(size: 28, weight: .bold, design: .rounded))
+                .foregroundStyle(color)
+                .monospacedDigit()
+            Text(label)
+                .font(.caption2.weight(.medium))
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    // MARK: - Compliance Card
+
+    private var complianceCard: some View {
+        let compliance = weeklyCompliance
+        let compColor: Color = compliance.percentage >= 85 ? .green : compliance.percentage >= 50 ? .orange : .red
+
+        return VStack(alignment: .leading, spacing: 14) {
+            SectionHeader(title: "Weekly Compliance", icon: "checkmark.circle.fill", color: .blue)
+
+            HStack {
+                Text("\(compliance.taken)/\(compliance.total) days this week")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Text("\(Int(compliance.percentage))%")
+                    .font(.system(size: 22, weight: .bold, design: .rounded))
+                    .foregroundStyle(compColor)
+                    .monospacedDigit()
+            }
+
+            GradientProgressBar(value: compliance.percentage / 100, color: compColor, height: 8)
+
+            if compliance.percentage >= 85 {
+                HStack(spacing: 5) {
+                    Image(systemName: "star.fill").font(.caption2).foregroundStyle(.yellow)
+                    Text("Consistent — great work!")
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+        .appCard()
+    }
+
+    // MARK: - Calendar Card
+
+    private var calendarCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            SectionHeader(title: "Last 28 Days", icon: "calendar", color: .blue)
+
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 4), count: 7), spacing: 4) {
                 ForEach(last28Days, id: \.date) { day in
                     VStack(spacing: 2) {
                         Text(day.date, format: .dateTime.day())
-                            .font(.system(size: 10))
+                            .font(.system(size: 9))
                             .foregroundStyle(.secondary)
-                        Circle()
-                            .fill(day.taken ? Color.blue : Color(.systemGray5))
-                            .frame(width: 24, height: 24)
-                            .overlay {
-                                if day.taken {
-                                    Image(systemName: "checkmark")
-                                        .font(.system(size: 10, weight: .bold))
-                                        .foregroundStyle(.white)
-                                }
+                        ZStack {
+                            Circle()
+                                .fill(day.taken ? Color.blue : Color(.systemGray5))
+                                .frame(width: 26, height: 26)
+                            if day.taken {
+                                Image(systemName: "checkmark")
+                                    .font(.system(size: 10, weight: .bold))
+                                    .foregroundStyle(.white)
                             }
+                        }
                     }
                 }
             }
-            .padding(.vertical, 8)
         }
+        .appCard()
     }
 
-    // MARK: - Section: 30-Day Chart
+    // MARK: - Chart Card
 
-    private var chartSection: some View {
-        Section("30-Day Intake") {
+    private var chartCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            SectionHeader(title: "30-Day Intake", icon: "chart.bar.fill", color: .blue)
+
             let data = last30DailyGrams
             if !data.isEmpty {
                 Chart(data, id: \.date) { day in
@@ -413,50 +363,59 @@ struct CreatineTrackerView: View {
                     }
                 }
                 .frame(height: 160)
-                .padding(.vertical, 8)
             }
         }
+        .appCard()
     }
 
-    // MARK: - Section: Recent History
+    // MARK: - Recent History Card
 
-    private var recentHistorySection: some View {
-        Section("Recent History") {
+    private var recentHistoryCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            SectionHeader(title: "Recent History", icon: "list.bullet", color: .secondary)
+
             if entries.isEmpty {
                 Text("No entries yet.")
                     .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 8)
             } else {
-                ForEach(entries.prefix(14)) { entry in
-                    HStack {
-                        Image(systemName: "pill.fill")
-                            .foregroundStyle(.blue)
-                            .frame(width: 24)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("\(String(format: "%.0f", entry.grams))g creatine")
-                                .font(.subheadline.weight(.semibold))
-                            Text(entry.date, format: .dateTime.weekday(.abbreviated).month(.abbreviated).day().hour().minute())
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                        Spacer()
-                    }
-                }
-                .onDelete { offsets in
+                VStack(spacing: 0) {
                     let prefixed = Array(entries.prefix(14))
-                    for index in offsets {
-                        modelContext.delete(prefixed[index])
+                    ForEach(Array(prefixed.enumerated()), id: \.element.id) { idx, entry in
+                        HStack(spacing: 12) {
+                            ZStack {
+                                Circle().fill(Color.blue.opacity(0.12)).frame(width: 32, height: 32)
+                                Image(systemName: "pill.fill")
+                                    .font(.system(size: 12, weight: .semibold))
+                                    .foregroundStyle(.blue)
+                            }
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("\(String(format: "%.0f", entry.grams))g creatine")
+                                    .font(.subheadline.weight(.semibold))
+                                Text(entry.date, format: .dateTime.weekday(.abbreviated).month(.abbreviated).day().hour().minute())
+                                    .font(.caption).foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                        }
+                        .padding(.horizontal, 16).padding(.vertical, 10)
+                        if idx < prefixed.count - 1 {
+                            Divider().padding(.leading, 60)
+                        }
                     }
                 }
+                .background(Color(.tertiarySystemGroupedBackground))
+                .clipShape(RoundedRectangle(cornerRadius: 14))
             }
         }
+        .appCard()
     }
 
     // MARK: - Undo Bar
 
     private var undoBar: some View {
         HStack(spacing: 12) {
-            Image(systemName: "pill.fill")
-                .foregroundStyle(.blue)
+            Image(systemName: "pill.fill").foregroundStyle(.blue)
             Text("Logged \(String(format: "%.0f", undoEntry?.grams ?? 0))g creatine")
                 .font(.subheadline.weight(.medium))
             Spacer()
@@ -467,11 +426,9 @@ struct CreatineTrackerView: View {
                     undoEntry = nil
                 }
             }
-            .font(.subheadline.bold())
-            .foregroundStyle(.blue)
+            .font(.subheadline.bold()).foregroundStyle(.blue)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
+        .padding(.horizontal, 16).padding(.vertical, 10)
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
         .padding(.horizontal)
         .transition(.move(edge: .bottom).combined(with: .opacity))
@@ -483,16 +440,10 @@ struct CreatineTrackerView: View {
         let entry = CreatineEntry(grams: dose)
         modelContext.insert(entry)
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-
-        // Undo support
         undoWorkItem?.cancel()
-        withAnimation(.spring(duration: 0.3)) {
-            undoEntry = entry
-        }
+        withAnimation(.spring(duration: 0.3)) { undoEntry = entry }
         let work = DispatchWorkItem {
-            withAnimation(.spring(duration: 0.3)) {
-                undoEntry = nil
-            }
+            withAnimation(.spring(duration: 0.3)) { undoEntry = nil }
         }
         undoWorkItem = work
         DispatchQueue.main.asyncAfter(deadline: .now() + 5, execute: work)
@@ -500,8 +451,6 @@ struct CreatineTrackerView: View {
 }
 
 #Preview {
-    NavigationStack {
-        CreatineTrackerView()
-    }
-    .modelContainer(for: [CreatineEntry.self, UserSettings.self], inMemory: true)
+    NavigationStack { CreatineTrackerView() }
+        .modelContainer(for: [CreatineEntry.self, UserSettings.self], inMemory: true)
 }
