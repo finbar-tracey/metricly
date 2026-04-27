@@ -9,7 +9,6 @@ struct VolumeTrendsView: View {
     @Environment(\.weightUnit) private var unit
 
     @State private var timeRange: TimeRange = .weekly
-    @State private var selectedGroup: MuscleGroup?
 
     enum TimeRange: String, CaseIterable {
         case weekly = "Weekly"
@@ -18,35 +17,177 @@ struct VolumeTrendsView: View {
 
     private var calendar: Calendar { Calendar.current }
 
+    var body: some View {
+        ScrollView {
+            LazyVStack(spacing: AppTheme.sectionSpacing) {
+                heroCard
+                volumeChartCard
+                if !muscleVolumeData.isEmpty { muscleBreakdownCard }
+            }
+            .padding(.horizontal)
+            .padding(.top, 8)
+            .padding(.bottom, 36)
+        }
+        .background(Color(.systemGroupedBackground))
+        .navigationTitle("Volume Trends")
+    }
+
+    // MARK: - Hero Card
+
+    private var heroCard: some View {
+        ZStack(alignment: .topLeading) {
+            LinearGradient(colors: [Color.blue, Color.blue.opacity(0.65)],
+                           startPoint: .topLeading, endPoint: .bottomTrailing)
+            Circle().fill(.white.opacity(0.07)).frame(width: 200).offset(x: 160, y: -60)
+
+            VStack(alignment: .leading, spacing: 18) {
+                HStack(alignment: .center, spacing: 14) {
+                    ZStack {
+                        Circle().fill(.white.opacity(0.20)).frame(width: 52, height: 52)
+                        Image(systemName: "chart.bar.fill")
+                            .font(.system(size: 22, weight: .semibold)).foregroundStyle(.white)
+                    }
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("This Week")
+                            .font(.caption.weight(.semibold)).foregroundStyle(.white.opacity(0.75))
+                        Text(formatVolume(totalVolumeThisWeek))
+                            .font(.system(size: 36, weight: .black, design: .rounded))
+                            .foregroundStyle(.white).monospacedDigit()
+                    }
+                    Spacer()
+                    if totalVolumeLastWeek > 0 {
+                        HStack(spacing: 4) {
+                            Image(systemName: volumeChange >= 0 ? "arrow.up" : "arrow.down")
+                                .font(.caption.bold())
+                            Text(String(format: "%.0f%%", abs(volumeChange))).font(.caption.bold())
+                        }
+                        .padding(.horizontal, 10).padding(.vertical, 5)
+                        .background(.white.opacity(0.20), in: Capsule())
+                        .foregroundStyle(.white)
+                    }
+                }
+
+                HStack(spacing: 0) {
+                    heroStatCol("Last Week", value: formatVolume(totalVolumeLastWeek))
+                    Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 28)
+                    heroStatCol("WoW", value: totalVolumeLastWeek > 0 ? String(format: "%+.0f%%", volumeChange) : "—")
+                    Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 28)
+                    heroStatCol("Workouts", value: "\(workoutsThisWeek)")
+                }
+            }
+            .padding(20)
+        }
+        .heroCard()
+    }
+
+    private func heroStatCol(_ title: String, value: String) -> some View {
+        VStack(spacing: 3) {
+            Text(value).font(.system(size: 15, weight: .bold, design: .rounded))
+                .foregroundStyle(.white).monospacedDigit()
+            Text(title).font(.caption2).foregroundStyle(.white.opacity(0.70))
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    // MARK: - Volume Chart Card
+
+    private var volumeChartCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            SectionHeader(title: "Volume Trend", icon: "chart.bar.fill", color: .blue)
+
+            HStack(spacing: 6) {
+                ForEach(TimeRange.allCases, id: \.self) { range in
+                    Button {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) { timeRange = range }
+                    } label: {
+                        Text(range.rawValue)
+                            .font(.caption.bold())
+                            .padding(.horizontal, 16).padding(.vertical, 7)
+                            .background(timeRange == range ? Color.blue : Color(.secondarySystemFill), in: Capsule())
+                            .foregroundStyle(timeRange == range ? .white : .primary)
+                    }
+                    .buttonStyle(.plain)
+                }
+                Spacer()
+            }
+
+            if volumeData.isEmpty {
+                Text("Not enough data yet.")
+                    .font(.subheadline).foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .center).padding(.vertical, 40)
+            } else {
+                Chart(volumeData) { point in
+                    BarMark(
+                        x: .value("Period", point.date, unit: timeRange == .weekly ? .weekOfYear : .month),
+                        y: .value("Volume", unit.display(point.volume))
+                    )
+                    .foregroundStyle(Color.blue.gradient).cornerRadius(4)
+                }
+                .chartYAxisLabel(unit.label)
+                .frame(height: 200).padding(.vertical, 4)
+            }
+        }
+        .appCard()
+    }
+
+    // MARK: - Muscle Breakdown Card
+
+    private var muscleBreakdownCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            SectionHeader(title: "Volume by Muscle (30 days)", icon: "figure.strengthtraining.traditional", color: .blue)
+
+            let maxVol = muscleVolumeData.map(\.1).max() ?? 1
+
+            VStack(spacing: 0) {
+                ForEach(Array(muscleVolumeData.enumerated()), id: \.element.0) { idx, pair in
+                    let (group, volume) = pair
+                    HStack(spacing: 14) {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 8).fill(Color.blue.opacity(0.12)).frame(width: 34, height: 34)
+                            Image(systemName: group.icon)
+                                .font(.system(size: 13, weight: .semibold)).foregroundStyle(Color.blue)
+                        }
+                        VStack(alignment: .leading, spacing: 5) {
+                            HStack {
+                                Text(group.rawValue).font(.subheadline.weight(.medium))
+                                Spacer()
+                                Text(formatVolume(volume))
+                                    .font(.caption.bold().monospacedDigit()).foregroundStyle(.secondary)
+                            }
+                            GradientProgressBar(value: volume / maxVol, color: .blue, height: 5)
+                        }
+                    }
+                    .padding(.horizontal, 16).padding(.vertical, 11)
+                    if idx < muscleVolumeData.count - 1 { Divider().padding(.leading, 64) }
+                }
+            }
+            .background(Color(.tertiarySystemGroupedBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+        }
+        .appCard()
+    }
+
+    // MARK: - Computed
+
     private var volumeData: [VolumePoint] {
         let grouped: [(Date, Double)]
-
         switch timeRange {
-        case .weekly:
-            grouped = groupByWeek()
-        case .monthly:
-            grouped = groupByMonth()
+        case .weekly: grouped = groupByWeek()
+        case .monthly: grouped = groupByMonth()
         }
-
         return grouped.map { VolumePoint(date: $0.0, volume: $0.1) }
     }
 
     private var muscleVolumeData: [(MuscleGroup, Double)] {
-        let recent = workouts.filter {
-            $0.date >= (calendar.date(byAdding: .day, value: -30, to: .now) ?? .now)
-        }
-
+        let recent = workouts.filter { $0.date >= (calendar.date(byAdding: .day, value: -30, to: .now) ?? .now) }
         var volumes: [MuscleGroup: Double] = [:]
         for workout in recent {
             for exercise in workout.exercises {
                 guard let group = exercise.category else { continue }
-                let exerciseVolume = exercise.sets
-                    .filter { !$0.isWarmUp }
-                    .reduce(0.0) { $0 + Double($1.reps) * $1.weight }
-                volumes[group, default: 0] += exerciseVolume
+                let vol = exercise.sets.filter { !$0.isWarmUp }.reduce(0.0) { $0 + Double($1.reps) * $1.weight }
+                volumes[group, default: 0] += vol
             }
         }
-
         return MuscleGroup.allCases
             .filter { $0 != .cardio && $0 != .other }
             .compactMap { group in
@@ -59,8 +200,7 @@ struct VolumeTrendsView: View {
     private var totalVolumeThisWeek: Double {
         let startOfWeek = calendar.dateInterval(of: .weekOfYear, for: .now)?.start ?? .now
         return workouts.filter { $0.date >= startOfWeek }
-            .flatMap(\.exercises)
-            .flatMap(\.sets)
+            .flatMap(\.exercises).flatMap(\.sets)
             .filter { !$0.isWarmUp }
             .reduce(0.0) { $0 + Double($1.reps) * $1.weight }
     }
@@ -69,8 +209,7 @@ struct VolumeTrendsView: View {
         let startOfWeek = calendar.dateInterval(of: .weekOfYear, for: .now)?.start ?? .now
         guard let lastWeekStart = calendar.date(byAdding: .day, value: -7, to: startOfWeek) else { return 0 }
         return workouts.filter { $0.date >= lastWeekStart && $0.date < startOfWeek }
-            .flatMap(\.exercises)
-            .flatMap(\.sets)
+            .flatMap(\.exercises).flatMap(\.sets)
             .filter { !$0.isWarmUp }
             .reduce(0.0) { $0 + Double($1.reps) * $1.weight }
     }
@@ -80,117 +219,16 @@ struct VolumeTrendsView: View {
         return ((totalVolumeThisWeek - totalVolumeLastWeek) / totalVolumeLastWeek) * 100
     }
 
-    var body: some View {
-        List {
-            // Summary stats
-            Section {
-                HStack(spacing: 0) {
-                    VStack(spacing: 4) {
-                        Text("This Week")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        Text(formatVolume(totalVolumeThisWeek))
-                            .font(.title3.bold())
-                    }
-                    .frame(maxWidth: .infinity)
-
-                    VStack(spacing: 4) {
-                        Text("Last Week")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        Text(formatVolume(totalVolumeLastWeek))
-                            .font(.title3.bold())
-                            .foregroundStyle(.secondary)
-                    }
-                    .frame(maxWidth: .infinity)
-
-                    VStack(spacing: 4) {
-                        Text("Change")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        HStack(spacing: 2) {
-                            Image(systemName: volumeChange >= 0 ? "arrow.up.right" : "arrow.down.right")
-                                .font(.caption)
-                            Text(String(format: "%.0f%%", volumeChange))
-                                .font(.title3.bold())
-                        }
-                        .foregroundStyle(volumeChange >= 0 ? .green : .red)
-                    }
-                    .frame(maxWidth: .infinity)
-                }
-                .padding(.vertical, 4)
-            }
-
-            // Volume trend chart
-            Section("Volume Trend") {
-                Picker("Range", selection: $timeRange) {
-                    ForEach(TimeRange.allCases, id: \.self) { range in
-                        Text(range.rawValue).tag(range)
-                    }
-                }
-                .pickerStyle(.segmented)
-
-                if !volumeData.isEmpty {
-                    Chart(volumeData) { point in
-                        BarMark(
-                            x: .value("Period", point.date, unit: timeRange == .weekly ? .weekOfYear : .month),
-                            y: .value("Volume", unit.display(point.volume))
-                        )
-                        .foregroundStyle(.blue.gradient)
-                        .cornerRadius(4)
-                    }
-                    .chartYAxisLabel(unit.label)
-                    .frame(height: 200)
-                    .padding(.vertical, 8)
-                } else {
-                    Text("Not enough data yet.")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
-            }
-
-            // Volume by muscle group (last 30 days)
-            if !muscleVolumeData.isEmpty {
-                Section("Volume by Muscle (30 days)") {
-                    Chart(muscleVolumeData, id: \.0) { group, volume in
-                        BarMark(
-                            x: .value("Volume", unit.display(volume)),
-                            y: .value("Muscle", group.rawValue)
-                        )
-                        .foregroundStyle(by: .value("Group", group.rawValue))
-                        .cornerRadius(4)
-                    }
-                    .chartLegend(.hidden)
-                    .chartXAxisLabel(unit.label)
-                    .frame(height: CGFloat(muscleVolumeData.count) * 36)
-                    .padding(.vertical, 8)
-
-                    ForEach(muscleVolumeData, id: \.0) { group, volume in
-                        HStack {
-                            Image(systemName: group.icon)
-                                .foregroundStyle(.tint)
-                                .frame(width: 24)
-                            Text(group.rawValue)
-                                .font(.subheadline)
-                            Spacer()
-                            Text(formatVolume(volume))
-                                .font(.subheadline.monospacedDigit())
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                }
-            }
-        }
-        .navigationTitle("Volume Trends")
+    private var workoutsThisWeek: Int {
+        let startOfWeek = calendar.dateInterval(of: .weekOfYear, for: .now)?.start ?? .now
+        return workouts.filter { $0.date >= startOfWeek }.count
     }
 
     private func groupByWeek() -> [(Date, Double)] {
         var weeks: [Date: Double] = [:]
         for workout in workouts {
             guard let weekStart = calendar.dateInterval(of: .weekOfYear, for: workout.date)?.start else { continue }
-            let vol = workout.exercises.flatMap(\.sets)
-                .filter { !$0.isWarmUp }
-                .reduce(0.0) { $0 + Double($1.reps) * $1.weight }
+            let vol = workout.exercises.flatMap(\.sets).filter { !$0.isWarmUp }.reduce(0.0) { $0 + Double($1.reps) * $1.weight }
             weeks[weekStart, default: 0] += vol
         }
         return weeks.sorted { $0.key < $1.key }
@@ -200,9 +238,7 @@ struct VolumeTrendsView: View {
         var months: [Date: Double] = [:]
         for workout in workouts {
             guard let monthStart = calendar.dateInterval(of: .month, for: workout.date)?.start else { continue }
-            let vol = workout.exercises.flatMap(\.sets)
-                .filter { !$0.isWarmUp }
-                .reduce(0.0) { $0 + Double($1.reps) * $1.weight }
+            let vol = workout.exercises.flatMap(\.sets).filter { !$0.isWarmUp }.reduce(0.0) { $0 + Double($1.reps) * $1.weight }
             months[monthStart, default: 0] += vol
         }
         return months.sorted { $0.key < $1.key }
@@ -210,9 +246,7 @@ struct VolumeTrendsView: View {
 
     private func formatVolume(_ volume: Double) -> String {
         let displayed = unit.display(volume)
-        if displayed >= 1000 {
-            return String(format: "%.1fk %@", displayed / 1000, unit.label)
-        }
+        if displayed >= 1000 { return String(format: "%.1fk %@", displayed / 1000, unit.label) }
         return "\(Int(displayed)) \(unit.label)"
     }
 }
@@ -224,8 +258,6 @@ struct VolumePoint: Identifiable {
 }
 
 #Preview {
-    NavigationStack {
-        VolumeTrendsView()
-    }
-    .modelContainer(for: Workout.self, inMemory: true)
+    NavigationStack { VolumeTrendsView() }
+        .modelContainer(for: Workout.self, inMemory: true)
 }
