@@ -51,92 +51,130 @@ struct ExerciseDetailView: View {
 
     var body: some View {
         List {
+            // MARK: - Stats Banner
+            Section {
+                exerciseStatsBanner
+                    .listRowBackground(Color.clear)
+                    .listRowInsets(.init(top: 4, leading: 16, bottom: 4, trailing: 16))
+            }
+
+            // MARK: - Quick Log
             if let lastSession = previousSession, !lastSession.sets.isEmpty {
                 Section(isExpanded: $showQuickLog) {
                     ForEach(Array(lastSession.sets.enumerated()), id: \.offset) { index, prevSet in
                         quickAddRow(index: index, prevSet: prevSet)
+                            .listRowBackground(Color(.secondarySystemGroupedBackground))
                     }
                 } header: {
                     HStack {
-                        Image(systemName: "clock.arrow.circlepath")
+                        Image(systemName: "clock.arrow.circlepath").foregroundStyle(.orange)
                         Text("Quick Log")
                         Spacer()
                         Image(systemName: showQuickLog ? "chevron.up" : "chevron.down")
-                            .font(.caption2)
-                            .foregroundStyle(.tertiary)
+                            .font(.caption2).foregroundStyle(.tertiary)
                     }
-                    .font(.subheadline)
+                    .font(.subheadline.weight(.semibold))
                     .contentShape(Rectangle())
-                    .onTapGesture {
-                        withAnimation {
-                            showQuickLog.toggle()
-                        }
-                    }
+                    .onTapGesture { withAnimation { showQuickLog.toggle() } }
                 }
             }
 
-            // Goal progress
-            if let goal = liftGoals.first(where: { $0.exerciseName.lowercased() == exercise.name.lowercased() && $0.achievedDate == nil }) {
+            // MARK: - Goal Progress
+            if let goal = liftGoals.first(where: {
+                $0.exerciseName.lowercased() == exercise.name.lowercased() && $0.achievedDate == nil
+            }) {
                 Section {
                     let pr = historicalBestWeight
                     let currentBest = max(pr, exercise.sets.filter { !$0.isWarmUp }.map(\.weight).max() ?? 0)
                     let progress = goal.targetWeight > 0 ? min(1.0, currentBest / goal.targetWeight) : 0
                     HStack(spacing: 12) {
-                        Image(systemName: "target")
-                            .font(.title3)
-                            .foregroundStyle(Color.accentColor)
+                        ZStack {
+                            Circle().fill(Color.accentColor.opacity(0.12)).frame(width: 38, height: 38)
+                            Image(systemName: "target").font(.system(size: 16)).foregroundStyle(Color.accentColor)
+                        }
                         VStack(alignment: .leading, spacing: 4) {
                             Text("Goal: \(weightUnit.format(goal.targetWeight))")
                                 .font(.subheadline.weight(.semibold))
                             Text("Current best: \(weightUnit.format(currentBest)) (\(Int(progress * 100))%)")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                            GradientProgressBar(value: progress, color: .accentColor, height: 8)
+                                .font(.caption).foregroundStyle(.secondary)
+                            GradientProgressBar(value: progress, color: .accentColor, height: 6)
                         }
                     }
                     .padding(.vertical, 4)
+                    .listRowBackground(Color(.secondarySystemGroupedBackground))
+                } header: {
+                    SectionHeader(title: "Lift Goal", icon: "target", color: .accentColor)
                 }
             }
 
+            // MARK: - Progression
             if let rec = progressionRecommendation {
                 Section(isExpanded: $showProgression) {
                     ProgressionBannerView(recommendation: rec)
+                        .listRowBackground(Color(.secondarySystemGroupedBackground))
                 } header: {
                     HStack {
-                        Image(systemName: "chart.line.uptrend.xyaxis")
-                        Text("Progression")
+                        Image(systemName: "chart.line.uptrend.xyaxis").foregroundStyle(.green)
+                        Text("Progression").font(.subheadline.weight(.semibold))
+                        Spacer()
+                        Image(systemName: showProgression ? "chevron.up" : "chevron.down")
+                            .font(.caption2).foregroundStyle(.tertiary)
                     }
-                    .font(.subheadline)
+                    .contentShape(Rectangle())
+                    .onTapGesture { withAnimation { showProgression.toggle() } }
                 }
             }
 
+            // MARK: - Notes
             Section {
                 TextField("Add a note...", text: Binding(
                     get: { exercise.notes },
                     set: { exercise.notes = $0 }
                 ), axis: .vertical)
-                    .lineLimit(2...4)
-                    .font(.subheadline)
+                .lineLimit(2...4)
+                .font(.subheadline)
+                .listRowBackground(Color(.secondarySystemGroupedBackground))
             } header: {
-                Text("Notes")
+                SectionHeader(title: "Notes", icon: "note.text", color: .blue)
             }
 
+            // MARK: - Sets
             if exercise.sets.isEmpty {
-                ContentUnavailableView {
-                    Label("No Sets", systemImage: "repeat")
-                } description: {
-                    Text("Add a set below to start tracking.")
+                Section {
+                    VStack(spacing: 12) {
+                        Image(systemName: "repeat")
+                            .font(.system(size: 32))
+                            .foregroundStyle(.tertiary)
+                        Text("No Sets Logged")
+                            .font(.subheadline.weight(.semibold))
+                        Text("Add a set below to start tracking.")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 20)
+                    .listRowBackground(Color.clear)
                 }
-                .listRowBackground(Color(.systemGroupedBackground))
+            } else {
+                Section {
+                    ForEach(Array(exercise.sets.enumerated()), id: \.offset) { index, exerciseSet in
+                        setRow(index: index, exerciseSet: exerciseSet)
+                            .listRowBackground(Color(.secondarySystemGroupedBackground))
+                    }
+                    .onDelete(perform: deleteSets)
+                } header: {
+                    SectionHeader(
+                        title: "Sets (\(exercise.sets.filter { !$0.isWarmUp }.count) working)",
+                        icon: "repeat",
+                        color: .accentColor
+                    )
+                }
             }
-
-            ForEach(Array(exercise.sets.enumerated()), id: \.offset) { index, exerciseSet in
-                setRow(index: index, exerciseSet: exerciseSet)
-            }
-            .onDelete(perform: deleteSets)
 
             newSetSection
         }
+        .listStyle(.insetGrouped)
+        .scrollContentBackground(.hidden)
+        .background(Color(.systemGroupedBackground))
         .overlay(alignment: .top) {
             if showPRBanner {
                 HStack(spacing: 6) {
@@ -492,6 +530,46 @@ struct ExerciseDetailView: View {
 
     private var isCardioExercise: Bool {
         exercise.category == .cardio
+    }
+
+    // MARK: - Stats Banner
+
+    private var exerciseStatsBanner: some View {
+        HStack(spacing: 0) {
+            bannerStat(
+                label: "Best Weight",
+                value: historicalBestWeight > 0 ? weightUnit.formatShort(historicalBestWeight) : "–",
+                icon: "trophy.fill",
+                color: .yellow
+            )
+            Rectangle().fill(Color(.separator)).frame(width: 1, height: 36)
+            bannerStat(
+                label: "Today",
+                value: "\(exercise.sets.filter { !$0.isWarmUp }.count) sets",
+                icon: "repeat",
+                color: .accentColor
+            )
+            Rectangle().fill(Color(.separator)).frame(width: 1, height: 36)
+            bannerStat(
+                label: "Category",
+                value: exercise.category?.rawValue ?? "–",
+                icon: exercise.category?.icon ?? "dumbbell.fill",
+                color: .purple
+            )
+        }
+        .padding(.vertical, 10)
+        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: AppTheme.cardRadius))
+    }
+
+    private func bannerStat(label: String, value: String, icon: String, color: Color) -> some View {
+        VStack(spacing: 4) {
+            Image(systemName: icon).font(.system(size: 13)).foregroundStyle(color)
+            Text(value)
+                .font(.system(size: 14, weight: .bold, design: .rounded))
+                .lineLimit(1).minimumScaleFactor(0.75)
+            Text(label).font(.caption2.weight(.medium)).foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity)
     }
 
     private var newSetSection: some View {

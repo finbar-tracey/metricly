@@ -45,244 +45,127 @@ struct WorkoutDetailView: View {
 
     var body: some View {
         List {
+            // MARK: - Hero (non-template)
             if !workout.isTemplate {
                 Section {
-                    VStack(spacing: 12) {
-                        // Status row
-                        HStack(spacing: 10) {
-                            ZStack {
-                                Circle()
-                                    .fill(workout.isFinished ? Color.green.opacity(0.15) : Color.accentColor.opacity(0.15))
-                                    .frame(width: 40, height: 40)
-                                Image(systemName: workout.isFinished ? "checkmark.circle.fill" : "timer")
-                                    .font(.system(size: 18))
-                                    .foregroundStyle(workout.isFinished ? .green : Color.accentColor)
-                            }
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(workout.isFinished ? "Completed" : "In Progress")
-                                    .font(.subheadline.weight(.semibold))
-                                Text(workout.date, format: .dateTime.weekday(.wide).month().day().hour().minute())
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                            Spacer()
-                            if workout.isFinished {
-                                if let rating = workout.rating, rating > 0 {
-                                    HStack(spacing: 2) {
-                                        ForEach(1...rating, id: \.self) { _ in
-                                            Image(systemName: "star.fill")
-                                                .imageScale(.small)
-                                        }
-                                    }
-                                    .foregroundStyle(.yellow)
-                                }
-                            }
-                        }
-
-                        // Quick stats
-                        HStack(spacing: 0) {
-                            workoutStatPill(
-                                icon: "figure.strengthtraining.functional",
-                                value: "\(workout.exercises.count)",
-                                label: "Exercises",
-                                color: .accentColor
-                            )
-                            Divider().frame(height: 44)
-                            workoutStatPill(
-                                icon: "repeat",
-                                value: "\(workout.exercises.flatMap(\.sets).filter { !$0.isWarmUp }.count)",
-                                label: "Sets",
-                                color: .purple
-                            )
-                            Divider().frame(height: 44)
-                            workoutStatPill(
-                                icon: "clock",
-                                value: workout.isFinished ? (workout.formattedDuration ?? "-") : elapsedTime,
-                                label: "Duration",
-                                color: .orange
-                            )
-                        }
-                        .padding(.vertical, 10)
-                        .background(Color(.secondarySystemGroupedBackground))
-                        .clipShape(RoundedRectangle(cornerRadius: 16))
-                        .shadow(color: .black.opacity(0.06), radius: 10, x: 0, y: 3)
-                    }
-                    .padding(.vertical, 4)
-                    .accessibilityElement(children: .combine)
-                    .accessibilityLabel(workout.isFinished ? "Workout completed, duration \(workout.formattedDuration ?? "")" : "Workout in progress, elapsed \(elapsedTime)")
+                    workoutHeroCard
+                        .listRowBackground(Color.clear)
+                        .listRowInsets(.init(top: 8, leading: 16, bottom: 0, trailing: 16))
 
                     if !workout.isFinished {
-                        Button {
-                            showingFinishSheet = true
-                        } label: {
-                            HStack(spacing: 8) {
-                                Image(systemName: "checkmark.circle.fill")
-                                    .font(.system(size: 16, weight: .semibold))
-                                Text("Finish Workout")
-                                    .font(.headline)
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 14)
-                            .background(
-                                LinearGradient(
-                                    colors: [Color.green, Color(red: 0.1, green: 0.72, blue: 0.35)],
-                                    startPoint: .leading,
-                                    endPoint: .trailing
-                                )
-                            )
-                            .foregroundStyle(.white)
-                            .clipShape(RoundedRectangle(cornerRadius: 14))
-                            .shadow(color: .green.opacity(0.35), radius: 10, x: 0, y: 4)
-                        }
-                        .buttonStyle(.plain)
-                        .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
-                        .listRowBackground(Color.clear)
+                        finishButton
+                            .listRowBackground(Color.clear)
+                            .listRowInsets(.init(top: 8, leading: 16, bottom: 8, trailing: 16))
                     }
                 }
             }
 
+            // MARK: - Notes
             Section {
                 NavigationLink {
                     WorkoutNotesView(workout: workout)
                 } label: {
-                    if workout.notes.isEmpty {
-                        HStack(spacing: 8) {
+                    HStack(spacing: 10) {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(Color.blue.opacity(0.12))
+                                .frame(width: 32, height: 32)
                             Image(systemName: "note.text")
-                                .foregroundStyle(.secondary)
-                            Text("Add notes...")
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundStyle(.blue)
+                        }
+                        if workout.notes.isEmpty {
+                            Text("Add notes…")
                                 .font(.subheadline)
                                 .foregroundStyle(.tertiary)
+                        } else {
+                            Text(LocalizedStringKey(workout.notes))
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(2)
                         }
-                    } else {
-                        Text(LocalizedStringKey(workout.notes))
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(3)
+                        Spacer()
                     }
+                    .padding(.vertical, 4)
                 }
+                .listRowBackground(Color(.secondarySystemGroupedBackground))
             } header: {
-                Text("Notes")
+                SectionHeader(title: "Notes", icon: "note.text", color: .blue)
             }
 
+            // MARK: - Empty state
             if workout.exercises.isEmpty {
-                ContentUnavailableView {
-                    Label("No Exercises", systemImage: "figure.run")
-                } description: {
-                    Text("Add an exercise below to get started.")
+                Section {
+                    VStack(spacing: 14) {
+                        Image(systemName: "figure.run")
+                            .font(.system(size: 38))
+                            .foregroundStyle(.tertiary)
+                        Text("No Exercises Yet")
+                            .font(.subheadline.weight(.semibold))
+                        Text("Add an exercise below to get started.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 24)
+                    .listRowBackground(Color.clear)
                 }
-                .listRowBackground(Color.clear)
             }
 
-            Section {
-                ForEach(sortedExercises) { exercise in
-                    NavigationLink(value: exercise) {
-                        HStack(spacing: 12) {
-                            if exercise.supersetGroup != nil {
-                                supersetIndicator(for: exercise)
-                            }
-                            // Exercise icon
-                            ZStack {
-                                RoundedRectangle(cornerRadius: 8)
-                                    .fill(Color.accentColor.opacity(0.12))
-                                    .frame(width: 36, height: 36)
-                                Image(systemName: exercise.category?.icon ?? "figure.strengthtraining.functional")
-                                    .font(.system(size: 14, weight: .semibold))
-                                    .foregroundStyle(Color.accentColor)
-                            }
-
-                            VStack(alignment: .leading, spacing: 3) {
-                                HStack(spacing: 6) {
-                                    Text(exercise.name)
-                                        .font(.subheadline.weight(.semibold))
-                                    if exercise.supersetGroup != nil {
-                                        Text("SS")
-                                            .font(.system(size: 9, weight: .bold))
-                                            .foregroundStyle(Color.accentColor)
-                                            .padding(.horizontal, 5)
-                                            .padding(.vertical, 2)
-                                            .background(Color.accentColor.opacity(0.12), in: .capsule)
-                                    }
-                                }
-                                HStack(spacing: 8) {
-                                    if !exercise.sets.isEmpty {
-                                        let workingSets = exercise.sets.filter { !$0.isWarmUp }
-                                        let warmUps = exercise.sets.filter(\.isWarmUp)
-                                        Text("\(workingSets.count) sets")
-                                            .font(.caption)
-                                            .foregroundStyle(.secondary)
-                                        if !warmUps.isEmpty {
-                                            Text("+ \(warmUps.count) warm-up")
-                                                .font(.caption)
-                                                .foregroundStyle(.orange)
-                                        }
-                                        if let avgRPE = averageRPE(for: exercise) {
-                                            Text("RPE \(String(format: "%.0f", avgRPE))")
-                                                .font(.caption2.weight(.semibold))
-                                                .foregroundStyle(.purple)
-                                                .padding(.horizontal, 5)
-                                                .padding(.vertical, 2)
-                                                .background(.purple.opacity(0.12), in: .capsule)
-                                        }
-                                    }
-                                    if let category = exercise.category {
-                                        Text(category.rawValue)
-                                            .font(.caption2)
-                                            .foregroundStyle(.tertiary)
-                                    }
-                                }
-                                if !exercise.notes.isEmpty {
-                                    Text(exercise.notes)
-                                        .font(.caption)
-                                        .foregroundStyle(.tertiary)
-                                        .lineLimit(1)
-                                }
-                            }
-
-                            Spacer()
+            // MARK: - Exercises
+            if !workout.exercises.isEmpty {
+                Section {
+                    ForEach(sortedExercises) { exercise in
+                        NavigationLink(value: exercise) {
+                            exerciseRow(exercise)
                         }
-                        .padding(.vertical, 2)
+                        .listRowBackground(Color(.secondarySystemGroupedBackground))
+                        .swipeActions(edge: .leading) {
+                            if exercise.supersetGroup != nil {
+                                Button {
+                                    unlinkSuperset(exercise)
+                                } label: {
+                                    Label("Unlink", systemImage: "link.badge.plus")
+                                }
+                                .tint(.orange)
+                            } else {
+                                Button {
+                                    linkingSupersetFor = exercise
+                                } label: {
+                                    Label("Superset", systemImage: "link")
+                                }
+                                .tint(.purple)
+                            }
+                        }
                         .accessibilityElement(children: .combine)
                         .accessibilityLabel(exerciseAccessibilityLabel(exercise))
                     }
-                    .swipeActions(edge: .leading) {
-                        if exercise.supersetGroup != nil {
-                            Button {
-                                unlinkSuperset(exercise)
-                            } label: {
-                                Label("Unlink", systemImage: "link.badge.plus")
-                            }
-                            .tint(.orange)
-                        } else {
-                            Button {
-                                linkingSupersetFor = exercise
-                            } label: {
-                                Label("Superset", systemImage: "link")
-                            }
-                            .tint(.purple)
+                    .onDelete { offsets in
+                        let sorted = sortedExercises
+                        if let index = offsets.first {
+                            exerciseToDelete = sorted[index]
                         }
                     }
-                }
-                .onDelete { offsets in
-                    let sorted = sortedExercises
-                    if let index = offsets.first {
-                        exerciseToDelete = sorted[index]
-                    }
-                }
-                .onMove(perform: moveExercises)
-            } header: {
-                if !workout.exercises.isEmpty {
-                    SectionHeader(title: "Exercises", icon: "dumbbell.fill", color: .accentColor)
+                    .onMove(perform: moveExercises)
+                } header: {
+                    SectionHeader(
+                        title: "Exercises (\(workout.exercises.count))",
+                        icon: "dumbbell.fill",
+                        color: .accentColor
+                    )
                 }
             }
 
+            // MARK: - Add Exercise
             Section {
                 HStack(spacing: 10) {
                     ZStack {
                         RoundedRectangle(cornerRadius: 8)
                             .fill(Color.accentColor.opacity(0.12))
-                            .frame(width: 36, height: 36)
+                            .frame(width: 32, height: 32)
                         Image(systemName: "plus")
-                            .font(.system(size: 14, weight: .bold))
+                            .font(.system(size: 13, weight: .bold))
                             .foregroundStyle(Color.accentColor)
                     }
                     TextField("Exercise name", text: $newExerciseName)
@@ -295,17 +178,19 @@ struct WorkoutDetailView: View {
                     } label: {
                         Image(systemName: "plus.circle.fill")
                             .font(.title2)
+                            .foregroundStyle(Color.accentColor)
                     }
                     .disabled(newExerciseName.trimmingCharacters(in: .whitespaces).isEmpty)
                     .accessibilityLabel("Add exercise")
-                    .accessibilityHint("Adds the exercise to this workout")
                 }
+                .listRowBackground(Color(.secondarySystemGroupedBackground))
 
                 Picker("Muscle Group", selection: $newExerciseCategory) {
                     ForEach(MuscleGroup.allCases) { group in
                         Label(group.rawValue, systemImage: group.icon).tag(group)
                     }
                 }
+                .listRowBackground(Color(.secondarySystemGroupedBackground))
 
                 if showingSuggestions {
                     ForEach(suggestions.prefix(5), id: \.self) { suggestion in
@@ -327,12 +212,16 @@ struct WorkoutDetailView: View {
                                     .font(.subheadline)
                             }
                         }
+                        .listRowBackground(Color(.secondarySystemGroupedBackground))
                     }
                 }
             } header: {
-                SectionHeader(title: "Add Exercise", icon: "plus.circle.fill", color: .accentColor)
+                SectionHeader(title: "Add Exercise", icon: "plus.circle.fill", color: .green)
             }
         }
+        .listStyle(.insetGrouped)
+        .scrollContentBackground(.hidden)
+        .background(Color(.systemGroupedBackground))
         .navigationTitle(workout.name)
         .navigationDestination(for: Exercise.self) { exercise in
             ExerciseDetailView(exercise: exercise)
@@ -485,6 +374,196 @@ struct WorkoutDetailView: View {
         }
     }
 
+    // MARK: - Hero Card
+
+    private var workoutHeroCard: some View {
+        ZStack(alignment: .topLeading) {
+            LinearGradient(
+                colors: workout.isFinished
+                    ? [Color(red: 0.12, green: 0.68, blue: 0.42), Color(red: 0.0, green: 0.48, blue: 0.58)]
+                    : [Color.accentColor, Color.blue],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+
+            Circle().fill(.white.opacity(0.07)).frame(width: 200).offset(x: 120, y: -40)
+            Circle().fill(.white.opacity(0.05)).frame(width: 110).offset(x: -30, y: 80)
+
+            VStack(alignment: .leading, spacing: 14) {
+                HStack {
+                    Label(
+                        workout.isFinished ? "Completed" : "In Progress",
+                        systemImage: workout.isFinished ? "checkmark.circle.fill" : "timer"
+                    )
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.white.opacity(0.9))
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(.white.opacity(0.2), in: .capsule)
+
+                    Spacer()
+
+                    if workout.isFinished, let rating = workout.rating, rating > 0 {
+                        HStack(spacing: 3) {
+                            ForEach(1...5, id: \.self) { i in
+                                Image(systemName: i <= rating ? "star.fill" : "star")
+                                    .font(.system(size: 12))
+                                    .foregroundStyle(i <= rating ? .yellow : .white.opacity(0.35))
+                            }
+                        }
+                    }
+                }
+
+                Text(workout.date, format: .dateTime.weekday(.wide).month(.abbreviated).day().hour().minute())
+                    .font(.subheadline)
+                    .foregroundStyle(.white.opacity(0.8))
+
+                HStack(spacing: 0) {
+                    heroStatCol(
+                        label: "Exercises",
+                        value: "\(workout.exercises.count)",
+                        icon: "figure.strengthtraining.functional"
+                    )
+                    Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 36)
+                    heroStatCol(
+                        label: "Sets",
+                        value: "\(workout.exercises.flatMap(\.sets).filter { !$0.isWarmUp }.count)",
+                        icon: "repeat"
+                    )
+                    Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 36)
+                    heroStatCol(
+                        label: "Duration",
+                        value: workout.isFinished ? (workout.formattedDuration ?? "–") : elapsedTime,
+                        icon: "clock"
+                    )
+                }
+                .padding(.vertical, 10)
+                .background(.white.opacity(0.12), in: RoundedRectangle(cornerRadius: 12))
+            }
+            .padding(20)
+        }
+        .frame(minHeight: 185)
+        .clipShape(RoundedRectangle(cornerRadius: AppTheme.heroRadius))
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(workout.isFinished
+            ? "Workout completed, duration \(workout.formattedDuration ?? "")"
+            : "Workout in progress, elapsed \(elapsedTime)")
+    }
+
+    private func heroStatCol(label: String, value: String, icon: String) -> some View {
+        VStack(spacing: 4) {
+            Image(systemName: icon)
+                .font(.system(size: 12))
+                .foregroundStyle(.white.opacity(0.75))
+            Text(value)
+                .font(.system(size: 18, weight: .bold, design: .rounded))
+                .foregroundStyle(.white)
+                .monospacedDigit()
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+            Text(label)
+                .font(.caption2.weight(.medium))
+                .foregroundStyle(.white.opacity(0.7))
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private var finishButton: some View {
+        Button {
+            showingFinishSheet = true
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 16, weight: .semibold))
+                Text("Finish Workout")
+                    .font(.headline)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 14)
+            .background(
+                LinearGradient(
+                    colors: [Color.green, Color(red: 0.1, green: 0.72, blue: 0.35)],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+            )
+            .foregroundStyle(.white)
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .shadow(color: .green.opacity(0.35), radius: 10, x: 0, y: 4)
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: - Exercise Row
+
+    private func exerciseRow(_ exercise: Exercise) -> some View {
+        HStack(spacing: 12) {
+            if exercise.supersetGroup != nil {
+                supersetIndicator(for: exercise)
+            }
+            ZStack {
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(Color.accentColor.opacity(0.12))
+                    .frame(width: 40, height: 40)
+                Image(systemName: exercise.category?.icon ?? "figure.strengthtraining.functional")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(Color.accentColor)
+            }
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 6) {
+                    Text(exercise.name)
+                        .font(.subheadline.weight(.semibold))
+                    if exercise.supersetGroup != nil {
+                        Text("SS")
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundStyle(Color.accentColor)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 2)
+                            .background(Color.accentColor.opacity(0.12), in: .capsule)
+                    }
+                }
+                HStack(spacing: 8) {
+                    if !exercise.sets.isEmpty {
+                        let working = exercise.sets.filter { !$0.isWarmUp }
+                        let warmUps = exercise.sets.filter(\.isWarmUp)
+                        Text("\(working.count) sets")
+                            .font(.caption).foregroundStyle(.secondary)
+                        if !warmUps.isEmpty {
+                            Text("+ \(warmUps.count)W")
+                                .font(.caption).foregroundStyle(.orange)
+                        }
+                        if let best = working.map(\.weight).max(), best > 0 {
+                            Text("· \(weightUnit.formatShort(best))")
+                                .font(.caption).foregroundStyle(.secondary)
+                        }
+                        if let avgRPE = averageRPE(for: exercise) {
+                            Text("RPE \(String(format: "%.0f", avgRPE))")
+                                .font(.caption2.weight(.semibold))
+                                .foregroundStyle(.purple)
+                                .padding(.horizontal, 5).padding(.vertical, 2)
+                                .background(.purple.opacity(0.12), in: .capsule)
+                        }
+                    } else {
+                        Text("No sets yet")
+                            .font(.caption).foregroundStyle(.tertiary)
+                    }
+                    if let cat = exercise.category {
+                        Text(cat.rawValue)
+                            .font(.caption2).foregroundStyle(.tertiary)
+                    }
+                }
+                if !exercise.notes.isEmpty {
+                    Text(exercise.notes)
+                        .font(.caption).foregroundStyle(.tertiary).lineLimit(1)
+                }
+            }
+            Spacer()
+        }
+        .padding(.vertical, 4)
+    }
+
+    // MARK: - Computed
+
     private func averageRPE(for exercise: Exercise) -> Double? {
         let rpes = exercise.sets.filter { !$0.isWarmUp }.compactMap(\.rpe)
         guard !rpes.isEmpty else { return nil }
@@ -495,31 +574,10 @@ struct WorkoutDetailView: View {
         var parts = [exercise.name]
         let workingSets = exercise.sets.filter { !$0.isWarmUp }
         let warmUps = exercise.sets.filter(\.isWarmUp)
-        if !workingSets.isEmpty {
-            parts.append("\(workingSets.count) working sets")
-        }
-        if !warmUps.isEmpty {
-            parts.append("\(warmUps.count) warm-up sets")
-        }
-        if exercise.supersetGroup != nil {
-            parts.append("superset")
-        }
+        if !workingSets.isEmpty { parts.append("\(workingSets.count) working sets") }
+        if !warmUps.isEmpty { parts.append("\(warmUps.count) warm-up sets") }
+        if exercise.supersetGroup != nil { parts.append("superset") }
         return parts.joined(separator: ", ")
-    }
-
-    private func setsSummary(_ sets: [ExerciseSet]) -> String {
-        let workingSets = sets.filter { !$0.isWarmUp }
-        let warmUpCount = sets.filter(\.isWarmUp).count
-        var parts = workingSets.map { s in
-            if s.isCardio {
-                return [s.formattedDistance(unit: weightUnit.distanceUnit), s.formattedDuration].compactMap { $0 }.joined(separator: " in ")
-            }
-            return "\(s.reps)x\(weightUnit.formatShort(s.weight))"
-        }
-        if warmUpCount > 0 {
-            parts.append("+\(warmUpCount)W")
-        }
-        return parts.joined(separator: "  ")
     }
 
     private var sortedExercises: [Exercise] {
@@ -538,30 +596,7 @@ struct WorkoutDetailView: View {
         showingSuggestions = false
     }
 
-    private func workoutStatPill(icon: String, value: String, label: String, color: Color = .accentColor) -> some View {
-        VStack(spacing: 6) {
-            ZStack {
-                Circle()
-                    .fill(color.opacity(0.12))
-                    .frame(width: 34, height: 34)
-                Image(systemName: icon)
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(color)
-            }
-            Text(value)
-                .font(.system(size: 18, weight: .bold, design: .rounded))
-                .monospacedDigit()
-                .lineLimit(1)
-                .minimumScaleFactor(0.7)
-            Text(label)
-                .font(.caption2.weight(.medium))
-                .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity)
-    }
-
     private func autoSelectCategory() {
-        // Auto-select category from previous usage of same exercise name
         let trimmed = newExerciseName.trimmingCharacters(in: .whitespaces)
         guard !trimmed.isEmpty else { return }
         if let previous = allExercises.first(where: { $0.name == trimmed && $0.category != nil }) {
@@ -599,9 +634,7 @@ struct WorkoutDetailView: View {
             let warmUps = exercise.sets.filter(\.isWarmUp)
 
             var header = exercise.name
-            if let cat = exercise.category {
-                header += " (\(cat.rawValue))"
-            }
+            if let cat = exercise.category { header += " (\(cat.rawValue))" }
             lines.append(header)
 
             if !warmUps.isEmpty {
@@ -658,13 +691,6 @@ struct WorkoutDetailView: View {
             newWorkout.exercises.append(newExercise)
         }
         HapticsManager.success()
-    }
-
-    private func deleteExercises(at offsets: IndexSet) {
-        let sorted = sortedExercises
-        for index in offsets {
-            modelContext.delete(sorted[index])
-        }
     }
 
     // MARK: - Live Activity
@@ -745,10 +771,8 @@ struct WorkoutDetailView: View {
             partner.supersetGroup = group
         }
         exercise.supersetGroup = group
-        // Place them adjacent in order
         let partnerOrder = partner.order
         exercise.order = partnerOrder + 1
-        // Shift exercises after them
         for ex in sortedExercises where ex.persistentModelID != exercise.persistentModelID && ex.order > partnerOrder {
             ex.order += 1
         }
