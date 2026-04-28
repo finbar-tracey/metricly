@@ -78,21 +78,13 @@ struct FullWorkoutListView: View {
 
     var body: some View {
         List {
-            // Stats hero row
+            // MARK: - Hero
             if !workouts.isEmpty {
                 Section {
-                    HStack(spacing: 0) {
-                        statPill("Total", value: "\(workouts.count)", icon: "dumbbell.fill", color: .accentColor)
-                        Rectangle().fill(Color(.separator)).frame(width: 1, height: 36)
-                        statPill("This Week", value: "\(thisWeekCount)", icon: "calendar", color: .blue)
-                        Rectangle().fill(Color(.separator)).frame(width: 1, height: 36)
-                        statPill("This Month", value: "\(thisMonthCount)", icon: "calendar.badge.clock", color: .purple)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 6)
+                    workoutHeroCard
+                        .listRowBackground(Color.clear)
+                        .listRowInsets(.init(top: 8, leading: 16, bottom: 8, trailing: 16))
                 }
-                .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
-                .listRowBackground(Color(.secondarySystemGroupedBackground))
             }
 
             // Filter chips
@@ -241,6 +233,8 @@ struct FullWorkoutListView: View {
             }
         }
         .listStyle(.insetGrouped)
+        .scrollContentBackground(.hidden)
+        .background(Color(.systemGroupedBackground))
         .overlay {
             if workouts.isEmpty {
                 ContentUnavailableView {
@@ -296,18 +290,53 @@ struct FullWorkoutListView: View {
         }
     }
 
-    // MARK: - Stat Pill
+    // MARK: - Hero Card
 
-    private func statPill(_ title: String, value: String, icon: String, color: Color) -> some View {
-        VStack(spacing: 4) {
-            HStack(spacing: 4) {
-                Image(systemName: icon).font(.system(size: 10, weight: .semibold)).foregroundStyle(color)
-                Text(value).font(.system(size: 17, weight: .bold, design: .rounded)).monospacedDigit()
+    private var workoutHeroCard: some View {
+        ZStack(alignment: .topLeading) {
+            LinearGradient(
+                colors: [Color.accentColor, Color.blue],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            Circle().fill(.white.opacity(0.07)).frame(width: 180).offset(x: 110, y: -30)
+            Circle().fill(.white.opacity(0.05)).frame(width: 90).offset(x: -20, y: 70)
+
+            VStack(alignment: .leading, spacing: 14) {
+                HStack(spacing: 6) {
+                    Image(systemName: "dumbbell.fill")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(.white.opacity(0.8))
+                    Text("All Workouts")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.white.opacity(0.8))
+                }
+
+                HStack(spacing: 0) {
+                    heroStatCol(label: "Total", value: "\(workouts.count)", icon: "dumbbell.fill")
+                    Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 36)
+                    heroStatCol(label: "This Week", value: "\(thisWeekCount)", icon: "calendar")
+                    Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 36)
+                    heroStatCol(label: "This Month", value: "\(thisMonthCount)", icon: "calendar.badge.clock")
+                }
+                .padding(.vertical, 10)
+                .background(.white.opacity(0.12), in: RoundedRectangle(cornerRadius: 12))
             }
-            Text(title).font(.caption2).foregroundStyle(.secondary)
+            .padding(18)
+        }
+        .frame(minHeight: 130)
+        .clipShape(RoundedRectangle(cornerRadius: AppTheme.heroRadius))
+    }
+
+    private func heroStatCol(label: String, value: String, icon: String) -> some View {
+        VStack(spacing: 4) {
+            Image(systemName: icon).font(.system(size: 11)).foregroundStyle(.white.opacity(0.75))
+            Text(value)
+                .font(.system(size: 18, weight: .bold, design: .rounded))
+                .foregroundStyle(.white).monospacedDigit()
+            Text(label).font(.caption2.weight(.medium)).foregroundStyle(.white.opacity(0.7))
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 8)
     }
 
     // MARK: - Filter Chip Label

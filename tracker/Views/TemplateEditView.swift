@@ -29,34 +29,64 @@ struct TemplateEditView: View {
 
     var body: some View {
         List {
+            // MARK: - Name
             Section {
-                HStack {
+                HStack(spacing: 12) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(Color.purple.opacity(0.12))
+                            .frame(width: 36, height: 36)
+                        Image(systemName: "doc.on.doc.fill")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(.purple)
+                    }
                     Text(template.name)
-                        .font(.headline)
+                        .font(.subheadline.weight(.semibold))
                     Spacer()
                     Button("Rename") {
                         newName = template.name
                         editingName = true
                     }
-                    .font(.subheadline)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Color.accentColor)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(Color.accentColor.opacity(0.1), in: .capsule)
                 }
+                .padding(.vertical, 4)
+                .listRowBackground(Color(.secondarySystemGroupedBackground))
             } header: {
-                Text("Template Name")
+                SectionHeader(title: "Template Name", icon: "doc.on.doc.fill", color: .purple)
             }
 
+            // MARK: - Exercises
             Section {
                 if template.exercises.isEmpty {
-                    Text("No exercises yet.")
-                        .foregroundStyle(.secondary)
+                    VStack(spacing: 12) {
+                        Image(systemName: "dumbbell.fill")
+                            .font(.system(size: 28))
+                            .foregroundStyle(.tertiary)
+                        Text("No exercises yet")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .listRowBackground(Color.clear)
                 } else {
                     ForEach(sortedExercises) { exercise in
-                        HStack {
-                            Image(systemName: exercise.category?.icon ?? "dumbbell")
-                                .foregroundStyle(.tint)
-                                .frame(width: 24)
-                            VStack(alignment: .leading, spacing: 2) {
+                        HStack(spacing: 12) {
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 8)
+                                    .fill(Color.accentColor.opacity(0.12))
+                                    .frame(width: 36, height: 36)
+                                Image(systemName: exercise.category?.icon ?? "dumbbell.fill")
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .foregroundStyle(Color.accentColor)
+                            }
+                            VStack(alignment: .leading, spacing: 3) {
                                 Text(exercise.name)
-                                    .font(.subheadline.weight(.medium))
+                                    .font(.subheadline.weight(.semibold))
                                 if let category = exercise.category {
                                     Text(category.rawValue)
                                         .font(.caption2)
@@ -65,21 +95,37 @@ struct TemplateEditView: View {
                                 if !exercise.notes.isEmpty {
                                     Text(exercise.notes)
                                         .font(.caption)
-                                        .foregroundStyle(.secondary)
+                                        .foregroundStyle(.tertiary)
                                         .lineLimit(1)
                                 }
                             }
+                            Spacer()
                         }
+                        .padding(.vertical, 4)
+                        .listRowBackground(Color(.secondarySystemGroupedBackground))
                     }
                     .onDelete(perform: deleteExercises)
                     .onMove(perform: moveExercises)
                 }
             } header: {
-                Text("Exercises")
+                SectionHeader(
+                    title: "Exercises (\(template.exercises.count))",
+                    icon: "dumbbell.fill",
+                    color: .accentColor
+                )
             }
 
+            // MARK: - Add Exercise
             Section {
-                HStack {
+                HStack(spacing: 10) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(Color.green.opacity(0.12))
+                            .frame(width: 32, height: 32)
+                        Image(systemName: "plus")
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundStyle(.green)
+                    }
                     TextField("Exercise name", text: $newExerciseName)
                         .onChange(of: newExerciseName) {
                             showingSuggestions = !newExerciseName.isEmpty && !suggestions.isEmpty
@@ -90,15 +136,18 @@ struct TemplateEditView: View {
                     } label: {
                         Image(systemName: "plus.circle.fill")
                             .font(.title2)
+                            .foregroundStyle(.green)
                     }
                     .disabled(newExerciseName.trimmingCharacters(in: .whitespaces).isEmpty)
                 }
+                .listRowBackground(Color(.secondarySystemGroupedBackground))
 
                 Picker("Muscle Group", selection: $newExerciseCategory) {
                     ForEach(MuscleGroup.allCases) { group in
                         Label(group.rawValue, systemImage: group.icon).tag(group)
                     }
                 }
+                .listRowBackground(Color(.secondarySystemGroupedBackground))
 
                 if showingSuggestions {
                     ForEach(suggestions.prefix(5), id: \.self) { suggestion in
@@ -108,15 +157,27 @@ struct TemplateEditView: View {
                             autoSelectCategory()
                             addExercise()
                         } label: {
-                            Label(suggestion, systemImage: "clock.arrow.circlepath")
-                                .foregroundStyle(.primary)
+                            HStack(spacing: 10) {
+                                Image(systemName: "clock.arrow.circlepath")
+                                    .foregroundStyle(.secondary)
+                                    .font(.subheadline)
+                                Text(suggestion).foregroundStyle(.primary)
+                                Spacer()
+                                Image(systemName: "plus.circle")
+                                    .foregroundStyle(.green)
+                                    .font(.subheadline)
+                            }
                         }
+                        .listRowBackground(Color(.secondarySystemGroupedBackground))
                     }
                 }
             } header: {
-                Text("Add Exercise")
+                SectionHeader(title: "Add Exercise", icon: "plus.circle.fill", color: .green)
             }
         }
+        .listStyle(.insetGrouped)
+        .scrollContentBackground(.hidden)
+        .background(Color(.systemGroupedBackground))
         .navigationTitle("Edit Template")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -126,9 +187,7 @@ struct TemplateEditView: View {
         }
         .alert("Rename Template", isPresented: $editingName) {
             TextField("Name", text: $newName)
-            Button("Save") {
-                template.name = newName
-            }
+            Button("Save") { template.name = newName }
             Button("Cancel", role: .cancel) {}
         }
     }
