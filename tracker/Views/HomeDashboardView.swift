@@ -198,7 +198,7 @@ struct HomeDashboardView: View {
             .padding(.bottom, 36)
         }
         .background(Color(.systemGroupedBackground))
-        .navigationTitle(greeting)
+        .navigationTitle("Home")
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 HStack(spacing: 16) {
@@ -238,10 +238,24 @@ struct HomeDashboardView: View {
 
     // MARK: - Hero Section
 
+    private var heroGradientColors: [Color] {
+        guard healthKitEnabled && healthDataLoaded else {
+            return [Color.accentColor, Color.blue]
+        }
+        let score = recoveryResult.readinessScore
+        if score >= 0.70 {
+            return [Color(red: 0.12, green: 0.65, blue: 0.40), Color(red: 0.0, green: 0.48, blue: 0.55)]
+        } else if score >= 0.45 {
+            return [Color.orange, Color(red: 0.85, green: 0.55, blue: 0.10)]
+        } else {
+            return [Color.red, Color(red: 0.85, green: 0.25, blue: 0.20)]
+        }
+    }
+
     private var heroSection: some View {
         ZStack(alignment: .topLeading) {
-            LinearGradient(colors: [Color.accentColor, Color.accentColor.opacity(0.55)],
-                           startPoint: .topLeading, endPoint: .bottomTrailing)
+            LinearGradient(colors: heroGradientColors, startPoint: .topLeading, endPoint: .bottomTrailing)
+                .animation(.easeInOut(duration: 0.6), value: healthDataLoaded)
             Circle().fill(.white.opacity(0.07)).frame(width: 220).offset(x: 180, y: -70)
             Circle().fill(.white.opacity(0.04)).frame(width: 140).offset(x: 260, y: 60)
 
@@ -253,14 +267,18 @@ struct HomeDashboardView: View {
                 }
 
                 if healthKitEnabled && healthDataLoaded {
-                    VStack(alignment: .leading, spacing: 2) {
+                    VStack(alignment: .leading, spacing: 4) {
                         HStack(alignment: .lastTextBaseline, spacing: 2) {
                             Text("\(Int(recoveryResult.readinessScore * 100))")
                                 .font(.system(size: 56, weight: .black, design: .rounded))
                                 .foregroundStyle(.white).monospacedDigit()
                             Text("%").font(.title.weight(.bold)).foregroundStyle(.white.opacity(0.70)).padding(.bottom, 6)
                         }
-                        Text("Recovery Readiness").font(.subheadline.weight(.medium)).foregroundStyle(.white.opacity(0.80))
+                        Text("Recovery Readiness")
+                            .font(.subheadline.weight(.medium)).foregroundStyle(.white.opacity(0.80))
+                        Text(RecoveryEngine.readinessLabel(recoveryResult.readinessScore))
+                            .font(.caption).foregroundStyle(.white.opacity(0.65))
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                 } else {
                     VStack(alignment: .leading, spacing: 2) {
@@ -508,26 +526,6 @@ struct HomeDashboardView: View {
                             }
                         }
                         GradientProgressBar(value: weekProgress, color: weekDone ? .green : .accentColor, height: 9)
-                    }
-                    .padding(.horizontal, 16).padding(.vertical, 14)
-                }
-
-                if healthKitEnabled && healthDataLoaded {
-                    Divider().padding(.leading, 16)
-                    VStack(alignment: .leading, spacing: 10) {
-                        HStack {
-                            HStack(spacing: 6) {
-                                Image(systemName: "battery.100.bolt")
-                                    .foregroundStyle(RecoveryEngine.readinessColor(recoveryResult.readinessScore))
-                                Text("Recovery Readiness").font(.subheadline)
-                            }
-                            Spacer()
-                            Text("\(Int(recoveryResult.readinessScore * 100))%")
-                                .font(.subheadline.bold().monospacedDigit())
-                                .foregroundStyle(RecoveryEngine.readinessColor(recoveryResult.readinessScore))
-                        }
-                        GradientProgressBar(value: recoveryResult.readinessScore,
-                                            color: RecoveryEngine.readinessColor(recoveryResult.readinessScore), height: 9)
                     }
                     .padding(.horizontal, 16).padding(.vertical, 14)
                 }
