@@ -90,4 +90,54 @@ struct ReminderManager {
             (1...7).map { "reminder_day_\($0)" }
         )
     }
+
+    // MARK: - Streak nudge (fires at 8pm on scheduled workout days)
+
+    /// Schedule a "you haven't trained yet" nudge at 20:00 on each scheduled day.
+    /// Call this whenever workout days / settings change. Call `cancelTodayStreakNudge()`
+    /// immediately after a workout is saved so the nudge doesn't fire.
+    static func scheduleStreakNudges(days: [Int]) {
+        let center = UNUserNotificationCenter.current()
+        // Remove old nudges
+        center.removePendingNotificationRequests(withIdentifiers:
+            (1...7).map { "nudge_day_\($0)" }
+        )
+        guard !days.isEmpty else { return }
+
+        let nudgeMessages = [
+            "Still time to train today! Your streak is worth protecting. 🔥",
+            "Haven't logged a workout yet today — let's keep that streak alive!",
+            "Your muscles are waiting. Log a quick session before midnight! 💪",
+            "Don't let the streak die today. Even 20 minutes counts.",
+            "One workout away from keeping your streak. You've got this!",
+        ]
+
+        for day in days {
+            let content = UNMutableNotificationContent()
+            content.title = "Workout reminder 🔥"
+            content.body = nudgeMessages[day % nudgeMessages.count]
+            content.sound = .default
+
+            var components = DateComponents()
+            components.weekday = day
+            components.hour = 20
+            components.minute = 0
+
+            let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: true)
+            let request = UNNotificationRequest(
+                identifier: "nudge_day_\(day)",
+                content: content,
+                trigger: trigger
+            )
+            center.add(request)
+        }
+    }
+
+    /// Call after saving a workout to dismiss today's nudge.
+    static func cancelTodayStreakNudge() {
+        let weekday = Calendar.current.component(.weekday, from: Date())
+        let id = "nudge_day_\(weekday)"
+        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [id])
+        UNUserNotificationCenter.current().removeDeliveredNotifications(withIdentifiers: [id])
+    }
 }

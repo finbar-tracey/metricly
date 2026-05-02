@@ -58,6 +58,7 @@ struct Achievement: Identifiable {
 struct AchievementsView: View {
     @Query(filter: #Predicate<Workout> { !$0.isTemplate && $0.endTime != nil })
     private var workouts: [Workout]
+    @Query private var cardioSessions: [CardioSession]
     @Query private var bodyWeights: [BodyWeightEntry]
     @Environment(\.weightUnit) private var unit
 
@@ -67,7 +68,8 @@ struct AchievementsView: View {
     @State private var externalWorkouts: [ExternalWorkout] = []
     @State private var isLoading = true
 
-    private var finishedWorkouts: [Workout] { workouts.filter { $0.endTime != nil } }
+    // The @Query predicate already filters endTime != nil — no second pass needed.
+    private var finishedWorkouts: [Workout] { workouts }
 
     var body: some View {
         ScrollView {
@@ -528,15 +530,7 @@ struct AchievementsView: View {
     // MARK: - Gym Computed Properties
 
     private var currentStreak: Int {
-        let calendar = Calendar.current
-        let dates = Set(finishedWorkouts.map { calendar.startOfDay(for: $0.date) })
-        var streak = 0; var day = calendar.startOfDay(for: .now)
-        while dates.contains(day) {
-            streak += 1
-            guard let prev = calendar.date(byAdding: .day, value: -1, to: day) else { break }
-            day = prev
-        }
-        return streak
+        Workout.currentStreak(from: workouts, cardioSessions: cardioSessions)
     }
 
     private var allTimeMaxWeight: Double {

@@ -8,29 +8,49 @@ struct PersonalRecordsView: View {
     @Environment(\.weightUnit) private var unit
 
     private var records: [PRRecord] {
-        var best: [String: PRRecord] = [:]
+        struct SessionEntry {
+            let name: String
+            let date: Date
+            let weight: Double
+            let reps: Int
+            let category: MuscleGroup?
+        }
+        // First pass: collect all session bests per exercise
+        var sessionBests: [String: [SessionEntry]] = [:]
         for workout in workouts {
             for exercise in workout.exercises {
                 let workingSets = exercise.sets.filter { !$0.isWarmUp }
                 guard let heaviest = workingSets.max(by: { $0.weight < $1.weight }),
                       heaviest.weight > 0 else { continue }
                 let key = exercise.name.lowercased()
-                if let existing = best[key] {
-                    if heaviest.weight > existing.weight {
-                        best[key] = PRRecord(exerciseName: exercise.name, weight: heaviest.weight,
-                            reps: heaviest.reps, date: workout.date, category: exercise.category,
-                            history: existing.history + [(workout.date, heaviest.weight)])
-                    } else {
-                        best[key]?.history.append((workout.date, heaviest.weight))
-                    }
-                } else {
-                    best[key] = PRRecord(exerciseName: exercise.name, weight: heaviest.weight,
-                        reps: heaviest.reps, date: workout.date, category: exercise.category,
-                        history: [(workout.date, heaviest.weight)])
-                }
+                sessionBests[key, default: []].append(SessionEntry(
+                    name: exercise.name, date: workout.date,
+                    weight: heaviest.weight, reps: heaviest.reps, category: exercise.category
+                ))
             }
         }
-        return best.values.sorted { $0.weight > $1.weight }
+        // Second pass: build running-best history so the chart never dips from deload sessions
+        var result: [PRRecord] = []
+        for sessions in sessionBests.values {
+            let sorted = sessions.sorted { $0.date < $1.date }
+            var runningBest: Double = 0
+            var history: [(Date, Double)] = []
+            for s in sorted {
+                runningBest = max(runningBest, s.weight)
+                history.append((s.date, runningBest))
+            }
+            guard let prSession = sorted.last(where: { $0.weight == runningBest }) ?? sorted.last,
+                  let first = sorted.first else { continue }
+            result.append(PRRecord(
+                exerciseName: first.name,
+                weight: runningBest,
+                reps: prSession.reps,
+                date: prSession.date,
+                category: prSession.category,
+                history: history
+            ))
+        }
+        return result.sorted { $0.weight > $1.weight }
     }
 
     private var groupedRecords: [(MuscleGroup?, [PRRecord])] {
@@ -101,12 +121,12 @@ struct PersonalRecordsView: View {
                 }
 
                 HStack(spacing: 0) {
-                    heroStatColumn(label: "Exercises", value: "\(records.count)")
+                    HeroStatCol(value: "\(records.count)", label: "Exercises")
                     Divider().frame(height: 30).overlay(.white.opacity(0.30))
-                    heroStatColumn(label: "Groups", value: "\(groupedRecords.count)")
+                    HeroStatCol(value: "\(groupedRecords.count)", label: "Groups")
                     if let heaviest = records.first {
                         Divider().frame(height: 30).overlay(.white.opacity(0.30))
-                        heroStatColumn(label: "Heaviest", value: unit.formatShort(heaviest.weight))
+                        HeroStatCol(value: unit.formatShort(heaviest.weight), label: "Heaviest")
                     }
                 }
             }
@@ -115,18 +135,6 @@ struct PersonalRecordsView: View {
         .heroCard()
     }
 
-    private func heroStatColumn(label: String, value: String) -> some View {
-        VStack(spacing: 3) {
-            Text(value)
-                .font(.system(size: 16, weight: .bold, design: .rounded))
-                .foregroundStyle(.white)
-                .monospacedDigit()
-            Text(label)
-                .font(.system(size: 10, weight: .medium))
-                .foregroundStyle(.white.opacity(0.65))
-        }
-        .frame(maxWidth: .infinity)
-    }
 
     // MARK: - Top Lifts Card
 
@@ -193,9 +201,14 @@ struct PersonalRecordsView: View {
             ForEach(groupedRecords, id: \.0) { group, recs in
                 VStack(alignment: .leading, spacing: 8) {
                     HStack(spacing: 6) {
-                        Image(systemName: group?.icon ?? "dumbbell")
-                            .font(.system(size: 10, weight: .bold))
-                            .foregroundStyle(Color.accentColor)
+                        if let group {
+                            MuscleIconView(group: group, color: Color.accentColor)
+                                .frame(width: 12, height: 12)
+                        } else {
+                            Image(systemName: "dumbbell")
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundStyle(Color.accentColor)
+                        }
                         Text((group?.rawValue ?? "Uncategorized").uppercased())
                             .font(.system(size: 10, weight: .bold, design: .rounded))
                             .foregroundStyle(.secondary)
@@ -224,9 +237,14 @@ struct PersonalRecordsView: View {
                 RoundedRectangle(cornerRadius: 8)
                     .fill((record.category?.color ?? Color.accentColor).opacity(0.12))
                     .frame(width: 32, height: 32)
-                Image(systemName: record.category?.icon ?? "dumbbell")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(record.category?.color ?? Color.accentColor)
+                if let category = record.category {
+                    MuscleIconView(group: category, color: category.color)
+                        .frame(width: 14, height: 14)
+                } else {
+                    Image(systemName: "dumbbell")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(Color.accentColor)
+                }
             }
             VStack(alignment: .leading, spacing: 2) {
                 Text(record.exerciseName)

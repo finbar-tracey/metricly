@@ -3,9 +3,9 @@ import SwiftData
 
 @Model
 final class ManualActivity {
-    var date: Date
-    var activityType: String // raw value of ActivityType
-    var durationMinutes: Int
+    var date: Date = Date()
+    var activityType: String = "" // raw value of ActivityType
+    var durationMinutes: Int = 0
     var notes: String = ""
     var caloriesBurned: Int? = nil
 

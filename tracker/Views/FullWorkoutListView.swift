@@ -259,9 +259,6 @@ struct FullWorkoutListView: View {
         .navigationDestination(for: Workout.self) { workout in
             WorkoutDetailView(workout: workout)
         }
-        .navigationDestination(for: String.self) { exerciseName in
-            ExerciseHistoryView(exerciseName: exerciseName)
-        }
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
@@ -313,11 +310,11 @@ struct FullWorkoutListView: View {
                 }
 
                 HStack(spacing: 0) {
-                    heroStatCol(label: "Total", value: "\(workouts.count)", icon: "dumbbell.fill")
+                    HeroStatCol(value: "\(workouts.count)", label: "Total", icon: "dumbbell.fill")
                     Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 36)
-                    heroStatCol(label: "This Week", value: "\(thisWeekCount)", icon: "calendar")
+                    HeroStatCol(value: "\(thisWeekCount)", label: "This Week", icon: "calendar")
                     Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 36)
-                    heroStatCol(label: "This Month", value: "\(thisMonthCount)", icon: "calendar.badge.clock")
+                    HeroStatCol(value: "\(thisMonthCount)", label: "This Month", icon: "calendar.badge.clock")
                 }
                 .padding(.vertical, 10)
                 .background(.white.opacity(0.12), in: RoundedRectangle(cornerRadius: 12))
@@ -326,17 +323,6 @@ struct FullWorkoutListView: View {
         }
         .frame(minHeight: 130)
         .clipShape(RoundedRectangle(cornerRadius: AppTheme.heroRadius))
-    }
-
-    private func heroStatCol(label: String, value: String, icon: String) -> some View {
-        VStack(spacing: 4) {
-            Image(systemName: icon).font(.system(size: 11)).foregroundStyle(.white.opacity(0.75))
-            Text(value)
-                .font(.system(size: 18, weight: .bold, design: .rounded))
-                .foregroundStyle(.white).monospacedDigit()
-            Text(label).font(.caption2.weight(.medium)).foregroundStyle(.white.opacity(0.7))
-        }
-        .frame(maxWidth: .infinity)
     }
 
     // MARK: - Filter Chip Label

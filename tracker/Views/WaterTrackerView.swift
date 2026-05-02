@@ -130,6 +130,7 @@ struct WaterTrackerView: View {
         .safeAreaInset(edge: .bottom) {
             if undoEntry != nil { undoBar }
         }
+        .onAppear { drainWidgetPendingWater() }
     }
 
     // MARK: - Hero Card
@@ -471,35 +472,35 @@ struct WaterTrackerView: View {
         .appCard()
     }
 
-    // MARK: - Undo Bar
-
     private var undoBar: some View {
-        HStack(spacing: 12) {
-            Image(systemName: "drop.fill").foregroundStyle(.cyan)
-            Text("Added \(Int(undoEntry?.milliliters ?? 0)) ml")
-                .font(.subheadline.weight(.medium))
-            Spacer()
-            Button("Undo") {
-                if let entry = undoEntry {
-                    modelContext.delete(entry)
-                    undoWorkItem?.cancel()
-                    undoEntry = nil
-                }
+        UndoBar(icon: "drop.fill", message: "Added \(Int(undoEntry?.milliliters ?? 0)) ml", color: .cyan) {
+            if let entry = undoEntry {
+                modelContext.delete(entry)
+                undoWorkItem?.cancel()
+                undoEntry = nil
             }
-            .font(.subheadline.bold()).foregroundStyle(.cyan)
         }
-        .padding(.horizontal, 16).padding(.vertical, 10)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
-        .padding(.horizontal)
-        .transition(.move(edge: .bottom).combined(with: .opacity))
     }
 
     // MARK: - Actions
+
+    /// Processes water logged via the home-screen widget button while the app was closed.
+    private func drainWidgetPendingWater() {
+        guard let defaults = UserDefaults(suiteName: WidgetDataWriter.suiteName) else { return }
+        let pending = defaults.double(forKey: "pendingWaterMl")
+        guard pending > 0 else { return }
+        defaults.set(0, forKey: "pendingWaterMl")
+        addEntry(ml: pending)
+    }
 
     private func addEntry(ml: Double) {
         let entry = WaterEntry(milliliters: ml)
         modelContext.insert(entry)
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        // Update water widget
+        let today = Calendar.current.startOfDay(for: .now)
+        let todayTotal = allEntries.filter { $0.date >= today }.reduce(0) { $0 + $1.milliliters } + ml
+        WidgetDataWriter.updateWater(todayMl: todayTotal, goalMl: Double(settings.dailyWaterGoalMl))
         undoWorkItem?.cancel()
         withAnimation(.spring(duration: 0.3)) { undoEntry = entry }
         let work = DispatchWorkItem {

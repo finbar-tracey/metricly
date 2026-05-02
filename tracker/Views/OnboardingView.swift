@@ -31,6 +31,21 @@ struct OnboardingView: View {
         .tabViewStyle(.page(indexDisplayMode: .always))
         .indexViewStyle(.page(backgroundDisplayMode: .always))
         .interactiveDismissDisabled()
+        .overlay(alignment: .topTrailing) {
+            if currentPage > 0 && currentPage < 4 {
+                Button {
+                    withAnimation { currentPage = 4 }
+                } label: {
+                    Text("Skip")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                }
+                .padding(.top, 56)
+                .transition(.opacity)
+            }
+        }
     }
 
     // MARK: - Page 1: Welcome
@@ -99,7 +114,7 @@ struct OnboardingView: View {
                     featureCard(icon: "plus.circle.fill", color: .accentColor, title: "Quick Logging", subtitle: "Add sets in seconds with smart defaults")
                     featureCard(icon: "clock.arrow.circlepath", color: .blue, title: "Auto-Fill", subtitle: "Pre-fills from your last session automatically")
                     featureCard(icon: "trophy.fill", color: .yellow, title: "PR Tracking", subtitle: "Celebrates every time you beat your best")
-                    featureCard(icon: "chart.bar.fill", color: .green, title: "Volume Trends", subtitle: "See your weekly progress at a glance")
+                    featureCard(icon: "figure.run", color: .orange, title: "GPS Cardio", subtitle: "Track runs & walks with live pace, splits and maps")
                     featureCard(icon: "heart.fill", color: .red, title: "Health Integration", subtitle: "Sync steps, sleep, and heart rate from Apple Health")
                 }
                 .padding(.horizontal)
@@ -156,11 +171,33 @@ struct OnboardingView: View {
                     }
 
                     profileField(icon: "target", color: .green) {
-                        Stepper("\(weeklyGoal) workouts / week", value: $weeklyGoal, in: 1...7)
+                        HStack {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Weekly Goal")
+                                    .font(.subheadline)
+                                Text("\(weeklyGoal) workouts / week")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            Stepper("", value: $weeklyGoal, in: 1...7)
+                                .labelsHidden()
+                        }
                     }
 
                     profileField(icon: "drop.fill", color: .blue) {
-                        Stepper("\(dailyWaterGoalMl) ml / day", value: $dailyWaterGoalMl, in: 1000...5000, step: 250)
+                        HStack {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Daily Water Goal")
+                                    .font(.subheadline)
+                                Text("\(dailyWaterGoalMl) ml / day")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            Stepper("", value: $dailyWaterGoalMl, in: 1000...5000, step: 250)
+                                .labelsHidden()
+                        }
                     }
                 }
 

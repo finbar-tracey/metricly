@@ -3,10 +3,10 @@ import SwiftData
 
 @Model
 final class LiftGoal {
-    var exerciseName: String
-    var targetWeight: Double // Stored in kg
-    var createdDate: Date
-    var achievedDate: Date?
+    var exerciseName: String = ""
+    var targetWeight: Double = 0 // Stored in kg
+    var createdDate: Date = Date()
+    var achievedDate: Date? = nil
 
     init(exerciseName: String, targetWeight: Double, createdDate: Date = .now) {
         self.exerciseName = exerciseName

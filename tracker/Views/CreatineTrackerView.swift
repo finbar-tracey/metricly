@@ -411,27 +411,14 @@ struct CreatineTrackerView: View {
         .appCard()
     }
 
-    // MARK: - Undo Bar
-
     private var undoBar: some View {
-        HStack(spacing: 12) {
-            Image(systemName: "pill.fill").foregroundStyle(.blue)
-            Text("Logged \(String(format: "%.0f", undoEntry?.grams ?? 0))g creatine")
-                .font(.subheadline.weight(.medium))
-            Spacer()
-            Button("Undo") {
-                if let entry = undoEntry {
-                    modelContext.delete(entry)
-                    undoWorkItem?.cancel()
-                    undoEntry = nil
-                }
+        UndoBar(icon: "pill.fill", message: "Logged \(String(format: "%.0f", undoEntry?.grams ?? 0))g creatine", color: .blue) {
+            if let entry = undoEntry {
+                modelContext.delete(entry)
+                undoWorkItem?.cancel()
+                undoEntry = nil
             }
-            .font(.subheadline.bold()).foregroundStyle(.blue)
         }
-        .padding(.horizontal, 16).padding(.vertical, 10)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
-        .padding(.horizontal)
-        .transition(.move(edge: .bottom).combined(with: .opacity))
     }
 
     // MARK: - Actions

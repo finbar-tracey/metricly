@@ -38,7 +38,11 @@ struct StepsDetailView: View {
                         .frame(maxWidth: .infinity, minHeight: 200)
                 } else {
                     heroCard
-                    timeRangePicker
+                    HStack {
+                        CapsuleSegmentPicker(options: TimeRange.allCases, selection: $timeRange,
+                                             activeColor: .green)
+                        Spacer()
+                    }
                     trendCard
                     if !hourlySteps.isEmpty && hourlySteps.contains(where: { $0.steps > 0 }) {
                         hourlyCard
@@ -129,12 +133,14 @@ struct StepsDetailView: View {
 
                 // Stat columns
                 HStack(spacing: 0) {
-                    heroStatColumn(icon: "figure.walk", label: "Distance", value: HealthFormatters.formatDistance(todayDistance))
+                    HeroStatCol(value: HealthFormatters.formatDistance(todayDistance),
+                                label: "Distance", icon: "figure.walk")
                     Divider().frame(height: 32).overlay(.white.opacity(0.30))
-                    heroStatColumn(icon: "flame.fill", label: "Active Cal", value: HealthFormatters.formatCalories(todayEnergy))
+                    HeroStatCol(value: HealthFormatters.formatCalories(todayEnergy),
+                                label: "Active Cal", icon: "flame.fill")
                     Divider().frame(height: 32).overlay(.white.opacity(0.30))
                     let pct = Int(min(100, max(0, todaySteps / stepGoal * 100)))
-                    heroStatColumn(icon: "target", label: "Goal %", value: "\(pct)%")
+                    HeroStatCol(value: "\(pct)%", label: "Goal %", icon: "target")
                 }
             }
             .padding(20)
@@ -142,51 +148,6 @@ struct StepsDetailView: View {
         .heroCard()
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(HealthFormatters.formatSteps(todaySteps)) steps of \(HealthFormatters.formatSteps(stepGoal)) goal")
-    }
-
-    private func heroStatColumn(icon: String, label: String, value: String) -> some View {
-        VStack(spacing: 3) {
-            Image(systemName: icon)
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(.white.opacity(0.80))
-            Text(value)
-                .font(.system(size: 15, weight: .bold, design: .rounded))
-                .foregroundStyle(.white)
-                .monospacedDigit()
-            Text(label)
-                .font(.system(size: 10, weight: .medium))
-                .foregroundStyle(.white.opacity(0.65))
-        }
-        .frame(maxWidth: .infinity)
-    }
-
-    // MARK: - Time Range Picker
-
-    private var timeRangePicker: some View {
-        HStack(spacing: 6) {
-            ForEach(TimeRange.allCases, id: \.self) { range in
-                Button {
-                    withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
-                        timeRange = range
-                    }
-                } label: {
-                    Text(range.rawValue)
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(timeRange == range ? .white : .primary)
-                        .padding(.horizontal, 18)
-                        .padding(.vertical, 8)
-                        .background(
-                            timeRange == range
-                                ? AnyShapeStyle(Color.green)
-                                : AnyShapeStyle(Color(.secondarySystemGroupedBackground)),
-                            in: Capsule()
-                        )
-                        .shadow(color: timeRange == range ? Color.green.opacity(0.35) : .clear, radius: 8, x: 0, y: 3)
-                }
-                .buttonStyle(.plain)
-            }
-            Spacer()
-        }
     }
 
     // MARK: - Trend Card
@@ -492,7 +453,7 @@ struct StepsDetailView: View {
     private var lastWeekAvg: Double {
         let calendar = Calendar.current
         let weekStart = calendar.dateInterval(of: .weekOfYear, for: .now)?.start ?? .now
-        let prevStart = calendar.date(byAdding: .day, value: -7, to: weekStart)!
+        let prevStart = calendar.date(byAdding: .day, value: -7, to: weekStart) ?? weekStart
         let lastWeek = dailySteps.filter { $0.date >= prevStart && $0.date < weekStart && $0.steps > 0 }
         guard !lastWeek.isEmpty else { return 0 }
         return lastWeek.map(\.steps).reduce(0, +) / Double(lastWeek.count)

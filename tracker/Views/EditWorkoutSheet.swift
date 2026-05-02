@@ -16,18 +16,61 @@ struct EditWorkoutSheet: View {
 
     var body: some View {
         NavigationStack {
-            Form {
+            List {
                 Section {
-                    TextField("Workout Name", text: $name)
-                    DatePicker("Date", selection: $date, displayedComponents: .date)
-                }
-                Section {
-                    TextField("Notes", text: $notes, axis: .vertical)
-                        .lineLimit(3...6)
+                    HStack(spacing: 12) {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(Color.accentColor.opacity(0.12))
+                                .frame(width: 36, height: 36)
+                            Image(systemName: "pencil")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundStyle(Color.accentColor)
+                        }
+                        TextField("Workout Name", text: $name)
+                            .font(.subheadline)
+                    }
+                    .listRowBackground(Color(.secondarySystemGroupedBackground))
+
+                    HStack(spacing: 12) {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(Color.red.opacity(0.12))
+                                .frame(width: 36, height: 36)
+                            Image(systemName: "calendar")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundStyle(.red)
+                        }
+                        DatePicker("Date", selection: $date, displayedComponents: .date)
+                            .font(.subheadline)
+                    }
+                    .listRowBackground(Color(.secondarySystemGroupedBackground))
                 } header: {
-                    Text("Notes")
+                    SectionHeader(title: "Details", icon: "dumbbell.fill", color: .accentColor)
+                }
+
+                Section {
+                    HStack(alignment: .top, spacing: 12) {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(Color.orange.opacity(0.12))
+                                .frame(width: 36, height: 36)
+                            Image(systemName: "note.text")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundStyle(.orange)
+                        }
+                        TextField("Add notes…", text: $notes, axis: .vertical)
+                            .font(.subheadline)
+                            .lineLimit(3...6)
+                    }
+                    .listRowBackground(Color(.secondarySystemGroupedBackground))
+                } header: {
+                    SectionHeader(title: "Notes", icon: "note.text", color: .orange)
                 }
             }
+            .listStyle(.insetGrouped)
+            .scrollContentBackground(.hidden)
+            .background(Color(.systemGroupedBackground))
             .navigationTitle("Edit Workout")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -41,6 +84,7 @@ struct EditWorkoutSheet: View {
                         workout.notes = notes
                         dismiss()
                     }
+                    .font(.headline)
                     .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
                 }
             }

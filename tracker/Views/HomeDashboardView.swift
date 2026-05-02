@@ -11,6 +11,7 @@ struct HomeDashboardView: View {
     @Query(sort: \CaffeineEntry.date, order: .reverse) private var caffeineEntries: [CaffeineEntry]
     @Query(sort: \WaterEntry.date, order: .reverse) private var waterEntries: [WaterEntry]
     @Query(sort: \CreatineEntry.date, order: .reverse) private var creatineEntries: [CreatineEntry]
+    @Query(sort: \CardioSession.date, order: .reverse) private var cardioSessions: [CardioSession]
     @Environment(\.weightUnit) private var weightUnit
 
     @State private var todaySteps: Double = 0
@@ -25,6 +26,8 @@ struct HomeDashboardView: View {
     @State private var animateRings = false
     @State private var showingAddWorkout = false
     @State private var repeatConfirmation = false
+    @State private var tappedDayWorkout: Workout?
+    @State private var cachedProgressionSuggestions: [ProgressionSuggestion] = []
 
     // MARK: - Caffeine Helpers
 
@@ -48,8 +51,11 @@ struct HomeDashboardView: View {
 
     private func suggestedBedtime(from now: Date) -> (time: Date, delayedByCaffeine: Bool) {
         let calendar = Calendar.current
-        var defaultBedtime = calendar.date(bySettingHour: 22, minute: 0, second: 0, of: calendar.startOfDay(for: now))!
-        if defaultBedtime < now { defaultBedtime = calendar.date(byAdding: .day, value: 1, to: defaultBedtime)! }
+        var defaultBedtime = calendar.date(bySettingHour: 22, minute: 0, second: 0, of: calendar.startOfDay(for: now))
+            ?? now.addingTimeInterval(3600 * 4)
+        if defaultBedtime < now {
+            defaultBedtime = calendar.date(byAdding: .day, value: 1, to: defaultBedtime) ?? defaultBedtime
+        }
         if let clearTime = caffeineClearTime(from: now), clearTime > defaultBedtime { return (clearTime, true) }
         return (defaultBedtime, false)
     }
@@ -74,12 +80,14 @@ struct HomeDashboardView: View {
     private var settings: UserSettings { settingsArray.first ?? UserSettings() }
     private var healthKitEnabled: Bool { settingsArray.first?.healthKitEnabled ?? false }
 
-    private var workoutsThisWeek: Int {
+    private var activitiesThisWeek: Int {
         guard let weekStart = Calendar.current.dateInterval(of: .weekOfYear, for: .now)?.start else { return 0 }
-        return allWorkouts.filter { $0.date >= weekStart }.count
+        let workoutCount = allWorkouts.filter { $0.date >= weekStart }.count
+        let cardioCount  = cardioSessions.filter { $0.date >= weekStart }.count
+        return workoutCount + cardioCount
     }
 
-    private var currentStreak: Int { Workout.currentStreak(from: allWorkouts) }
+    private var currentStreak: Int { Workout.currentStreak(from: allWorkouts, cardioSessions: Array(cardioSessions.prefix(60))) }
 
     private var greeting: String {
         let hour = Calendar.current.component(.hour, from: .now)
@@ -101,7 +109,8 @@ struct HomeDashboardView: View {
                 todayRestingHR: restingHR, averageRestingHR: averageRestingHR,
                 sleepMinutes: healthDataLoaded ? sleepMinutes : nil
             ),
-            externalWorkouts: externalWorkouts
+            externalWorkouts: externalWorkouts,
+            cardioSessions: Array(cardioSessions.prefix(50))
         )
     }
 
@@ -121,11 +130,7 @@ struct HomeDashboardView: View {
     }
 
     private var todayTotalVolumeKg: Double {
-        todaysWorkouts.reduce(0.0) { total, workout in
-            total + workout.exercises.reduce(0.0) { exTotal, exercise in
-                exTotal + exercise.sets.filter { !$0.isWarmUp }.reduce(0.0) { $0 + Double($1.reps) * $1.weight }
-            }
-        }
+        todaysWorkouts.reduce(0.0) { $0 + $1.totalVolumeKg() }
     }
 
     private var todayMuscleGroups: [MuscleGroup] {
@@ -134,36 +139,45 @@ struct HomeDashboardView: View {
 
     private var inProgressWorkout: Workout? { allWorkouts.first { !$0.isFinished } }
 
+    private var todayWeekday: Int {
+        Calendar.current.component(.weekday, from: .now)
+    }
+
     private struct ProgressionSuggestion: Identifiable {
         let id = UUID()
         let exerciseName: String
         let recommendation: ProgressionRecommendation
     }
 
-    private var progressionSuggestions: [ProgressionSuggestion] {
-        let twoWeeksAgo = Calendar.current.date(byAdding: .day, value: -14, to: .now) ?? .distantPast
-        let recentWorkouts = allWorkouts.filter { $0.endTime != nil && $0.date >= twoWeeksAgo }
-        var seen = Set<String>(); var exerciseNames: [String] = []
-        for workout in recentWorkouts {
-            for exercise in workout.exercises {
-                let key = exercise.name.lowercased()
-                if !seen.contains(key) { seen.insert(key); exerciseNames.append(exercise.name) }
+    private func buildProgressionSuggestions() {
+        // Snapshot the data we need on the main thread, then compute off it.
+        let snapshot = allWorkouts
+        Task(priority: .utility) {
+            let twoWeeksAgo = Calendar.current.date(byAdding: .day, value: -14, to: .now) ?? .distantPast
+            let recentWorkouts = snapshot.filter { $0.endTime != nil && $0.date >= twoWeeksAgo }
+            var seen = Set<String>(); var exerciseNames: [String] = []
+            for workout in recentWorkouts {
+                for exercise in workout.exercises {
+                    let key = exercise.name.lowercased()
+                    if !seen.contains(key) { seen.insert(key); exerciseNames.append(exercise.name) }
+                }
             }
-        }
-        var suggestions: [ProgressionSuggestion] = []
-        let allExercisesFlat = allWorkouts.flatMap(\.exercises)
-        for name in exerciseNames {
-            let history = allExercisesFlat
-                .filter { $0.name.lowercased() == name.lowercased() && !(($0.workout?.isTemplate) ?? true) && !$0.sets.isEmpty }
-                .sorted { ($0.workout?.date ?? .distantPast) > ($1.workout?.date ?? .distantPast) }
-            let sessions = ProgressionAdvisor.buildSessions(from: history)
-            guard sessions.count >= 2 else { continue }
-            let rec = ProgressionAdvisor.recommend(sessions: sessions, muscleGroup: history.first?.category)
-            if case .increase = rec.action {
-                suggestions.append(ProgressionSuggestion(exerciseName: name, recommendation: rec))
+            var suggestions: [ProgressionSuggestion] = []
+            let allExercisesFlat = snapshot.flatMap(\.exercises)
+            for name in exerciseNames {
+                let history = allExercisesFlat
+                    .filter { $0.name.lowercased() == name.lowercased() && !(($0.workout?.isTemplate) ?? true) && !$0.sets.isEmpty }
+                    .sorted { ($0.workout?.date ?? .distantPast) > ($1.workout?.date ?? .distantPast) }
+                let sessions = ProgressionAdvisor.buildSessions(from: history)
+                guard sessions.count >= 2 else { continue }
+                let rec = ProgressionAdvisor.recommend(sessions: sessions, muscleGroup: history.first?.category)
+                if case .increase = rec.action {
+                    suggestions.append(ProgressionSuggestion(exerciseName: name, recommendation: rec))
+                }
             }
+            let result = Array(suggestions.sorted { $0.recommendation.confidence > $1.recommendation.confidence }.prefix(3))
+            await MainActor.run { cachedProgressionSuggestions = result }
         }
-        return Array(suggestions.sorted { $0.recommendation.confidence > $1.recommendation.confidence }.prefix(3))
     }
 
     // MARK: - Body
@@ -173,21 +187,20 @@ struct HomeDashboardView: View {
             LazyVStack(spacing: AppTheme.sectionSpacing) {
                 heroSection
 
-                // Contextual CTA — most impactful placement, right under hero
+                // Continue / great-session banner only — readyToTrain is now in the hero chip
                 if let cta = contextualCTA {
-                    contextualCTACard(cta)
+                    switch cta {
+                    case .continueWorkout, .greatSession:
+                        contextualCTACard(cta)
+                    default:
+                        EmptyView()
+                    }
                 }
 
-                if !todaysWorkouts.isEmpty {
-                    todayWorkoutCard
-                }
+                planAndMetricsRow
 
                 if healthKitEnabled && healthDataLoaded {
                     muscleReadinessCard
-                }
-
-                if healthKitEnabled && healthDataLoaded {
-                    healthGlanceCard
                 }
 
                 if !caffeineEntries.isEmpty && totalCaffeineMg(at: .now) >= 25 {
@@ -196,8 +209,16 @@ struct HomeDashboardView: View {
 
                 trainingStatusCard
 
-                if !progressionSuggestions.isEmpty {
+                if !cardioSessions.isEmpty {
+                    cardioCard
+                }
+
+                if !cachedProgressionSuggestions.isEmpty {
                     progressionCard
+                }
+
+                if healthKitEnabled && healthDataLoaded {
+                    healthGlanceCard
                 }
 
                 recentWorkoutsCard
@@ -225,11 +246,16 @@ struct HomeDashboardView: View {
         .sheet(isPresented: $showingAddWorkout) {
             AddWorkoutSheet().environment(\.weightUnit, weightUnit)
         }
+        .navigationDestination(item: $tappedDayWorkout) { workout in
+            WorkoutDetailView(workout: workout)
+        }
         .confirmationDialog("Repeat your last workout?", isPresented: $repeatConfirmation) {
             Button("Repeat \"\(allWorkouts.first?.name ?? "")\"") { repeatLastWorkout() }
         } message: {
             Text("This will create a new workout with the same exercises (no sets copied).")
         }
+        .onAppear { buildProgressionSuggestions() }
+        .onChange(of: allWorkouts.count) { buildProgressionSuggestions() }
         .task {
             guard healthKitEnabled else { return }
             await loadHealthData()
@@ -268,36 +294,88 @@ struct HomeDashboardView: View {
             Circle().fill(.white.opacity(0.07)).frame(width: 220).offset(x: 180, y: -70)
             Circle().fill(.white.opacity(0.04)).frame(width: 140).offset(x: 260, y: 60)
 
-            VStack(alignment: .leading, spacing: 20) {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(greeting).font(.title3.weight(.semibold)).foregroundStyle(.white)
-                    Text(Date.now, format: .dateTime.weekday(.wide).month().day())
-                        .font(.subheadline).foregroundStyle(.white.opacity(0.72))
-                }
+            VStack(alignment: .leading, spacing: 16) {
+                // Greeting
+                Text(greeting)
+                    .font(.title3.weight(.semibold))
+                    .foregroundStyle(.white)
 
                 if healthKitEnabled && healthDataLoaded {
-                    VStack(alignment: .leading, spacing: 4) {
-                        HStack(alignment: .lastTextBaseline, spacing: 2) {
-                            Text("\(Int(recoveryResult.readinessScore * 100))")
-                                .font(.system(size: 56, weight: .black, design: .rounded))
-                                .foregroundStyle(.white).monospacedDigit()
-                            Text("%").font(.title.weight(.bold)).foregroundStyle(.white.opacity(0.70)).padding(.bottom, 6)
+                    // Score + HRV ring side by side
+                    HStack(alignment: .top, spacing: 10) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Recovery Readiness")
+                                .font(.caption.weight(.medium))
+                                .foregroundStyle(.white.opacity(0.72))
+                            HStack(alignment: .lastTextBaseline, spacing: 2) {
+                                Text("\(Int(recoveryResult.readinessScore * 100))")
+                                    .font(.system(size: 52, weight: .black, design: .rounded))
+                                    .foregroundStyle(.white).monospacedDigit()
+                                Text("%")
+                                    .font(.title2.weight(.bold))
+                                    .foregroundStyle(.white.opacity(0.70))
+                                    .padding(.bottom, 4)
+                            }
+                            Text(readinessShortLabel)
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(readinessTintColor)
+                            Text(RecoveryEngine.readinessLabel(recoveryResult.readinessScore))
+                                .font(.caption).foregroundStyle(.white.opacity(0.65))
+                                .fixedSize(horizontal: false, vertical: true)
+                                .lineLimit(2)
                         }
-                        Text("Recovery Readiness")
-                            .font(.subheadline.weight(.medium)).foregroundStyle(.white.opacity(0.80))
-                        Text(RecoveryEngine.readinessLabel(recoveryResult.readinessScore))
-                            .font(.caption).foregroundStyle(.white.opacity(0.65))
-                            .fixedSize(horizontal: false, vertical: true)
+                        Spacer(minLength: 8)
+                        if let hrvValue = hrv {
+                            hervRing(value: hrvValue)
+                        }
+                    }
+
+                    // Suggestion chip — train or rest depending on readiness
+                    let score = recoveryResult.readinessScore
+                    if score >= 0.50 {
+                        Button { showingAddWorkout = true } label: {
+                            HStack(spacing: 8) {
+                                Image(systemName: "bolt.fill")
+                                    .font(.system(size: 11, weight: .semibold))
+                                Text("Great day to train \(recoveryResult.suggestedWorkoutType)")
+                                    .font(.caption.weight(.semibold))
+                                Spacer(minLength: 4)
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 10, weight: .semibold))
+                            }
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 14).padding(.vertical, 10)
+                            .background(.white.opacity(0.15), in: RoundedRectangle(cornerRadius: 10))
+                        }
+                        .buttonStyle(.plain)
+                    } else if score < 0.40 {
+                        NavigationLink { MuscleRecoveryView() } label: {
+                            HStack(spacing: 8) {
+                                Image(systemName: "moon.fill")
+                                    .font(.system(size: 11, weight: .semibold))
+                                Text("Rest day recommended")
+                                    .font(.caption.weight(.semibold))
+                                Spacer(minLength: 4)
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 10, weight: .semibold))
+                            }
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 14).padding(.vertical, 10)
+                            .background(.white.opacity(0.15), in: RoundedRectangle(cornerRadius: 10))
+                        }
+                        .buttonStyle(.plain)
                     }
                 } else {
-                    VStack(alignment: .leading, spacing: 2) {
-                        HStack(alignment: .lastTextBaseline, spacing: 10) {
-                            Image(systemName: "flame.fill").font(.system(size: 38, weight: .bold)).foregroundStyle(.white.opacity(0.88))
-                            Text("\(currentStreak)").font(.system(size: 56, weight: .black, design: .rounded))
-                                .foregroundStyle(.white).monospacedDigit()
-                        }
-                        Text("Day Streak").font(.subheadline.weight(.medium)).foregroundStyle(.white.opacity(0.80))
+                    // No health data — show streak
+                    HStack(alignment: .lastTextBaseline, spacing: 10) {
+                        Image(systemName: "flame.fill")
+                            .font(.system(size: 38, weight: .bold)).foregroundStyle(.white.opacity(0.88))
+                        Text("\(currentStreak)")
+                            .font(.system(size: 56, weight: .black, design: .rounded))
+                            .foregroundStyle(.white).monospacedDigit()
                     }
+                    Text("Day Streak")
+                        .font(.subheadline.weight(.medium)).foregroundStyle(.white.opacity(0.80))
                 }
 
                 weekActivityStrip
@@ -307,6 +385,57 @@ struct HomeDashboardView: View {
         .heroCard()
     }
 
+    // MARK: - Readiness helpers
+
+    private var readinessShortLabel: String {
+        let s = recoveryResult.readinessScore
+        if s >= 0.80 { return "Fully recovered" }
+        if s >= 0.60 { return "Mostly recovered" }
+        if s >= 0.40 { return "Partially recovered" }
+        return "Low readiness"
+    }
+
+    private var readinessTintColor: Color {
+        let s = recoveryResult.readinessScore
+        if s >= 0.60 { return Color(red: 0.25, green: 0.95, blue: 0.55) }
+        if s >= 0.40 { return .yellow }
+        return .orange
+    }
+
+    private func hervRing(value: Double) -> some View {
+        let progress = CGFloat(min(value / 100.0, 1.0))
+        return ZStack {
+            // Background track
+            Circle()
+                .stroke(.white.opacity(0.22), lineWidth: 8)
+                .frame(width: 96, height: 96)
+            // Filled arc
+            Circle()
+                .trim(from: 0, to: animateRings ? progress : 0)
+                .stroke(readinessTintColor, style: StrokeStyle(lineWidth: 8, lineCap: .round))
+                .rotationEffect(.degrees(-90))
+                .frame(width: 96, height: 96)
+                .animation(.easeOut(duration: 1.0), value: animateRings)
+            // Inner content
+            VStack(spacing: 3) {
+                ZStack {
+                    Circle()
+                        .fill(readinessTintColor.opacity(0.20))
+                        .frame(width: 32, height: 32)
+                    Image(systemName: "heart.fill")
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundStyle(readinessTintColor)
+                }
+                Text("HRV")
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.60))
+                Text("\(Int(value)) ms")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(.white)
+            }
+        }
+    }
+
     // MARK: - Week Activity Strip
 
     private var currentWeekDays: [Date] {
@@ -314,7 +443,7 @@ struct HomeDashboardView: View {
         let today = calendar.startOfDay(for: .now)
         let weekday = calendar.component(.weekday, from: today) // 1=Sun, 2=Mon…
         let daysFromMonday = (weekday + 5) % 7
-        let monday = calendar.date(byAdding: .day, value: -daysFromMonday, to: today)!
+        guard let monday = calendar.date(byAdding: .day, value: -daysFromMonday, to: today) else { return [] }
         return (0..<7).compactMap { calendar.date(byAdding: .day, value: $0, to: monday) }
     }
 
@@ -331,33 +460,40 @@ struct HomeDashboardView: View {
                 let isFuture = day > today
                 let hasWorkout = allWorkouts.contains { calendar.isDate($0.date, inSameDayAs: day) }
 
-                VStack(spacing: 5) {
-                    Text(labels[i])
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(.white.opacity(isToday ? 1.0 : 0.55))
+                let workout = allWorkouts.first { calendar.isDate($0.date, inSameDayAs: day) }
+                Button {
+                    if let workout { tappedDayWorkout = workout }
+                } label: {
+                    VStack(spacing: 5) {
+                        Text(labels[i])
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundStyle(.white.opacity(isToday ? 1.0 : 0.55))
 
-                    ZStack {
-                        Circle()
-                            .fill(hasWorkout ? .white : .white.opacity(isFuture ? 0.08 : 0.15))
-                            .frame(width: 28, height: 28)
-
-                        if isToday && !hasWorkout {
+                        ZStack {
                             Circle()
-                                .stroke(.white.opacity(0.7), lineWidth: 1.5)
+                                .fill(hasWorkout ? .white : .white.opacity(isFuture ? 0.08 : 0.15))
                                 .frame(width: 28, height: 28)
-                        }
 
-                        if hasWorkout {
-                            Image(systemName: "checkmark")
-                                .font(.system(size: 11, weight: .bold))
-                                .foregroundStyle(accentBase)
-                        } else if isToday {
-                            Circle()
-                                .fill(.white.opacity(0.6))
-                                .frame(width: 6, height: 6)
+                            if isToday && !hasWorkout {
+                                Circle()
+                                    .stroke(.white.opacity(0.7), lineWidth: 1.5)
+                                    .frame(width: 28, height: 28)
+                            }
+
+                            if hasWorkout {
+                                Image(systemName: "checkmark")
+                                    .font(.system(size: 11, weight: .bold))
+                                    .foregroundStyle(accentBase)
+                            } else if isToday {
+                                Circle()
+                                    .fill(.white.opacity(0.6))
+                                    .frame(width: 6, height: 6)
+                            }
                         }
                     }
                 }
+                .buttonStyle(.plain)
+                .disabled(workout == nil)
                 .frame(maxWidth: .infinity)
             }
         }
@@ -481,6 +617,174 @@ struct HomeDashboardView: View {
         }
     }
 
+    // MARK: - Plan + Metrics Row
+
+    private var planAndMetricsRow: some View {
+        HStack(alignment: .top, spacing: 12) {
+            todayPlanMiniCard
+            keyMetricsMiniCard
+        }
+    }
+
+    private var todayPlanMiniCard: some View {
+        let planned = settings.weeklyPlan[todayWeekday]
+        let doneCount = todaysWorkouts.filter(\.isFinished).count
+        let totalCount = max(1, todaysWorkouts.count)
+        let progress = Double(doneCount) / Double(totalCount)
+        let hasPlan = planned?.isEmpty == false
+
+        return VStack(alignment: .leading, spacing: 10) {
+            Text("Today's Plan")
+                .font(.subheadline.weight(.bold))
+
+            if hasPlan, let name = planned {
+                HStack(spacing: 4) {
+                    Text("\(doneCount)/\(totalCount) completed")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(doneCount >= totalCount ? Color.green : Color.accentColor)
+                    Spacer()
+                }
+                GradientProgressBar(value: progress, color: doneCount >= totalCount ? .green : .accentColor, height: 5)
+                    .padding(.bottom, 2)
+
+                HStack(spacing: 8) {
+                    ZStack {
+                        Circle()
+                            .fill(doneCount > 0 ? Color.green.opacity(0.15) : Color(.tertiarySystemGroupedBackground))
+                            .frame(width: 30, height: 30)
+                        Image(systemName: doneCount > 0 ? "checkmark" : "dumbbell.fill")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(doneCount > 0 ? Color.green : Color.accentColor)
+                    }
+                    Text(name)
+                        .font(.caption.weight(.semibold))
+                        .lineLimit(2)
+                        .foregroundStyle(.primary)
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.caption2).foregroundStyle(.tertiary)
+                }
+            } else {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(todaysWorkouts.isEmpty ? "No workout scheduled" : "\(todaysWorkouts.count) workout\(todaysWorkouts.count == 1 ? "" : "s") today")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    if !todaysWorkouts.isEmpty {
+                        Text("\(todayTotalSets) sets · \(weightUnit.formatShort(todayTotalVolumeKg))")
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
+                    }
+                }
+            }
+
+            Spacer()
+
+            Button { showingAddWorkout = true } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "play.fill")
+                        .font(.system(size: 10, weight: .semibold))
+                    Text("Start Workout")
+                        .font(.caption.weight(.semibold))
+                }
+                .frame(maxWidth: .infinity)
+                .foregroundStyle(.white)
+                .padding(.vertical, 10)
+                .background(Color.green, in: RoundedRectangle(cornerRadius: 10))
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, minHeight: 160, alignment: .topLeading)
+        .background(Color(.secondarySystemGroupedBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .shadow(color: .black.opacity(0.07), radius: 10, x: 0, y: 3)
+    }
+
+    private var keyMetricsMiniCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("Key Metrics")
+                    .font(.subheadline.weight(.bold))
+                Spacer()
+                NavigationLink { HealthDashboardView() } label: {
+                    Text("View all")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Color.accentColor)
+                }
+            }
+
+            if healthKitEnabled && healthDataLoaded {
+                VStack(spacing: 0) {
+                    miniMetricRow(icon: "moon.zzz.fill", color: .indigo, label: "Sleep",
+                                  value: HealthFormatters.formatSleepShort(sleepMinutes),
+                                  status: sleepMinutes >= 420 ? "Good" : "Fair",
+                                  good: sleepMinutes >= 420)
+                    Divider().padding(.vertical, 5)
+                    miniMetricRow(icon: "heart.fill", color: .red, label: "Resting HR",
+                                  value: restingHR.map { "\(Int($0)) bpm" } ?? "—",
+                                  status: restingHR.map { $0 < 70 ? "Good" : "Fair" } ?? "",
+                                  good: restingHR.map { $0 < 70 } ?? false)
+                    Divider().padding(.vertical, 5)
+                    miniMetricRow(icon: "flame.fill", color: .orange, label: "Calories",
+                                  value: "\(Int(activeCalories))",
+                                  status: activeCalories >= 300 ? "On track" : "Low",
+                                  good: activeCalories >= 300)
+                    Divider().padding(.vertical, 5)
+                    miniMetricRow(icon: "drop.fill", color: .cyan, label: "Hydration",
+                                  value: todayWaterMl >= 1000 ? String(format: "%.1f L", todayWaterMl / 1000) : "\(Int(todayWaterMl)) ml",
+                                  status: waterProgress >= 0.7 ? "Good" : "Low",
+                                  good: waterProgress >= 0.7)
+                }
+            } else {
+                VStack(spacing: 0) {
+                    miniMetricRow(icon: "dumbbell.fill", color: .accentColor, label: "This week",
+                                  value: "\(activitiesThisWeek)", status: settings.weeklyGoal > 0 ? "/ \(settings.weeklyGoal) goal" : "workouts",
+                                  good: settings.weeklyGoal > 0 ? activitiesThisWeek >= settings.weeklyGoal : true)
+                    Divider().padding(.vertical, 5)
+                    miniMetricRow(icon: "flame.fill", color: .orange, label: "Streak",
+                                  value: "\(currentStreak) day\(currentStreak == 1 ? "" : "s")",
+                                  status: currentStreak >= 3 ? "Active" : "",
+                                  good: currentStreak >= 3)
+                    Divider().padding(.vertical, 5)
+                    miniMetricRow(icon: "scalemass.fill", color: .purple, label: "Volume today",
+                                  value: weightUnit.formatShort(todayTotalVolumeKg),
+                                  status: todayTotalSets > 0 ? "\(todayTotalSets) sets" : "",
+                                  good: true)
+                }
+            }
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, minHeight: 160, alignment: .topLeading)
+        .background(Color(.secondarySystemGroupedBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .shadow(color: .black.opacity(0.07), radius: 10, x: 0, y: 3)
+    }
+
+    private func miniMetricRow(icon: String, color: Color, label: String, value: String, status: String, good: Bool) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: icon)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(color)
+                .frame(width: 18)
+            Text(label)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+            Spacer()
+            VStack(alignment: .trailing, spacing: 1) {
+                Text(value)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.primary)
+                    .lineLimit(1)
+                if !status.isEmpty {
+                    Text(status)
+                        .font(.system(size: 9, weight: .medium))
+                        .foregroundStyle(good ? Color.green : Color.orange)
+                }
+            }
+        }
+    }
+
     // MARK: - Muscle Readiness Card
 
     private var muscleReadinessCard: some View {
@@ -496,29 +800,28 @@ struct HomeDashboardView: View {
             }
 
             LazyVGrid(
-                columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 4),
-                spacing: 10
+                columns: Array(repeating: GridItem(.flexible(), spacing: 4), count: 6),
+                spacing: 12
             ) {
                 ForEach(recoveryResult.muscleResults, id: \.group) { result in
                     let color = RecoveryEngine.freshnessColor(result.freshness)
-                    VStack(spacing: 5) {
+                    VStack(spacing: 6) {
                         ZStack {
-                            Circle().fill(color.opacity(0.12)).frame(width: 40, height: 40)
+                            Circle().fill(color.opacity(0.12)).frame(width: 46, height: 46)
                             Circle()
                                 .trim(from: 0, to: result.freshness)
-                                .stroke(color.opacity(0.55), style: StrokeStyle(lineWidth: 3, lineCap: .round))
+                                .stroke(color, style: StrokeStyle(lineWidth: 3.5, lineCap: .round))
                                 .rotationEffect(.degrees(-90))
-                                .frame(width: 40, height: 40)
+                                .frame(width: 46, height: 46)
                                 .animation(.easeOut(duration: 0.7), value: result.freshness)
-                            Image(systemName: result.group.icon)
-                                .font(.system(size: 14, weight: .semibold))
-                                .foregroundStyle(color)
+                            MuscleIconView(group: result.group, color: color)
+                                .frame(width: 20, height: 20)
                         }
                         Text(result.group.rawValue)
                             .font(.system(size: 9, weight: .medium))
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(color)
                             .lineLimit(1)
-                            .minimumScaleFactor(0.7)
+                            .minimumScaleFactor(0.6)
                     }
                     .frame(maxWidth: .infinity)
                 }
@@ -546,7 +849,7 @@ struct HomeDashboardView: View {
 
     private var healthGlanceCard: some View {
         VStack(alignment: .leading, spacing: 14) {
-            SectionHeader(title: "Health", icon: "heart.circle.fill", color: .red)
+            SectionHeader(title: "All Health Metrics", icon: "heart.circle.fill", color: .red)
 
             LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
                 NavigationLink { StepsDetailView() } label: {
@@ -602,6 +905,8 @@ struct HomeDashboardView: View {
             }
         }
         .appCard()
+        .redacted(reason: healthKitEnabled && !healthDataLoaded ? .placeholder : [])
+        .animation(.easeInOut(duration: 0.3), value: healthDataLoaded)
     }
 
     private func compactHealthTile(icon: String, color: Color, value: String, label: String, progress: Double?) -> some View {
@@ -680,54 +985,6 @@ struct HomeDashboardView: View {
         .buttonStyle(.plain)
     }
 
-    // MARK: - Today's Workout Card
-
-    private var todayWorkoutCard: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            SectionHeader(title: "Today", icon: "calendar.circle.fill", color: .orange)
-
-            VStack(spacing: 0) {
-                HStack(spacing: 0) {
-                    statCol("\(todaysWorkouts.count)", label: todaysWorkouts.count == 1 ? "Workout" : "Workouts")
-                    Rectangle().fill(Color(.separator)).frame(width: 1, height: 32)
-                    statCol("\(todayTotalSets)", label: "Sets")
-                    Rectangle().fill(Color(.separator)).frame(width: 1, height: 32)
-                    statCol(weightUnit.formatShort(todayTotalVolumeKg), label: "Volume")
-                }
-                .padding(.vertical, 14)
-                .background(Color(.tertiarySystemGroupedBackground))
-                .clipShape(RoundedRectangle(cornerRadius: 14))
-
-                if !todayMuscleGroups.isEmpty {
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 6) {
-                            ForEach(todayMuscleGroups, id: \.self) { group in
-                                HStack(spacing: 3) {
-                                    Image(systemName: group.icon).font(.system(size: 9))
-                                    Text(group.rawValue)
-                                }
-                                .font(.caption2)
-                                .padding(.horizontal, 8).padding(.vertical, 4)
-                                .background(Color.accentColor.opacity(0.10), in: Capsule())
-                                .foregroundStyle(Color.accentColor)
-                            }
-                        }
-                    }
-                    .padding(.top, 10)
-                }
-            }
-        }
-        .appCard()
-    }
-
-    private func statCol(_ value: String, label: String) -> some View {
-        VStack(spacing: 3) {
-            Text(value).font(.title3.weight(.bold).monospacedDigit()).lineLimit(1).minimumScaleFactor(0.75)
-            Text(label).font(.caption2).foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity)
-    }
-
     // MARK: - Training Status Card
 
     private var trainingStatusCard: some View {
@@ -736,13 +993,13 @@ struct HomeDashboardView: View {
 
             VStack(spacing: 0) {
                 if settings.weeklyGoal > 0 {
-                    let weekProgress = min(1.0, Double(workoutsThisWeek) / Double(settings.weeklyGoal))
-                    let weekDone = workoutsThisWeek >= settings.weeklyGoal
+                    let weekProgress = min(1.0, Double(activitiesThisWeek) / Double(settings.weeklyGoal))
+                    let weekDone = activitiesThisWeek >= settings.weeklyGoal
                     VStack(alignment: .leading, spacing: 10) {
                         HStack {
                             HStack(spacing: 6) {
                                 Image(systemName: "target").foregroundStyle(weekDone ? Color.green : Color.accentColor)
-                                Text("\(workoutsThisWeek)/\(settings.weeklyGoal) workouts this week").font(.subheadline)
+                                Text("\(activitiesThisWeek)/\(settings.weeklyGoal) workouts this week").font(.subheadline)
                             }
                             Spacer()
                             if weekDone {
@@ -800,7 +1057,7 @@ struct HomeDashboardView: View {
             SectionHeader(title: "Ready to Progress", icon: "chart.line.uptrend.xyaxis", color: .green)
 
             VStack(spacing: 0) {
-                ForEach(Array(progressionSuggestions.enumerated()), id: \.element.id) { index, suggestion in
+                ForEach(Array(cachedProgressionSuggestions.enumerated()), id: \.element.id) { index, suggestion in
                     NavigationLink(value: suggestion.exerciseName) {
                         HStack(spacing: 14) {
                             ZStack {
@@ -821,7 +1078,7 @@ struct HomeDashboardView: View {
                         .padding(.horizontal, 16).padding(.vertical, 12)
                     }
                     .buttonStyle(.plain)
-                    if index < progressionSuggestions.count - 1 { Divider().padding(.leading, 66) }
+                    if index < cachedProgressionSuggestions.count - 1 { Divider().padding(.leading, 66) }
                 }
             }
             .background(Color(.tertiarySystemGroupedBackground))
@@ -830,11 +1087,70 @@ struct HomeDashboardView: View {
         .appCard()
     }
 
+    // MARK: - Cardio Card
+
+    private var cardioCard: some View {
+        let weekStart = Calendar.current.dateInterval(of: .weekOfYear, for: .now)?.start ?? .distantPast
+        let thisWeekSessions = cardioSessions.filter { $0.date >= weekStart }
+        let thisWeekKm = thisWeekSessions.reduce(0) { $0 + $1.distanceMeters } / 1000
+        let lastSession = cardioSessions.first
+        let distUnit = weightUnit.distanceUnit
+        let useKm = distUnit == .km
+
+        return VStack(alignment: .leading, spacing: 14) {
+            HStack {
+                SectionHeader(title: "Cardio", icon: "figure.run", color: .orange)
+                Spacer()
+                NavigationLink { CardioHubView() } label: {
+                    Text("See All").font(.caption.weight(.semibold)).foregroundStyle(.orange)
+                }
+            }
+
+            HStack(spacing: 12) {
+                // This week stat
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("This Week")
+                        .font(.caption2.weight(.semibold)).foregroundStyle(.secondary)
+                    Text(String(format: "%.1f %@", distUnit.display(thisWeekKm), distUnit.label))
+                        .font(.system(size: 22, weight: .bold, design: .rounded))
+                        .monospacedDigit()
+                        .foregroundStyle(.orange)
+                    Text("\(thisWeekSessions.count) session\(thisWeekSessions.count == 1 ? "" : "s")")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(14)
+                .background(Color.orange.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
+
+                // Last run stat
+                if let last = lastSession {
+                    NavigationLink(destination: CardioSessionDetailView(session: last)) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Last Run")
+                                .font(.caption2.weight(.semibold)).foregroundStyle(.secondary)
+                            Text(last.formattedDistance(useKm: useKm))
+                                .font(.system(size: 22, weight: .bold, design: .rounded))
+                                .monospacedDigit()
+                                .foregroundStyle(last.type.color)
+                            Text(last.formattedPace(useKm: useKm))
+                                .font(.caption).foregroundStyle(.secondary)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(14)
+                        .background(last.type.color.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+        .appCard()
+    }
+
     // MARK: - Recent Workouts Card
 
     private var recentWorkoutsCard: some View {
         VStack(alignment: .leading, spacing: 14) {
-            SectionHeader(title: "Recent Workouts", icon: "clock.fill", color: .green)
+            SectionHeader(title: "Recent Workouts", icon: "clock.fill", color: .blue)
 
             if allWorkouts.isEmpty {
                 VStack(spacing: 16) {
@@ -902,25 +1218,27 @@ struct HomeDashboardView: View {
                     NavigationLink(value: active) {
                         quickLinkTile(icon: "play.circle.fill", color: .orange, title: "Continue Workout")
                     }.buttonStyle(.plain)
+                } else {
+                    NavigationLink { WorkoutScheduleView() } label: {
+                        quickLinkTile(icon: "calendar.badge.checkmark", color: .green, title: "Weekly Schedule")
+                    }.buttonStyle(.plain)
                 }
-
-                Button { showingAddWorkout = true } label: {
-                    quickLinkTile(icon: "plus.circle.fill", color: .accentColor, title: "Start Workout")
-                }.buttonStyle(.plain)
 
                 NavigationLink { ExerciseLibraryView() } label: {
                     quickLinkTile(icon: "books.vertical", color: .blue, title: "Exercise Library")
                 }.buttonStyle(.plain)
 
                 NavigationLink { InsightsView() } label: {
-                    quickLinkTile(icon: "chart.bar", color: .green, title: "Insights")
+                    quickLinkTile(icon: "chart.bar.fill", color: .purple, title: "Insights")
                 }.buttonStyle(.plain)
 
-                if inProgressWorkout == nil {
-                    NavigationLink { HealthDashboardView() } label: {
-                        quickLinkTile(icon: "heart.text.square", color: .red, title: "Health")
-                    }.buttonStyle(.plain)
-                }
+                NavigationLink { PersonalRecordsView() } label: {
+                    quickLinkTile(icon: "trophy.fill", color: .yellow, title: "Personal Records")
+                }.buttonStyle(.plain)
+
+                NavigationLink { HealthDashboardView() } label: {
+                    quickLinkTile(icon: "heart.text.square", color: .red, title: "Health")
+                }.buttonStyle(.plain)
             }
         }
         .appCard()
@@ -973,20 +1291,12 @@ struct HomeDashboardView: View {
 
     private func repeatLastWorkout() {
         guard let last = allWorkouts.first else { return }
-        let formatter = DateFormatter(); formatter.dateFormat = "MMM d"
-        let newName = "\(last.name.components(separatedBy: " - ").first ?? last.name) - \(formatter.string(from: .now))"
+        let baseName = last.name.components(separatedBy: " - ").first ?? last.name
+        let newName = "\(baseName) - \(Date.now.formatted(.dateTime.month(.abbreviated).day()))"
         let workout = Workout(name: newName, date: .now)
         modelContext.insert(workout)
-        for (index, oldExercise) in last.exercises.sorted(by: { $0.order < $1.order }).enumerated() {
-            let exercise = Exercise(name: oldExercise.name, workout: workout, category: oldExercise.category)
-            exercise.order = index
-            exercise.supersetGroup = oldExercise.supersetGroup
-            exercise.notes = oldExercise.notes
-            exercise.customRestDuration = oldExercise.customRestDuration
-            modelContext.insert(exercise)
-            workout.exercises.append(exercise)
-        }
-        try? modelContext.save()
+        workout.copyExercises(from: last.exercises, into: modelContext)
+        modelContext.saveOrLog()
     }
 }
 

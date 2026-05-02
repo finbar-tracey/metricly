@@ -3,8 +3,8 @@ import SwiftData
 
 @Model
 final class ProgressPhoto {
-    var date: Date
-    var imageData: Data
+    var date: Date = Date()
+    var imageData: Data = Data()
     var notes: String = ""
     var category: String = "Front"
 

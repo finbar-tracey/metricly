@@ -1,19 +1,33 @@
 import SwiftUI
 import SwiftData
 import UIKit
+import UserNotifications
 
 struct FinishWorkoutSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.weightUnit) private var weightUnit
     @Query private var settingsArray: [UserSettings]
+    @Query(filter: #Predicate<Exercise> { $0.workout?.isTemplate == false })
+    private var allExercises: [Exercise]
     let workout: Workout
+
+    @Query(filter: #Predicate<Workout> { !$0.isTemplate }, sort: \Workout.date, order: .reverse)
+    private var allWorkouts: [Workout]
 
     @State private var rating: Int = 0
     @State private var notes: String
+    @State private var shareImage: UIImage?
+    @State private var showingShare = false
+    @State private var showingReminderPrompt = false
 
     init(workout: Workout) {
         self.workout = workout
         _notes = State(initialValue: workout.notes)
+    }
+
+    /// True when this is the user's first completed workout and they haven't set reminders yet.
+    private var shouldPromptForReminders: Bool {
+        allWorkouts.count <= 1 && (settingsArray.first?.reminderDays.isEmpty ?? true)
     }
 
     private var totalVolume: Double {
@@ -30,21 +44,53 @@ struct FinishWorkoutSheet: View {
                 VStack(spacing: AppTheme.sectionSpacing) {
                     celebrationCard
                     statsCard
+                    if !sessionPRs.isEmpty { prCard }
                     notesCard
                 }
                 .padding(.horizontal)
                 .padding(.bottom, 36)
             }
             .background(Color(.systemGroupedBackground))
-            .navigationTitle("Finish Workout")
+            .navigationTitle("Workout Complete")
             .navigationBarTitleDisplayMode(.inline)
+            .alert("Stay consistent 🔥", isPresented: $showingReminderPrompt) {
+                Button("Set Reminder") {
+                    // Request permission then open Settings to let user pick days
+                    Task {
+                        let status = await ReminderManager.checkAuthorizationStatus()
+                        if status == .denied {
+                            if let url = URL(string: UIApplication.openSettingsURLString) {
+                                await UIApplication.shared.open(url)
+                            }
+                        } else {
+                            UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { _, _ in }
+                        }
+                    }
+                }
+                Button("Maybe Later", role: .cancel) {}
+            } message: {
+                Text("Want Metricly to remind you on your training days? You can set this up in Settings anytime.")
+            }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
                 }
+                ToolbarItem(placement: .primaryAction) {
+                    Button {
+                        shareImage = renderWorkoutShareImage(workout: workout, weightUnit: weightUnit)
+                        showingShare = true
+                    } label: {
+                        Image(systemName: "square.and.arrow.up")
+                    }
+                }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { finishWorkout() }
                         .font(.headline)
+                }
+            }
+            .sheet(isPresented: $showingShare) {
+                if let img = shareImage {
+                    ShareSheet(items: [img])
                 }
             }
         }
@@ -183,6 +229,74 @@ struct FinishWorkoutSheet: View {
         }
     }
 
+    // MARK: - PR Detection
+
+    struct SessionPR: Identifiable {
+        let id = UUID()
+        let exerciseName: String
+        let weight: Double
+    }
+
+    private var sessionPRs: [SessionPR] {
+        var prs: [SessionPR] = []
+        for exercise in workout.exercises {
+            let sessionBest = exercise.sets.filter { !$0.isWarmUp }.map(\.weight).max() ?? 0
+            guard sessionBest > 0 else { continue }
+            // Historical best = max weight across all OTHER instances of this exercise
+            let historicalBest = allExercises
+                .filter { other in
+                    other.name.lowercased() == exercise.name.lowercased()
+                    && other.persistentModelID != exercise.persistentModelID
+                    && !(other.workout?.isTemplate ?? true)
+                }
+                .flatMap(\.sets)
+                .filter { !$0.isWarmUp }
+                .map(\.weight)
+                .max() ?? 0
+            if sessionBest > historicalBest {
+                prs.append(SessionPR(exerciseName: exercise.name, weight: sessionBest))
+            }
+        }
+        return prs
+    }
+
+    // MARK: - PR Card
+
+    private var prCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            SectionHeader(title: "Personal Records", icon: "trophy.fill", color: .yellow)
+
+            VStack(spacing: 0) {
+                ForEach(sessionPRs) { pr in
+                    HStack(spacing: 12) {
+                        ZStack {
+                            Circle().fill(Color.yellow.opacity(0.15)).frame(width: 36, height: 36)
+                            Image(systemName: "trophy.fill")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundStyle(.yellow)
+                        }
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(pr.exerciseName)
+                                .font(.subheadline.weight(.semibold))
+                            Text("New best: \(weightUnit.format(pr.weight))")
+                                .font(.caption).foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Image(systemName: "star.fill")
+                            .font(.caption).foregroundStyle(.yellow)
+                    }
+                    .padding(.horizontal, 14).padding(.vertical, 10)
+                    if pr.id != sessionPRs.last?.id {
+                        Divider().padding(.leading, 62)
+                    }
+                }
+            }
+            .background(Color(.secondarySystemGroupedBackground))
+            .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardRadius))
+            .shadow(color: .black.opacity(0.06), radius: 8, x: 0, y: 2)
+        }
+    }
+
     // MARK: - Helpers
 
     private func formatVolume(_ volumeKg: Double) -> String {
@@ -216,16 +330,32 @@ struct FinishWorkoutSheet: View {
         )
 
         if settingsArray.first?.healthKitEnabled == true {
-            Task {
-                try? await HealthKitManager.shared.saveWorkout(
-                    name: workout.name,
-                    start: workout.date,
-                    end: workout.endTime ?? .now
-                )
-            }
+            Task { try? await HealthKitManager.shared.saveStrengthWorkout(workout) }
         }
 
         UIImpactFeedbackGenerator(style: .heavy).impactOccurred()
+
+        // Cancel today's streak nudge — user has already worked out
+        ReminderManager.cancelTodayStreakNudge()
+
+        // First-workout nudge: prompt to set up reminders
+        if shouldPromptForReminders {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+                showingReminderPrompt = true
+            }
+        }
+
+        // Push fresh data to home screen widget
+        WidgetDataWriter.update(
+            streakDays: 0,          // caller doesn't have streak — widget reads from shared store; 0 = unchanged
+            todayWorkoutName: workout.name,
+            weeklyCardioKm: 0,
+            lastRunPace: "",
+            lastRunDist: "",
+            weeklyGoal: settingsArray.first?.weeklyGoal ?? 0,
+            workoutsThisWeek: 0     // widget re-computes from stored value
+        )
+
         dismiss()
     }
 }

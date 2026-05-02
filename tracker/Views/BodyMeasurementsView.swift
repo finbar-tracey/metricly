@@ -131,11 +131,11 @@ struct BodyMeasurementsView: View {
                 }
 
                 HStack(spacing: 0) {
-                    heroStatCol("Lowest", value: lowestValue.map { formatLength($0) } ?? "—")
+                    HeroStatCol(value: lowestValue.map { formatLength($0) } ?? "—", label: "Lowest")
                     Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 28)
-                    heroStatCol("Highest", value: highestValue.map { formatLength($0) } ?? "—")
+                    HeroStatCol(value: highestValue.map { formatLength($0) } ?? "—", label: "Highest")
                     Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 28)
-                    heroStatCol("Entries", value: "\(siteEntries.count)")
+                    HeroStatCol(value: "\(siteEntries.count)", label: "Entries")
                 }
             }
             .padding(20)
@@ -143,14 +143,6 @@ struct BodyMeasurementsView: View {
         .heroCard()
     }
 
-    private func heroStatCol(_ title: String, value: String) -> some View {
-        VStack(spacing: 3) {
-            Text(value).font(.system(size: 16, weight: .bold, design: .rounded))
-                .foregroundStyle(.white).monospacedDigit()
-            Text(title).font(.caption2).foregroundStyle(.white.opacity(0.70))
-        }
-        .frame(maxWidth: .infinity)
-    }
 
     // MARK: - Log Card
 

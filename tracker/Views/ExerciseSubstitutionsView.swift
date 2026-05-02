@@ -1,5 +1,9 @@
 import SwiftUI
 
+struct SubstitutionDestination: Hashable {
+    let exerciseName: String
+}
+
 struct ExerciseSubstitutionsView: View {
     let exerciseName: String
 

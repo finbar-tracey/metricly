@@ -3,8 +3,8 @@ import SwiftData
 
 @Model
 final class WaterEntry {
-    var date: Date
-    var milliliters: Double // always stored in ml
+    var date: Date = Date()
+    var milliliters: Double = 0 // always stored in ml
 
     init(date: Date = .now, milliliters: Double) {
         self.date = date

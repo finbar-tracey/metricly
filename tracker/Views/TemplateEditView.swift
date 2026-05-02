@@ -80,9 +80,14 @@ struct TemplateEditView: View {
                                 RoundedRectangle(cornerRadius: 8)
                                     .fill(Color.accentColor.opacity(0.12))
                                     .frame(width: 36, height: 36)
-                                Image(systemName: exercise.category?.icon ?? "dumbbell.fill")
-                                    .font(.system(size: 14, weight: .semibold))
-                                    .foregroundStyle(Color.accentColor)
+                                if let category = exercise.category {
+                                    MuscleIconView(group: category, color: Color.accentColor)
+                                        .frame(width: 16, height: 16)
+                                } else {
+                                    Image(systemName: "dumbbell.fill")
+                                        .font(.system(size: 14, weight: .semibold))
+                                        .foregroundStyle(Color.accentColor)
+                                }
                             }
                             VStack(alignment: .leading, spacing: 3) {
                                 Text(exercise.name)

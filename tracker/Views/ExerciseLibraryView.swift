@@ -6,8 +6,10 @@ struct ExerciseLibraryView: View {
     @Query(filter: #Predicate<Workout> { !$0.isTemplate }) private var workouts: [Workout]
     @Environment(\.weightUnit) private var weightUnit
     @State private var searchText = ""
+    @State private var cachedExercises: [ExerciseInfo] = []
 
-    private var allExercises: [ExerciseInfo] {
+    // Rebuild only when workouts change, not on every keystroke
+    private func buildAllExercises() -> [ExerciseInfo] {
         var seen: [String: ExerciseInfo] = [:]
         for guide in ExerciseGuide.database {
             let key = guide.name.lowercased()
@@ -38,9 +40,9 @@ struct ExerciseLibraryView: View {
     }
 
     private var filteredExercises: [ExerciseInfo] {
-        if searchText.isEmpty { return allExercises }
+        if searchText.isEmpty { return cachedExercises }
         let query = searchText.lowercased()
-        return allExercises.filter { $0.name.lowercased().contains(query) }
+        return cachedExercises.filter { $0.name.lowercased().contains(query) }
     }
 
     private var groupedExercises: [(MuscleGroup, [ExerciseInfo])] {
@@ -84,9 +86,8 @@ struct ExerciseLibraryView: View {
                                 RoundedRectangle(cornerRadius: 5)
                                     .fill(groupColor(group).gradient)
                                     .frame(width: 18, height: 18)
-                                Image(systemName: group.icon)
-                                    .font(.system(size: 9, weight: .bold))
-                                    .foregroundStyle(.white)
+                                MuscleIconView(group: group, color: .white)
+                                    .frame(width: 11, height: 11)
                             }
                             Text(group.rawValue)
                                 .textCase(nil)
@@ -99,9 +100,8 @@ struct ExerciseLibraryView: View {
         .searchable(text: $searchText, prompt: "Search exercises")
         .navigationTitle("Exercise Library")
         .navigationBarTitleDisplayMode(.inline)
-        .navigationDestination(for: String.self) { name in
-            ExerciseHistoryView(exerciseName: name)
-        }
+        .onAppear { cachedExercises = buildAllExercises() }
+        .onChange(of: workouts.count) { cachedExercises = buildAllExercises() }
     }
 
     private func exerciseRow(_ exercise: ExerciseInfo, group: MuscleGroup) -> some View {
@@ -110,9 +110,8 @@ struct ExerciseLibraryView: View {
                 RoundedRectangle(cornerRadius: 8)
                     .fill(groupColor(group).opacity(0.12))
                     .frame(width: 34, height: 34)
-                Image(systemName: group.icon)
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(groupColor(group))
+                MuscleIconView(group: group, color: groupColor(group))
+                    .frame(width: 18, height: 18)
             }
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 5) {
@@ -171,6 +170,7 @@ struct ExerciseLibraryView: View {
                 exercise.category = newCategory
             }
         }
+        modelContext.saveOrLog()
         HapticsManager.lightTap()
     }
 }

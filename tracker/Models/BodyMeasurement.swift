@@ -3,9 +3,9 @@ import SwiftData
 
 @Model
 final class BodyMeasurement {
-    var date: Date
-    var site: String
-    var value: Double // Always stored in cm
+    var date: Date = Date()
+    var site: String = ""
+    var value: Double = 0 // Always stored in cm
 
     init(date: Date = .now, site: String, value: Double) {
         self.date = date

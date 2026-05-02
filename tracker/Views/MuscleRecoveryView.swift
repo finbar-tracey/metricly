@@ -14,6 +14,7 @@ struct MuscleRecoveryView: View {
     @State private var todayRestingHR: Double?
     @State private var averageRestingHR: Double?
     @State private var healthDataLoaded = false
+    @Query(sort: \CardioSession.date, order: .reverse) private var cardioSessions: [CardioSession]
     @State private var externalWorkouts: [ExternalWorkout] = []
 
     private var recoveryResult: RecoveryResult {
@@ -26,7 +27,8 @@ struct MuscleRecoveryView: View {
                 averageRestingHR: averageRestingHR,
                 sleepMinutes: healthDataLoaded ? lastNightSleep : nil
             ),
-            externalWorkouts: externalWorkouts
+            externalWorkouts: externalWorkouts,
+            cardioSessions: Array(cardioSessions.prefix(50))
         )
     }
 
@@ -75,7 +77,7 @@ struct MuscleRecoveryView: View {
 
     private var heroCard: some View {
         let score = recoveryResult.readinessScore
-        let readinessColor = RecoveryEngine.readinessColor(score)
+        let readinessColor = RecoveryEngine.freshnessColor(score)
 
         return ZStack(alignment: .topLeading) {
             LinearGradient(
@@ -282,9 +284,8 @@ struct MuscleRecoveryView: View {
         return HStack(spacing: 14) {
             ZStack {
                 Circle().fill(color.opacity(0.12)).frame(width: 36, height: 36)
-                Image(systemName: result.group.icon)
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(color)
+                MuscleIconView(group: result.group, color: color)
+                    .frame(width: 16, height: 16)
             }
             VStack(alignment: .leading, spacing: 5) {
                 HStack {
@@ -331,9 +332,8 @@ struct MuscleRecoveryView: View {
                 LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
                     ForEach(ready) { result in
                         HStack(spacing: 8) {
-                            Image(systemName: result.group.icon)
-                                .font(.system(size: 13, weight: .semibold))
-                                .foregroundStyle(.green)
+                            MuscleIconView(group: result.group, color: .green)
+                                .frame(width: 14, height: 14)
                             Text(result.group.rawValue)
                                 .font(.caption.weight(.semibold))
                                 .foregroundStyle(.primary)

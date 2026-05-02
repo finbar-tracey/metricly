@@ -35,7 +35,11 @@ struct HeartRateDetailView: View {
                         .frame(maxWidth: .infinity, minHeight: 200)
                 } else {
                     heroCard
-                    timeRangePicker
+                    HStack {
+                        CapsuleSegmentPicker(options: TimeRange.allCases, selection: $timeRange,
+                                             activeColor: Color(red: 0.88, green: 0.15, blue: 0.25))
+                        Spacer()
+                    }
                     if let stats = todayStats {
                         zonesCard(stats: stats)
                     }
@@ -128,70 +132,25 @@ struct HeartRateDetailView: View {
                 // Stat columns
                 HStack(spacing: 0) {
                     if let stats = todayStats {
-                        heroStatColumn(icon: "arrow.down.heart.fill", label: "Min", value: "\(Int(stats.min)) bpm")
+                        HeroStatCol(value: "\(Int(stats.min)) bpm", label: "Min", icon: "arrow.down.heart.fill")
                         Divider().frame(height: 32).overlay(.white.opacity(0.30))
-                        heroStatColumn(icon: "arrow.up.heart.fill", label: "Max", value: "\(Int(stats.max)) bpm")
+                        HeroStatCol(value: "\(Int(stats.max)) bpm", label: "Max", icon: "arrow.up.heart.fill")
                         Divider().frame(height: 32).overlay(.white.opacity(0.30))
                     }
                     if let hrv = todayHRV {
-                        heroStatColumn(icon: "waveform.path.ecg", label: "HRV", value: "\(Int(hrv)) ms")
+                        HeroStatCol(value: "\(Int(hrv)) ms", label: "HRV", icon: "waveform.path.ecg")
                     } else {
-                        heroStatColumn(icon: "waveform.path.ecg", label: "HRV", value: "—")
+                        HeroStatCol(value: "—", label: "HRV", icon: "waveform.path.ecg")
                     }
                     if let stats = todayStats {
                         Divider().frame(height: 32).overlay(.white.opacity(0.30))
-                        heroStatColumn(icon: "arrow.up.arrow.down", label: "Range", value: "\(Int(stats.max - stats.min))")
+                        HeroStatCol(value: "\(Int(stats.max - stats.min))", label: "Range", icon: "arrow.up.arrow.down")
                     }
                 }
             }
             .padding(20)
         }
         .heroCard()
-    }
-
-    private func heroStatColumn(icon: String, label: String, value: String) -> some View {
-        VStack(spacing: 3) {
-            Image(systemName: icon)
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(.white.opacity(0.80))
-            Text(value)
-                .font(.system(size: 14, weight: .bold, design: .rounded))
-                .foregroundStyle(.white)
-                .monospacedDigit()
-            Text(label)
-                .font(.system(size: 10, weight: .medium))
-                .foregroundStyle(.white.opacity(0.65))
-        }
-        .frame(maxWidth: .infinity)
-    }
-
-    // MARK: - Time Range Picker
-
-    private var timeRangePicker: some View {
-        HStack(spacing: 6) {
-            ForEach(TimeRange.allCases, id: \.self) { range in
-                Button {
-                    withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
-                        timeRange = range
-                    }
-                } label: {
-                    Text(range.rawValue)
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(timeRange == range ? .white : .primary)
-                        .padding(.horizontal, 18)
-                        .padding(.vertical, 8)
-                        .background(
-                            timeRange == range
-                                ? AnyShapeStyle(Color(red: 0.88, green: 0.15, blue: 0.25))
-                                : AnyShapeStyle(Color(.secondarySystemGroupedBackground)),
-                            in: Capsule()
-                        )
-                        .shadow(color: timeRange == range ? Color.red.opacity(0.35) : .clear, radius: 8, x: 0, y: 3)
-                }
-                .buttonStyle(.plain)
-            }
-            Spacer()
-        }
     }
 
     // MARK: - Zones Card
@@ -530,7 +489,7 @@ struct HeartRateDetailView: View {
     private var lastWeekAvgResting: Double {
         let calendar = Calendar.current
         let weekStart = calendar.dateInterval(of: .weekOfYear, for: .now)?.start ?? .now
-        let prevStart = calendar.date(byAdding: .day, value: -7, to: weekStart)!
+        let prevStart = calendar.date(byAdding: .day, value: -7, to: weekStart) ?? weekStart
         let lastWeek = dailyRestingHR.filter { $0.date >= prevStart && $0.date < weekStart }
         guard !lastWeek.isEmpty else { return 0 }
         return lastWeek.map(\.bpm).reduce(0, +) / Double(lastWeek.count)

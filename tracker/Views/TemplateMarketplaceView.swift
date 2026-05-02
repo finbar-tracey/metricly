@@ -166,7 +166,7 @@ struct TemplateMarketplaceView: View {
                     ForEach(template.workouts.prefix(3), id: \.name) { workout in
                         HStack(spacing: 8) {
                             Image(systemName: "dumbbell.fill")
-                                .font(.system(size: 10)).foregroundStyle(.accentColor)
+                                .font(.system(size: 10)).foregroundStyle(Color.accentColor)
                             Text(workout.name).font(.caption.weight(.semibold))
                             Text("· \(workout.exercises.count) exercises")
                                 .font(.caption).foregroundStyle(.tertiary)

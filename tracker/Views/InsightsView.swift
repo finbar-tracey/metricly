@@ -62,18 +62,22 @@ struct InsightsView: View {
                 .padding(.vertical, 10)
             }
 
-            switch selectedTab {
-            case .volume:
-                VolumeTrendsView()
-            case .muscles:
-                MuscleGroupSummaryView()
-            case .recovery:
-                MuscleRecoveryView()
-            case .bodyWeight:
-                BodyWeightView()
-            case .recap:
-                WeeklyMonthlyReportView()
+            Group {
+                switch selectedTab {
+                case .volume:
+                    VolumeTrendsView()
+                case .muscles:
+                    MuscleGroupSummaryView()
+                case .recovery:
+                    MuscleRecoveryView()
+                case .bodyWeight:
+                    BodyWeightView()
+                case .recap:
+                    WeeklyMonthlyReportView()
+                }
             }
+            .transition(.opacity)
+            .animation(.easeInOut(duration: 0.2), value: selectedTab)
         }
         .navigationTitle("Insights")
         .navigationBarTitleDisplayMode(.inline)

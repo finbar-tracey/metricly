@@ -99,11 +99,11 @@ struct MuscleGroupSummaryView: View {
                 }
 
                 HStack(spacing: 0) {
-                    heroStatCol("Muscles", value: "\(chartData.count)")
+                    HeroStatCol(value: "\(chartData.count)", label: "Muscles")
                     Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 28)
-                    heroStatCol("Workouts", value: "\(filteredWorkouts.count)")
+                    HeroStatCol(value: "\(filteredWorkouts.count)", label: "Workouts")
                     Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 28)
-                    heroStatCol("Top", value: chartData.first?.group.rawValue ?? "—")
+                    HeroStatCol(value: chartData.first?.group.rawValue ?? "—", label: "Top")
                 }
             }
             .padding(20)
@@ -111,14 +111,6 @@ struct MuscleGroupSummaryView: View {
         .heroCard()
     }
 
-    private func heroStatCol(_ title: String, value: String) -> some View {
-        VStack(spacing: 3) {
-            Text(value).font(.system(size: 15, weight: .bold, design: .rounded))
-                .foregroundStyle(.white).monospacedDigit()
-            Text(title).font(.caption2).foregroundStyle(.white.opacity(0.70))
-        }
-        .frame(maxWidth: .infinity)
-    }
 
     // MARK: - Chart Card
 
@@ -158,9 +150,8 @@ struct MuscleGroupSummaryView: View {
                                 RoundedRectangle(cornerRadius: 8)
                                     .fill(colorFor(item.group).opacity(0.12))
                                     .frame(width: 34, height: 34)
-                                Image(systemName: item.group.icon)
-                                    .font(.system(size: 13, weight: .semibold))
-                                    .foregroundStyle(colorFor(item.group))
+                                MuscleIconView(group: item.group, color: colorFor(item.group))
+                                    .frame(width: 14, height: 14)
                             }
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(item.group.rawValue).font(.subheadline.weight(.semibold))

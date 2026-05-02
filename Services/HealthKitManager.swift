@@ -17,7 +17,11 @@ final class HealthKitManager {
 
         let typesToShare: Set<HKSampleType> = [
             HKObjectType.workoutType(),
-            HKObjectType.quantityType(forIdentifier: .bodyMass)!
+            HKObjectType.quantityType(forIdentifier: .bodyMass)!,
+            HKObjectType.quantityType(forIdentifier: .activeEnergyBurned)!,
+            HKObjectType.quantityType(forIdentifier: .distanceWalkingRunning)!,
+            HKObjectType.quantityType(forIdentifier: .distanceCycling)!,
+            HKObjectType.quantityType(forIdentifier: .heartRate)!
         ]
 
         let typesToRead: Set<HKObjectType> = [
@@ -27,6 +31,7 @@ final class HealthKitManager {
             HKObjectType.quantityType(forIdentifier: .heartRateVariabilitySDNN)!,
             HKObjectType.quantityType(forIdentifier: .activeEnergyBurned)!,
             HKObjectType.quantityType(forIdentifier: .distanceWalkingRunning)!,
+            HKObjectType.quantityType(forIdentifier: .distanceCycling)!,
             HKObjectType.quantityType(forIdentifier: .vo2Max)!,
             HKObjectType.categoryType(forIdentifier: .sleepAnalysis)!,
             HKObjectType.workoutType()
@@ -39,7 +44,7 @@ final class HealthKitManager {
 
     func fetchSteps(for date: Date) async throws -> Double {
         let type = HKQuantityType(.stepCount)
-        let interval = Calendar.current.dateInterval(of: .day, for: date)!
+        let interval = Calendar.current.dayInterval(for: date)
         let predicate = HKQuery.predicateForSamples(withStart: interval.start, end: interval.end)
         let descriptor = HKStatisticsQueryDescriptor(
             predicate: .quantitySample(type: type, predicate: predicate),
@@ -52,8 +57,8 @@ final class HealthKitManager {
     func fetchDailySteps(days: Int) async throws -> [(date: Date, steps: Double)] {
         let type = HKQuantityType(.stepCount)
         let calendar = Calendar.current
-        let start = calendar.startOfDay(for: calendar.date(byAdding: .day, value: -days, to: .now)!)
-        let end = calendar.startOfDay(for: calendar.date(byAdding: .day, value: 1, to: .now)!)
+        let start = calendar.startOfDay(for: calendar.adding(.day, value: -days, to: .now))
+        let end = calendar.startOfDay(for: calendar.adding(.day, value: 1, to: .now))
         let predicate = HKQuery.predicateForSamples(withStart: start, end: end)
         let descriptor = HKStatisticsCollectionQueryDescriptor(
             predicate: .quantitySample(type: type, predicate: predicate),
@@ -74,7 +79,7 @@ final class HealthKitManager {
         let type = HKQuantityType(.stepCount)
         let calendar = Calendar.current
         let start = calendar.startOfDay(for: date)
-        let end = calendar.date(byAdding: .day, value: 1, to: start)!
+        let end = calendar.adding(.day, value: 1, to: start)
         let predicate = HKQuery.predicateForSamples(withStart: start, end: end)
         let descriptor = HKStatisticsCollectionQueryDescriptor(
             predicate: .quantitySample(type: type, predicate: predicate),
@@ -94,7 +99,7 @@ final class HealthKitManager {
 
     func fetchDistance(for date: Date) async throws -> Double {
         let type = HKQuantityType(.distanceWalkingRunning)
-        let interval = Calendar.current.dateInterval(of: .day, for: date)!
+        let interval = Calendar.current.dayInterval(for: date)
         let predicate = HKQuery.predicateForSamples(withStart: interval.start, end: interval.end)
         let descriptor = HKStatisticsQueryDescriptor(
             predicate: .quantitySample(type: type, predicate: predicate),
@@ -107,8 +112,8 @@ final class HealthKitManager {
     func fetchDailyDistance(days: Int) async throws -> [(date: Date, km: Double)] {
         let type = HKQuantityType(.distanceWalkingRunning)
         let calendar = Calendar.current
-        let start = calendar.startOfDay(for: calendar.date(byAdding: .day, value: -days, to: .now)!)
-        let end = calendar.startOfDay(for: calendar.date(byAdding: .day, value: 1, to: .now)!)
+        let start = calendar.startOfDay(for: calendar.adding(.day, value: -days, to: .now))
+        let end = calendar.startOfDay(for: calendar.adding(.day, value: 1, to: .now))
         let predicate = HKQuery.predicateForSamples(withStart: start, end: end)
         let descriptor = HKStatisticsCollectionQueryDescriptor(
             predicate: .quantitySample(type: type, predicate: predicate),
@@ -128,8 +133,8 @@ final class HealthKitManager {
     func fetchDailyActiveEnergy(days: Int) async throws -> [(date: Date, kcal: Double)] {
         let type = HKQuantityType(.activeEnergyBurned)
         let calendar = Calendar.current
-        let start = calendar.startOfDay(for: calendar.date(byAdding: .day, value: -days, to: .now)!)
-        let end = calendar.startOfDay(for: calendar.date(byAdding: .day, value: 1, to: .now)!)
+        let start = calendar.startOfDay(for: calendar.adding(.day, value: -days, to: .now))
+        let end = calendar.startOfDay(for: calendar.adding(.day, value: 1, to: .now))
         let predicate = HKQuery.predicateForSamples(withStart: start, end: end)
         let descriptor = HKStatisticsCollectionQueryDescriptor(
             predicate: .quantitySample(type: type, predicate: predicate),
@@ -150,7 +155,7 @@ final class HealthKitManager {
 
     func fetchRestingHeartRate(for date: Date) async throws -> Double? {
         let type = HKQuantityType(.restingHeartRate)
-        let interval = Calendar.current.dateInterval(of: .day, for: date)!
+        let interval = Calendar.current.dayInterval(for: date)
         let predicate = HKQuery.predicateForSamples(withStart: interval.start, end: interval.end)
         let bpmUnit = HKUnit.count().unitDivided(by: .minute())
         let descriptor = HKSampleQueryDescriptor(
@@ -164,7 +169,7 @@ final class HealthKitManager {
 
     func fetchHeartRateStats(for date: Date) async throws -> (min: Double, max: Double, avg: Double)? {
         let type = HKQuantityType(.heartRate)
-        let interval = Calendar.current.dateInterval(of: .day, for: date)!
+        let interval = Calendar.current.dayInterval(for: date)
         let predicate = HKQuery.predicateForSamples(withStart: interval.start, end: interval.end)
         let bpmUnit = HKUnit.count().unitDivided(by: .minute())
         let descriptor = HKStatisticsQueryDescriptor(
@@ -183,8 +188,8 @@ final class HealthKitManager {
     func fetchDailyRestingHeartRate(days: Int) async throws -> [(date: Date, bpm: Double)] {
         let type = HKQuantityType(.restingHeartRate)
         let calendar = Calendar.current
-        let start = calendar.startOfDay(for: calendar.date(byAdding: .day, value: -days, to: .now)!)
-        let end = calendar.startOfDay(for: calendar.date(byAdding: .day, value: 1, to: .now)!)
+        let start = calendar.startOfDay(for: calendar.adding(.day, value: -days, to: .now))
+        let end = calendar.startOfDay(for: calendar.adding(.day, value: 1, to: .now))
         let predicate = HKQuery.predicateForSamples(withStart: start, end: end)
         let bpmUnit = HKUnit.count().unitDivided(by: .minute())
         let descriptor = HKStatisticsCollectionQueryDescriptor(
@@ -210,7 +215,7 @@ final class HealthKitManager {
         var results: [(date: Date, min: Double, max: Double)] = []
         for offset in 0..<days {
             guard let date = calendar.date(byAdding: .day, value: -offset, to: calendar.startOfDay(for: .now)) else { continue }
-            let interval = calendar.dateInterval(of: .day, for: date)!
+            let interval = calendar.dayInterval(for: date)
             let predicate = HKQuery.predicateForSamples(withStart: interval.start, end: interval.end)
             let descriptor = HKStatisticsQueryDescriptor(
                 predicate: .quantitySample(type: type, predicate: predicate),
@@ -229,7 +234,7 @@ final class HealthKitManager {
 
     func fetchHRV(for date: Date) async throws -> Double? {
         let type = HKQuantityType(.heartRateVariabilitySDNN)
-        let interval = Calendar.current.dateInterval(of: .day, for: date)!
+        let interval = Calendar.current.dayInterval(for: date)
         let predicate = HKQuery.predicateForSamples(withStart: interval.start, end: interval.end)
         let descriptor = HKSampleQueryDescriptor(
             predicates: [.quantitySample(type: type, predicate: predicate)],
@@ -243,8 +248,8 @@ final class HealthKitManager {
     func fetchDailyHRV(days: Int) async throws -> [(date: Date, ms: Double)] {
         let type = HKQuantityType(.heartRateVariabilitySDNN)
         let calendar = Calendar.current
-        let start = calendar.startOfDay(for: calendar.date(byAdding: .day, value: -days, to: .now)!)
-        let end = calendar.startOfDay(for: calendar.date(byAdding: .day, value: 1, to: .now)!)
+        let start = calendar.startOfDay(for: calendar.adding(.day, value: -days, to: .now))
+        let end = calendar.startOfDay(for: calendar.adding(.day, value: 1, to: .now))
         let predicate = HKQuery.predicateForSamples(withStart: start, end: end)
         let descriptor = HKStatisticsCollectionQueryDescriptor(
             predicate: .quantitySample(type: type, predicate: predicate),
@@ -267,9 +272,10 @@ final class HealthKitManager {
     func fetchSleep(for date: Date) async throws -> (totalMinutes: Double, inBed: Date?, wakeUp: Date?, stages: [SleepStage]) {
         let type = HKCategoryType(.sleepAnalysis)
         let calendar = Calendar.current
-        let eveningBefore = calendar.date(bySettingHour: 18, minute: 0, second: 0,
-            of: calendar.date(byAdding: .day, value: -1, to: date)!)!
-        let noonOfDate = calendar.date(bySettingHour: 12, minute: 0, second: 0, of: date)!
+        let yesterday = calendar.adding(.day, value: -1, to: date)
+        let eveningBefore = calendar.date(bySettingHour: 18, minute: 0, second: 0, of: yesterday)
+            ?? yesterday
+        let noonOfDate = calendar.date(bySettingHour: 12, minute: 0, second: 0, of: date) ?? date
         let predicate = HKQuery.predicateForSamples(withStart: eveningBefore, end: noonOfDate)
         let descriptor = HKSampleQueryDescriptor(
             predicates: [.categorySample(type: type, predicate: predicate)],
@@ -300,8 +306,8 @@ final class HealthKitManager {
                 asleepIntervals.append((sample.startDate, sample.endDate))
                 stages.append(SleepStage(type: .unspecified, start: sample.startDate, end: sample.endDate))
             case .inBed:
-                if inBed == nil || sample.startDate < inBed! { inBed = sample.startDate }
-                if wakeUp == nil || sample.endDate > wakeUp! { wakeUp = sample.endDate }
+                inBed = inBed.map { min($0, sample.startDate) } ?? sample.startDate
+                wakeUp = wakeUp.map { max($0, sample.endDate) } ?? sample.endDate
             case .awake:
                 stages.append(SleepStage(type: .awake, start: sample.startDate, end: sample.endDate))
             default:
@@ -369,7 +375,7 @@ final class HealthKitManager {
 
     func fetchActiveEnergy(for date: Date) async throws -> Double {
         let type = HKQuantityType(.activeEnergyBurned)
-        let interval = Calendar.current.dateInterval(of: .day, for: date)!
+        let interval = Calendar.current.dayInterval(for: date)
         let predicate = HKQuery.predicateForSamples(withStart: interval.start, end: interval.end)
         let descriptor = HKStatisticsQueryDescriptor(
             predicate: .quantitySample(type: type, predicate: predicate),
@@ -395,19 +401,104 @@ final class HealthKitManager {
         return samples.first?.quantity.doubleValue(for: unit)
     }
 
-    // MARK: - Write (existing)
+    // MARK: - Write
 
-    func saveWorkout(name: String, start: Date, end: Date) async throws {
+    /// Save a strength workout to Apple Health with estimated active calories.
+    func saveStrengthWorkout(_ workout: Workout) async throws {
         guard isAvailable else { return }
+        let start = workout.date
+        let end   = workout.endTime ?? .now
+        guard end > start else { return }
 
-        let configuration = HKWorkoutConfiguration()
-        configuration.activityType = .traditionalStrengthTraining
-        configuration.locationType = .indoor
+        let config = HKWorkoutConfiguration()
+        config.activityType = .traditionalStrengthTraining
+        config.locationType = .indoor
 
-        let builder = HKWorkoutBuilder(healthStore: store, configuration: configuration, device: .local())
+        let builder = HKWorkoutBuilder(healthStore: store, configuration: config, device: .local())
         try await builder.beginCollection(at: start)
+
+        // Estimate active energy: ~5 kcal per working set (rough but reasonable)
+        let workingSets = workout.exercises.flatMap(\.sets).filter { !$0.isWarmUp }.count
+        let estimatedKcal = max(30.0, Double(workingSets) * 5.0)
+        let energyType    = HKQuantityType(.activeEnergyBurned)
+        let energySample  = HKQuantitySample(
+            type: energyType,
+            quantity: HKQuantity(unit: .kilocalorie(), doubleValue: estimatedKcal),
+            start: start, end: end
+        )
+        try await builder.addSamples([energySample])
+
         try await builder.endCollection(at: end)
-        try await builder.addMetadata([HKMetadataKeyWorkoutBrandName: name])
+        try await builder.addMetadata([HKMetadataKeyWorkoutBrandName: workout.name])
+        try await builder.finishWorkout()
+    }
+
+    /// Save a cardio session to Apple Health with distance and active calories.
+    func saveCardioSession(_ session: CardioSession) async throws {
+        guard isAvailable else { return }
+        let end   = session.date
+        let start = end.addingTimeInterval(-session.durationSeconds)
+        guard session.durationSeconds > 0 else { return }
+
+        let config = HKWorkoutConfiguration()
+        switch session.type {
+        case .outdoorRun:
+            config.activityType = .running
+            config.locationType = .outdoor
+        case .indoorRun:
+            config.activityType = .running
+            config.locationType = .indoor
+        case .outdoorWalk:
+            config.activityType = .walking
+            config.locationType = .outdoor
+        case .indoorWalk:
+            config.activityType = .walking
+            config.locationType = .indoor
+        case .outdoorCycle:
+            config.activityType = .cycling
+            config.locationType = .outdoor
+        }
+
+        let builder = HKWorkoutBuilder(healthStore: store, configuration: config, device: .local())
+        try await builder.beginCollection(at: start)
+
+        var samples: [HKSample] = []
+
+        // Distance
+        if session.distanceMeters > 0 {
+            let distType: HKQuantityTypeIdentifier = (session.type == .outdoorCycle)
+                ? .distanceCycling : .distanceWalkingRunning
+            let distSample = HKQuantitySample(
+                type: HKQuantityType(distType),
+                quantity: HKQuantity(unit: .meter(), doubleValue: session.distanceMeters),
+                start: start, end: end
+            )
+            samples.append(distSample)
+        }
+
+        // Active energy (use stored value or estimate via MET)
+        let kcal = session.caloriesBurned ?? session.estimatedCalories()
+        let energySample = HKQuantitySample(
+            type: HKQuantityType(.activeEnergyBurned),
+            quantity: HKQuantity(unit: .kilocalorie(), doubleValue: kcal),
+            start: start, end: end
+        )
+        samples.append(energySample)
+
+        // Average heart rate (if recorded)
+        if let avgHR = session.avgHeartRate, avgHR > 0 {
+            let hrUnit  = HKUnit.count().unitDivided(by: .minute())
+            let hrSample = HKQuantitySample(
+                type: HKQuantityType(.heartRate),
+                quantity: HKQuantity(unit: hrUnit, doubleValue: avgHR),
+                start: start, end: end
+            )
+            samples.append(hrSample)
+        }
+
+        if !samples.isEmpty { try await builder.addSamples(samples) }
+        try await builder.endCollection(at: end)
+        try await builder.addMetadata([HKMetadataKeyWorkoutBrandName: session.title])
         try await builder.finishWorkout()
     }
 
@@ -426,7 +517,7 @@ final class HealthKitManager {
         guard isAvailable else { return [] }
 
         let calendar = Calendar.current
-        let start = calendar.startOfDay(for: calendar.date(byAdding: .day, value: -days, to: .now)!)
+        let start = calendar.startOfDay(for: calendar.adding(.day, value: -days, to: .now))
         let predicate = HKQuery.predicateForSamples(withStart: start, end: .now)
 
         let descriptor = HKSampleQueryDescriptor(
@@ -495,4 +586,19 @@ struct DailySleepDetail {
     let inBed: Date?
     let wakeUp: Date?
     let stages: [SleepStage]
+}
+
+// MARK: - Calendar convenience
+
+private extension Calendar {
+    /// Returns the `.day` DateInterval for a given date. Falls back to a 24-hour interval when
+    /// the calendar cannot produce one (virtually impossible for `.day`, but avoids a force-unwrap).
+    func dayInterval(for date: Date) -> DateInterval {
+        dateInterval(of: .day, for: date) ?? DateInterval(start: startOfDay(for: date), duration: 86400)
+    }
+
+    /// `date(byAdding:)` with a safe fallback to the base date on failure.
+    func adding(_ component: Component, value: Int, to base: Date) -> Date {
+        date(byAdding: component, value: value, to: base) ?? base
+    }
 }

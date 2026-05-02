@@ -3,8 +3,8 @@ import SwiftData
 
 @Model
 final class ExerciseSet {
-    var reps: Int
-    var weight: Double
+    var reps: Int = 0
+    var weight: Double = 0
     var isWarmUp: Bool = false
     var rpe: Int? = nil
     var distance: Double? = nil       // km

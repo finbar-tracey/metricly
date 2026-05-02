@@ -50,11 +50,7 @@ struct WorkoutCardView: View {
             if !workout.exercises.isEmpty {
                 HStack(spacing: 6) {
                     ForEach(workout.exercises.sorted { $0.order < $1.order }.prefix(3)) { exercise in
-                        HStack(spacing: 3) {
-                            Image(systemName: exercise.category?.icon ?? "dumbbell")
-                                .font(.system(size: 9))
-                            Text(exercise.name)
-                        }
+                        Text(exercise.name)
                         .font(.caption2.weight(.medium))
                         .foregroundStyle(accentColor)
                         .padding(.horizontal, 7)

@@ -1,5 +1,23 @@
 import Foundation
 import SwiftData
+import SwiftUI
+
+enum AppAccentColor: String, CaseIterable, Identifiable {
+    case blue, indigo, purple, pink, red, orange, green, teal
+    var id: String { rawValue }
+    var color: Color {
+        switch self {
+        case .blue: return .blue
+        case .indigo: return .indigo
+        case .purple: return .purple
+        case .pink: return .pink
+        case .red: return .red
+        case .orange: return .orange
+        case .green: return .green
+        case .teal: return .teal
+        }
+    }
+}
 
 @Model
 final class UserSettings {
@@ -24,6 +42,23 @@ final class UserSettings {
     var creatineDailyDose: Double = 5.0 // grams
     var creatineLoadingPhase: Bool = false // loading phase = 20g/day for first week
 
+    // Cardio goals
+    var weeklyCardioDistanceGoalKm: Double = 0   // 0 = not set
+    var weeklyCardioSessionGoal: Int       = 0   // 0 = not set
+
+    // Weekly workout schedule — JSON [weekday: name], weekday 1=Sun … 7=Sat
+    var weeklyPlanData: Data? = nil
+
+    var weeklyPlan: [Int: String] {
+        get { (try? JSONDecoder().decode([Int: String].self, from: weeklyPlanData ?? Data())) ?? [:] }
+        set { weeklyPlanData = try? JSONEncoder().encode(newValue) }
+    }
+
+    var accentColor: AppAccentColor {
+        get { AppAccentColor(rawValue: accentColorName) ?? .blue }
+        set { accentColorName = newValue.rawValue }
+    }
+
     var caffeineSensitivityEnum: CaffeineEntry.Sensitivity {
         get { CaffeineEntry.Sensitivity(rawValue: caffeineSensitivity) ?? .normal }
         set { caffeineSensitivity = newValue.rawValue }
@@ -37,22 +72,5 @@ final class UserSettings {
         self.useKilograms = useKilograms
         self.defaultRestDuration = defaultRestDuration
         self.autoStartRestTimer = autoStartRestTimer
-        self.hasSeenOnboarding = false
-        self.weeklyGoal = 0
-        self.reminderDays = []
-        self.reminderHour = 9
-        self.reminderMinute = 0
-        self.accentColorName = "blue"
-        self.appearanceMode = "system"
-        self.healthKitEnabled = false
-        self.heightCm = 0
-        self.biologicalSex = ""
-        self.userName = ""
-        self.focusModeReminder = false
-        self.caffeineSensitivity = "Normal"
-        self.dailyCaffeineLimit = 400
-        self.dailyWaterGoalMl = 2500
-        self.creatineDailyDose = 5.0
-        self.creatineLoadingPhase = false
     }
 }

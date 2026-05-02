@@ -544,7 +544,7 @@ struct SleepDetailView: View {
     private var lastWeekAvg: Double {
         let calendar = Calendar.current
         let weekStart = calendar.dateInterval(of: .weekOfYear, for: .now)?.start ?? .now
-        let prevStart = calendar.date(byAdding: .day, value: -7, to: weekStart)!
+        let prevStart = calendar.date(byAdding: .day, value: -7, to: weekStart) ?? weekStart
         let lastWeek = dailySleep.filter { $0.date >= prevStart && $0.date < weekStart }
         guard !lastWeek.isEmpty else { return 0 }
         return lastWeek.map(\.minutes).reduce(0, +) / Double(lastWeek.count)

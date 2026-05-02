@@ -5,9 +5,9 @@ struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(filter: #Predicate<Workout> { !$0.isTemplate }, sort: \Workout.date, order: .reverse)
     private var workouts: [Workout]
+    @Query(sort: \CardioSession.date, order: .reverse) private var cardioSessions: [CardioSession]
     @Query private var settingsArray: [UserSettings]
     @State private var workoutToDelete: Workout?
-    @State private var repeatConfirmation = false
     @State private var showingOnboarding = false
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
@@ -22,47 +22,67 @@ struct ContentView: View {
     }
 
     enum SidebarItem: String, Hashable, CaseIterable {
+        // Track
         case workouts = "Workouts"
         case programs = "Programs"
+        case schedule = "Schedule"
         case calendar = "Calendar"
+        case cardio = "Cardio"
+        case activityLog = "Activity Log"
+        // Progress
         case achievements = "Achievements"
         case streak = "Streak"
         case personalRecords = "Personal Records"
         case progressPhotos = "Progress Photos"
         case measurements = "Measurements"
+        case bodyWeight = "Body Weight"
+        case bodyFat = "Body Fat %"
         case liftGoals = "Lift Goals"
+        // Health
+        case health = "Health"
+        case water = "Water"
+        case caffeine = "Caffeine"
+        case creatine = "Creatine"
+        // Analyze
         case insights = "Insights"
         case exerciseLibrary = "Exercise Library"
         case comparison = "Compare"
+        case smartSuggestions = "Smart Suggestions"
+        // Tools
         case plateCalculator = "Plate Calculator"
         case oneRepMax = "1RM Calculator"
         case workoutTimers = "Workout Timers"
-        case caffeineTracker = "Caffeine Tracker"
-        case bodyFat = "Body Fat %"
-        case health = "Health"
+        // Settings
         case settings = "Settings"
 
         var icon: String {
             switch self {
-            case .workouts: return "dumbbell"
-            case .programs: return "calendar.badge.clock"
-            case .calendar: return "calendar"
-            case .achievements: return "medal"
-            case .streak: return "flame"
-            case .personalRecords: return "trophy"
-            case .progressPhotos: return "camera"
-            case .measurements: return "ruler"
-            case .liftGoals: return "target"
-            case .insights: return "chart.bar"
-            case .exerciseLibrary: return "books.vertical"
-            case .comparison: return "arrow.left.arrow.right"
-            case .plateCalculator: return "circle.grid.cross"
-            case .oneRepMax: return "function"
-            case .workoutTimers: return "timer"
-            case .caffeineTracker: return "cup.and.saucer.fill"
-            case .bodyFat: return "percent"
-            case .health: return "heart.text.square"
-            case .settings: return "gearshape"
+            case .workouts:         return "dumbbell"
+            case .programs:         return "calendar.badge.clock"
+            case .schedule:         return "calendar.badge.checkmark"
+            case .calendar:         return "calendar"
+            case .cardio:           return "figure.run"
+            case .activityLog:      return "list.bullet.rectangle"
+            case .achievements:     return "medal"
+            case .streak:           return "flame"
+            case .personalRecords:  return "trophy"
+            case .progressPhotos:   return "camera"
+            case .measurements:     return "ruler"
+            case .bodyWeight:       return "scalemass"
+            case .liftGoals:        return "target"
+            case .insights:         return "chart.bar"
+            case .exerciseLibrary:  return "books.vertical"
+            case .comparison:       return "arrow.left.arrow.right"
+            case .smartSuggestions: return "lightbulb"
+            case .plateCalculator:  return "circle.grid.cross"
+            case .oneRepMax:        return "function"
+            case .workoutTimers:    return "timer"
+            case .caffeine:         return "cup.and.saucer.fill"
+            case .bodyFat:          return "percent"
+            case .health:           return "heart.text.square"
+            case .water:            return "drop.fill"
+            case .creatine:         return "pill.fill"
+            case .settings:         return "gearshape"
             }
         }
     }
@@ -76,16 +96,7 @@ struct ContentView: View {
     }
 
     private var accentColor: Color {
-        switch settingsArray.first?.accentColorName ?? "blue" {
-        case "indigo": return .indigo
-        case "purple": return .purple
-        case "pink": return .pink
-        case "red": return .red
-        case "orange": return .orange
-        case "green": return .green
-        case "teal": return .teal
-        default: return .blue
-        }
+        (settingsArray.first?.accentColor ?? .blue).color
     }
 
     private var resolvedColorScheme: ColorScheme? {
@@ -107,17 +118,7 @@ struct ContentView: View {
         .tint(accentColor)
         .environment(\.weightUnit, weightUnit)
         .preferredColorScheme(resolvedColorScheme)
-        .alert("Repeat Last Workout?", isPresented: $repeatConfirmation) {
-            Button("Repeat") {
-                repeatLastWorkout()
-            }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            if let last = workouts.first {
-                Text("Create a new workout with the same exercises as \"\(last.name)\"?")
-            }
-        }
-        .sheet(isPresented: $showingOnboarding) {
+        .fullScreenCover(isPresented: $showingOnboarding) {
             OnboardingView {
                 settings.hasSeenOnboarding = true
             }
@@ -126,6 +127,31 @@ struct ContentView: View {
             if !settings.hasSeenOnboarding {
                 showingOnboarding = true
             }
+            // Schedule streak nudges based on saved reminder days
+            let reminderDays = settings.reminderDays
+            if !reminderDays.isEmpty {
+                ReminderManager.scheduleStreakNudges(days: reminderDays)
+            }
+            // Push today's scheduled workout name to the Today's Plan widget
+            let weekday = Calendar.current.component(.weekday, from: Date())
+            let scheduled = settings.weeklyPlan[weekday] ?? ""
+            let weekStart = Calendar.current.dateInterval(of: .weekOfYear, for: .now)?.start ?? .distantPast
+            let activitiesThisWeek = workouts.filter { $0.date >= weekStart }.count
+                                   + cardioSessions.filter { $0.date >= weekStart }.count
+            WidgetDataWriter.update(
+                streakDays: Workout.currentStreak(from: workouts, cardioSessions: cardioSessions),
+                todayWorkoutName: workouts.first(where: { Calendar.current.isDateInToday($0.date) })?.name ?? "",
+                weeklyCardioKm: 0,
+                lastRunPace: "",
+                lastRunDist: "",
+                weeklyGoal: settings.weeklyGoal,
+                workoutsThisWeek: activitiesThisWeek,
+                weeklyCardioGoalKm: settings.weeklyCardioDistanceGoalKm,
+                todayScheduledName: scheduled
+            )
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .openTrainingTab)) { _ in
+            withAnimation { selectedTab = .training }
         }
         .alert("Delete Workout?", isPresented: Binding(
             get: { workoutToDelete != nil },
@@ -151,116 +177,93 @@ struct ContentView: View {
         NavigationSplitView {
             List(selection: $selectedSidebarItem) {
                 Section("Track") {
-                    Label("Workouts", systemImage: "dumbbell")
-                        .tag(SidebarItem.workouts)
-                    Label("Programs", systemImage: "calendar.badge.clock")
-                        .tag(SidebarItem.programs)
-                    Label("Calendar", systemImage: "calendar")
-                        .tag(SidebarItem.calendar)
-                    Label("Progress Photos", systemImage: "camera")
-                        .tag(SidebarItem.progressPhotos)
+                    Label("Workouts",     systemImage: "dumbbell")                  .tag(SidebarItem.workouts)
+                    Label("Programs",     systemImage: "calendar.badge.clock")      .tag(SidebarItem.programs)
+                    Label("Schedule",     systemImage: "calendar.badge.checkmark")  .tag(SidebarItem.schedule)
+                    Label("Calendar",     systemImage: "calendar")                  .tag(SidebarItem.calendar)
+                    Label("Cardio",       systemImage: "figure.run")                .tag(SidebarItem.cardio)
+                    Label("Activity Log", systemImage: "list.bullet.rectangle")     .tag(SidebarItem.activityLog)
                 }
                 Section("Progress") {
-                    Label("Achievements", systemImage: "medal")
-                        .tag(SidebarItem.achievements)
-                    Label("Streak", systemImage: "flame")
-                        .tag(SidebarItem.streak)
-                    Label("Personal Records", systemImage: "trophy")
-                        .tag(SidebarItem.personalRecords)
-                    Label("Measurements", systemImage: "ruler")
-                        .tag(SidebarItem.measurements)
-                    Label("Body Fat %", systemImage: "percent")
-                        .tag(SidebarItem.bodyFat)
-                    Label("Health", systemImage: "heart.text.square")
-                        .tag(SidebarItem.health)
-                    Label("Lift Goals", systemImage: "target")
-                        .tag(SidebarItem.liftGoals)
+                    Label("Achievements",      systemImage: "medal")               .tag(SidebarItem.achievements)
+                    Label("Streak",            systemImage: "flame")               .tag(SidebarItem.streak)
+                    Label("Personal Records",  systemImage: "trophy")              .tag(SidebarItem.personalRecords)
+                    Label("Progress Photos",   systemImage: "camera")              .tag(SidebarItem.progressPhotos)
+                    Label("Measurements",      systemImage: "ruler")               .tag(SidebarItem.measurements)
+                    Label("Body Weight",       systemImage: "scalemass")           .tag(SidebarItem.bodyWeight)
+                    Label("Body Fat %",        systemImage: "percent")             .tag(SidebarItem.bodyFat)
+                    Label("Lift Goals",        systemImage: "target")              .tag(SidebarItem.liftGoals)
+                }
+                Section("Health") {
+                    Label("Health Dashboard",  systemImage: "heart.text.square")   .tag(SidebarItem.health)
+                    Label("Water",             systemImage: "drop.fill")           .tag(SidebarItem.water)
+                    Label("Caffeine",          systemImage: "cup.and.saucer.fill") .tag(SidebarItem.caffeine)
+                    Label("Creatine",          systemImage: "pill.fill")           .tag(SidebarItem.creatine)
                 }
                 Section("Analyze") {
-                    Label("Insights", systemImage: "chart.bar")
-                        .tag(SidebarItem.insights)
-                    Label("Exercise Library", systemImage: "books.vertical")
-                        .tag(SidebarItem.exerciseLibrary)
-                    Label("Compare", systemImage: "arrow.left.arrow.right")
-                        .tag(SidebarItem.comparison)
+                    Label("Insights",          systemImage: "chart.bar")               .tag(SidebarItem.insights)
+                    Label("Exercise Library",  systemImage: "books.vertical")          .tag(SidebarItem.exerciseLibrary)
+                    Label("Compare Workouts",  systemImage: "arrow.left.arrow.right")  .tag(SidebarItem.comparison)
+                    Label("Smart Suggestions", systemImage: "lightbulb")               .tag(SidebarItem.smartSuggestions)
                 }
                 Section("Tools") {
-                    Label("Plate Calculator", systemImage: "circle.grid.cross")
-                        .tag(SidebarItem.plateCalculator)
-                    Label("1RM Calculator", systemImage: "function")
-                        .tag(SidebarItem.oneRepMax)
-                    Label("Workout Timers", systemImage: "timer")
-                        .tag(SidebarItem.workoutTimers)
-                    Label("Caffeine Tracker", systemImage: "cup.and.saucer.fill")
-                        .tag(SidebarItem.caffeineTracker)
+                    Label("Plate Calculator",  systemImage: "circle.grid.cross") .tag(SidebarItem.plateCalculator)
+                    Label("1RM Calculator",    systemImage: "function")          .tag(SidebarItem.oneRepMax)
+                    Label("Workout Timers",    systemImage: "timer")             .tag(SidebarItem.workoutTimers)
                 }
                 Section {
-                    Label("Settings", systemImage: "gearshape")
-                        .tag(SidebarItem.settings)
+                    Label("Settings", systemImage: "gearshape").tag(SidebarItem.settings)
                 }
             }
             .navigationTitle("Metricly")
+            .toolbar {
+                ToolbarItem(placement: .primaryAction) {
+                    Button { showingSearch = true } label: {
+                        Image(systemName: "magnifyingglass")
+                    }
+                }
+            }
+            .sheet(isPresented: $showingSearch) { GlobalSearchView() }
         } detail: {
             NavigationStack {
                 switch selectedSidebarItem {
-                case .workouts, .none:
-                    HomeDashboardView()
-                case .programs:
-                    TrainingProgramsView()
-                        .navigationTitle("Programs")
-                case .calendar:
-                    WorkoutCalendarView()
-                        .navigationTitle("Calendar")
-                case .progressPhotos:
-                    ProgressPhotosView()
-                case .achievements:
-                    AchievementsView()
-                case .streak:
-                    StreakCalendarView()
-                case .personalRecords:
-                    PersonalRecordsView()
-                case .measurements:
-                    BodyMeasurementsView()
-                case .liftGoals:
-                    LiftGoalsView()
-                case .insights:
-                    InsightsView()
-                        .navigationTitle("Insights")
-                case .exerciseLibrary:
-                    ExerciseLibraryView()
-                        .navigationTitle("Exercise Library")
-                case .comparison:
-                    WorkoutComparisonView()
-                        .navigationTitle("Compare Workouts")
-                case .plateCalculator:
-                    PlateCalculatorView()
-                case .oneRepMax:
-                    OneRepMaxView()
-                case .workoutTimers:
-                    WorkoutTimerView()
-                case .caffeineTracker:
-                    CaffeineTrackerView()
-                case .bodyFat:
-                    BodyFatEstimateView()
-                case .health:
-                    HealthDashboardView()
-                case .settings:
-                    SettingsView()
-                        .navigationTitle("Settings")
+                case .workouts, .none:  HomeDashboardView()
+                case .programs:         TrainingProgramsView().navigationTitle("Programs")
+                case .schedule:         WorkoutScheduleView()
+                case .calendar:         WorkoutCalendarView().navigationTitle("Calendar")
+                case .cardio:           CardioHubView()
+                case .activityLog:      ActivityLogView().navigationTitle("Activity Log")
+                case .achievements:     AchievementsView()
+                case .streak:           StreakCalendarView()
+                case .personalRecords:  PersonalRecordsView()
+                case .progressPhotos:   ProgressPhotosView()
+                case .measurements:     BodyMeasurementsView()
+                case .bodyWeight:       BodyWeightView()
+                case .bodyFat:          BodyFatEstimateView()
+                case .liftGoals:        LiftGoalsView()
+                case .health:           HealthDashboardView()
+                case .water:            WaterTrackerView()
+                case .caffeine:         CaffeineTrackerView()
+                case .creatine:         CreatineTrackerView()
+                case .insights:         InsightsView().navigationTitle("Insights")
+                case .exerciseLibrary:  ExerciseLibraryView().navigationTitle("Exercise Library")
+                case .comparison:       WorkoutComparisonView().navigationTitle("Compare Workouts")
+                case .smartSuggestions: SmartSuggestionsView()
+                case .plateCalculator:  PlateCalculatorView()
+                case .oneRepMax:        OneRepMaxView()
+                case .workoutTimers:    WorkoutTimerView()
+                case .settings:         SettingsView().navigationTitle("Settings")
                 }
             }
-            .navigationDestination(for: Workout.self) { workout in
-                WorkoutDetailView(workout: workout)
-            }
-            .navigationDestination(for: String.self) { exerciseName in
-                ExerciseHistoryView(exerciseName: exerciseName)
-            }
+            .navigationDestination(for: Workout.self) { workout in WorkoutDetailView(workout: workout) }
+            .navigationDestination(for: String.self)  { name in ExerciseHistoryView(exerciseName: name) }
         }
     }
 
     // MARK: - iPhone Layout (TabView)
 
     @State private var showingSettings = false
+    @State private var showingSearch = false
 
     private var iPhoneLayout: some View {
         TabView(selection: $selectedTab) {
@@ -281,13 +284,23 @@ struct ContentView: View {
                                     Image(systemName: "gearshape")
                                 }
                             }
+                            ToolbarItem(placement: .topBarTrailing) {
+                                Button {
+                                    showingSearch = true
+                                } label: {
+                                    Image(systemName: "magnifyingglass")
+                                }
+                            }
+                        }
+                        .sheet(isPresented: $showingSearch) {
+                            GlobalSearchView()
                         }
                 }
             }
 
             Tab("Training", systemImage: "figure.strengthtraining.traditional", value: .training) {
                 NavigationStack {
-                    trainingHubView
+                    TrainingHubView()
                         .navigationDestination(for: Workout.self) { workout in
                             WorkoutDetailView(workout: workout)
                         }
@@ -299,13 +312,16 @@ struct ContentView: View {
 
             Tab("Health", systemImage: "heart.text.square", value: .health) {
                 NavigationStack {
-                    healthHubView
+                    HealthHubView()
                 }
             }
 
             Tab("More", systemImage: "ellipsis.circle", value: .more) {
                 NavigationStack {
-                    moreHubView
+                    MoreHubView()
+                        .navigationDestination(for: String.self) { exerciseName in
+                            ExerciseHistoryView(exerciseName: exerciseName)
+                        }
                 }
             }
         }
@@ -321,256 +337,8 @@ struct ContentView: View {
         }
     }
 
-    // MARK: - Training Hub
-
-    private var totalFinishedWorkouts: Int {
-        workouts.filter { $0.endTime != nil }.count
-    }
-
-    private var uniqueExerciseCount: Int {
-        Set(workouts.filter { $0.endTime != nil }.flatMap { $0.exercises.map { $0.name.lowercased() } }).count
-    }
-
-    private var trainingHubView: some View {
-        List {
-            Section {
-                HStack(spacing: 0) {
-                    progressStat(value: "\(totalFinishedWorkouts)", label: "Workouts", icon: "figure.strengthtraining.traditional", color: .blue)
-                    Divider().frame(height: 40)
-                    progressStat(value: "\(currentStreak)", label: "Streak", icon: "flame.fill", color: .orange)
-                    Divider().frame(height: 40)
-                    progressStat(value: "\(uniqueExerciseCount)", label: "Exercises", icon: "dumbbell.fill", color: .purple)
-                }
-                .padding(.vertical, 10)
-            }
-
-            Section("Workouts") {
-                NavigationLink {
-                    FullWorkoutListView()
-                } label: {
-                    hubRow(icon: "dumbbell", color: .blue, title: "All Workouts", subtitle: "Complete workout history")
-                }
-                NavigationLink {
-                    TrainingProgramsView()
-                } label: {
-                    hubRow(icon: "calendar.badge.clock", color: .purple, title: "Programs", subtitle: "Structured training plans")
-                }
-                NavigationLink {
-                    WorkoutCalendarView()
-                } label: {
-                    hubRow(icon: "calendar", color: .teal, title: "Calendar", subtitle: "Monthly training view")
-                }
-            }
-
-            Section("Analyze") {
-                NavigationLink {
-                    InsightsView()
-                } label: {
-                    hubRow(icon: "chart.bar", color: .green, title: "Insights", subtitle: "Training analytics & trends")
-                }
-                NavigationLink {
-                    WorkoutComparisonView()
-                } label: {
-                    hubRow(icon: "arrow.left.arrow.right", color: .indigo, title: "Compare Workouts", subtitle: "Side-by-side analysis")
-                }
-                NavigationLink {
-                    SmartSuggestionsView()
-                } label: {
-                    hubRow(icon: "brain.head.profile", color: .purple, title: "Smart Suggestions", subtitle: "AI-driven workout ideas")
-                }
-            }
-
-            Section("Progress") {
-                NavigationLink {
-                    PersonalRecordsView()
-                } label: {
-                    hubRow(icon: "trophy", color: .orange, title: "Personal Records", subtitle: "Your heaviest lifts")
-                }
-                NavigationLink {
-                    StreakCalendarView()
-                } label: {
-                    hubRow(icon: "flame", color: .red, title: "Streak", subtitle: "Workout consistency")
-                }
-                NavigationLink {
-                    LiftGoalsView()
-                } label: {
-                    hubRow(icon: "target", color: .green, title: "Lift Goals", subtitle: "Progressive overload targets")
-                }
-            }
-        }
-        .navigationTitle("Training")
-    }
-
-    private func progressStat(value: String, label: String, icon: String, color: Color) -> some View {
-        VStack(spacing: 6) {
-            ZStack {
-                Circle()
-                    .fill(color.opacity(0.12))
-                    .frame(width: 36, height: 36)
-                Image(systemName: icon)
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(color)
-            }
-            Text(value)
-                .font(.system(size: 22, weight: .black, design: .rounded))
-                .monospacedDigit()
-            Text(label)
-                .font(.caption2.weight(.medium))
-                .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity)
-    }
-
-    // MARK: - Health Hub
-
-    private var healthHubView: some View {
-        List {
-            Section("Health") {
-                NavigationLink {
-                    HealthDashboardView()
-                } label: {
-                    hubRow(icon: "heart.text.square", color: .red, title: "Health Dashboard", subtitle: "Steps, heart rate, sleep & more")
-                }
-                NavigationLink {
-                    CaffeineTrackerView()
-                } label: {
-                    hubRow(icon: "cup.and.saucer.fill", color: .brown, title: "Caffeine Tracker", subtitle: "Half-life decay & sleep readiness")
-                }
-                NavigationLink {
-                    WaterTrackerView()
-                } label: {
-                    hubRow(icon: "drop.fill", color: .cyan, title: "Water Tracker", subtitle: "Daily hydration tracking")
-                }
-                NavigationLink {
-                    CreatineTrackerView()
-                } label: {
-                    hubRow(icon: "pill.fill", color: .blue, title: "Creatine Tracker", subtitle: "Daily supplement tracking")
-                }
-            }
-
-            Section("Body") {
-                NavigationLink {
-                    BodyWeightView()
-                } label: {
-                    hubRow(icon: "scalemass", color: .blue, title: "Body Weight", subtitle: "Weigh-ins & trend line")
-                }
-                NavigationLink {
-                    BodyMeasurementsView()
-                } label: {
-                    hubRow(icon: "ruler", color: .teal, title: "Measurements", subtitle: "Body circumference tracking")
-                }
-                NavigationLink {
-                    BodyFatEstimateView()
-                } label: {
-                    hubRow(icon: "percent", color: .indigo, title: "Body Fat %", subtitle: "Navy method estimation")
-                }
-                NavigationLink {
-                    ProgressPhotosView()
-                } label: {
-                    hubRow(icon: "camera", color: .blue, title: "Progress Photos", subtitle: "Visual transformation")
-                }
-            }
-        }
-        .navigationTitle("Health")
-    }
-
-    // MARK: - More Hub
-
-    private var moreHubView: some View {
-        List {
-            Section("Library") {
-                NavigationLink {
-                    ExerciseLibraryView()
-                } label: {
-                    hubRow(icon: "books.vertical", color: .blue, title: "Exercise Library", subtitle: "All your exercises")
-                }
-                NavigationLink {
-                    AchievementsView()
-                } label: {
-                    hubRow(icon: "medal", color: .yellow, title: "Achievements", subtitle: "Badges and milestones")
-                }
-            }
-
-            Section("Calculators") {
-                NavigationLink {
-                    PlateCalculatorView()
-                } label: {
-                    hubRow(icon: "circle.grid.cross", color: .orange, title: "Plate Calculator", subtitle: "Barbell plate loading")
-                }
-                NavigationLink {
-                    OneRepMaxView()
-                } label: {
-                    hubRow(icon: "function", color: .teal, title: "1RM Calculator", subtitle: "Estimated one-rep max")
-                }
-            }
-
-            Section("Activity") {
-                NavigationLink {
-                    ActivityLogView()
-                } label: {
-                    hubRow(icon: "figure.walk", color: .green, title: "Activity Log", subtitle: "Walks, rides, stretching, and more")
-                }
-            }
-
-            Section("Timers") {
-                NavigationLink {
-                    WorkoutTimerView()
-                } label: {
-                    hubRow(icon: "timer", color: .red, title: "Workout Timers", subtitle: "EMOM, AMRAP, and Tabata")
-                }
-            }
-        }
-        .navigationTitle("More")
-    }
-
-    private func hubRow(icon: String, color: Color, title: String, subtitle: String) -> some View {
-        HStack(spacing: 14) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 11)
-                    .fill(color.gradient)
-                    .frame(width: 40, height: 40)
-                Image(systemName: icon)
-                    .font(.system(size: 17, weight: .semibold))
-                    .foregroundStyle(.white)
-            }
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(.subheadline.weight(.semibold))
-                Text(subtitle)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .padding(.vertical, 3)
-    }
-
-    private var currentStreak: Int {
-        Workout.currentStreak(from: workouts)
-    }
-
-    // MARK: - Actions
-
-    private func repeatLastWorkout() {
-        guard let last = workouts.first else { return }
-        let formatter = DateFormatter()
-        formatter.dateFormat = "MMM d"
-        let newName = "\(last.name.components(separatedBy: " - ").first ?? last.name) - \(formatter.string(from: .now))"
-        let workout = Workout(name: newName, date: .now)
-        modelContext.insert(workout)
-        let sortedExercises = last.exercises.sorted { $0.order < $1.order }
-        for (index, oldExercise) in sortedExercises.enumerated() {
-            let exercise = Exercise(name: oldExercise.name, workout: workout, category: oldExercise.category)
-            exercise.order = index
-            exercise.supersetGroup = oldExercise.supersetGroup
-            exercise.notes = oldExercise.notes
-            exercise.customRestDuration = oldExercise.customRestDuration
-            modelContext.insert(exercise)
-            workout.exercises.append(exercise)
-        }
-        try? modelContext.save()
-    }
-
 }
+
 
 #Preview {
     ContentView()

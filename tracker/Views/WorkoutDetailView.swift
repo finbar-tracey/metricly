@@ -6,7 +6,8 @@ struct WorkoutDetailView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.weightUnit) private var weightUnit
     @Environment(\.scenePhase) private var scenePhase
-    @Query private var allExercises: [Exercise]
+    @Query(filter: #Predicate<Exercise> { $0.workout?.isTemplate == false })
+    private var allExercises: [Exercise]
     let workout: Workout
     @State private var newExerciseName = ""
     @State private var newExerciseCategory: MuscleGroup = .other
@@ -419,23 +420,17 @@ struct WorkoutDetailView: View {
                     .foregroundStyle(.white.opacity(0.8))
 
                 HStack(spacing: 0) {
-                    heroStatCol(
-                        label: "Exercises",
-                        value: "\(workout.exercises.count)",
-                        icon: "figure.strengthtraining.functional"
-                    )
+                    HeroStatCol(value: "\(workout.exercises.count)",
+                                label: "Exercises",
+                                icon: "figure.strengthtraining.functional")
                     Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 36)
-                    heroStatCol(
-                        label: "Sets",
-                        value: "\(workout.exercises.flatMap(\.sets).filter { !$0.isWarmUp }.count)",
-                        icon: "repeat"
-                    )
+                    HeroStatCol(value: "\(workout.exercises.flatMap(\.sets).filter { !$0.isWarmUp }.count)",
+                                label: "Sets",
+                                icon: "repeat")
                     Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 36)
-                    heroStatCol(
-                        label: "Duration",
-                        value: workout.isFinished ? (workout.formattedDuration ?? "–") : elapsedTime,
-                        icon: "clock"
-                    )
+                    HeroStatCol(value: workout.isFinished ? (workout.formattedDuration ?? "–") : elapsedTime,
+                                label: "Duration",
+                                icon: "clock")
                 }
                 .padding(.vertical, 10)
                 .background(.white.opacity(0.12), in: RoundedRectangle(cornerRadius: 12))
@@ -448,24 +443,6 @@ struct WorkoutDetailView: View {
         .accessibilityLabel(workout.isFinished
             ? "Workout completed, duration \(workout.formattedDuration ?? "")"
             : "Workout in progress, elapsed \(elapsedTime)")
-    }
-
-    private func heroStatCol(label: String, value: String, icon: String) -> some View {
-        VStack(spacing: 4) {
-            Image(systemName: icon)
-                .font(.system(size: 12))
-                .foregroundStyle(.white.opacity(0.75))
-            Text(value)
-                .font(.system(size: 18, weight: .bold, design: .rounded))
-                .foregroundStyle(.white)
-                .monospacedDigit()
-                .lineLimit(1)
-                .minimumScaleFactor(0.7)
-            Text(label)
-                .font(.caption2.weight(.medium))
-                .foregroundStyle(.white.opacity(0.7))
-        }
-        .frame(maxWidth: .infinity)
     }
 
     private var finishButton: some View {
@@ -505,9 +482,8 @@ struct WorkoutDetailView: View {
                 RoundedRectangle(cornerRadius: 10)
                     .fill(Color.accentColor.opacity(0.12))
                     .frame(width: 40, height: 40)
-                Image(systemName: exercise.category?.icon ?? "figure.strengthtraining.functional")
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(Color.accentColor)
+                MuscleIconView(group: exercise.category ?? .other, color: Color.accentColor)
+                    .frame(width: 22, height: 22)
             }
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 6) {
@@ -615,10 +591,7 @@ struct WorkoutDetailView: View {
     private func formatWorkoutSummary() -> String {
         var lines: [String] = []
         lines.append("💪 \(workout.name)")
-
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateStyle = .medium
-        lines.append(dateFormatter.string(from: workout.date))
+        lines.append(workout.date.formatted(date: .long, time: .omitted))
 
         if let duration = workout.formattedDuration {
             lines.append("Duration: \(duration)")
@@ -664,32 +637,14 @@ struct WorkoutDetailView: View {
     private func saveAsTemplate() {
         let template = Workout(name: workout.name, isTemplate: true)
         modelContext.insert(template)
-        let sorted = workout.exercises.sorted { $0.order < $1.order }
-        for (index, exercise) in sorted.enumerated() {
-            let templateExercise = Exercise(name: exercise.name, workout: template, category: exercise.category)
-            templateExercise.order = index
-            templateExercise.notes = exercise.notes
-            templateExercise.supersetGroup = exercise.supersetGroup
-            templateExercise.customRestDuration = exercise.customRestDuration
-            modelContext.insert(templateExercise)
-            template.exercises.append(templateExercise)
-        }
+        template.copyExercises(from: workout.exercises, into: modelContext)
         showTemplateSaved = true
     }
 
     private func duplicateWorkout() {
         let newWorkout = Workout(name: workout.name, date: .now)
         modelContext.insert(newWorkout)
-        let sorted = workout.exercises.sorted { $0.order < $1.order }
-        for (index, exercise) in sorted.enumerated() {
-            let newExercise = Exercise(name: exercise.name, workout: newWorkout, category: exercise.category)
-            newExercise.order = index
-            newExercise.notes = exercise.notes
-            newExercise.supersetGroup = exercise.supersetGroup
-            newExercise.customRestDuration = exercise.customRestDuration
-            modelContext.insert(newExercise)
-            newWorkout.exercises.append(newExercise)
-        }
+        newWorkout.copyExercises(from: workout.exercises, into: modelContext)
         HapticsManager.success()
     }
 
@@ -794,8 +749,8 @@ struct WorkoutDetailView: View {
                             linkingSupersetFor = nil
                         } label: {
                             HStack {
-                                Image(systemName: "figure.strengthtraining.functional")
-                                    .foregroundStyle(.tint)
+                                MuscleIconView(group: partner.category ?? .other, color: Color.accentColor)
+                                    .frame(width: 18, height: 18)
                                 Text(partner.name)
                                 if partner.supersetGroup != nil {
                                     Spacer()

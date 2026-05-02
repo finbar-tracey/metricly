@@ -68,11 +68,11 @@ struct VolumeTrendsView: View {
                 }
 
                 HStack(spacing: 0) {
-                    heroStatCol("Last Week", value: formatVolume(totalVolumeLastWeek))
+                    HeroStatCol(value: formatVolume(totalVolumeLastWeek), label: "Last Week")
                     Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 28)
-                    heroStatCol("WoW", value: totalVolumeLastWeek > 0 ? String(format: "%+.0f%%", volumeChange) : "—")
+                    HeroStatCol(value: totalVolumeLastWeek > 0 ? String(format: "%+.0f%%", volumeChange) : "—", label: "WoW")
                     Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 28)
-                    heroStatCol("Workouts", value: "\(workoutsThisWeek)")
+                    HeroStatCol(value: "\(workoutsThisWeek)", label: "Workouts")
                 }
             }
             .padding(20)
@@ -80,14 +80,6 @@ struct VolumeTrendsView: View {
         .heroCard()
     }
 
-    private func heroStatCol(_ title: String, value: String) -> some View {
-        VStack(spacing: 3) {
-            Text(value).font(.system(size: 15, weight: .bold, design: .rounded))
-                .foregroundStyle(.white).monospacedDigit()
-            Text(title).font(.caption2).foregroundStyle(.white.opacity(0.70))
-        }
-        .frame(maxWidth: .infinity)
-    }
 
     // MARK: - Volume Chart Card
 
@@ -144,8 +136,8 @@ struct VolumeTrendsView: View {
                     HStack(spacing: 14) {
                         ZStack {
                             RoundedRectangle(cornerRadius: 8).fill(Color.blue.opacity(0.12)).frame(width: 34, height: 34)
-                            Image(systemName: group.icon)
-                                .font(.system(size: 13, weight: .semibold)).foregroundStyle(Color.blue)
+                            MuscleIconView(group: group, color: Color.blue)
+                                .frame(width: 14, height: 14)
                         }
                         VStack(alignment: .leading, spacing: 5) {
                             HStack {

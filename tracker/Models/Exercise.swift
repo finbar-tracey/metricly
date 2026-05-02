@@ -31,7 +31,7 @@ enum MuscleGroup: String, Codable, CaseIterable, Identifiable {
 
 @Model
 final class Exercise {
-    var name: String
+    var name: String = ""
     var notes: String = ""
     var order: Int = 0
     var supersetGroup: Int? = nil
@@ -39,7 +39,13 @@ final class Exercise {
     var customRestDuration: Int? = nil
     var workout: Workout?
     @Relationship(deleteRule: .cascade, inverse: \ExerciseSet.exercise)
-    var sets: [ExerciseSet]
+    var _sets: [ExerciseSet]? = nil
+
+    /// Non-optional accessor — CloudKit requires the stored relationship be optional.
+    var sets: [ExerciseSet] {
+        get { _sets ?? [] }
+        set { _sets = newValue }
+    }
 
     var category: MuscleGroup? {
         get { categoryRaw.flatMap { MuscleGroup(rawValue: $0) } }

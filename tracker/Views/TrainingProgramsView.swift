@@ -137,7 +137,7 @@ struct TrainingProgramsView: View {
                         HStack(spacing: 14) {
                             ZStack {
                                 RoundedRectangle(cornerRadius: 10)
-                                    .fill(program.isActive ? Color.accentColor.gradient : AnyShapeStyle(Color(.systemGray5).gradient))
+                                    .fill(program.isActive ? AnyShapeStyle(Color.accentColor.gradient) : AnyShapeStyle(Color(.systemGray5).gradient))
                                     .frame(width: 40, height: 40)
                                 Image(systemName: "dumbbell.fill")
                                     .font(.system(size: 15, weight: .semibold))
@@ -339,7 +339,13 @@ struct ProgramDayDetailView: View {
             Section {
                 ForEach(sortedExercises) { exercise in
                     HStack {
-                        Image(systemName: exercise.category?.icon ?? "dumbbell").foregroundStyle(.tint).frame(width: 24)
+                        Group {
+                            if let category = exercise.category {
+                                MuscleIconView(group: category, color: Color.accentColor)
+                            } else {
+                                Image(systemName: "dumbbell").foregroundStyle(.tint)
+                            }
+                        }.frame(width: 18, height: 18)
                         VStack(alignment: .leading, spacing: 2) {
                             Text(exercise.name).font(.subheadline.bold())
                             Text("\(exercise.targetSets) sets × \(exercise.targetReps) reps")

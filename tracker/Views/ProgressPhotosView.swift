@@ -120,7 +120,7 @@ struct ProgressPhotosView: View {
                 HStack(spacing: 0) {
                     ForEach(categories, id: \.self) { cat in
                         let count = photos.filter { $0.category == cat }.count
-                        heroStatCol(cat, value: "\(count)")
+                        HeroStatCol(value: "\(count)", label: cat)
                         if cat != categories.last {
                             Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 28)
                         }
@@ -132,14 +132,6 @@ struct ProgressPhotosView: View {
         .heroCard()
     }
 
-    private func heroStatCol(_ title: String, value: String) -> some View {
-        VStack(spacing: 3) {
-            Text(value).font(.system(size: 15, weight: .bold, design: .rounded))
-                .foregroundStyle(.white).monospacedDigit()
-            Text(title).font(.caption2).foregroundStyle(.white.opacity(0.70))
-        }
-        .frame(maxWidth: .infinity)
-    }
 
     // MARK: - Category Picker Card
 

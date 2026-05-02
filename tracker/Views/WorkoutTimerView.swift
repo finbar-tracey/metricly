@@ -161,7 +161,7 @@ struct WorkoutTimerView: View {
             Spacer()
             Text(value)
                 .font(.subheadline.bold().monospacedDigit())
-                .foregroundStyle(.accentColor)
+                .foregroundStyle(Color.accentColor)
             control()
         }
         .padding(.horizontal, 16).padding(.vertical, 12)
@@ -259,7 +259,7 @@ struct WorkoutTimerView: View {
 
                     Button { roundsCompleted += 1 } label: {
                         Image(systemName: "plus.circle.fill")
-                            .font(.system(size: 36)).foregroundStyle(.accentColor)
+                            .font(.system(size: 36)).foregroundStyle(Color.accentColor)
                     }
                     .buttonStyle(.plain).frame(maxWidth: .infinity)
                 }

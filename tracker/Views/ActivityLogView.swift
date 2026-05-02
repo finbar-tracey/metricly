@@ -134,11 +134,11 @@ struct ActivityLogView: View {
                 }
 
                 HStack(spacing: 0) {
-                    heroStatCol("This Week", value: "\(thisWeekMinutes)m")
+                    HeroStatCol(value: "\(thisWeekMinutes)m", label: "This Week")
                     Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 28)
-                    heroStatCol("Activities", value: "\(thisWeekTotalCount)")
+                    HeroStatCol(value: "\(thisWeekTotalCount)", label: "Activities")
                     Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 28)
-                    heroStatCol("Today", value: "\(todayMinutes)m")
+                    HeroStatCol(value: "\(todayMinutes)m", label: "Today")
                 }
             }
             .padding(20)
@@ -146,14 +146,6 @@ struct ActivityLogView: View {
         .heroCard()
     }
 
-    private func heroStatCol(_ title: String, value: String) -> some View {
-        VStack(spacing: 3) {
-            Text(value).font(.system(size: 16, weight: .bold, design: .rounded))
-                .foregroundStyle(.white).monospacedDigit()
-            Text(title).font(.caption2).foregroundStyle(.white.opacity(0.70))
-        }
-        .frame(maxWidth: .infinity)
-    }
 
     // MARK: - Quick Log Card
 

@@ -59,7 +59,8 @@ struct CaffeineTrackerView: View {
     }
 
     private var frequentSources: [(name: String, mg: Double, icon: String, count: Int)] {
-        let last30 = entries.filter { $0.date > Calendar.current.date(byAdding: .day, value: -30, to: .now)! }
+        let cutoff = Calendar.current.date(byAdding: .day, value: -30, to: .now) ?? .now
+        let last30 = entries.filter { $0.date > cutoff }
         var counts: [String: Int] = [:]
         for entry in last30 { counts[entry.source, default: 0] += 1 }
         return counts.sorted { $0.value > $1.value }
@@ -76,16 +77,17 @@ struct CaffeineTrackerView: View {
     private func dailyTotals(days: Int) -> [(date: Date, mg: Double)] {
         let cal = Calendar.current
         let today = cal.startOfDay(for: .now)
-        return (0..<days).reversed().map { offset in
-            let day = cal.date(byAdding: .day, value: -offset, to: today)!
-            let nextDay = cal.date(byAdding: .day, value: 1, to: day)!
+        return (0..<days).reversed().compactMap { offset in
+            guard let day = cal.date(byAdding: .day, value: -offset, to: today),
+                  let nextDay = cal.date(byAdding: .day, value: 1, to: day) else { return nil }
             let total = entries.filter { $0.date >= day && $0.date < nextDay }.reduce(0) { $0 + $1.milligrams }
             return (date: day, mg: total)
         }
     }
 
     private var timeOfDayBreakdown: [(period: String, icon: String, color: Color, mg: Double, count: Int)] {
-        let last30 = entries.filter { $0.date > Calendar.current.date(byAdding: .day, value: -30, to: .now)! }
+        let cutoff = Calendar.current.date(byAdding: .day, value: -30, to: .now) ?? .now
+        let last30 = entries.filter { $0.date > cutoff }
         let cal = Calendar.current
         var morning: (mg: Double, count: Int) = (0, 0)
         var afternoon: (mg: Double, count: Int) = (0, 0)
@@ -122,8 +124,8 @@ struct CaffeineTrackerView: View {
         let today = cal.startOfDay(for: .now)
         var streak = 0
         for offset in 0..<90 {
-            let day = cal.date(byAdding: .day, value: -offset, to: today)!
-            let nextDay = cal.date(byAdding: .day, value: 1, to: day)!
+            guard let day = cal.date(byAdding: .day, value: -offset, to: today),
+                  let nextDay = cal.date(byAdding: .day, value: 1, to: day) else { break }
             if entries.contains(where: { $0.date >= day && $0.date < nextDay }) { break }
             streak += 1
         }
@@ -133,11 +135,11 @@ struct CaffeineTrackerView: View {
     private var daysSinceFreeDayText: String? {
         let cal = Calendar.current
         let today = cal.startOfDay(for: .now)
-        let todayEnd = cal.date(byAdding: .day, value: 1, to: today)!
+        guard let todayEnd = cal.date(byAdding: .day, value: 1, to: today) else { return nil }
         guard entries.contains(where: { $0.date >= today && $0.date < todayEnd }) else { return nil }
         for offset in 1..<90 {
-            let day = cal.date(byAdding: .day, value: -offset, to: today)!
-            let nextDay = cal.date(byAdding: .day, value: 1, to: day)!
+            guard let day = cal.date(byAdding: .day, value: -offset, to: today),
+                  let nextDay = cal.date(byAdding: .day, value: 1, to: day) else { break }
             if !entries.contains(where: { $0.date >= day && $0.date < nextDay }) {
                 return offset == 1 ? "Yesterday" : "\(offset) days ago"
             }
@@ -331,25 +333,18 @@ struct CaffeineTrackerView: View {
                 }
 
                 HStack(spacing: 0) {
-                    heroStatCol("Today", value: "\(Int(todayTotalMg))mg")
-                    Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 28)
-                    heroStatCol("Limit", value: "\(Int(dailyLimit))mg")
-                    Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 28)
-                    heroStatCol("Remaining", value: "\(Int(remaining))mg")
+                    HeroStatCol(value: "\(Int(todayTotalMg))mg", label: "Today", icon: "cup.and.saucer.fill")
+                    Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 36)
+                    HeroStatCol(value: "\(Int(dailyLimit))mg", label: "Limit", icon: "gauge.with.needle")
+                    Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 36)
+                    HeroStatCol(value: "\(Int(remaining))mg", label: "Remaining", icon: "clock")
                 }
+                .padding(.vertical, 10)
+                .background(.white.opacity(0.12), in: RoundedRectangle(cornerRadius: 12))
             }
             .padding(20)
         }
         .heroCard()
-    }
-
-    private func heroStatCol(_ title: String, value: String) -> some View {
-        VStack(spacing: 3) {
-            Text(value).font(.system(size: 14, weight: .bold, design: .rounded))
-                .foregroundStyle(.white).monospacedDigit()
-            Text(title).font(.caption2).foregroundStyle(.white.opacity(0.70))
-        }
-        .frame(maxWidth: .infinity)
     }
 
     // MARK: - Quick Log Card
@@ -742,20 +737,8 @@ struct CaffeineTrackerView: View {
         .padding(.horizontal, 16).padding(.vertical, 12)
     }
 
-    // MARK: - Undo Bar
-
     private var undoBar: some View {
-        HStack {
-            Image(systemName: "cup.and.saucer.fill").foregroundStyle(.brown)
-            Text("Caffeine logged").font(.subheadline)
-            Spacer()
-            Button { undoLastEntry() } label: {
-                Text("Undo").font(.subheadline.bold()).foregroundStyle(.brown)
-            }
-        }
-        .padding(.horizontal).padding(.vertical, 10)
-        .background(.ultraThinMaterial)
-        .transition(.move(edge: .bottom).combined(with: .opacity))
+        UndoBar(icon: "cup.and.saucer.fill", message: "Caffeine logged", color: .brown, onUndo: undoLastEntry)
     }
 
     // MARK: - Actions
@@ -767,6 +750,7 @@ struct CaffeineTrackerView: View {
         customMg = ""; showTimePicker = false; customDate = .now; isMgFocused = false
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
         showUndoSnackbar(for: entry)
+        updateCaffeineWidget()
     }
 
     private func quickLog(source: String, mg: Double) {
@@ -774,6 +758,17 @@ struct CaffeineTrackerView: View {
         modelContext.insert(entry)
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
         showUndoSnackbar(for: entry)
+        updateCaffeineWidget()
+    }
+
+    private func updateCaffeineWidget() {
+        let cutoff = Date().addingTimeInterval(-12 * 3600)
+        let recent = entries.filter { $0.date >= cutoff }.map { (date: $0.date, milligrams: $0.milligrams) }
+        WidgetDataWriter.updateCaffeine(
+            entries: recent,
+            halfLifeHours: settings.caffeineHalfLife,
+            dailyLimitMg: Double(settings.dailyCaffeineLimit)
+        )
     }
 
     private func showUndoSnackbar(for entry: CaffeineEntry) {

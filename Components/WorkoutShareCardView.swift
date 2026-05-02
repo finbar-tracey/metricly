@@ -80,9 +80,13 @@ struct WorkoutShareCardView: View {
             VStack(alignment: .leading, spacing: 10) {
                 ForEach(sortedExercises.prefix(8)) { exercise in
                     HStack {
-                        Image(systemName: exercise.category?.icon ?? "dumbbell")
-                            .foregroundStyle(.tint)
-                            .frame(width: 20)
+                        Group {
+                            if let category = exercise.category {
+                                MuscleIconView(group: category, color: Color.accentColor)
+                            } else {
+                                Image(systemName: "dumbbell").foregroundStyle(.tint)
+                            }
+                        }.frame(width: 14, height: 14)
                         VStack(alignment: .leading, spacing: 2) {
                             Text(exercise.name)
                                 .font(.subheadline.bold())

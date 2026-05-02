@@ -3,9 +3,9 @@ import SwiftData
 
 @Model
 final class CaffeineEntry {
-    var date: Date
-    var milligrams: Double // always stored in mg
-    var source: String     // "Coffee", "Espresso", "Tea", "Energy Drink", "Pre-Workout", "Other"
+    var date: Date = Date()
+    var milligrams: Double = 0 // always stored in mg
+    var source: String = ""    // "Coffee", "Espresso", "Tea", "Energy Drink", "Pre-Workout", "Other"
 
     init(date: Date = .now, milligrams: Double, source: String) {
         self.date = date

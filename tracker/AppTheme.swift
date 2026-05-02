@@ -1,4 +1,5 @@
 import SwiftUI
+import SwiftData
 
 // MARK: - Design tokens
 
@@ -66,4 +67,91 @@ struct GradientProgressBar: View {
         }
         .frame(height: height)
     }
+}
+
+// MARK: - HeroStatCol
+// Replaces the ~14 private heroStatCol / heroStatColumn copies spread across views.
+// Used inside gradient hero cards; always white text.
+
+struct HeroStatCol: View {
+    let value: String
+    let label: String
+    var icon:  String? = nil
+
+    var body: some View {
+        VStack(spacing: 3) {
+            if let icon {
+                Image(systemName: icon)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.78))
+            }
+            Text(value)
+                .font(.system(size: 15, weight: .bold, design: .rounded))
+                .foregroundStyle(.white)
+                .monospacedDigit()
+                .minimumScaleFactor(0.7)
+                .lineLimit(1)
+            Text(label)
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(.white.opacity(0.68))
+        }
+        .frame(maxWidth: .infinity)
+    }
+}
+
+// MARK: - CapsuleSegmentPicker
+// Replaces the ~6 identical animated capsule pickers in detail views.
+
+struct CapsuleSegmentPicker<T: Hashable & RawRepresentable>: View where T.RawValue == String {
+    let options: [T]
+    @Binding var selection: T
+    var activeColor: Color = .accentColor
+
+    var body: some View {
+        HStack(spacing: 6) {
+            ForEach(options, id: \.self) { option in
+                Button {
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+                        selection = option
+                    }
+                } label: {
+                    Text(option.rawValue)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(selection == option ? .white : .primary)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                        .background(
+                            selection == option
+                                ? AnyShapeStyle(activeColor)
+                                : AnyShapeStyle(Color(.secondarySystemGroupedBackground)),
+                            in: Capsule()
+                        )
+                        .shadow(color: selection == option ? activeColor.opacity(0.35) : .clear,
+                                radius: 8, x: 0, y: 3)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+}
+
+// MARK: - ModelContext helpers
+
+extension ModelContext {
+    /// Saves the context and logs any error instead of silently swallowing it.
+    func saveOrLog(file: String = #fileID, line: Int = #line) {
+        do {
+            try save()
+        } catch {
+            print("SwiftData save error [\(file):\(line)]: \(error)")
+        }
+    }
+}
+
+// MARK: - Notification names
+
+extension Notification.Name {
+    /// Posted by AppDelegate when the user taps a workout reminder notification.
+    /// ContentView observes this to switch to the Training tab.
+    static let openTrainingTab = Notification.Name("openTrainingTab")
 }

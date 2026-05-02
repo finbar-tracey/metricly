@@ -3,14 +3,20 @@ import SwiftData
 
 @Model
 final class TrainingProgram {
-    var name: String
-    var totalWeeks: Int
+    var name: String = ""
+    var totalWeeks: Int = 0
     var currentWeek: Int = 1
-    var startDate: Date
+    var startDate: Date = Date()
     var isActive: Bool = true
     var notes: String = ""
     @Relationship(deleteRule: .cascade, inverse: \ProgramDay.program)
-    var days: [ProgramDay]
+    var _days: [ProgramDay]? = nil
+
+    /// Non-optional accessor — CloudKit requires the stored relationship be optional.
+    var days: [ProgramDay] {
+        get { _days ?? [] }
+        set { _days = newValue }
+    }
 
     init(name: String, totalWeeks: Int, startDate: Date = .now) {
         self.name = name
@@ -34,12 +40,18 @@ final class TrainingProgram {
 
 @Model
 final class ProgramDay {
-    var dayOfWeek: Int // 1 = Sunday, 7 = Saturday
-    var workoutName: String
+    var dayOfWeek: Int = 1 // 1 = Sunday, 7 = Saturday
+    var workoutName: String = ""
     var order: Int = 0
     var program: TrainingProgram?
     @Relationship(deleteRule: .cascade, inverse: \ProgramExercise.day)
-    var exercises: [ProgramExercise]
+    var _exercises: [ProgramExercise]? = nil
+
+    /// Non-optional accessor — CloudKit requires the stored relationship be optional.
+    var exercises: [ProgramExercise] {
+        get { _exercises ?? [] }
+        set { _exercises = newValue }
+    }
 
     init(dayOfWeek: Int, workoutName: String, program: TrainingProgram? = nil) {
         self.dayOfWeek = dayOfWeek
@@ -64,9 +76,9 @@ final class ProgramDay {
 
 @Model
 final class ProgramExercise {
-    var name: String
-    var targetSets: Int
-    var targetReps: String // e.g. "8-12" or "5"
+    var name: String = ""
+    var targetSets: Int = 3
+    var targetReps: String = "8-12" // e.g. "8-12" or "5"
     var categoryRaw: String? = nil
     var order: Int = 0
     var day: ProgramDay?

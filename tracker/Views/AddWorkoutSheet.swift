@@ -54,11 +54,11 @@ struct AddWorkoutSheet: View {
                                 HStack(spacing: 12) {
                                     ZStack {
                                         RoundedRectangle(cornerRadius: 8)
-                                            .fill(isSelected ? Color.accentColor.opacity(0.15) : Color(.tertiarySystemFill))
+                                            .fill(isSelected ? Color.accentColor : Color(.tertiarySystemFill))
                                             .frame(width: 36, height: 36)
-                                        Image(systemName: isSelected ? "checkmark.circle.fill" : "doc.text")
+                                        Image(systemName: isSelected ? "checkmark" : "doc.text")
                                             .font(.system(size: 14, weight: .semibold))
-                                            .foregroundStyle(isSelected ? Color.accentColor : .secondary)
+                                            .foregroundStyle(isSelected ? .white : .secondary)
                                     }
                                     VStack(alignment: .leading, spacing: 2) {
                                         Text(template.name)
@@ -70,11 +70,17 @@ struct AddWorkoutSheet: View {
                                     }
                                     Spacer()
                                     if isSelected {
-                                        Image(systemName: "checkmark")
-                                            .font(.caption.bold())
+                                        Image(systemName: "checkmark.circle.fill")
+                                            .font(.body)
                                             .foregroundStyle(Color.accentColor)
                                     }
                                 }
+                                .padding(.vertical, isSelected ? 2 : 0)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 10)
+                                        .stroke(Color.accentColor.opacity(isSelected ? 0.4 : 0), lineWidth: 1.5)
+                                        .padding(-6)
+                                )
                             }
                             .accessibilityLabel("\(template.name), \(template.exercises.count) exercises")
                             .accessibilityAddTraits(isSelected ? .isSelected : [])
@@ -88,10 +94,15 @@ struct AddWorkoutSheet: View {
                     Section {
                         ForEach(template.exercises.sorted { $0.order < $1.order }) { exercise in
                             HStack(spacing: 10) {
-                                Image(systemName: exercise.category?.icon ?? "dumbbell")
-                                    .font(.caption)
-                                    .foregroundStyle(Color.accentColor)
-                                    .frame(width: 20)
+                                if let category = exercise.category {
+                                    MuscleIconView(group: category, color: Color.accentColor)
+                                        .frame(width: 16, height: 16)
+                                } else {
+                                    Image(systemName: "dumbbell")
+                                        .font(.caption)
+                                        .foregroundStyle(Color.accentColor)
+                                        .frame(width: 16)
+                                }
                                 Text(exercise.name)
                                     .font(.subheadline)
                                 Spacer()
@@ -116,7 +127,7 @@ struct AddWorkoutSheet: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Start") {
                         createWorkout()
-                        try? modelContext.save()
+                        modelContext.saveOrLog()
                         HapticsManager.workoutStarted()
                         dismiss()
                     }
@@ -130,24 +141,12 @@ struct AddWorkoutSheet: View {
     private func createWorkout() {
         let workout = Workout(name: name, date: date)
         modelContext.insert(workout)
-
         if let template = selectedTemplate {
-            let sorted = template.exercises.sorted { $0.order < $1.order }
-            for (index, templateExercise) in sorted.enumerated() {
-                let exercise = Exercise(name: templateExercise.name, workout: workout, category: templateExercise.category)
-                exercise.order = index
-                exercise.notes = templateExercise.notes
-                exercise.supersetGroup = templateExercise.supersetGroup
-                exercise.customRestDuration = templateExercise.customRestDuration
-                modelContext.insert(exercise)
-                workout.exercises.append(exercise)
-            }
+            workout.copyExercises(from: template.exercises, into: modelContext)
         }
     }
 
     private static func defaultWorkoutName() -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "MMM d"
-        return "Workout - \(formatter.string(from: .now))"
+        "Workout - \(Date.now.formatted(.dateTime.month(.abbreviated).day()))"
     }
 }

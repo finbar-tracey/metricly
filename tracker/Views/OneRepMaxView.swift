@@ -161,11 +161,11 @@ struct OneRepMaxView: View {
                 }
 
                 HStack(spacing: 0) {
-                    heroStatCol("Sessions", value: "\(e1rmHistory.count)")
+                    HeroStatCol(value: "\(e1rmHistory.count)", label: "Sessions")
                     Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 28)
-                    heroStatCol("Current", value: unit.format(currentE1RM))
+                    HeroStatCol(value: unit.format(currentE1RM), label: "Current")
                     Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 28)
-                    heroStatCol("Peak", value: unit.format(peakE1RM))
+                    HeroStatCol(value: unit.format(peakE1RM), label: "Peak")
                 }
             }
             .padding(20)
@@ -173,14 +173,6 @@ struct OneRepMaxView: View {
         .heroCard()
     }
 
-    private func heroStatCol(_ title: String, value: String) -> some View {
-        VStack(spacing: 3) {
-            Text(value).font(.system(size: 14, weight: .bold, design: .rounded))
-                .foregroundStyle(.white).monospacedDigit()
-            Text(title).font(.caption2).foregroundStyle(.white.opacity(0.70))
-        }
-        .frame(maxWidth: .infinity)
-    }
 
     // MARK: - Chart Card
 

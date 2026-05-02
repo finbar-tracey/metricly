@@ -6,5 +6,15 @@
 	<string>Metricly reads your health data to show steps, heart rate, sleep, and recovery insights alongside your workout tracking.</string>
 	<key>NSHealthUpdateUsageDescription</key>
 	<string>Metricly saves your workouts and body weight entries to Apple Health.</string>
+	<key>NSMotionUsageDescription</key>
+	<string>Metricly uses motion data to track distance and steps during indoor runs and walks.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Metricly uses your location to track your runs and walks — plotting your route on a map and calculating accurate distance and pace.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>location</string>
+		<string>audio</string>
+		<string>remote-notification</string>
+	</array>
 </dict>
 </plist>

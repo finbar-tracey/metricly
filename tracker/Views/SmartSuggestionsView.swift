@@ -8,11 +8,16 @@ struct SmartSuggestionsView: View {
     private var workouts: [Workout]
     @Query private var settingsArray: [UserSettings]
 
+    @Query(sort: \CardioSession.date, order: .reverse) private var cardioSessions: [CardioSession]
     @State private var externalWorkouts: [ExternalWorkout] = []
     @State private var createdWorkout: Workout?
 
     private var recoveryResult: RecoveryResult {
-        RecoveryEngine.evaluate(workouts: workouts, externalWorkouts: externalWorkouts)
+        RecoveryEngine.evaluate(
+            workouts: workouts,
+            externalWorkouts: externalWorkouts,
+            cardioSessions: Array(cardioSessions.prefix(50))
+        )
     }
 
     private var muscleReadiness: [(MuscleGroup, Double)] {
@@ -136,9 +141,8 @@ struct SmartSuggestionsView: View {
                             RoundedRectangle(cornerRadius: 10)
                                 .fill(Color.accentColor.opacity(0.12))
                                 .frame(width: 38, height: 38)
-                            Image(systemName: suggestion.group.icon)
-                                .font(.system(size: 14, weight: .semibold))
-                                .foregroundStyle(Color.accentColor)
+                            MuscleIconView(group: suggestion.group, color: Color.accentColor)
+                                .frame(width: 16, height: 16)
                         }
                         VStack(alignment: .leading, spacing: 3) {
                             Text(suggestion.name)

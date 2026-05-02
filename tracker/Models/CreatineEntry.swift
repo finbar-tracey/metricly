@@ -3,8 +3,8 @@ import SwiftData
 
 @Model
 final class CreatineEntry {
-    var date: Date
-    var grams: Double // typically 3-5g
+    var date: Date = Date()
+    var grams: Double = 5.0 // typically 3-5g
 
     init(date: Date = .now, grams: Double = 5.0) {
         self.date = date

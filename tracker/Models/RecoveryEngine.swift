@@ -66,11 +66,14 @@ enum RecoveryEngine {
     /// - Parameters:
     ///   - workouts: Finished, non-template workouts sorted newest-first.
     ///   - health: Optional health signals. Pass default if unavailable.
+    ///   - externalWorkouts: HealthKit workouts (non-app).
+    ///   - cardioSessions: App-native cardio sessions (runs, rides, walks).
     ///   - now: Injectable for testability.
     static func evaluate(
         workouts: [Workout],
         health: HealthSignals = .init(),
         externalWorkouts: [ExternalWorkout] = [],
+        cardioSessions: [CardioSession] = [],
         now: Date = .now
     ) -> RecoveryResult {
         let healthMultiplier = computeHealthMultiplier(health: health)
@@ -89,6 +92,13 @@ enum RecoveryEngine {
         muscleResults = applyExternalWorkoutFatigue(
             muscleResults: muscleResults,
             externalWorkouts: externalWorkouts,
+            now: now
+        )
+
+        // Apply systemic fatigue from app-native cardio sessions
+        muscleResults = applyCardioSessionFatigue(
+            muscleResults: muscleResults,
+            cardioSessions: cardioSessions,
             now: now
         )
 
@@ -383,6 +393,85 @@ enum RecoveryEngine {
         }
     }
 
+    // MARK: - Cardio Session Fatigue
+
+    /// Applies fatigue from the user's own cardio sessions (runs, rides, walks).
+    /// Cardio is systemic — it hits every muscle group, but legs/lower body hardest.
+    /// A 5 km easy run reduces leg freshness ~20-25%; a 20 km long run can reduce it ~55%.
+    private static func applyCardioSessionFatigue(
+        muscleResults: [MuscleFatigueResult],
+        cardioSessions: [CardioSession],
+        now: Date
+    ) -> [MuscleFatigueResult] {
+        // Look back 72 h — a hard long run can linger for 3 days in the legs
+        let cutoff = now.addingTimeInterval(-72 * 3600)
+        let recent = cardioSessions.filter { $0.date >= cutoff }
+        guard !recent.isEmpty else { return muscleResults }
+
+        // Compute a 0–2 fatigue magnitude per session and weight by recency
+        var totalLegs   = 0.0   // fatigue magnitude that hits legs heavily
+        var totalSystemic = 0.0 // fatigue magnitude for everything else
+
+        for session in recent {
+            let hoursSince = now.timeIntervalSince(session.date) / 3600
+
+            // Recency: full weight within 24 h, tapering to 0 at 72 h
+            let recencyFactor = max(0.0, 1.0 - hoursSince / 72.0)
+            guard recencyFactor > 0 else { continue }
+
+            // Intensity by type
+            let typeIntensity: Double
+            switch session.type {
+            case .outdoorRun, .indoorRun:    typeIntensity = 1.00
+            case .outdoorCycle:              typeIntensity = 0.65
+            case .outdoorWalk, .indoorWalk:  typeIntensity = 0.25
+            }
+
+            // Duration contribution (90 min = full duration score)
+            let durationScore = min(1.0, session.durationSeconds / (90 * 60))
+
+            // Distance contribution (20 km = full distance score)
+            let distanceScore = min(1.0, session.distanceMeters / 20_000)
+
+            // Pace contribution for runs (faster = more fatigue)
+            var paceMultiplier = 1.0
+            if (session.type == .outdoorRun || session.type == .indoorRun),
+               session.avgPaceSecPerKm > 0 {
+                let zone = PaceZone.zone(for: session.avgPaceSecPerKm)
+                switch zone {
+                case .speed:     paceMultiplier = 1.40
+                case .threshold: paceMultiplier = 1.25
+                case .tempo:     paceMultiplier = 1.12
+                case .aerobic:   paceMultiplier = 1.00
+                case .easy:      paceMultiplier = 0.85
+                case .recovery:  paceMultiplier = 0.70
+                }
+            }
+
+            // Combine into a 0–2 magnitude score
+            let magnitude = typeIntensity * max(durationScore, distanceScore) * paceMultiplier * 2.0
+
+            totalLegs      += magnitude * recencyFactor
+            totalSystemic  += magnitude * recencyFactor * 0.45 // systemic is ~45% of leg impact
+        }
+
+        // Convert to freshness reductions, capped so one session can't zero you out
+        // Legs: up to 60% reduction for a very hard long run
+        let legImpact      = min(0.60, totalLegs      * 0.18)
+        // Everything else: up to 30% reduction
+        let systemicImpact = min(0.30, totalSystemic  * 0.18)
+
+        return muscleResults.map { result in
+            let impact = (result.group == .legs) ? legImpact : systemicImpact
+            return MuscleFatigueResult(
+                group: result.group,
+                freshness: max(0, result.freshness - impact),
+                lastTrained: result.lastTrained,
+                effectiveRecoveryHours: result.effectiveRecoveryHours
+            )
+        }
+    }
+
     // MARK: - Suggested Workout Type
 
     static func suggestWorkoutType(from results: [MuscleFatigueResult]) -> String {
@@ -416,10 +505,6 @@ enum RecoveryEngine {
         return "Fatigued"
     }
 
-    static func readinessColor(_ score: Double) -> Color {
-        freshnessColor(score)
-    }
-
     static func readinessLabel(_ score: Double) -> String {
         if score >= 0.8 { return "You're well recovered. Great time for a hard session!" }
         if score >= 0.5 { return "Mostly recovered. Light to moderate training recommended." }
@@ -428,11 +513,6 @@ enum RecoveryEngine {
     }
 
     static func timeAgoText(from date: Date) -> String {
-        let hours = Int(Date.now.timeIntervalSince(date) / 3600)
-        if hours < 1 { return "Just now" }
-        if hours < 24 { return "\(hours)h ago" }
-        let days = hours / 24
-        if days == 1 { return "Yesterday" }
-        return "\(days) days ago"
+        date.formatted(.relative(presentation: .named, unitsStyle: .abbreviated))
     }
 }

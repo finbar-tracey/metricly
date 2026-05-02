@@ -10,6 +10,7 @@ enum ReportPeriod: String, CaseIterable {
 struct WeeklyMonthlyReportView: View {
     @Query(filter: #Predicate<Workout> { !$0.isTemplate }, sort: \Workout.date, order: .reverse)
     private var allWorkouts: [Workout]
+    @Query(sort: \CardioSession.date, order: .reverse) private var cardioSessions: [CardioSession]
     @Query(sort: \BodyWeightEntry.date) private var allBodyWeightEntries: [BodyWeightEntry]
     @Query private var settingsArray: [UserSettings]
     @Environment(\.weightUnit) private var weightUnit
@@ -46,9 +47,11 @@ struct WeeklyMonthlyReportView: View {
         let calendar = Calendar.current; let current = currentPeriodRange
         switch selectedPeriod {
         case .week:
-            return (calendar.date(byAdding: .day, value: -7, to: current.start)!, current.start)
+            let prev = calendar.date(byAdding: .day, value: -7, to: current.start) ?? current.start
+            return (prev, current.start)
         case .month:
-            return (calendar.date(byAdding: .month, value: -1, to: current.start)!, current.start)
+            let prev = calendar.date(byAdding: .month, value: -1, to: current.start) ?? current.start
+            return (prev, current.start)
         }
     }
 
@@ -77,14 +80,10 @@ struct WeeklyMonthlyReportView: View {
     }
 
     private var totalVolumeKg: Double {
-        periodWorkouts.reduce(0.0) { total, workout in
-            total + workout.exercises.reduce(0.0) { exTotal, exercise in
-                exTotal + exercise.sets.filter { !$0.isWarmUp }.reduce(0.0) { $0 + Double($1.reps) * $1.weight }
-            }
-        }
+        periodWorkouts.reduce(0.0) { $0 + $1.totalVolumeKg() }
     }
 
-    private var totalVolume: Double { weightUnit == .kg ? totalVolumeKg : totalVolumeKg * 2.20462 }
+    private var totalVolume: Double { weightUnit.display(totalVolumeKg) }
 
     private var totalDuration: TimeInterval {
         periodWorkouts.reduce(0) { $0 + ($1.duration ?? 0) }
@@ -98,11 +97,7 @@ struct WeeklyMonthlyReportView: View {
     }
 
     private var volumeChange: Double? {
-        let prevVolumeKg = previousPeriodWorkouts.reduce(0.0) { total, workout in
-            total + workout.exercises.reduce(0.0) { exTotal, exercise in
-                exTotal + exercise.sets.filter { !$0.isWarmUp }.reduce(0.0) { $0 + Double($1.reps) * $1.weight }
-            }
-        }
+        let prevVolumeKg = previousPeriodWorkouts.reduce(0.0) { $0 + $1.totalVolumeKg() }
         guard prevVolumeKg > 0 else { return nil }
         return ((totalVolumeKg - prevVolumeKg) / prevVolumeKg) * 100
     }
@@ -159,7 +154,7 @@ struct WeeklyMonthlyReportView: View {
         return diff
     }
 
-    private var currentStreak: Int { Workout.currentStreak(from: allWorkouts) }
+    private var currentStreak: Int { Workout.currentStreak(from: allWorkouts, cardioSessions: cardioSessions) }
 
     private var workoutsPerWeekAverage: Double? {
         guard selectedPeriod == .month, !periodWorkouts.isEmpty else { return nil }
@@ -182,7 +177,7 @@ struct WeeklyMonthlyReportView: View {
         switch selectedPeriod {
         case .week:
             formatter.dateFormat = "MMM d"
-            let endOfWeek = Calendar.current.date(byAdding: .day, value: 6, to: range.start)!
+            let endOfWeek = Calendar.current.date(byAdding: .day, value: 6, to: range.start) ?? range.end
             return "\(formatter.string(from: range.start)) – \(formatter.string(from: min(endOfWeek, .now)))"
         case .month:
             formatter.dateFormat = "MMMM yyyy"; return formatter.string(from: range.start)
@@ -301,13 +296,13 @@ struct WeeklyMonthlyReportView: View {
                         .font(.subheadline).foregroundStyle(.white.opacity(0.75))
                 } else {
                     HStack(spacing: 0) {
-                        heroStatCol("Workouts", value: "\(workoutCount)")
+                        HeroStatCol(value: "\(workoutCount)", label: "Workouts")
                         Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 28)
-                        heroStatCol("Sets", value: "\(totalSets)")
+                        HeroStatCol(value: "\(totalSets)", label: "Sets")
                         Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 28)
-                        heroStatCol("Duration", value: formattedDuration)
+                        HeroStatCol(value: formattedDuration, label: "Duration")
                         Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 28)
-                        heroStatCol("Volume", value: formatVolume(totalVolume))
+                        HeroStatCol(value: formatVolume(totalVolume), label: "Volume")
                     }
                 }
             }
@@ -316,14 +311,6 @@ struct WeeklyMonthlyReportView: View {
         .heroCard()
     }
 
-    private func heroStatCol(_ title: String, value: String) -> some View {
-        VStack(spacing: 3) {
-            Text(value).font(.system(size: 14, weight: .bold, design: .rounded))
-                .foregroundStyle(.white).monospacedDigit()
-            Text(title).font(.caption2).foregroundStyle(.white.opacity(0.70))
-        }
-        .frame(maxWidth: .infinity)
-    }
 
     // MARK: - Training Summary Card
 
@@ -411,10 +398,8 @@ struct WeeklyMonthlyReportView: View {
             VStack(spacing: 10) {
                 ForEach(muscleGroupSetCounts.prefix(6), id: \.group) { item in
                     HStack(spacing: 10) {
-                        Image(systemName: item.group.icon)
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundStyle(Color.accentColor)
-                            .frame(width: 20)
+                        MuscleIconView(group: item.group, color: Color.accentColor)
+                            .frame(width: 14, height: 14)
                         Text(item.group.rawValue)
                             .font(.caption.weight(.medium))
                             .frame(width: 70, alignment: .leading)

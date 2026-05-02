@@ -7,6 +7,19 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		15696E43EDA62A1A568F42A5 /* WatchKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4FFE27167BE30FCE70F74F0D /* WatchKit.framework */; settings = {ATTRIBUTES = (); }; };
+		16DFA90F7DCF3037A4C2EF30 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 9368BA8071E780160200AF2C /* Assets.xcassets */; };
+		1EB787865C77762031B1F03C /* HealthKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 62964D20926F033C299E8669 /* HealthKit.framework */; settings = {ATTRIBUTES = (); }; };
+		256F025906207781C4A42241 /* WatchGymView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8542A36BEB6EAFCC197C9226 /* WatchGymView.swift */; };
+		2FBFAED8CF597A8948429AB2 /* WatchRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 663DD188085EEE0F6A1E3458 /* WatchRootView.swift */; };
+		35515EA8CD7ABF9D043C5710 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4101AA73A1268A38D07B832B /* WidgetKit.framework */; settings = {ATTRIBUTES = (); }; };
+		424EEF5EC8024FAB25D38FC2 /* WatchWorkoutSessionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C7565ACAA622AD970A48063 /* WatchWorkoutSessionManager.swift */; };
+		46E7A05A5969361C9381DD69 /* MetriclyWatchComplications.appex in Embed Watch Complications */ = {isa = PBXBuildFile; fileRef = 6D730FE107BD884EB1ED495E /* MetriclyWatchComplications.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		4861DF7CD2C7BFDBFD1E4B60 /* WatchSyncModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = ADABA831A2528A54D046938D /* WatchSyncModels.swift */; };
+		5E0888633FA8FE356908D9BA /* WatchConnectivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 34E8399A10C9B6F4798A1579 /* WatchConnectivity.framework */; settings = {ATTRIBUTES = (); }; };
+		61E65B49C870A8DE919AF15E /* WatchSyncModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = ADABA831A2528A54D046938D /* WatchSyncModels.swift */; };
+		63D4CA14C514390DDE603321 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5F25E98828C1435245FC19FC /* SwiftUI.framework */; settings = {ATTRIBUTES = (); }; };
+		7234F76A6DB6A51D5BC9115B /* WatchModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2BE5CDBF4BEBD2DAD8351B6F /* WatchModels.swift */; };
 		82CCBB3A2F81354000BD46EA /* AppShortcuts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82CCBB032F81354000BD46EA /* AppShortcuts.swift */; };
 		82CCBB422F81354000BD46EA /* ExportHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82CCBB0B2F81354000BD46EA /* ExportHelper.swift */; };
 		82CCBB442F81354000BD46EA /* HapticsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82CCBB0D2F81354000BD46EA /* HapticsManager.swift */; };
@@ -20,9 +33,102 @@
 		82CCBB892F8AD6AE00BD46EA /* WorkoutCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82CCBB882F8AD6AE00BD46EA /* WorkoutCardView.swift */; };
 		82CCBB8D2F8BF5CF00BD46EA /* FlowLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82CCBB8C2F8BF5CF00BD46EA /* FlowLayout.swift */; };
 		82CCBB922F8BF6CB00BD46EA /* QuickStartCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82CCBB912F8BF6CB00BD46EA /* QuickStartCard.swift */; };
+		82CCBB942F8BF6CB00BD46EA /* MuscleIconView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82CCBB932F8BF6CB00BD46EA /* MuscleIconView.swift */; };
+		82CCBB952F8BF6CB00BD46EA /* UndoBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82CCBB952F8BF6CA00BD46EA /* UndoBar.swift */; };
+		82CCBB962F8BF6CB00BD46EA /* HubRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82CCBB962F8BF6CA00BD46EA /* HubRow.swift */; };
+		82CCBBA02F8BF6CB00BD46EA /* CardioTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82CCBBA02F8BF6CA00BD46EA /* CardioTracker.swift */; };
+		82CCBBA12F8BF6CB00BD46EA /* WidgetDataWriter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82CCBBA12F8BF6CA00BD46EA /* WidgetDataWriter.swift */; };
+		82FD87A22FA5057700D73920 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 82FD87A12FA5057700D73920 /* WidgetKit.framework */; };
+		82FD87A42FA5057700D73920 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 82FD87A32FA5057700D73920 /* SwiftUI.framework */; };
+		82FD87B32FA5057800D73920 /* MetriclyWidgetsExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 82FD879F2FA5057700D73920 /* MetriclyWidgetsExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		8579BFCD02F9FB3CBF64154A /* MetriclyWatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2BA4CCAFFA20F72B2C77AE63 /* MetriclyWatchApp.swift */; };
+		8724577E02FB4DC83ACD458D /* PhoneConnectivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5A29A21938233E7A93C4C95 /* PhoneConnectivityManager.swift */; };
+		93D922DE98A02C2ADF16FA4C /* WatchConnectivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A5301678701A47E0ABE3B26 /* WatchConnectivityManager.swift */; };
+		9D21304DDD863A01918674DE /* WatchRestTimerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5589E11C36A11B70766D53EB /* WatchRestTimerView.swift */; };
+		C191685841B1CD47F46D5C5D /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 39E4F1D6FA51D7480550839B /* Foundation.framework */; };
+		C65C4106D61E19FD82FEBD27 /* MetriclyWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = FDE4FFC6BE5D207CB3754ED7 /* MetriclyWatch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		D25382435926316D83D43CC7 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 39E4F1D6FA51D7480550839B /* Foundation.framework */; };
+		EDB8AE92F24CFC88014E868E /* WatchComplications.swift in Sources */ = {isa = PBXBuildFile; fileRef = 450504C0961911BD593E7516 /* WatchComplications.swift */; };
+		F5E1D7AFB6B9A3642F1A8CE2 /* WatchCardioView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4124FAE731ACA1B9480E005F /* WatchCardioView.swift */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		82FD87B12FA5057800D73920 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 82A0C4C62F58E8E200BD421B /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 82FD879E2FA5057700D73920;
+			remoteInfo = MetriclyWidgetsExtension;
+		};
+		EC713DBD2D0E892C0874F3CF /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 82A0C4C62F58E8E200BD421B /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 1F1F6EED99F308FC902A5AF1;
+			remoteInfo = MetriclyWatch;
+		};
+		FBC45A849A3585EF66694E42 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 82A0C4C62F58E8E200BD421B /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 9D19226C2526088B02273D63;
+			remoteInfo = MetriclyWatchComplications;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		82FD87B82FA5057800D73920 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				82FD87B32FA5057800D73920 /* MetriclyWidgetsExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C00122913A5E03234F96BC56 /* Embed Watch Content */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 16;
+			files = (
+				C65C4106D61E19FD82FEBD27 /* MetriclyWatch.app in Embed Watch Content */,
+			);
+			name = "Embed Watch Content";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		CD1C210EC1A7CF1623ACCBB8 /* Embed Watch Complications */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				46E7A05A5969361C9381DD69 /* MetriclyWatchComplications.appex in Embed Watch Complications */,
+			);
+			name = "Embed Watch Complications";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
+		1D6493B1AA93126B3C5A3986 /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		2BA4CCAFFA20F72B2C77AE63 /* MetriclyWatchApp.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MetriclyWatchApp.swift; sourceTree = "<group>"; };
+		2BE5CDBF4BEBD2DAD8351B6F /* WatchModels.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchModels.swift; sourceTree = "<group>"; };
+		34E8399A10C9B6F4798A1579 /* WatchConnectivity.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WatchConnectivity.framework; path = System/Library/Frameworks/WatchConnectivity.framework; sourceTree = SDKROOT; };
+		39E4F1D6FA51D7480550839B /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/WatchOS.platform/Developer/SDKs/WatchOS11.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
+		4101AA73A1268A38D07B832B /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		4124FAE731ACA1B9480E005F /* WatchCardioView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchCardioView.swift; sourceTree = "<group>"; };
+		450504C0961911BD593E7516 /* WatchComplications.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchComplications.swift; sourceTree = "<group>"; };
+		4FFE27167BE30FCE70F74F0D /* WatchKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WatchKit.framework; path = System/Library/Frameworks/WatchKit.framework; sourceTree = SDKROOT; };
+		5589E11C36A11B70766D53EB /* WatchRestTimerView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchRestTimerView.swift; sourceTree = "<group>"; };
+		5F25E98828C1435245FC19FC /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+		62964D20926F033C299E8669 /* HealthKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = HealthKit.framework; path = System/Library/Frameworks/HealthKit.framework; sourceTree = SDKROOT; };
+		663DD188085EEE0F6A1E3458 /* WatchRootView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchRootView.swift; sourceTree = "<group>"; };
+		6A5301678701A47E0ABE3B26 /* WatchConnectivityManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchConnectivityManager.swift; sourceTree = "<group>"; };
+		6C7565ACAA622AD970A48063 /* WatchWorkoutSessionManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchWorkoutSessionManager.swift; sourceTree = "<group>"; };
+		6D730FE107BD884EB1ED495E /* MetriclyWatchComplications.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = MetriclyWatchComplications.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		82A0C4CE2F58E8E200BD421B /* tracker.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = tracker.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		82CCBB032F81354000BD46EA /* AppShortcuts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppShortcuts.swift; sourceTree = "<group>"; };
 		82CCBB0B2F81354000BD46EA /* ExportHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportHelper.swift; sourceTree = "<group>"; };
@@ -37,6 +143,22 @@
 		82CCBB882F8AD6AE00BD46EA /* WorkoutCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutCardView.swift; sourceTree = "<group>"; };
 		82CCBB8C2F8BF5CF00BD46EA /* FlowLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowLayout.swift; sourceTree = "<group>"; };
 		82CCBB912F8BF6CB00BD46EA /* QuickStartCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickStartCard.swift; sourceTree = "<group>"; };
+		82CCBB932F8BF6CB00BD46EA /* MuscleIconView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MuscleIconView.swift; sourceTree = "<group>"; };
+		82CCBB952F8BF6CA00BD46EA /* UndoBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UndoBar.swift; sourceTree = "<group>"; };
+		82CCBB962F8BF6CA00BD46EA /* HubRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HubRow.swift; sourceTree = "<group>"; };
+		82CCBBA02F8BF6CA00BD46EA /* CardioTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardioTracker.swift; sourceTree = "<group>"; };
+		82CCBBA12F8BF6CA00BD46EA /* WidgetDataWriter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetDataWriter.swift; sourceTree = "<group>"; };
+		82FD879F2FA5057700D73920 /* MetriclyWidgetsExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = MetriclyWidgetsExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		82FD87A12FA5057700D73920 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		82FD87A32FA5057700D73920 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+		82FD87BB2FA508A300D73920 /* MetriclyWidgetsExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = MetriclyWidgetsExtension.entitlements; sourceTree = "<group>"; };
+		8542A36BEB6EAFCC197C9226 /* WatchGymView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchGymView.swift; sourceTree = "<group>"; };
+		9368BA8071E780160200AF2C /* Assets.xcassets */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		ADABA831A2528A54D046938D /* WatchSyncModels.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchSyncModels.swift; sourceTree = "<group>"; };
+		D5A29A21938233E7A93C4C95 /* PhoneConnectivityManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PhoneConnectivityManager.swift; sourceTree = "<group>"; };
+		E7BFB9689E4590B0397BD07C /* MetriclyWatchComplications.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = MetriclyWatchComplications.entitlements; sourceTree = "<group>"; };
+		EBF0E4BA9016748E21F092B3 /* MetriclyWatch.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = MetriclyWatch.entitlements; sourceTree = "<group>"; };
+		FDE4FFC6BE5D207CB3754ED7 /* MetriclyWatch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MetriclyWatch.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -46,6 +168,13 @@
 				Info.plist,
 			);
 			target = 82A0C4CD2F58E8E200BD421B /* tracker */;
+		};
+		82FD87B72FA5057800D73920 /* Exceptions for "MetriclyWidgets" folder in "MetriclyWidgetsExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 82FD879E2FA5057700D73920 /* MetriclyWidgetsExtension */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
@@ -58,9 +187,28 @@
 			path = tracker;
 			sourceTree = "<group>";
 		};
+		82FD87A52FA5057700D73920 /* MetriclyWidgets */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				82FD87B72FA5057800D73920 /* Exceptions for "MetriclyWidgets" folder in "MetriclyWidgetsExtension" target */,
+			);
+			path = MetriclyWidgets;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		45C1BBFDEE4B7BF93888233D /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D25382435926316D83D43CC7 /* Foundation.framework in Frameworks */,
+				1EB787865C77762031B1F03C /* HealthKit.framework in Frameworks */,
+				5E0888633FA8FE356908D9BA /* WatchConnectivity.framework in Frameworks */,
+				15696E43EDA62A1A568F42A5 /* WatchKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		82A0C4CB2F58E8E200BD421B /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -68,17 +216,76 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		82FD879C2FA5057700D73920 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				82FD87A42FA5057700D73920 /* SwiftUI.framework in Frameworks */,
+				82FD87A22FA5057700D73920 /* WidgetKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C3F5113F1D6FD54B593F1E4B /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C191685841B1CD47F46D5C5D /* Foundation.framework in Frameworks */,
+				35515EA8CD7ABF9D043C5710 /* WidgetKit.framework in Frameworks */,
+				63D4CA14C514390DDE603321 /* SwiftUI.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		21907B9991D255001FD84AF8 /* watchOS */ = {
+			isa = PBXGroup;
+			children = (
+				39E4F1D6FA51D7480550839B /* Foundation.framework */,
+			);
+			name = watchOS;
+			sourceTree = "<group>";
+		};
+		6ED0973E21277FB2753A848A /* MetriclyWatch */ = {
+			isa = PBXGroup;
+			children = (
+				2BA4CCAFFA20F72B2C77AE63 /* MetriclyWatchApp.swift */,
+				663DD188085EEE0F6A1E3458 /* WatchRootView.swift */,
+				2BE5CDBF4BEBD2DAD8351B6F /* WatchModels.swift */,
+				6C7565ACAA622AD970A48063 /* WatchWorkoutSessionManager.swift */,
+				6A5301678701A47E0ABE3B26 /* WatchConnectivityManager.swift */,
+				8542A36BEB6EAFCC197C9226 /* WatchGymView.swift */,
+				4124FAE731ACA1B9480E005F /* WatchCardioView.swift */,
+				9368BA8071E780160200AF2C /* Assets.xcassets */,
+				EBF0E4BA9016748E21F092B3 /* MetriclyWatch.entitlements */,
+				5589E11C36A11B70766D53EB /* WatchRestTimerView.swift */,
+			);
+			path = MetriclyWatch;
+			sourceTree = "<group>";
+		};
+		7FA17C6917C523B86CA1468A /* MetriclyWatchComplications */ = {
+			isa = PBXGroup;
+			children = (
+				450504C0961911BD593E7516 /* WatchComplications.swift */,
+				1D6493B1AA93126B3C5A3986 /* Info.plist */,
+				E7BFB9689E4590B0397BD07C /* MetriclyWatchComplications.entitlements */,
+			);
+			path = MetriclyWatchComplications;
+			sourceTree = "<group>";
+		};
 		82A0C4C52F58E8E200BD421B = {
 			isa = PBXGroup;
 			children = (
+				82FD87BB2FA508A300D73920 /* MetriclyWidgetsExtension.entitlements */,
 				82A0C4D02F58E8E200BD421B /* tracker */,
+				82FD87A52FA5057700D73920 /* MetriclyWidgets */,
+				82FD87A02FA5057700D73920 /* Frameworks */,
 				82A0C4CF2F58E8E200BD421B /* Products */,
 				82CCBB8E2F8BF6A200BD46EA /* Services */,
 				82CCBB8F2F8BF6A200BD46EA /* Helpers */,
 				82CCBB902F8BF6A300BD46EA /* Components */,
+				6ED0973E21277FB2753A848A /* MetriclyWatch */,
+				7FA17C6917C523B86CA1468A /* MetriclyWatchComplications */,
 			);
 			sourceTree = "<group>";
 		};
@@ -86,6 +293,9 @@
 			isa = PBXGroup;
 			children = (
 				82A0C4CE2F58E8E200BD421B /* tracker.app */,
+				82FD879F2FA5057700D73920 /* MetriclyWidgetsExtension.appex */,
+				FDE4FFC6BE5D207CB3754ED7 /* MetriclyWatch.app */,
+				6D730FE107BD884EB1ED495E /* MetriclyWatchComplications.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -95,9 +305,13 @@
 			children = (
 				82CCBB0D2F81354000BD46EA /* HapticsManager.swift */,
 				82CCBB6B2F82C20700BD46EA /* HealthKitManager.swift */,
+				82CCBBA02F8BF6CA00BD46EA /* CardioTracker.swift */,
+				82CCBBA12F8BF6CA00BD46EA /* WidgetDataWriter.swift */,
 				82CCBB232F81354000BD46EA /* WorkoutActivityManager.swift */,
 				82CCBB182F81354000BD46EA /* ReminderManager.swift */,
 				82CCBB032F81354000BD46EA /* AppShortcuts.swift */,
+				D5A29A21938233E7A93C4C95 /* PhoneConnectivityManager.swift */,
+				ADABA831A2528A54D046938D /* WatchSyncModels.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -120,13 +334,50 @@
 				82CCBB882F8AD6AE00BD46EA /* WorkoutCardView.swift */,
 				82CCBB282F81354000BD46EA /* WorkoutShareCardView.swift */,
 				82CCBB912F8BF6CB00BD46EA /* QuickStartCard.swift */,
+				82CCBB932F8BF6CB00BD46EA /* MuscleIconView.swift */,
+				82CCBB952F8BF6CA00BD46EA /* UndoBar.swift */,
+				82CCBB962F8BF6CA00BD46EA /* HubRow.swift */,
 			);
 			path = Components;
+			sourceTree = "<group>";
+		};
+		82FD87A02FA5057700D73920 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				82FD87A12FA5057700D73920 /* WidgetKit.framework */,
+				82FD87A32FA5057700D73920 /* SwiftUI.framework */,
+				21907B9991D255001FD84AF8 /* watchOS */,
+				62964D20926F033C299E8669 /* HealthKit.framework */,
+				34E8399A10C9B6F4798A1579 /* WatchConnectivity.framework */,
+				4FFE27167BE30FCE70F74F0D /* WatchKit.framework */,
+				4101AA73A1268A38D07B832B /* WidgetKit.framework */,
+				5F25E98828C1435245FC19FC /* SwiftUI.framework */,
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		1F1F6EED99F308FC902A5AF1 /* MetriclyWatch */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = C1132063254384E778C7B033 /* Build configuration list for PBXNativeTarget "MetriclyWatch" */;
+			buildPhases = (
+				2FA80F01E485F2D7B9338CB8 /* Sources */,
+				45C1BBFDEE4B7BF93888233D /* Frameworks */,
+				0C3D9E03808F9E2804B46EBF /* Resources */,
+				CD1C210EC1A7CF1623ACCBB8 /* Embed Watch Complications */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				F83132FE3A2F981C844EE9F1 /* PBXTargetDependency */,
+			);
+			name = MetriclyWatch;
+			productName = MetriclyWatch;
+			productReference = FDE4FFC6BE5D207CB3754ED7 /* MetriclyWatch.app */;
+			productType = "com.apple.product-type.application";
+		};
 		82A0C4CD2F58E8E200BD421B /* tracker */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 82A0C4D92F58E8E200BD421B /* Build configuration list for PBXNativeTarget "tracker" */;
@@ -134,20 +385,59 @@
 				82A0C4CA2F58E8E200BD421B /* Sources */,
 				82A0C4CB2F58E8E200BD421B /* Frameworks */,
 				82A0C4CC2F58E8E200BD421B /* Resources */,
+				82FD87B82FA5057800D73920 /* Embed Foundation Extensions */,
+				C00122913A5E03234F96BC56 /* Embed Watch Content */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				82FD87B22FA5057800D73920 /* PBXTargetDependency */,
+				C40E3E867D9D8D916FDE45FE /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				82A0C4D02F58E8E200BD421B /* tracker */,
+			);
+			name = tracker;
+			productName = tracker;
+			productReference = 82A0C4CE2F58E8E200BD421B /* tracker.app */;
+			productType = "com.apple.product-type.application";
+		};
+		82FD879E2FA5057700D73920 /* MetriclyWidgetsExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 82FD87B42FA5057800D73920 /* Build configuration list for PBXNativeTarget "MetriclyWidgetsExtension" */;
+			buildPhases = (
+				82FD879B2FA5057700D73920 /* Sources */,
+				82FD879C2FA5057700D73920 /* Frameworks */,
+				82FD879D2FA5057700D73920 /* Resources */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				82A0C4D02F58E8E200BD421B /* tracker */,
+				82FD87A52FA5057700D73920 /* MetriclyWidgets */,
 			);
-			name = tracker;
-			packageProductDependencies = (
+			name = MetriclyWidgetsExtension;
+			productName = MetriclyWidgetsExtension;
+			productReference = 82FD879F2FA5057700D73920 /* MetriclyWidgetsExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		9D19226C2526088B02273D63 /* MetriclyWatchComplications */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A638D92D6E68451CE35C626B /* Build configuration list for PBXNativeTarget "MetriclyWatchComplications" */;
+			buildPhases = (
+				362F80E5B0EB66040AFEA6B9 /* Sources */,
+				C3F5113F1D6FD54B593F1E4B /* Frameworks */,
+				DA5B7CA96647E67700CC7D85 /* Resources */,
 			);
-			productName = tracker;
-			productReference = 82A0C4CE2F58E8E200BD421B /* tracker.app */;
-			productType = "com.apple.product-type.application";
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = MetriclyWatchComplications;
+			productName = MetriclyWatchComplications;
+			productReference = 6D730FE107BD884EB1ED495E /* MetriclyWatchComplications.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -156,11 +446,14 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
-				LastSwiftUpdateCheck = 2630;
-				LastUpgradeCheck = 2630;
+				LastSwiftUpdateCheck = 2640;
+				LastUpgradeCheck = 2640;
 				TargetAttributes = {
 					82A0C4CD2F58E8E200BD421B = {
 						CreatedOnToolsVersion = 26.3;
+					};
+					82FD879E2FA5057700D73920 = {
+						CreatedOnToolsVersion = 26.4.1;
 					};
 				};
 			};
@@ -179,12 +472,37 @@
 			projectRoot = "";
 			targets = (
 				82A0C4CD2F58E8E200BD421B /* tracker */,
+				82FD879E2FA5057700D73920 /* MetriclyWidgetsExtension */,
+				1F1F6EED99F308FC902A5AF1 /* MetriclyWatch */,
+				9D19226C2526088B02273D63 /* MetriclyWatchComplications */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		0C3D9E03808F9E2804B46EBF /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				16DFA90F7DCF3037A4C2EF30 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		82A0C4CC2F58E8E200BD421B /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		82FD879D2FA5057700D73920 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		DA5B7CA96647E67700CC7D85 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -194,6 +512,30 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		2FA80F01E485F2D7B9338CB8 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				8579BFCD02F9FB3CBF64154A /* MetriclyWatchApp.swift in Sources */,
+				2FBFAED8CF597A8948429AB2 /* WatchRootView.swift in Sources */,
+				7234F76A6DB6A51D5BC9115B /* WatchModels.swift in Sources */,
+				424EEF5EC8024FAB25D38FC2 /* WatchWorkoutSessionManager.swift in Sources */,
+				93D922DE98A02C2ADF16FA4C /* WatchConnectivityManager.swift in Sources */,
+				256F025906207781C4A42241 /* WatchGymView.swift in Sources */,
+				F5E1D7AFB6B9A3642F1A8CE2 /* WatchCardioView.swift in Sources */,
+				61E65B49C870A8DE919AF15E /* WatchSyncModels.swift in Sources */,
+				9D21304DDD863A01918674DE /* WatchRestTimerView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		362F80E5B0EB66040AFEA6B9 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				EDB8AE92F24CFC88014E868E /* WatchComplications.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		82A0C4CA2F58E8E200BD421B /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -208,15 +550,68 @@
 				82CCBB4F2F81354000BD46EA /* ReminderManager.swift in Sources */,
 				82CCBB512F81354000BD46EA /* ShareSheet.swift in Sources */,
 				82CCBB6C2F82C20700BD46EA /* HealthKitManager.swift in Sources */,
+				82CCBBA02F8BF6CB00BD46EA /* CardioTracker.swift in Sources */,
+				82CCBBA12F8BF6CB00BD46EA /* WidgetDataWriter.swift in Sources */,
 				82CCBB922F8BF6CB00BD46EA /* QuickStartCard.swift in Sources */,
+				82CCBB942F8BF6CB00BD46EA /* MuscleIconView.swift in Sources */,
+				82CCBB952F8BF6CB00BD46EA /* UndoBar.swift in Sources */,
+				82CCBB962F8BF6CB00BD46EA /* HubRow.swift in Sources */,
 				82CCBB5A2F81354000BD46EA /* WorkoutActivityManager.swift in Sources */,
 				82CCBB5F2F81354000BD46EA /* WorkoutShareCardView.swift in Sources */,
+				8724577E02FB4DC83ACD458D /* PhoneConnectivityManager.swift in Sources */,
+				4861DF7CD2C7BFDBFD1E4B60 /* WatchSyncModels.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		82FD879B2FA5057700D73920 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXTargetDependency section */
+		82FD87B22FA5057800D73920 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 82FD879E2FA5057700D73920 /* MetriclyWidgetsExtension */;
+			targetProxy = 82FD87B12FA5057800D73920 /* PBXContainerItemProxy */;
+		};
+		C40E3E867D9D8D916FDE45FE /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = MetriclyWatch;
+			target = 1F1F6EED99F308FC902A5AF1 /* MetriclyWatch */;
+			targetProxy = EC713DBD2D0E892C0874F3CF /* PBXContainerItemProxy */;
+		};
+		F83132FE3A2F981C844EE9F1 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = MetriclyWatchComplications;
+			target = 9D19226C2526088B02273D63 /* MetriclyWatchComplications */;
+			targetProxy = FBC45A849A3585EF66694E42 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
 /* Begin XCBuildConfiguration section */
+		38DE0803F369A351C20A1A46 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = MetriclyWatchComplications/MetriclyWatchComplications.entitlements;
+				DEVELOPMENT_TEAM = R4CNRLU7KW;
+				INFOPLIST_FILE = MetriclyWatchComplications/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = Findows.tracker.watchkitapp.complications;
+				PRODUCT_NAME = MetriclyWatchComplications;
+				SDKROOT = watchos;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 10.0;
+			};
+			name = Debug;
+		};
 		82A0C4D72F58E8E200BD421B /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -276,6 +671,7 @@
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
@@ -333,6 +729,7 @@
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				VALIDATE_PRODUCT = YES;
 			};
@@ -409,7 +806,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.2;
+				MARKETING_VERSION = 1.3;
 				PRODUCT_BUNDLE_IDENTIFIER = Findows.tracker;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -423,6 +820,139 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		82FD87B52FA5057800D73920 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = MetriclyWidgetsExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = R4CNRLU7KW;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = MetriclyWidgets/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = MetriclyWidgets;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.4;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = Findows.tracker.MetriclyWidgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		82FD87B62FA5057800D73920 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = MetriclyWidgetsExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = R4CNRLU7KW;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = MetriclyWidgets/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = MetriclyWidgets;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.4;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = Findows.tracker.MetriclyWidgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		9525456C40D6EFFB23D4B441 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = MetriclyWatch/MetriclyWatch.entitlements;
+				DEVELOPMENT_TEAM = R4CNRLU7KW;
+				ENABLE_PREVIEWS = YES;
+				INFOPLIST_FILE = MetriclyWatch/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = Findows.tracker.watchkitapp;
+				PRODUCT_NAME = MetriclyWatch;
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 10.0;
+			};
+			name = Debug;
+		};
+		C63AFB0F01148807FA5898F7 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = MetriclyWatchComplications/MetriclyWatchComplications.entitlements;
+				DEVELOPMENT_TEAM = R4CNRLU7KW;
+				INFOPLIST_FILE = MetriclyWatchComplications/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = Findows.tracker.watchkitapp.complications;
+				PRODUCT_NAME = MetriclyWatchComplications;
+				SDKROOT = watchos;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				VALIDATE_PRODUCT = YES;
+				WATCHOS_DEPLOYMENT_TARGET = 10.0;
+			};
+			name = Release;
+		};
+		F46B83BDC2DDBC75F422834D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = MetriclyWatch/MetriclyWatch.entitlements;
+				DEVELOPMENT_TEAM = R4CNRLU7KW;
+				ENABLE_PREVIEWS = YES;
+				INFOPLIST_FILE = MetriclyWatch/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = Findows.tracker.watchkitapp;
+				PRODUCT_NAME = MetriclyWatch;
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				VALIDATE_PRODUCT = YES;
+				WATCHOS_DEPLOYMENT_TARGET = 10.0;
 			};
 			name = Release;
 		};
@@ -443,6 +973,33 @@
 			buildConfigurations = (
 				82A0C4DA2F58E8E200BD421B /* Debug */,
 				82A0C4DB2F58E8E200BD421B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		82FD87B42FA5057800D73920 /* Build configuration list for PBXNativeTarget "MetriclyWidgetsExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				82FD87B52FA5057800D73920 /* Debug */,
+				82FD87B62FA5057800D73920 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A638D92D6E68451CE35C626B /* Build configuration list for PBXNativeTarget "MetriclyWatchComplications" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C63AFB0F01148807FA5898F7 /* Release */,
+				38DE0803F369A351C20A1A46 /* Debug */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		C1132063254384E778C7B033 /* Build configuration list for PBXNativeTarget "MetriclyWatch" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F46B83BDC2DDBC75F422834D /* Release */,
+				9525456C40D6EFFB23D4B441 /* Debug */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

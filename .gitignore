@@ -19,3 +19,12 @@ Pods/
 
 # Archives
 *.xcarchive
+
+# Claude Code internal state
+.claude/
+
+# Temporary generation scripts
+add_watch_target.rb
+generate_icon.swift
+icon_1024.png
+icon_1024_dark.png

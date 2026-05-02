@@ -12,6 +12,13 @@ struct ExerciseDetailView: View {
     @Query private var settingsArray: [UserSettings]
     @Query private var liftGoals: [LiftGoal]
     let exercise: Exercise
+
+    init(exercise: Exercise) {
+        self.exercise = exercise
+        let name = exercise.name
+        _allExercises = Query(filter: #Predicate<Exercise> { $0.name == name })
+    }
+
     @State private var newReps = 10
     @State private var newWeight = 20.0
     @State private var newIsWarmUp = false
@@ -41,8 +48,7 @@ struct ExerciseDetailView: View {
     @State private var timer: Timer?
     @State private var timerEndDate: Date?
 
-    // Toolbar sheets
-    @State private var showRestTimer = false
+    @State private var showRPE = false
 
     // Cardio input
     @State private var newDistance: Double = 5.0
@@ -207,11 +213,12 @@ struct ExerciseDetailView: View {
             }
             ToolbarItemGroup(placement: .topBarTrailing) {
                 Button {
-                    showRestTimer = true
+                    if timerActive { stopTimer() } else { startTimer() }
                 } label: {
-                    Image(systemName: "stopwatch")
+                    Image(systemName: timerActive ? "stopwatch.fill" : "stopwatch")
+                        .symbolEffect(.pulse, isActive: timerActive)
                 }
-                .accessibilityLabel("Rest Timer")
+                .accessibilityLabel(timerActive ? "Stop rest timer" : "Start rest timer")
 
                 NavigationLink(value: PlateCalcDestination()) {
                     Image(systemName: "circle.grid.2x2")
@@ -225,6 +232,9 @@ struct ExerciseDetailView: View {
                     NavigationLink(value: FormGuideDestination(exerciseName: exercise.name)) {
                         Label("Form Guide", systemImage: "text.book.closed")
                     }
+                    NavigationLink(value: SubstitutionDestination(exerciseName: exercise.name)) {
+                        Label("Find Alternatives", systemImage: "arrow.triangle.2.circlepath")
+                    }
                     Button {
                         editedName = exercise.name
                         isEditingName = true
@@ -236,12 +246,11 @@ struct ExerciseDetailView: View {
                 }
             }
         }
-        .navigationDestination(for: String.self) { name in
-            ExerciseHistoryView(exerciseName: name)
-        }
-
         .navigationDestination(for: FormGuideDestination.self) { dest in
             ExerciseGuideView(exerciseName: dest.exerciseName)
+        }
+        .navigationDestination(for: SubstitutionDestination.self) { dest in
+            ExerciseSubstitutionsView(exerciseName: dest.exerciseName)
         }
         .alert("Edit Exercise", isPresented: $isEditingName) {
             TextField("Name", text: $editedName)
@@ -252,16 +261,6 @@ struct ExerciseDetailView: View {
         }
         .sheet(item: $editingSet) { exerciseSet in
             EditSetSheet(exerciseSet: exerciseSet, reps: editReps, weight: editWeight, distanceUnit: weightUnit.distanceUnit)
-        }
-        .sheet(isPresented: $showRestTimer) {
-            NavigationStack {
-                WorkoutTimerView()
-                    .toolbar {
-                        ToolbarItem(placement: .confirmationAction) {
-                            Button("Done") { showRestTimer = false }
-                        }
-                    }
-            }
         }
         .navigationDestination(for: PlateCalcDestination.self) { _ in
             PlateCalculatorView()
@@ -550,12 +549,18 @@ struct ExerciseDetailView: View {
                 color: .accentColor
             )
             Rectangle().fill(Color(.separator)).frame(width: 1, height: 36)
-            bannerStat(
-                label: "Category",
-                value: exercise.category?.rawValue ?? "–",
-                icon: exercise.category?.icon ?? "dumbbell.fill",
-                color: .purple
-            )
+            // Category column uses MuscleIconView for visual consistency
+            VStack(spacing: 4) {
+                MuscleIconView(group: exercise.category ?? .other, color: .purple)
+                    .frame(width: 16, height: 16)
+                Text(exercise.category?.rawValue ?? "–")
+                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                    .lineLimit(1).minimumScaleFactor(0.75)
+                Text("Category")
+                    .font(.caption2.weight(.medium))
+                    .foregroundStyle(.secondary)
+            }
+            .frame(maxWidth: .infinity)
         }
         .padding(.vertical, 10)
         .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: AppTheme.cardRadius))
@@ -676,35 +681,6 @@ struct ExerciseDetailView: View {
 
     @ViewBuilder
     private var strengthInputFields: some View {
-        // Rest timer config
-        HStack {
-            Label {
-                Text("Rest")
-                    .font(.subheadline)
-            } icon: {
-                Image(systemName: "timer")
-                    .foregroundStyle(Color.accentColor)
-            }
-            Spacer()
-            Stepper("\(restDuration)s", value: $restDuration, in: 15...300, step: 15)
-                .fixedSize()
-            if exercise.customRestDuration != restDuration {
-                Button {
-                    exercise.customRestDuration = restDuration
-                    HapticsManager.lightTap()
-                } label: {
-                    Text("Save")
-                        .font(.caption.bold())
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(Color.accentColor, in: .capsule)
-                        .foregroundStyle(.white)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Save rest duration for this exercise")
-            }
-        }
-
         // Reps row
         HStack {
             Label {
@@ -792,41 +768,58 @@ struct ExerciseDetailView: View {
 
     private var rpePicker: some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Label {
-                    Text("RPE")
-                        .font(.subheadline)
-                } icon: {
-                    Image(systemName: "gauge.with.needle")
-                        .foregroundStyle(.purple)
-                }
-                Spacer()
-                if newRPE != nil {
-                    Button("Clear") {
-                        newRPE = nil
+            Button {
+                withAnimation(.easeInOut(duration: 0.2)) { showRPE.toggle() }
+            } label: {
+                HStack {
+                    Label {
+                        Text("RPE")
+                            .font(.subheadline)
+                            .foregroundStyle(.primary)
+                    } icon: {
+                        Image(systemName: "gauge.with.needle")
+                            .foregroundStyle(.purple)
                     }
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    Spacer()
+                    if let rpe = newRPE {
+                        Text("\(rpe)")
+                            .font(.caption.bold())
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 3)
+                            .background(Color.accentColor, in: .capsule)
+                        Button("Clear") { newRPE = nil }
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .buttonStyle(.plain)
+                    } else {
+                        Image(systemName: showRPE ? "chevron.up" : "chevron.down")
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
+                    }
                 }
             }
-            HStack(spacing: 6) {
-                ForEach(1...10, id: \.self) { value in
-                    Button {
-                        newRPE = value
-                    } label: {
-                        Text("\(value)")
-                            .font(.system(size: 13, weight: .semibold, design: .rounded))
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 8)
-                            .background(newRPE == value ? Color.accentColor : Color(.tertiarySystemFill), in: RoundedRectangle(cornerRadius: 8))
-                            .foregroundStyle(newRPE == value ? .white : .primary)
+            .buttonStyle(.plain)
+
+            if showRPE {
+                HStack(spacing: 6) {
+                    ForEach(1...10, id: \.self) { value in
+                        Button {
+                            newRPE = value
+                            withAnimation(.easeInOut(duration: 0.2)) { showRPE = false }
+                        } label: {
+                            Text("\(value)")
+                                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 8)
+                                .background(newRPE == value ? Color.accentColor : Color(.tertiarySystemFill), in: RoundedRectangle(cornerRadius: 8))
+                                .foregroundStyle(newRPE == value ? .white : .primary)
+                        }
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
                 }
+                .transition(.opacity.combined(with: .move(edge: .top)))
             }
-            Text("Rate of Perceived Exertion (optional)")
-                .font(.caption2)
-                .foregroundStyle(.tertiary)
         }
     }
 
@@ -883,34 +876,16 @@ struct ExerciseDetailView: View {
                 .accessibilityLabel("Skip rest timer")
             }
             .buttonStyle(.plain)
+
         }
         .padding()
         .background(.regularMaterial)
     }
 
     private var undoBar: some View {
-        HStack {
-            Image(systemName: "arrow.uturn.backward.circle.fill")
-                .foregroundStyle(.blue)
-            Text("Set added")
-                .font(.subheadline)
-            Spacer()
-            Button {
-                undoLastSet()
-            } label: {
-                Text("Undo")
-                    .font(.subheadline.bold())
-                    .foregroundStyle(.blue)
-            }
-            .accessibilityLabel("Undo last set")
-            .accessibilityHint("Removes the set you just added")
-        }
-        .padding(.horizontal)
-        .padding(.vertical, 10)
-        .background(.ultraThinMaterial)
-        .transition(.move(edge: .bottom).combined(with: .opacity))
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel("Set added. Undo available.")
+        UndoBar(icon: "arrow.uturn.backward.circle.fill", message: "Set added", color: .blue, onUndo: undoLastSet)
+            .accessibilityElement(children: .contain)
+            .accessibilityLabel("Set added. Undo available.")
     }
 
     private func showUndoSnackbar(for set: ExerciseSet) {
@@ -1008,11 +983,8 @@ struct ExerciseDetailView: View {
 
     private func startDisplayTimer() {
         timer?.invalidate()
-        timer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { t in
-            guard let endDate = timerEndDate else {
-                t.invalidate()
-                return
-            }
+        let t = Timer(timeInterval: 0.5, repeats: true) { [self] t in
+            guard let endDate = timerEndDate else { t.invalidate(); return }
             let remaining = Int(ceil(endDate.timeIntervalSinceNow))
             if remaining > 0 {
                 restRemaining = remaining
@@ -1027,6 +999,9 @@ struct ExerciseDetailView: View {
                 cancelRestNotification()
             }
         }
+        // Add to .common so the timer keeps firing while the user scrolls
+        RunLoop.main.add(t, forMode: .common)
+        timer = t
     }
 
     private func stopTimer() {
@@ -1148,6 +1123,9 @@ struct ExerciseDetailView: View {
             UIImpactFeedbackGenerator(style: .medium).impactOccurred()
             checkForPR(weight: weightInKg, isWarmUp: newIsWarmUp)
             showUndoSnackbar(for: exerciseSet)
+            if !newIsWarmUp && (settingsArray.first?.autoStartRestTimer ?? false) {
+                startTimer()
+            }
         }
     }
 
@@ -1166,6 +1144,9 @@ struct ExerciseDetailView: View {
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
         if !source.isCardio {
             checkForPR(weight: source.weight, isWarmUp: false)
+            if !source.isWarmUp && (settingsArray.first?.autoStartRestTimer ?? false) {
+                startTimer()
+            }
         }
         showUndoSnackbar(for: newSet)
     }
