@@ -116,17 +116,38 @@ struct BodyWeightView: View {
 
                 Divider().padding(.leading, 16)
 
-                Button { addEntry() } label: {
+                Button {
+                    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                    addEntry()
+                } label: {
                     Label("Log Weight", systemImage: "plus.circle.fill")
-                        .font(.subheadline.bold())
+                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .tracking(0.3)
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .background(newWeight.isEmpty ? Color(.systemFill) : Color.orange.opacity(0.9))
+                        .padding(.vertical, 15)
+                        .background(
+                            Group {
+                                if newWeight.isEmpty {
+                                    Color(.systemFill)
+                                } else {
+                                    LinearGradient(
+                                        colors: [Color.orange, Color(red: 0.95, green: 0.45, blue: 0.20)],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
+                                }
+                            }
+                        )
                         .foregroundStyle(newWeight.isEmpty ? Color.secondary : Color.white)
-                        .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardRadius))
+                        .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardRadius, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: AppTheme.cardRadius, style: .continuous)
+                                .stroke(Color.white.opacity(newWeight.isEmpty ? 0 : 0.18), lineWidth: 0.5)
+                        )
+                        .shadow(color: newWeight.isEmpty ? .clear : Color.orange.opacity(0.40), radius: 10, y: 4)
                 }
                 .disabled(newWeight.isEmpty)
-                .buttonStyle(.plain)
+                .buttonStyle(.pressableCard)
                 .padding(.horizontal, 16).padding(.vertical, 12)
             }
             .background(Color(.tertiarySystemGroupedBackground))
@@ -182,19 +203,63 @@ struct BodyWeightView: View {
         VStack(alignment: .leading, spacing: 14) {
             SectionHeader(title: "Trend", icon: "chart.line.uptrend.xyaxis", color: .orange)
             Chart(chartEntries) { entry in
-                LineMark(x: .value("Date", entry.date, unit: .day),
-                         y: .value("Weight", weightUnit.display(entry.weight)))
-                    .interpolationMethod(.catmullRom).foregroundStyle(Color.orange)
-                AreaMark(x: .value("Date", entry.date, unit: .day),
-                         y: .value("Weight", weightUnit.display(entry.weight)))
-                    .interpolationMethod(.catmullRom).foregroundStyle(Color.orange.opacity(0.15).gradient)
-                PointMark(x: .value("Date", entry.date, unit: .day),
-                          y: .value("Weight", weightUnit.display(entry.weight)))
-                    .symbolSize(20).foregroundStyle(Color.orange)
+                AreaMark(
+                    x: .value("Date", entry.date, unit: .day),
+                    y: .value("Weight", weightUnit.display(entry.weight))
+                )
+                .interpolationMethod(.catmullRom)
+                .foregroundStyle(
+                    LinearGradient(
+                        colors: [
+                            Color.orange.opacity(0.55),
+                            Color.orange.opacity(0.25),
+                            Color.orange.opacity(0.02)
+                        ],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
+
+                LineMark(
+                    x: .value("Date", entry.date, unit: .day),
+                    y: .value("Weight", weightUnit.display(entry.weight))
+                )
+                .interpolationMethod(.catmullRom)
+                .lineStyle(StrokeStyle(lineWidth: 2.5, lineCap: .round, lineJoin: .round))
+                .foregroundStyle(
+                    LinearGradient(
+                        colors: [Color.orange, Color(red: 0.95, green: 0.45, blue: 0.20)],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                )
+                .shadow(color: Color.orange.opacity(0.30), radius: 5, y: 2)
+
+                PointMark(
+                    x: .value("Date", entry.date, unit: .day),
+                    y: .value("Weight", weightUnit.display(entry.weight))
+                )
+                .symbolSize(36)
+                .foregroundStyle(Color.orange)
+                .annotation(position: .overlay) {
+                    Circle().fill(.white).frame(width: 4, height: 4)
+                }
             }
             .chartYAxisLabel(weightUnit.label)
             .chartYScale(domain: chartYDomain)
-            .frame(height: 200).padding(.vertical, 4)
+            .chartXAxis {
+                AxisMarks(values: .automatic(desiredCount: 5)) { _ in
+                    AxisGridLine().foregroundStyle(.secondary.opacity(0.15))
+                    AxisValueLabel().font(.caption2).foregroundStyle(.secondary)
+                }
+            }
+            .chartYAxis {
+                AxisMarks(position: .leading) { _ in
+                    AxisGridLine().foregroundStyle(.secondary.opacity(0.15))
+                    AxisValueLabel().font(.caption2).foregroundStyle(.secondary)
+                }
+            }
+            .frame(height: 220).padding(.vertical, 4)
             .accessibilityElement(children: .combine)
             .accessibilityLabel("Body weight trend, \(chartEntries.count) entries")
         }

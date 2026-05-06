@@ -8,6 +8,7 @@ struct CardioActiveView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
     @Query private var settingsArray: [UserSettings]
+    @Query(sort: \BodyWeightEntry.date, order: .reverse) private var bodyWeightEntries: [BodyWeightEntry]
     @Environment(\.weightUnit) private var weightUnit
 
     let cardioType: CardioType
@@ -25,7 +26,7 @@ struct CardioActiveView: View {
     @State private var completedSession: CardioSession?
     @State private var showCompletion = false
 
-    private var useKm: Bool { settingsArray.first?.useKilograms ?? true }
+    private var useKm: Bool { weightUnit.distanceUnit == .km }
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -98,16 +99,29 @@ struct CardioActiveView: View {
 
     private var countdownOverlay: some View {
         ZStack {
-            Color.black.opacity(0.55).ignoresSafeArea()
-            VStack(spacing: 20) {
+            // Layered background: dim + radial color glow
+            Color.black.opacity(0.62).ignoresSafeArea()
+            RadialGradient(
+                colors: [cardioType.color.opacity(0.35), .clear],
+                center: .center,
+                startRadius: 0,
+                endRadius: 280
+            )
+            .ignoresSafeArea()
+            VStack(spacing: 22) {
                 Text(countdown > 0 ? "\(countdown)" : "Go!")
-                    .font(.system(size: 120, weight: .black, design: .rounded))
+                    .font(.system(size: 130, weight: .black, design: .rounded))
                     .foregroundStyle(.white)
                     .contentTransition(.numericText())
-                    .animation(.spring(response: 0.3, dampingFraction: 0.6), value: countdown)
-                Text("Get ready…")
-                    .font(.title3.weight(.semibold))
-                    .foregroundStyle(.white.opacity(0.8))
+                    .animation(.spring(response: 0.32, dampingFraction: 0.6), value: countdown)
+                    .shadow(color: cardioType.color.opacity(0.55), radius: 22, y: 6)
+                Text(countdown > 0 ? "GET READY" : "")
+                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                    .tracking(1.0)
+                    .foregroundStyle(.white.opacity(0.85))
+                    .padding(.horizontal, 14).padding(.vertical, 6)
+                    .background(.ultraThinMaterial.opacity(0.7), in: Capsule())
+                    .overlay(Capsule().stroke(.white.opacity(0.22), lineWidth: 0.5))
                     .opacity(countdown > 0 ? 1 : 0)
             }
         }
@@ -141,12 +155,21 @@ struct CardioActiveView: View {
 
     private var mapLayer: some View {
         Map(position: $cameraPosition) {
-            // Route polyline
+            // Route polyline — gradient stroke with soft shadow halo (rendered as a wider faded underlay)
             if tracker.locations.count > 1 {
                 MapPolyline(coordinates: tracker.locations.map(\.coordinate))
                     .stroke(
-                        cardioType.color,
-                        style: StrokeStyle(lineWidth: 5, lineCap: .round, lineJoin: .round)
+                        cardioType.color.opacity(0.30),
+                        style: StrokeStyle(lineWidth: 11, lineCap: .round, lineJoin: .round)
+                    )
+                MapPolyline(coordinates: tracker.locations.map(\.coordinate))
+                    .stroke(
+                        LinearGradient(
+                            colors: [cardioType.color, cardioType.color.opacity(0.78)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        style: StrokeStyle(lineWidth: 6, lineCap: .round, lineJoin: .round)
                     )
             }
             // User dot
@@ -154,13 +177,23 @@ struct CardioActiveView: View {
                 Annotation("", coordinate: last.coordinate) {
                     ZStack {
                         Circle()
-                            .fill(cardioType.color)
-                            .frame(width: 18, height: 18)
+                            .fill(cardioType.color.opacity(0.25))
+                            .frame(width: 34, height: 34)
+                        Circle()
+                            .fill(
+                                LinearGradient(
+                                    colors: [cardioType.color, cardioType.color.opacity(0.75)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .frame(width: 20, height: 20)
                         Circle()
                             .stroke(.white, lineWidth: 3)
-                            .frame(width: 18, height: 18)
+                            .frame(width: 20, height: 20)
                     }
-                    .shadow(color: .black.opacity(0.25), radius: 4)
+                    .shadow(color: cardioType.color.opacity(0.55), radius: 6)
+                    .shadow(color: .black.opacity(0.30), radius: 4, y: 1)
                 }
             }
         }
@@ -197,11 +230,20 @@ struct CardioActiveView: View {
 
     private var dragHandle: some View {
         Capsule()
-            .fill(Color(.tertiaryLabel))
-            .frame(width: 40, height: 4)
-            .padding(.top, 10)
+            .fill(
+                LinearGradient(
+                    colors: [Color(.tertiaryLabel), Color(.tertiaryLabel).opacity(0.5)],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+            )
+            .frame(width: 44, height: 5)
+            .padding(.top, 11)
             .padding(.bottom, 4)
-            .onTapGesture { withAnimation(.spring()) { showSplits.toggle() } }
+            .onTapGesture {
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                withAnimation(.spring(response: 0.42, dampingFraction: 0.78)) { showSplits.toggle() }
+            }
     }
 
     // MARK: - Stats panel
@@ -257,24 +299,33 @@ struct CardioActiveView: View {
                 secondaryStat(
                     icon: "flag.checkered",
                     value: "\(tracker.splits.count)",
-                    label: tracker.distanceUnit == "km" ? "km splits" : "mi splits"
+                    label: useKm ? "km splits" : "mi splits"
                 )
                 Button {
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    withAnimation(.spring(response: 0.42, dampingFraction: 0.78)) {
                         showSplits.toggle()
                     }
                 } label: {
-                    HStack(spacing: 4) {
+                    HStack(spacing: 5) {
                         Image(systemName: showSplits ? "chevron.down" : "chevron.up")
                             .font(.caption.bold())
                         Text("Splits")
-                            .font(.caption.bold())
+                            .font(.system(size: 12, weight: .bold, design: .rounded))
                     }
                     .foregroundStyle(cardioType.color)
-                    .padding(.horizontal, 10).padding(.vertical, 5)
-                    .background(cardioType.color.opacity(0.12), in: Capsule())
+                    .padding(.horizontal, 11).padding(.vertical, 6)
+                    .background(
+                        LinearGradient(
+                            colors: [cardioType.color.opacity(0.18), cardioType.color.opacity(0.10)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        in: Capsule()
+                    )
+                    .overlay(Capsule().stroke(cardioType.color.opacity(0.22), lineWidth: 0.5))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressableCard)
             }
             .padding(.horizontal, 20)
 
@@ -288,16 +339,18 @@ struct CardioActiveView: View {
     }
 
     private func statCell(value: String, label: String, font: Font, color: Color? = nil) -> some View {
-        VStack(spacing: 2) {
+        VStack(spacing: 4) {
             Text(value)
                 .font(font)
                 .monospacedDigit()
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)
                 .foregroundStyle(color.map { AnyShapeStyle($0) } ?? AnyShapeStyle(.primary))
-            Text(label)
-                .font(.caption2.weight(.semibold))
+                .contentTransition(.numericText())
+            Text(label.uppercased())
+                .font(.system(size: 10, weight: .bold, design: .rounded))
                 .foregroundStyle(.secondary)
+                .tracking(0.4)
         }
         .frame(maxWidth: .infinity)
     }
@@ -324,18 +377,20 @@ struct CardioActiveView: View {
         VStack(spacing: 0) {
             // Header
             HStack {
-                Text("Split").frame(width: 36, alignment: .leading)
+                Text("SPLIT").frame(width: 40, alignment: .leading)
                 Spacer()
-                Text("Time").frame(width: 52, alignment: .trailing)
-                Text("Pace").frame(width: 64, alignment: .trailing)
+                Text("TIME").frame(width: 56, alignment: .trailing)
+                Text("PACE").frame(width: 68, alignment: .trailing)
                 if tracker.currentHeartRate != nil {
-                    Text("HR").frame(width: 40, alignment: .trailing)
+                    Text("HR").frame(width: 42, alignment: .trailing)
                 }
             }
-            .font(.system(size: 10, weight: .semibold))
+            .font(.system(size: 10, weight: .bold, design: .rounded))
+            .tracking(0.5)
             .foregroundStyle(.secondary)
             .padding(.horizontal, 20)
-            .padding(.bottom, 4)
+            .padding(.top, 12)
+            .padding(.bottom, 6)
 
             Divider()
 
@@ -343,32 +398,43 @@ struct CardioActiveView: View {
                 VStack(spacing: 0) {
                     ForEach(tracker.splits.reversed()) { split in
                         HStack {
-                            Text("\(split.id)")
-                                .font(.caption.bold().monospacedDigit())
-                                .frame(width: 36, alignment: .leading)
+                            ZStack {
+                                Circle()
+                                    .fill(cardioType.color.opacity(0.16))
+                                    .frame(width: 28, height: 28)
+                                Text("\(split.id)")
+                                    .font(.system(size: 12, weight: .black, design: .rounded).monospacedDigit())
+                                    .foregroundStyle(cardioType.color)
+                            }
+                            .frame(width: 40, alignment: .leading)
                             Spacer()
                             Text(split.formattedDuration())
-                                .font(.caption.monospacedDigit())
-                                .frame(width: 52, alignment: .trailing)
+                                .font(.system(size: 13, weight: .semibold, design: .rounded).monospacedDigit())
+                                .frame(width: 56, alignment: .trailing)
                             Text(split.formattedPace(useKm: useKm))
-                                .font(.caption.bold().monospacedDigit())
-                                .frame(width: 64, alignment: .trailing)
+                                .font(.system(size: 13, weight: .black, design: .rounded).monospacedDigit())
+                                .foregroundStyle(cardioType.color)
+                                .frame(width: 68, alignment: .trailing)
                             if tracker.currentHeartRate != nil {
                                 Text(split.avgHeartRate.map { "\(Int($0))" } ?? "--")
-                                    .font(.caption.monospacedDigit())
+                                    .font(.system(size: 13, weight: .semibold, design: .rounded).monospacedDigit())
                                     .foregroundStyle(.red)
-                                    .frame(width: 40, alignment: .trailing)
+                                    .frame(width: 42, alignment: .trailing)
                             }
                         }
                         .padding(.horizontal, 20)
-                        .padding(.vertical, 6)
+                        .padding(.vertical, 8)
                         Divider().padding(.horizontal, 20)
                     }
                 }
             }
-            .frame(maxHeight: 180)
+            .frame(maxHeight: 200)
         }
-        .background(Color(.tertiarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 14))
+        .background(Color(.tertiarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(Color.white.opacity(0.06), lineWidth: 0.5)
+        )
         .padding(.horizontal, 12)
     }
 
@@ -378,75 +444,114 @@ struct CardioActiveView: View {
         HStack(spacing: 28) {
             // Stop button
             Button {
+                UIImpactFeedbackGenerator(style: .heavy).impactOccurred()
                 showStopAlert = true
             } label: {
                 ZStack {
                     Circle()
-                        .fill(Color.red.opacity(0.12))
-                        .frame(width: 52, height: 52)
+                        .fill(
+                            LinearGradient(
+                                colors: [Color.red.opacity(0.20), Color.red.opacity(0.10)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 56, height: 56)
+                        .overlay(Circle().stroke(Color.red.opacity(0.30), lineWidth: 1))
                     Image(systemName: "stop.fill")
-                        .font(.system(size: 18, weight: .semibold))
+                        .font(.system(size: 20, weight: .bold))
                         .foregroundStyle(.red)
                 }
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressableCard)
 
             // Manual lap button
             Button {
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
                 tracker.recordManualLap()
             } label: {
                 ZStack {
                     Circle()
-                        .fill(Color.blue.opacity(0.12))
-                        .frame(width: 52, height: 52)
+                        .fill(
+                            LinearGradient(
+                                colors: [Color.blue.opacity(0.20), Color.blue.opacity(0.10)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 56, height: 56)
+                        .overlay(Circle().stroke(Color.blue.opacity(0.30), lineWidth: 1))
                     VStack(spacing: 1) {
                         Image(systemName: "flag.fill")
-                            .font(.system(size: 14, weight: .semibold))
+                            .font(.system(size: 15, weight: .bold))
                             .foregroundStyle(.blue)
-                        Text("Lap")
-                            .font(.system(size: 9, weight: .bold))
+                        Text("LAP")
+                            .font(.system(size: 9, weight: .bold, design: .rounded))
+                            .tracking(0.5)
                             .foregroundStyle(.blue)
                     }
                 }
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressableCard)
             .disabled(tracker.state != .active)
+            .opacity(tracker.state == .active ? 1 : 0.45)
 
             // Pause / Resume — big center button
             Button {
+                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                 if tracker.state == .active { tracker.pause() }
                 else if tracker.state == .paused { tracker.resume() }
             } label: {
                 ZStack {
                     Circle()
-                        .fill(cardioType.color)
-                        .frame(width: 76, height: 76)
-                        .shadow(color: cardioType.color.opacity(0.4), radius: 12, y: 4)
+                        .fill(
+                            LinearGradient(
+                                colors: [cardioType.color, cardioType.color.opacity(0.78)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 84, height: 84)
+                        .shadow(color: cardioType.color.opacity(0.50), radius: 14, y: 5)
+                        .overlay(Circle().stroke(.white.opacity(0.20), lineWidth: 0.5))
                     Image(systemName: tracker.state == .paused ? "play.fill" : "pause.fill")
-                        .font(.system(size: 26, weight: .semibold))
+                        .font(.system(size: 28, weight: .bold))
                         .foregroundStyle(.white)
+                        .contentTransition(.symbolEffect(.replace))
                 }
             }
-            .buttonStyle(.plain)
-            .animation(.spring(response: 0.3, dampingFraction: 0.6), value: tracker.state)
+            .buttonStyle(.pressableCard)
+            .animation(.spring(response: 0.42, dampingFraction: 0.78), value: tracker.state)
 
             // Audio cues toggle
             Button {
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
                 audioCues.toggle()
             } label: {
                 ZStack {
                     Circle()
-                        .fill(audioCues ? cardioType.color.opacity(0.12) : Color(.tertiarySystemFill))
-                        .frame(width: 52, height: 52)
+                        .fill(
+                            audioCues
+                                ? AnyShapeStyle(LinearGradient(
+                                    colors: [cardioType.color.opacity(0.20), cardioType.color.opacity(0.10)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                ))
+                                : AnyShapeStyle(Color(.tertiarySystemFill))
+                        )
+                        .frame(width: 56, height: 56)
+                        .overlay(
+                            Circle().stroke(audioCues ? cardioType.color.opacity(0.30) : Color.clear, lineWidth: 1)
+                        )
                     Image(systemName: audioCues ? "speaker.wave.2.fill" : "speaker.slash.fill")
-                        .font(.system(size: 16, weight: .semibold))
+                        .font(.system(size: 18, weight: .bold))
                         .foregroundStyle(audioCues ? cardioType.color : .secondary)
                 }
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressableCard)
             .onChange(of: audioCues) { tracker.audioCuesEnabled = audioCues }
         }
-        .padding(.vertical, 20)
+        .padding(.vertical, 22)
     }
 
     // MARK: - Helpers
@@ -457,10 +562,8 @@ struct CardioActiveView: View {
 
     private func finishSession() {
         let result = tracker.stop()
-        let bodyWeightKg = settingsArray.first.map {
-            // Use height/weight from settings if available; else default 70 kg
-            $0.useKilograms ? 70.0 : 70.0   // placeholder — tracker uses 70 kg default
-        } ?? 70.0
+        // Use latest logged body weight; fall back to 70 kg if none recorded yet
+        let bodyWeightKg = bodyWeightEntries.first?.weight ?? 70.0
 
         // Build CardioSession and persist
         let session = CardioSession(
@@ -488,7 +591,7 @@ struct CardioActiveView: View {
         UIImpactFeedbackGenerator(style: .heavy).impactOccurred()
 
         // Push fresh cardio data to home screen widget
-        let useKmWidget = settingsArray.first?.useKilograms ?? true
+        let useKmWidget = weightUnit.distanceUnit == .km
         WidgetDataWriter.update(
             streakDays: 0,
             todayWorkoutName: "",

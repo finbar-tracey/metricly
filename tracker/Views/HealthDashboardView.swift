@@ -106,35 +106,52 @@ struct HealthDashboardView: View {
             ZStack {
                 if let ring = ring {
                     Circle()
-                        .stroke(.quaternary, lineWidth: 6)
+                        .stroke(ringColor.opacity(0.16), lineWidth: 7)
                     Circle()
                         .trim(from: 0, to: ring)
-                        .stroke(ringColor.gradient, style: StrokeStyle(lineWidth: 6, lineCap: .round))
+                        .stroke(
+                            ringColor.gradient,
+                            style: StrokeStyle(lineWidth: 7, lineCap: .round)
+                        )
                         .rotationEffect(.degrees(-90))
                         .animation(.easeInOut(duration: 0.6), value: ring)
+                        .shadow(color: ringColor.opacity(0.45), radius: 5, y: 1)
                 } else {
-                    Circle().fill(color.opacity(0.12))
+                    Circle().fill(color.opacity(0.16))
+                    Circle().stroke(color.opacity(0.18), lineWidth: 1)
                 }
                 Image(systemName: icon)
-                    .font(.system(size: 20, weight: .semibold))
+                    .font(.system(size: 22, weight: .bold))
                     .foregroundStyle(color)
             }
-            .frame(width: 56, height: 56)
+            .frame(width: 60, height: 60)
 
             VStack(spacing: 3) {
                 Text(value)
-                    .font(.system(size: 22, weight: .bold, design: .rounded))
+                    .font(.system(size: 24, weight: .black, design: .rounded))
                     .monospacedDigit()
                 Text(label)
-                    .font(.caption2.weight(.medium))
+                    .font(.system(size: 11, weight: .semibold, design: .rounded))
                     .foregroundStyle(.secondary)
+                    .tracking(0.3)
+                    .textCase(.uppercase)
             }
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 20)
-        .background(Color(.secondarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardRadius))
-        .shadow(color: .black.opacity(0.07), radius: 14, x: 0, y: 4)
+        .padding(.vertical, 22)
+        .background(
+            LinearGradient(
+                colors: [color.opacity(0.10), Color(.secondarySystemGroupedBackground)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        )
+        .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardRadius, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: AppTheme.cardRadius, style: .continuous)
+                .stroke(color.opacity(0.18), lineWidth: 0.5)
+        )
+        .shadow(color: .black.opacity(0.10), radius: 16, x: 0, y: 5)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(label): \(value)")
     }
@@ -166,20 +183,29 @@ struct HealthDashboardView: View {
     private func vitalsRow(icon: String, color: Color, label: String, value: String) -> some View {
         HStack(spacing: 12) {
             ZStack {
-                Circle().fill(color.opacity(0.12)).frame(width: 34, height: 34)
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [color, color.opacity(0.72)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 38, height: 38)
+                    .shadow(color: color.opacity(0.40), radius: 5, y: 2)
                 Image(systemName: icon)
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(color)
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(.white)
             }
             Text(label)
-                .font(.subheadline)
+                .font(.system(size: 15, weight: .semibold, design: .rounded))
             Spacer()
             Text(value)
                 .font(.subheadline.bold().monospacedDigit())
-                .foregroundStyle(.secondary)
+                .foregroundStyle(color)
         }
         .padding(.horizontal, 16)
-        .padding(.vertical, 12)
+        .padding(.vertical, 13)
     }
 
     // MARK: - Detail Links Card
@@ -192,17 +218,24 @@ struct HealthDashboardView: View {
                 NavigationLink { StepsDetailView() } label: {
                     detailRow(icon: "figure.walk", color: .green, title: "Steps", subtitle: "Daily activity tracking")
                 }
-                Divider().padding(.leading, 66)
+                .buttonStyle(.pressableCard)
+                Divider().padding(.leading, 70)
                 NavigationLink { HeartRateDetailView() } label: {
                     detailRow(icon: "heart.fill", color: .red, title: "Heart Rate", subtitle: "Resting heart rate trends")
                 }
-                Divider().padding(.leading, 66)
+                .buttonStyle(.pressableCard)
+                Divider().padding(.leading, 70)
                 NavigationLink { SleepDetailView() } label: {
                     detailRow(icon: "bed.double.fill", color: .indigo, title: "Sleep", subtitle: "Duration and stages")
                 }
+                .buttonStyle(.pressableCard)
             }
             .background(Color(.tertiarySystemGroupedBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(Color.white.opacity(0.05), lineWidth: 0.5)
+            )
         }
         .appCard()
     }
@@ -210,16 +243,26 @@ struct HealthDashboardView: View {
     private func detailRow(icon: String, color: Color, title: String, subtitle: String) -> some View {
         HStack(spacing: 14) {
             ZStack {
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(color.gradient)
-                    .frame(width: 40, height: 40)
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [color, color.opacity(0.72)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 44, height: 44)
+                    .shadow(color: color.opacity(0.40), radius: 6, y: 3)
                 Image(systemName: icon)
-                    .font(.system(size: 17, weight: .semibold))
+                    .font(.system(size: 18, weight: .bold))
                     .foregroundStyle(.white)
             }
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title).font(.subheadline.weight(.semibold))
-                Text(subtitle).font(.caption).foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title)
+                    .font(.system(size: 16, weight: .semibold, design: .rounded))
+                Text(subtitle)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
             Spacer()
             Image(systemName: "chevron.right")
@@ -227,16 +270,45 @@ struct HealthDashboardView: View {
                 .foregroundStyle(.tertiary)
         }
         .padding(.horizontal, 16)
-        .padding(.vertical, 12)
+        .padding(.vertical, 13)
     }
 
     // MARK: - Disabled State
 
     private var healthKitDisabledView: some View {
-        ContentUnavailableView {
-            Label("Apple Health Not Connected", systemImage: "heart.text.square")
-        } description: {
-            Text("Enable \"Sync with Apple Health\" in Settings to see your steps, heart rate, sleep, and other health data.")
+        VStack(spacing: 22) {
+            Spacer()
+            ZStack {
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            colors: [Color.red.opacity(0.20), Color.red.opacity(0.06)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 110, height: 110)
+                    .overlay(Circle().stroke(Color.red.opacity(0.18), lineWidth: 1))
+                Image(systemName: "heart.text.square")
+                    .font(.system(size: 46, weight: .bold))
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [.red, Color(red: 0.85, green: 0.20, blue: 0.30)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+            }
+            VStack(spacing: 8) {
+                Text("Apple Health Not Connected")
+                    .font(.system(size: 22, weight: .bold, design: .rounded))
+                Text("Enable \"Sync with Apple Health\" in Settings to see your steps, heart rate, sleep, and other health data.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 40)
+            }
+            Spacer()
         }
     }
 

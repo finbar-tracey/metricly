@@ -65,16 +65,32 @@ struct EditSetSheet: View {
                         HStack(spacing: 6) {
                             ForEach(1...10, id: \.self) { value in
                                 Button {
+                                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
                                     rpe = value
                                 } label: {
                                     Text("\(value)")
-                                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+                                        .font(.system(size: 14, weight: .bold, design: .rounded))
                                         .frame(maxWidth: .infinity)
-                                        .padding(.vertical, 8)
-                                        .background(rpe == value ? Color.accentColor : Color(.tertiarySystemFill), in: RoundedRectangle(cornerRadius: 8))
+                                        .padding(.vertical, 9)
+                                        .background {
+                                            if rpe == value {
+                                                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                                    .fill(
+                                                        LinearGradient(
+                                                            colors: [.purple, Color(red: 0.55, green: 0.35, blue: 0.95)],
+                                                            startPoint: .topLeading,
+                                                            endPoint: .bottomTrailing
+                                                        )
+                                                    )
+                                                    .shadow(color: .purple.opacity(0.40), radius: 6, y: 3)
+                                            } else {
+                                                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                                    .fill(Color(.tertiarySystemFill))
+                                            }
+                                        }
                                         .foregroundStyle(rpe == value ? .white : .primary)
                                 }
-                                .buttonStyle(.plain)
+                                .buttonStyle(.pressableCard)
                             }
                         }
                     } footer: {
@@ -129,26 +145,29 @@ struct EditSetSheet: View {
                 }
                 Spacer()
                 Button {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
                     distance = max(0.1, distance - weightUnit.distanceUnit.stepSize)
                 } label: {
                     Image(systemName: "minus.circle.fill")
                         .font(.title2)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color.accentColor.opacity(0.8))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressableCard)
                 Text(String(format: "%.1f %@", distance, weightUnit.distanceUnit.label))
-                    .font(.system(size: 28, weight: .bold, design: .rounded))
+                    .font(.system(size: 28, weight: .black, design: .rounded))
                     .monospacedDigit()
-                    .frame(minWidth: 80)
+                    .foregroundStyle(Color.accentColor)
+                    .frame(minWidth: 100)
                     .contentTransition(.numericText())
                 Button {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
                     distance += weightUnit.distanceUnit.stepSize
                 } label: {
                     Image(systemName: "plus.circle.fill")
                         .font(.title2)
                         .foregroundStyle(Color.accentColor)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressableCard)
             }
         }
 
@@ -217,41 +236,44 @@ struct EditSetSheet: View {
                 }
                 Spacer()
                 Text(weightUnit.format(weight))
-                    .font(.system(size: 28, weight: .bold, design: .rounded))
+                    .font(.system(size: 28, weight: .black, design: .rounded))
                     .monospacedDigit()
+                    .foregroundStyle(Color.accentColor)
                     .contentTransition(.numericText())
             }
             HStack {
                 Button {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
                     weight = max(0, weight - weightIncrement)
                 } label: {
                     Image(systemName: "minus.circle.fill")
                         .font(.title2)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color.accentColor.opacity(0.8))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressableCard)
                 Spacer()
                 TextField("Weight", value: $weight, format: .number)
                     .keyboardType(.decimalPad)
                     .multilineTextAlignment(.center)
-                    .font(.body.monospacedDigit())
+                    .font(.system(size: 16, weight: .bold, design: .rounded).monospacedDigit())
                     .frame(width: 100)
-                    .padding(.vertical, 8)
+                    .padding(.vertical, 10)
                     .padding(.horizontal, 12)
-                    .background(Color(.tertiarySystemFill), in: .rect(cornerRadius: 8))
+                    .background(Color(.tertiarySystemFill), in: .rect(cornerRadius: 10))
                     .focused($isWeightFieldFocused)
                     .onChange(of: weight) {
                         if weight < 0 { weight = 0 }
                     }
                 Spacer()
                 Button {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
                     weight += weightIncrement
                 } label: {
                     Image(systemName: "plus.circle.fill")
                         .font(.title2)
                         .foregroundStyle(Color.accentColor)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressableCard)
             }
         }
     }

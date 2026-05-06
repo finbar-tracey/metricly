@@ -12,7 +12,7 @@ struct TemplateEditView: View {
     @State private var showingSuggestions = false
 
     private var suggestions: [String] {
-        let history = Set(allExercises.map(\.name))
+        let history = Set(allExercises.filter { !($0.workout?.isTemplate ?? true) }.map(\.name))
         let current = Set(template.exercises.map(\.name))
         let available = history.subtracting(current)
         if newExerciseName.isEmpty {
@@ -77,24 +77,34 @@ struct TemplateEditView: View {
                     ForEach(sortedExercises) { exercise in
                         HStack(spacing: 12) {
                             ZStack {
-                                RoundedRectangle(cornerRadius: 8)
-                                    .fill(Color.accentColor.opacity(0.12))
-                                    .frame(width: 36, height: 36)
+                                RoundedRectangle(cornerRadius: 11, style: .continuous)
+                                    .fill(
+                                        LinearGradient(
+                                            colors: [Color.accentColor.opacity(0.22), Color.accentColor.opacity(0.10)],
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        )
+                                    )
+                                    .frame(width: 42, height: 42)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 11, style: .continuous)
+                                            .stroke(Color.accentColor.opacity(0.20), lineWidth: 0.5)
+                                    )
                                 if let category = exercise.category {
                                     MuscleIconView(group: category, color: Color.accentColor)
-                                        .frame(width: 16, height: 16)
+                                        .frame(width: 18, height: 18)
                                 } else {
                                     Image(systemName: "dumbbell.fill")
-                                        .font(.system(size: 14, weight: .semibold))
+                                        .font(.system(size: 15, weight: .bold))
                                         .foregroundStyle(Color.accentColor)
                                 }
                             }
                             VStack(alignment: .leading, spacing: 3) {
                                 Text(exercise.name)
-                                    .font(.subheadline.weight(.semibold))
+                                    .font(.system(size: 15, weight: .semibold, design: .rounded))
                                 if let category = exercise.category {
                                     Text(category.rawValue)
-                                        .font(.caption2)
+                                        .font(.caption2.weight(.semibold))
                                         .foregroundStyle(.secondary)
                                 }
                                 if !exercise.notes.isEmpty {
@@ -124,12 +134,19 @@ struct TemplateEditView: View {
             Section {
                 HStack(spacing: 10) {
                     ZStack {
-                        RoundedRectangle(cornerRadius: 8)
-                            .fill(Color.green.opacity(0.12))
-                            .frame(width: 32, height: 32)
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .fill(
+                                LinearGradient(
+                                    colors: [.green, Color(red: 0.10, green: 0.72, blue: 0.40)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .frame(width: 36, height: 36)
+                            .shadow(color: .green.opacity(0.40), radius: 5, y: 2)
                         Image(systemName: "plus")
-                            .font(.system(size: 13, weight: .bold))
-                            .foregroundStyle(.green)
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundStyle(.white)
                     }
                     TextField("Exercise name", text: $newExerciseName)
                         .onChange(of: newExerciseName) {
@@ -137,12 +154,14 @@ struct TemplateEditView: View {
                             autoSelectCategory()
                         }
                     Button {
+                        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                         addExercise()
                     } label: {
                         Image(systemName: "plus.circle.fill")
                             .font(.title2)
                             .foregroundStyle(.green)
                     }
+                    .buttonStyle(.pressableCard)
                     .disabled(newExerciseName.trimmingCharacters(in: .whitespaces).isEmpty)
                 }
                 .listRowBackground(Color(.secondarySystemGroupedBackground))

@@ -227,7 +227,7 @@ struct HomeDashboardView: View {
             .padding(.horizontal)
             .padding(.bottom, 36)
         }
-        .background(Color(.systemGroupedBackground))
+        .tabBackground(tint: heroGradientColors.first ?? .accentColor, height: 420)
         .navigationTitle("Home")
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
@@ -275,15 +275,15 @@ struct HomeDashboardView: View {
 
     private var heroGradientColors: [Color] {
         guard healthKitEnabled && healthDataLoaded else {
-            return [Color.accentColor, Color.blue]
+            return AppTheme.Gradients.calm
         }
         let score = recoveryResult.readinessScore
         if score >= 0.70 {
-            return [Color(red: 0.12, green: 0.65, blue: 0.40), Color(red: 0.0, green: 0.48, blue: 0.55)]
+            return AppTheme.Gradients.recovery
         } else if score >= 0.45 {
-            return [Color.orange, Color(red: 0.85, green: 0.55, blue: 0.10)]
+            return AppTheme.Gradients.caution
         } else {
-            return [Color.red, Color(red: 0.85, green: 0.25, blue: 0.20)]
+            return AppTheme.Gradients.strain
         }
     }
 
@@ -291,8 +291,14 @@ struct HomeDashboardView: View {
         ZStack(alignment: .topLeading) {
             LinearGradient(colors: heroGradientColors, startPoint: .topLeading, endPoint: .bottomTrailing)
                 .animation(.easeInOut(duration: 0.6), value: healthDataLoaded)
-            Circle().fill(.white.opacity(0.07)).frame(width: 220).offset(x: 180, y: -70)
-            Circle().fill(.white.opacity(0.04)).frame(width: 140).offset(x: 260, y: 60)
+            // Top sheen for depth
+            LinearGradient(
+                colors: [.white.opacity(0.18), .clear],
+                startPoint: .top, endPoint: .center
+            )
+            .blendMode(.plusLighter)
+            Circle().fill(.white.opacity(0.10)).frame(width: 220).blur(radius: 12).offset(x: 180, y: -70)
+            Circle().fill(.white.opacity(0.06)).frame(width: 140).blur(radius: 10).offset(x: 260, y: 60)
 
             VStack(alignment: .leading, spacing: 16) {
                 // Greeting
@@ -305,16 +311,21 @@ struct HomeDashboardView: View {
                     HStack(alignment: .top, spacing: 10) {
                         VStack(alignment: .leading, spacing: 4) {
                             Text("Recovery Readiness")
-                                .font(.caption.weight(.medium))
-                                .foregroundStyle(.white.opacity(0.72))
+                                .font(.system(size: 12, weight: .bold, design: .rounded))
+                                .foregroundStyle(.white.opacity(0.78))
+                                .tracking(0.5)
+                                .textCase(.uppercase)
                             HStack(alignment: .lastTextBaseline, spacing: 2) {
-                                Text("\(Int(recoveryResult.readinessScore * 100))")
-                                    .font(.system(size: 52, weight: .black, design: .rounded))
-                                    .foregroundStyle(.white).monospacedDigit()
+                                AnimatedInt(
+                                    value: Int(recoveryResult.readinessScore * 100),
+                                    font: .system(size: 68, weight: .black, design: .rounded),
+                                    color: .white
+                                )
+                                .shadow(color: .black.opacity(0.18), radius: 8, x: 0, y: 4)
                                 Text("%")
-                                    .font(.title2.weight(.bold))
-                                    .foregroundStyle(.white.opacity(0.70))
-                                    .padding(.bottom, 4)
+                                    .font(.system(size: 26, weight: .heavy, design: .rounded))
+                                    .foregroundStyle(.white.opacity(0.78))
+                                    .padding(.bottom, 6)
                             }
                             Text(readinessShortLabel)
                                 .font(.subheadline.weight(.semibold))
@@ -345,9 +356,13 @@ struct HomeDashboardView: View {
                             }
                             .foregroundStyle(.white)
                             .padding(.horizontal, 14).padding(.vertical, 10)
-                            .background(.white.opacity(0.15), in: RoundedRectangle(cornerRadius: 10))
+                            .background(.ultraThinMaterial.opacity(0.65), in: RoundedRectangle(cornerRadius: AppTheme.chipRadius))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: AppTheme.chipRadius)
+                                    .stroke(.white.opacity(0.22), lineWidth: 0.5)
+                            )
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.pressableCard)
                     } else if score < 0.40 {
                         NavigationLink { MuscleRecoveryView() } label: {
                             HStack(spacing: 8) {
@@ -361,21 +376,33 @@ struct HomeDashboardView: View {
                             }
                             .foregroundStyle(.white)
                             .padding(.horizontal, 14).padding(.vertical, 10)
-                            .background(.white.opacity(0.15), in: RoundedRectangle(cornerRadius: 10))
+                            .background(.ultraThinMaterial.opacity(0.65), in: RoundedRectangle(cornerRadius: AppTheme.chipRadius))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: AppTheme.chipRadius)
+                                    .stroke(.white.opacity(0.22), lineWidth: 0.5)
+                            )
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.pressableCard)
                     }
                 } else {
                     // No health data — show streak
-                    HStack(alignment: .lastTextBaseline, spacing: 10) {
-                        Image(systemName: "flame.fill")
-                            .font(.system(size: 38, weight: .bold)).foregroundStyle(.white.opacity(0.88))
-                        Text("\(currentStreak)")
-                            .font(.system(size: 56, weight: .black, design: .rounded))
-                            .foregroundStyle(.white).monospacedDigit()
-                    }
                     Text("Day Streak")
-                        .font(.subheadline.weight(.medium)).foregroundStyle(.white.opacity(0.80))
+                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                        .foregroundStyle(.white.opacity(0.78))
+                        .tracking(0.5)
+                        .textCase(.uppercase)
+                    HStack(alignment: .lastTextBaseline, spacing: 12) {
+                        Image(systemName: "flame.fill")
+                            .font(.system(size: 44, weight: .bold))
+                            .foregroundStyle(.white.opacity(0.92))
+                            .shadow(color: .black.opacity(0.20), radius: 6, x: 0, y: 3)
+                        AnimatedInt(
+                            value: currentStreak,
+                            font: .system(size: 76, weight: .black, design: .rounded),
+                            color: .white
+                        )
+                        .shadow(color: .black.opacity(0.22), radius: 10, x: 0, y: 5)
+                    }
                 }
 
                 weekActivityStrip
@@ -492,7 +519,7 @@ struct HomeDashboardView: View {
                         }
                     }
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressableCard)
                 .disabled(workout == nil)
                 .frame(maxWidth: .infinity)
             }
@@ -542,10 +569,17 @@ struct HomeDashboardView: View {
                 Button { showingAddWorkout = true } label: {
                     Text("Start")
                         .font(.subheadline.bold()).foregroundStyle(.white)
-                        .padding(.horizontal, 16).padding(.vertical, 8)
-                        .background(Color.green, in: Capsule())
+                        .padding(.horizontal, 16).padding(.vertical, 9)
+                        .background(
+                            LinearGradient(
+                                colors: [.green, Color(red: 0.10, green: 0.72, blue: 0.40)],
+                                startPoint: .topLeading, endPoint: .bottomTrailing
+                            ),
+                            in: Capsule()
+                        )
+                        .shadow(color: .green.opacity(0.45), radius: 8, x: 0, y: 4)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressableCard)
             }
             .appCard()
 
@@ -553,7 +587,7 @@ struct HomeDashboardView: View {
             NavigationLink(value: workout) {
                 HStack(spacing: 14) {
                     ZStack {
-                        Circle().fill(Color.orange.opacity(0.12)).frame(width: 50, height: 50)
+                        Circle().fill(Color.orange.opacity(0.16)).frame(width: 50, height: 50)
                         Image(systemName: "play.fill")
                             .font(.system(size: 20, weight: .semibold)).foregroundStyle(.orange)
                     }
@@ -565,13 +599,20 @@ struct HomeDashboardView: View {
                     Spacer()
                     Text("Continue")
                         .font(.subheadline.bold()).foregroundStyle(.white)
-                        .padding(.horizontal, 16).padding(.vertical, 8)
-                        .background(Color.orange, in: Capsule())
+                        .padding(.horizontal, 16).padding(.vertical, 9)
+                        .background(
+                            LinearGradient(
+                                colors: [.orange, Color(red: 0.95, green: 0.45, blue: 0.20)],
+                                startPoint: .topLeading, endPoint: .bottomTrailing
+                            ),
+                            in: Capsule()
+                        )
+                        .shadow(color: .orange.opacity(0.45), radius: 8, x: 0, y: 4)
                     Image(systemName: "chevron.right").font(.caption2).foregroundStyle(.tertiary)
                 }
                 .appCard()
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressableCard)
 
         case .restDay:
             HStack(spacing: 14) {
@@ -593,7 +634,7 @@ struct HomeDashboardView: View {
                         .padding(.horizontal, 12).padding(.vertical, 6)
                         .background(Color.indigo.opacity(0.1), in: Capsule())
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressableCard)
             }
             .appCard()
 
@@ -635,7 +676,7 @@ struct HomeDashboardView: View {
 
         return VStack(alignment: .leading, spacing: 10) {
             Text("Today's Plan")
-                .font(.subheadline.weight(.bold))
+                .font(.system(size: 16, weight: .bold, design: .rounded))
 
             if hasPlan, let name = planned {
                 HStack(spacing: 4) {
@@ -688,23 +729,34 @@ struct HomeDashboardView: View {
                 }
                 .frame(maxWidth: .infinity)
                 .foregroundStyle(.white)
-                .padding(.vertical, 10)
-                .background(Color.green, in: RoundedRectangle(cornerRadius: 10))
+                .padding(.vertical, 11)
+                .background(
+                    LinearGradient(
+                        colors: [.green, Color(red: 0.10, green: 0.72, blue: 0.40)],
+                        startPoint: .topLeading, endPoint: .bottomTrailing
+                    ),
+                    in: RoundedRectangle(cornerRadius: 11)
+                )
+                .shadow(color: .green.opacity(0.40), radius: 8, x: 0, y: 4)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressableCard)
         }
-        .padding(14)
-        .frame(maxWidth: .infinity, minHeight: 160, alignment: .topLeading)
+        .padding(16)
+        .frame(maxWidth: .infinity, minHeight: 168, alignment: .topLeading)
         .background(Color(.secondarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 14))
-        .shadow(color: .black.opacity(0.07), radius: 10, x: 0, y: 3)
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(Color.white.opacity(0.06), lineWidth: 0.5)
+        )
+        .shadow(color: .black.opacity(0.10), radius: 14, x: 0, y: 5)
     }
 
     private var keyMetricsMiniCard: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
                 Text("Key Metrics")
-                    .font(.subheadline.weight(.bold))
+                    .font(.system(size: 16, weight: .bold, design: .rounded))
                 Spacer()
                 NavigationLink { HealthDashboardView() } label: {
                     Text("View all")
@@ -753,11 +805,15 @@ struct HomeDashboardView: View {
                 }
             }
         }
-        .padding(14)
-        .frame(maxWidth: .infinity, minHeight: 160, alignment: .topLeading)
+        .padding(16)
+        .frame(maxWidth: .infinity, minHeight: 168, alignment: .topLeading)
         .background(Color(.secondarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 14))
-        .shadow(color: .black.opacity(0.07), radius: 10, x: 0, y: 3)
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(Color.white.opacity(0.06), lineWidth: 0.5)
+        )
+        .shadow(color: .black.opacity(0.10), radius: 14, x: 0, y: 5)
     }
 
     private func miniMetricRow(icon: String, color: Color, label: String, value: String, status: String, good: Bool) -> some View {
@@ -801,24 +857,33 @@ struct HomeDashboardView: View {
 
             LazyVGrid(
                 columns: Array(repeating: GridItem(.flexible(), spacing: 4), count: 6),
-                spacing: 12
+                spacing: 14
             ) {
                 ForEach(recoveryResult.muscleResults, id: \.group) { result in
                     let color = RecoveryEngine.freshnessColor(result.freshness)
-                    VStack(spacing: 6) {
+                    VStack(spacing: 7) {
                         ZStack {
-                            Circle().fill(color.opacity(0.12)).frame(width: 46, height: 46)
+                            Circle()
+                                .fill(color.opacity(0.14))
+                                .frame(width: 52, height: 52)
+                            Circle()
+                                .stroke(color.opacity(0.18), lineWidth: 4)
+                                .frame(width: 52, height: 52)
                             Circle()
                                 .trim(from: 0, to: result.freshness)
-                                .stroke(color, style: StrokeStyle(lineWidth: 3.5, lineCap: .round))
+                                .stroke(
+                                    color.gradient,
+                                    style: StrokeStyle(lineWidth: 4, lineCap: .round)
+                                )
                                 .rotationEffect(.degrees(-90))
-                                .frame(width: 46, height: 46)
+                                .frame(width: 52, height: 52)
                                 .animation(.easeOut(duration: 0.7), value: result.freshness)
+                                .shadow(color: color.opacity(0.4), radius: 4, y: 1)
                             MuscleIconView(group: result.group, color: color)
-                                .frame(width: 20, height: 20)
+                                .frame(width: 22, height: 22)
                         }
                         Text(result.group.rawValue)
-                            .font(.system(size: 9, weight: .medium))
+                            .font(.system(size: 10, weight: .semibold, design: .rounded))
                             .foregroundStyle(color)
                             .lineLimit(1)
                             .minimumScaleFactor(0.6)
@@ -856,37 +921,37 @@ struct HomeDashboardView: View {
                     compactHealthTile(icon: "figure.walk", color: .green,
                                       value: HealthFormatters.formatSteps(todaySteps), label: "Steps",
                                       progress: todaySteps / 10_000)
-                }.buttonStyle(.plain)
+                }.buttonStyle(.pressableCard)
 
                 NavigationLink { SleepDetailView() } label: {
                     compactHealthTile(icon: "bed.double.fill", color: .indigo,
                                       value: HealthFormatters.formatSleepShort(sleepMinutes), label: "Sleep",
                                       progress: sleepMinutes / 480)
-                }.buttonStyle(.plain)
+                }.buttonStyle(.pressableCard)
 
                 NavigationLink { HeartRateDetailView() } label: {
                     compactHealthTile(icon: "heart.fill", color: .red,
                                       value: restingHR.map { "\(Int($0))" } ?? "—", label: "Resting HR",
                                       progress: nil)
-                }.buttonStyle(.plain)
+                }.buttonStyle(.pressableCard)
 
                 NavigationLink { HealthDashboardView() } label: {
                     compactHealthTile(icon: "waveform.path.ecg", color: .purple,
                                       value: hrv.map { "\(Int($0)) ms" } ?? "—", label: "HRV",
                                       progress: nil)
-                }.buttonStyle(.plain)
+                }.buttonStyle(.pressableCard)
 
                 NavigationLink { HealthDashboardView() } label: {
                     compactHealthTile(icon: "flame.fill", color: .orange,
                                       value: "\(Int(activeCalories))", label: "Active Cal",
                                       progress: nil)
-                }.buttonStyle(.plain)
+                }.buttonStyle(.pressableCard)
 
                 NavigationLink { WaterTrackerView() } label: {
                     compactHealthTile(icon: "drop.fill", color: .cyan,
                                       value: "\(Int(todayWaterMl)) ml", label: "Water",
                                       progress: waterProgress)
-                }.buttonStyle(.plain)
+                }.buttonStyle(.pressableCard)
 
                 let caffeineMg = totalCaffeineMg(at: .now)
                 if caffeineMg > 0.5 {
@@ -894,14 +959,14 @@ struct HomeDashboardView: View {
                         compactHealthTile(icon: "cup.and.saucer.fill", color: .brown,
                                           value: "\(Int(caffeineMg)) mg", label: "Caffeine",
                                           progress: min(1.0, caffeineMg / Double(settings.dailyCaffeineLimit)))
-                    }.buttonStyle(.plain)
+                    }.buttonStyle(.pressableCard)
                 }
 
                 NavigationLink { CreatineTrackerView() } label: {
                     compactHealthTile(icon: "pill.fill", color: .blue,
                                       value: creatineTakenToday ? "Taken" : "Not yet", label: "Creatine",
                                       progress: creatineTakenToday ? 1.0 : 0)
-                }.buttonStyle(.plain)
+                }.buttonStyle(.pressableCard)
             }
         }
         .appCard()
@@ -910,38 +975,60 @@ struct HomeDashboardView: View {
     }
 
     private func compactHealthTile(icon: String, color: Color, value: String, label: String, progress: Double?) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 14) {
             HStack {
                 ZStack {
-                    Circle().fill(color.opacity(0.15))
+                    Circle().fill(color.opacity(0.18))
                     if let progress {
                         Circle()
                             .trim(from: 0, to: animateRings ? min(1.0, progress) : 0)
-                            .stroke(color.gradient, style: StrokeStyle(lineWidth: 3.5, lineCap: .round))
+                            .stroke(color.gradient, style: StrokeStyle(lineWidth: 4, lineCap: .round))
                             .rotationEffect(.degrees(-90))
                             .animation(.easeOut(duration: 0.8), value: animateRings)
                     }
-                    Image(systemName: icon).font(.system(size: 15, weight: .semibold)).foregroundStyle(color)
+                    Image(systemName: icon)
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundStyle(color)
                 }
-                .frame(width: 40, height: 40)
+                .frame(width: 44, height: 44)
                 Spacer()
                 if let progress {
                     Text("\(Int(min(1, progress) * 100))%")
-                        .font(.system(size: 11, weight: .bold, design: .rounded))
-                        .foregroundStyle(color.opacity(0.8)).monospacedDigit()
+                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                        .foregroundStyle(color)
+                        .monospacedDigit()
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(color.opacity(0.12), in: Capsule())
                 }
             }
             VStack(alignment: .leading, spacing: 2) {
                 Text(value)
-                    .font(.system(size: 20, weight: .bold, design: .rounded))
-                    .monospacedDigit().lineLimit(1).minimumScaleFactor(0.75)
-                Text(label).font(.caption2.weight(.medium)).foregroundStyle(.secondary)
+                    .font(.system(size: 22, weight: .black, design: .rounded))
+                    .monospacedDigit()
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+                Text(label)
+                    .font(.system(size: 11, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.secondary)
+                    .tracking(0.3)
+                    .textCase(.uppercase)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(14)
-        .background(Color(.tertiarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .padding(16)
+        .background(
+            LinearGradient(
+                colors: [color.opacity(0.10), Color(.tertiarySystemGroupedBackground)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(color.opacity(0.18), lineWidth: 0.5)
+        )
     }
 
     // MARK: - Bedtime Suggestion Card
@@ -953,15 +1040,26 @@ struct HomeDashboardView: View {
         return NavigationLink { CaffeineTrackerView() } label: {
             HStack(spacing: 14) {
                 ZStack {
-                    Circle().fill(color.opacity(0.12)).frame(width: 44, height: 44)
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: [color, color.opacity(0.72)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 48, height: 48)
+                        .shadow(color: color.opacity(0.45), radius: 9, x: 0, y: 4)
                     Image(systemName: bedtime.delayedByCaffeine ? "moon.fill" : "moon.zzz.fill")
-                        .font(.system(size: 18, weight: .semibold)).foregroundStyle(color)
+                        .font(.system(size: 20, weight: .bold))
+                        .foregroundStyle(.white)
                 }
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("Suggested Bedtime").font(.subheadline.weight(.semibold))
+                    Text("Suggested Bedtime")
+                        .font(.system(size: 15, weight: .semibold, design: .rounded))
                     HStack(spacing: 6) {
                         Text(bedtime.time, format: .dateTime.hour().minute())
-                            .font(.caption.weight(.medium)).foregroundStyle(.secondary)
+                            .font(.caption.weight(.semibold)).foregroundStyle(.secondary)
                         if bedtime.delayedByCaffeine {
                             Text("· Caffeine still active").font(.caption).foregroundStyle(.orange)
                         }
@@ -970,19 +1068,27 @@ struct HomeDashboardView: View {
                 Spacer()
                 if let clearTime = caffeineClearTime(from: .now) {
                     VStack(alignment: .trailing, spacing: 2) {
-                        Text("Clear by").font(.caption2).foregroundStyle(.tertiary)
+                        Text("Clear by")
+                            .font(.system(size: 10, weight: .bold, design: .rounded))
+                            .foregroundStyle(.tertiary)
+                            .tracking(0.3)
+                            .textCase(.uppercase)
                         Text(clearTime, format: .dateTime.hour().minute())
-                            .font(.caption.bold()).foregroundStyle(.brown)
+                            .font(.caption.bold().monospacedDigit()).foregroundStyle(.brown)
                     }
                 }
-                Image(systemName: "chevron.right").font(.caption2).foregroundStyle(.tertiary)
+                Image(systemName: "chevron.right").font(.caption2.weight(.semibold)).foregroundStyle(.tertiary)
             }
-            .padding(16)
+            .padding(.horizontal, 16).padding(.vertical, 14)
             .background(Color(.secondarySystemGroupedBackground))
-            .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardRadius))
-            .shadow(color: .black.opacity(0.07), radius: 12, x: 0, y: 4)
+            .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardRadius, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: AppTheme.cardRadius, style: .continuous)
+                    .stroke(Color.white.opacity(0.06), lineWidth: 0.5)
+            )
+            .shadow(color: .black.opacity(0.10), radius: 16, x: 0, y: 5)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressableCard)
     }
 
     // MARK: - Training Status Card
@@ -1003,12 +1109,22 @@ struct HomeDashboardView: View {
                             }
                             Spacer()
                             if weekDone {
-                                Text("Done!").font(.caption.bold()).foregroundStyle(.green)
-                                    .padding(.horizontal, 8).padding(.vertical, 2)
-                                    .background(Color.green.opacity(0.12), in: Capsule())
+                                Text("DONE")
+                                    .font(.system(size: 10, weight: .bold, design: .rounded))
+                                    .tracking(0.6)
+                                    .foregroundStyle(.white)
+                                    .padding(.horizontal, 9).padding(.vertical, 4)
+                                    .background(
+                                        LinearGradient(
+                                            colors: [.green, Color(red: 0.10, green: 0.72, blue: 0.40)],
+                                            startPoint: .topLeading, endPoint: .bottomTrailing
+                                        ),
+                                        in: Capsule()
+                                    )
+                                    .shadow(color: .green.opacity(0.4), radius: 5, y: 2)
                             }
                         }
-                        GradientProgressBar(value: weekProgress, color: weekDone ? .green : .accentColor, height: 9)
+                        GradientProgressBar(value: weekProgress, color: weekDone ? .green : .accentColor, height: 10)
                     }
                     .padding(.horizontal, 16).padding(.vertical, 14)
                 }
@@ -1016,21 +1132,30 @@ struct HomeDashboardView: View {
                 Divider().padding(.leading, 16)
 
                 HStack {
-                    HStack(spacing: 5) {
+                    HStack(spacing: 6) {
                         Image(systemName: "flame.fill")
                             .foregroundStyle(currentStreak >= 3 ? .orange : .secondary)
-                        Text("\(currentStreak) day streak").font(.subheadline.weight(.medium))
+                        Text("\(currentStreak) day streak")
+                            .font(.system(size: 15, weight: .semibold, design: .rounded))
                     }
                     Spacer()
                     NavigationLink { SmartSuggestionsView() } label: {
-                        HStack(spacing: 4) {
-                            Image(systemName: "brain.head.profile").font(.caption)
-                            Text(recoveryResult.suggestedWorkoutType).font(.caption.weight(.medium))
+                        HStack(spacing: 5) {
+                            Image(systemName: "brain.head.profile").font(.caption.weight(.semibold))
+                            Text(recoveryResult.suggestedWorkoutType).font(.caption.weight(.semibold))
                         }
-                        .padding(.horizontal, 10).padding(.vertical, 5)
-                        .background(Color.purple.opacity(0.12), in: Capsule())
+                        .padding(.horizontal, 12).padding(.vertical, 6)
+                        .background(
+                            LinearGradient(
+                                colors: [Color.purple.opacity(0.18), Color.purple.opacity(0.10)],
+                                startPoint: .topLeading, endPoint: .bottomTrailing
+                            ),
+                            in: Capsule()
+                        )
+                        .overlay(Capsule().stroke(Color.purple.opacity(0.20), lineWidth: 0.5))
                         .foregroundStyle(.purple)
                     }
+                    .buttonStyle(.pressableCard)
                 }
                 .padding(.horizontal, 16).padding(.vertical, 14)
 
@@ -1045,7 +1170,11 @@ struct HomeDashboardView: View {
                 }
             }
             .background(Color(.tertiarySystemGroupedBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(Color.white.opacity(0.05), lineWidth: 0.5)
+            )
         }
         .appCard()
     }
@@ -1061,28 +1190,43 @@ struct HomeDashboardView: View {
                     NavigationLink(value: suggestion.exerciseName) {
                         HStack(spacing: 14) {
                             ZStack {
-                                Circle().fill(Color.green.opacity(0.12)).frame(width: 36, height: 36)
+                                RoundedRectangle(cornerRadius: 11, style: .continuous)
+                                    .fill(
+                                        LinearGradient(
+                                            colors: [.green, Color(red: 0.10, green: 0.72, blue: 0.40)],
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        )
+                                    )
+                                    .frame(width: 38, height: 38)
+                                    .shadow(color: .green.opacity(0.40), radius: 6, y: 3)
                                 Image(systemName: "arrow.up.circle.fill")
-                                    .font(.system(size: 16, weight: .semibold)).foregroundStyle(.green)
+                                    .font(.system(size: 18, weight: .bold))
+                                    .foregroundStyle(.white)
                             }
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(suggestion.exerciseName).font(.subheadline.weight(.semibold))
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(suggestion.exerciseName)
+                                    .font(.system(size: 15, weight: .semibold, design: .rounded))
                                 if case .increase(let kg) = suggestion.recommendation.action {
                                     Text("Try \(weightUnit.format(kg)) next session")
                                         .font(.caption).foregroundStyle(.secondary)
                                 }
                             }
                             Spacer()
-                            Image(systemName: "chevron.right").font(.caption2).foregroundStyle(.tertiary)
+                            Image(systemName: "chevron.right").font(.caption2.weight(.semibold)).foregroundStyle(.tertiary)
                         }
                         .padding(.horizontal, 16).padding(.vertical, 12)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressableCard)
                     if index < cachedProgressionSuggestions.count - 1 { Divider().padding(.leading, 66) }
                 }
             }
             .background(Color(.tertiarySystemGroupedBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(Color.white.opacity(0.05), lineWidth: 0.5)
+            )
         }
         .appCard()
     }
@@ -1108,38 +1252,66 @@ struct HomeDashboardView: View {
 
             HStack(spacing: 12) {
                 // This week stat
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: 6) {
                     Text("This Week")
-                        .font(.caption2.weight(.semibold)).foregroundStyle(.secondary)
+                        .font(.system(size: 11, weight: .bold, design: .rounded))
+                        .foregroundStyle(.orange)
+                        .tracking(0.4)
+                        .textCase(.uppercase)
                     Text(String(format: "%.1f %@", distUnit.display(thisWeekKm), distUnit.label))
-                        .font(.system(size: 22, weight: .bold, design: .rounded))
+                        .font(.system(size: 24, weight: .black, design: .rounded))
                         .monospacedDigit()
                         .foregroundStyle(.orange)
                     Text("\(thisWeekSessions.count) session\(thisWeekSessions.count == 1 ? "" : "s")")
                         .font(.caption).foregroundStyle(.secondary)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(14)
-                .background(Color.orange.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
+                .padding(16)
+                .background(
+                    LinearGradient(
+                        colors: [Color.orange.opacity(0.18), Color.orange.opacity(0.06)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    in: RoundedRectangle(cornerRadius: 14, style: .continuous)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .stroke(Color.orange.opacity(0.20), lineWidth: 0.5)
+                )
 
                 // Last run stat
                 if let last = lastSession {
                     NavigationLink(destination: CardioSessionDetailView(session: last)) {
-                        VStack(alignment: .leading, spacing: 4) {
+                        VStack(alignment: .leading, spacing: 6) {
                             Text("Last Run")
-                                .font(.caption2.weight(.semibold)).foregroundStyle(.secondary)
+                                .font(.system(size: 11, weight: .bold, design: .rounded))
+                                .foregroundStyle(last.type.color)
+                                .tracking(0.4)
+                                .textCase(.uppercase)
                             Text(last.formattedDistance(useKm: useKm))
-                                .font(.system(size: 22, weight: .bold, design: .rounded))
+                                .font(.system(size: 24, weight: .black, design: .rounded))
                                 .monospacedDigit()
                                 .foregroundStyle(last.type.color)
                             Text(last.formattedPace(useKm: useKm))
                                 .font(.caption).foregroundStyle(.secondary)
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(14)
-                        .background(last.type.color.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
+                        .padding(16)
+                        .background(
+                            LinearGradient(
+                                colors: [last.type.color.opacity(0.18), last.type.color.opacity(0.06)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            in: RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                .stroke(last.type.color.opacity(0.20), lineWidth: 0.5)
+                        )
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressableCard)
                 }
             }
         }
@@ -1167,7 +1339,7 @@ struct HomeDashboardView: View {
                             .font(.subheadline.bold()).padding(.horizontal, 24).padding(.vertical, 12)
                             .background(Color.accentColor.gradient).foregroundStyle(.white).clipShape(Capsule())
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressableCard)
                 }
                 .frame(maxWidth: .infinity).padding(.vertical, 30)
             } else {
@@ -1181,7 +1353,7 @@ struct HomeDashboardView: View {
                             }
                             .padding(.horizontal, 4)
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.pressableCard)
                         if index < min(allWorkouts.count, 5) - 1 { Divider().padding(.leading, 16) }
                     }
                 }
@@ -1200,7 +1372,7 @@ struct HomeDashboardView: View {
                         .background(Color(.tertiarySystemGroupedBackground))
                         .clipShape(RoundedRectangle(cornerRadius: 14))
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressableCard)
                 }
             }
         }
@@ -1217,45 +1389,63 @@ struct HomeDashboardView: View {
                 if let active = inProgressWorkout {
                     NavigationLink(value: active) {
                         quickLinkTile(icon: "play.circle.fill", color: .orange, title: "Continue Workout")
-                    }.buttonStyle(.plain)
+                    }.buttonStyle(.pressableCard)
                 } else {
                     NavigationLink { WorkoutScheduleView() } label: {
                         quickLinkTile(icon: "calendar.badge.checkmark", color: .green, title: "Weekly Schedule")
-                    }.buttonStyle(.plain)
+                    }.buttonStyle(.pressableCard)
                 }
 
                 NavigationLink { ExerciseLibraryView() } label: {
                     quickLinkTile(icon: "books.vertical", color: .blue, title: "Exercise Library")
-                }.buttonStyle(.plain)
+                }.buttonStyle(.pressableCard)
 
                 NavigationLink { InsightsView() } label: {
                     quickLinkTile(icon: "chart.bar.fill", color: .purple, title: "Insights")
-                }.buttonStyle(.plain)
+                }.buttonStyle(.pressableCard)
 
                 NavigationLink { PersonalRecordsView() } label: {
                     quickLinkTile(icon: "trophy.fill", color: .yellow, title: "Personal Records")
-                }.buttonStyle(.plain)
+                }.buttonStyle(.pressableCard)
 
                 NavigationLink { HealthDashboardView() } label: {
                     quickLinkTile(icon: "heart.text.square", color: .red, title: "Health")
-                }.buttonStyle(.plain)
+                }.buttonStyle(.pressableCard)
             }
         }
         .appCard()
     }
 
     private func quickLinkTile(icon: String, color: Color, title: String) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 14) {
             ZStack {
-                RoundedRectangle(cornerRadius: 12).fill(color.gradient).frame(width: 46, height: 46)
-                Image(systemName: icon).font(.system(size: 20, weight: .semibold)).foregroundStyle(.white)
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [color, color.opacity(0.72)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 52, height: 52)
+                    .shadow(color: color.opacity(0.45), radius: 10, x: 0, y: 5)
+                Image(systemName: icon)
+                    .font(.system(size: 22, weight: .bold))
+                    .foregroundStyle(.white)
             }
-            Text(title).font(.subheadline.weight(.semibold)).lineLimit(2).multilineTextAlignment(.leading)
+            Text(title)
+                .font(.system(size: 15, weight: .semibold, design: .rounded))
+                .lineLimit(2)
+                .multilineTextAlignment(.leading)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(14)
+        .padding(16)
         .background(Color(.tertiarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(Color.white.opacity(0.06), lineWidth: 0.5)
+        )
     }
 
     // MARK: - HealthKit Loading

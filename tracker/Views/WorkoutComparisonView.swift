@@ -40,8 +40,19 @@ struct WorkoutComparisonView: View {
             VStack(spacing: 0) {
                 HStack(spacing: 12) {
                     ZStack {
-                        RoundedRectangle(cornerRadius: 8).fill(Color.blue.opacity(0.12)).frame(width: 34, height: 34)
-                        Text("A").font(.system(size: 14, weight: .black)).foregroundStyle(.blue)
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .fill(
+                                LinearGradient(
+                                    colors: [.blue, Color(red: 0.30, green: 0.55, blue: 0.95)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .frame(width: 38, height: 38)
+                            .shadow(color: .blue.opacity(0.40), radius: 5, y: 2)
+                        Text("A")
+                            .font(.system(size: 16, weight: .black, design: .rounded))
+                            .foregroundStyle(.white)
                     }
                     Picker("First", selection: $leftWorkout) {
                         Text("Select workout…").tag(nil as Workout?)
@@ -49,14 +60,25 @@ struct WorkoutComparisonView: View {
                     }
                     .font(.subheadline)
                 }
-                .padding(.horizontal, 16).padding(.vertical, 12)
+                .padding(.horizontal, 16).padding(.vertical, 13)
 
-                Divider().padding(.leading, 62)
+                Divider().padding(.leading, 66)
 
                 HStack(spacing: 12) {
                     ZStack {
-                        RoundedRectangle(cornerRadius: 8).fill(Color.orange.opacity(0.12)).frame(width: 34, height: 34)
-                        Text("B").font(.system(size: 14, weight: .black)).foregroundStyle(.orange)
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .fill(
+                                LinearGradient(
+                                    colors: [.orange, Color(red: 0.95, green: 0.45, blue: 0.20)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .frame(width: 38, height: 38)
+                            .shadow(color: .orange.opacity(0.40), radius: 5, y: 2)
+                        Text("B")
+                            .font(.system(size: 16, weight: .black, design: .rounded))
+                            .foregroundStyle(.white)
                     }
                     Picker("Second", selection: $rightWorkout) {
                         Text("Select workout…").tag(nil as Workout?)
@@ -64,10 +86,14 @@ struct WorkoutComparisonView: View {
                     }
                     .font(.subheadline)
                 }
-                .padding(.horizontal, 16).padding(.vertical, 12)
+                .padding(.horizontal, 16).padding(.vertical, 13)
             }
             .background(Color(.tertiarySystemGroupedBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(Color.white.opacity(0.05), lineWidth: 0.5)
+            )
         }
         .appCard()
     }
@@ -82,27 +108,43 @@ struct WorkoutComparisonView: View {
 
         return ZStack(alignment: .topLeading) {
             LinearGradient(
-                colors: [bIsAhead ? Color.orange : Color.blue,
-                         bIsAhead ? Color.red.opacity(0.6) : Color.cyan.opacity(0.6)],
-                startPoint: .topLeading, endPoint: .bottomTrailing
+                colors: bIsAhead ? AppTheme.Gradients.caution : AppTheme.Gradients.calm,
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
             )
-            Circle().fill(.white.opacity(0.07)).frame(width: 200).offset(x: 160, y: -60)
+            // Top sheen
+            LinearGradient(
+                colors: [.white.opacity(0.18), .clear],
+                startPoint: .top, endPoint: .center
+            )
+            .blendMode(.plusLighter)
+            Circle().fill(.white.opacity(0.10)).frame(width: 200).blur(radius: 12).offset(x: 160, y: -60)
+            Circle().fill(.white.opacity(0.06)).frame(width: 110).blur(radius: 10).offset(x: -30, y: 80)
 
             VStack(alignment: .leading, spacing: 18) {
                 HStack(alignment: .center, spacing: 14) {
                     ZStack {
-                        Circle().fill(.white.opacity(0.20)).frame(width: 52, height: 52)
+                        Circle()
+                            .fill(.ultraThinMaterial.opacity(0.7))
+                            .frame(width: 56, height: 56)
+                            .overlay(Circle().stroke(.white.opacity(0.25), lineWidth: 0.5))
                         Image(systemName: "arrow.left.arrow.right")
-                            .font(.system(size: 20, weight: .semibold)).foregroundStyle(.white)
+                            .font(.system(size: 22, weight: .bold))
+                            .foregroundStyle(.white)
                     }
-                    VStack(alignment: .leading, spacing: 3) {
+                    VStack(alignment: .leading, spacing: 2) {
                         Text("Volume Comparison")
-                            .font(.caption.weight(.semibold)).foregroundStyle(.white.opacity(0.75))
+                            .font(.system(size: 12, weight: .bold, design: .rounded))
+                            .foregroundStyle(.white.opacity(0.82))
+                            .tracking(0.5)
+                            .textCase(.uppercase)
                         HStack(alignment: .firstTextBaseline, spacing: 4) {
                             Image(systemName: bIsAhead ? "arrow.up.right" : "arrow.down.right")
-                                .font(.system(size: 20, weight: .bold))
+                                .font(.system(size: 22, weight: .bold))
                             Text(String(format: "%+.1f%%", volDiff))
-                                .font(.system(size: 32, weight: .black, design: .rounded)).monospacedDigit()
+                                .font(.system(size: 36, weight: .black, design: .rounded))
+                                .monospacedDigit()
+                                .shadow(color: .black.opacity(0.18), radius: 5, y: 3)
                         }
                         .foregroundStyle(.white)
                     }
@@ -111,9 +153,15 @@ struct WorkoutComparisonView: View {
 
                 HStack(spacing: 0) {
                     heroSideCol(label: left.name, date: left.date, value: formatVolume(leftVol), color: .blue, tag: "A")
-                    Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 44)
+                    Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 48)
                     heroSideCol(label: right.name, date: right.date, value: formatVolume(rightVol), color: .orange, tag: "B")
                 }
+                .padding(.vertical, 12)
+                .background(.ultraThinMaterial.opacity(0.55), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .stroke(.white.opacity(0.18), lineWidth: 0.5)
+                )
             }
             .padding(20)
         }
@@ -148,13 +196,35 @@ struct WorkoutComparisonView: View {
                 SectionHeader(title: "Summary", icon: "list.bullet.rectangle", color: .accentColor)
                 Spacer()
                 HStack(spacing: 8) {
-                    Text("A").font(.caption2.bold()).foregroundStyle(.blue)
-                        .padding(.horizontal, 7).padding(.vertical, 3)
-                        .background(Color.blue.opacity(0.12), in: Capsule())
-                    Text("vs").font(.caption2).foregroundStyle(.secondary)
-                    Text("B").font(.caption2.bold()).foregroundStyle(.orange)
-                        .padding(.horizontal, 7).padding(.vertical, 3)
-                        .background(Color.orange.opacity(0.12), in: Capsule())
+                    Text("A")
+                        .font(.system(size: 11, weight: .black, design: .rounded))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 8).padding(.vertical, 4)
+                        .background(
+                            LinearGradient(
+                                colors: [.blue, Color(red: 0.30, green: 0.55, blue: 0.95)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            in: Capsule()
+                        )
+                        .shadow(color: .blue.opacity(0.40), radius: 4, y: 2)
+                    Text("vs")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                    Text("B")
+                        .font(.system(size: 11, weight: .black, design: .rounded))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 8).padding(.vertical, 4)
+                        .background(
+                            LinearGradient(
+                                colors: [.orange, Color(red: 0.95, green: 0.45, blue: 0.20)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            in: Capsule()
+                        )
+                        .shadow(color: .orange.opacity(0.40), radius: 4, y: 2)
                 }
             }
 
@@ -242,15 +312,26 @@ struct WorkoutComparisonView: View {
             HStack(spacing: 10) {
                 if let icon = match.icon {
                     ZStack {
-                        RoundedRectangle(cornerRadius: 7)
-                            .fill(Color.accentColor.opacity(0.12))
-                            .frame(width: 28, height: 28)
+                        RoundedRectangle(cornerRadius: 9, style: .continuous)
+                            .fill(
+                                LinearGradient(
+                                    colors: [Color.accentColor.opacity(0.22), Color.accentColor.opacity(0.10)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .frame(width: 32, height: 32)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 9, style: .continuous)
+                                    .stroke(Color.accentColor.opacity(0.20), lineWidth: 0.5)
+                            )
                         Image(systemName: icon)
-                            .font(.system(size: 11, weight: .semibold))
+                            .font(.system(size: 12, weight: .bold))
                             .foregroundStyle(Color.accentColor)
                     }
                 }
-                Text(match.name).font(.subheadline.weight(.semibold))
+                Text(match.name)
+                    .font(.system(size: 15, weight: .semibold, design: .rounded))
                 Spacer()
                 if let diff = match.volumeDiff {
                     HStack(spacing: 3) {
@@ -258,11 +339,20 @@ struct WorkoutComparisonView: View {
                             .font(.system(size: 9, weight: .bold))
                         Text(String(format: "%+.0f%%", diff)).font(.caption.bold().monospacedDigit())
                     }
-                    .foregroundStyle(diff > 0 ? .green : .red)
-                    .padding(.horizontal, 8).padding(.vertical, 4)
-                    .background((diff > 0 ? Color.green : Color.red).opacity(0.10), in: Capsule())
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 9).padding(.vertical, 5)
+                    .background(
+                        LinearGradient(
+                            colors: diff > 0 ? [.green, Color(red: 0.05, green: 0.55, blue: 0.42)]
+                                              : [.red, Color(red: 0.78, green: 0.20, blue: 0.20)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        in: Capsule()
+                    )
+                    .shadow(color: (diff > 0 ? Color.green : Color.red).opacity(0.40), radius: 4, y: 2)
                 } else {
-                    Text("Only in one").font(.caption2).foregroundStyle(.secondary)
+                    Text("Only in one").font(.caption2.weight(.semibold)).foregroundStyle(.secondary)
                 }
             }
 

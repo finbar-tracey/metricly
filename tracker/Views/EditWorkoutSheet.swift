@@ -20,12 +20,19 @@ struct EditWorkoutSheet: View {
                 Section {
                     HStack(spacing: 12) {
                         ZStack {
-                            RoundedRectangle(cornerRadius: 8)
-                                .fill(Color.accentColor.opacity(0.12))
-                                .frame(width: 36, height: 36)
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .fill(
+                                    LinearGradient(
+                                        colors: [Color.accentColor, Color.accentColor.opacity(0.72)],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
+                                )
+                                .frame(width: 38, height: 38)
+                                .shadow(color: Color.accentColor.opacity(0.40), radius: 5, y: 2)
                             Image(systemName: "pencil")
-                                .font(.system(size: 14, weight: .semibold))
-                                .foregroundStyle(Color.accentColor)
+                                .font(.system(size: 15, weight: .bold))
+                                .foregroundStyle(.white)
                         }
                         TextField("Workout Name", text: $name)
                             .font(.subheadline)
@@ -34,12 +41,19 @@ struct EditWorkoutSheet: View {
 
                     HStack(spacing: 12) {
                         ZStack {
-                            RoundedRectangle(cornerRadius: 8)
-                                .fill(Color.red.opacity(0.12))
-                                .frame(width: 36, height: 36)
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .fill(
+                                    LinearGradient(
+                                        colors: [Color.red, Color.red.opacity(0.72)],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
+                                )
+                                .frame(width: 38, height: 38)
+                                .shadow(color: Color.red.opacity(0.40), radius: 5, y: 2)
                             Image(systemName: "calendar")
-                                .font(.system(size: 14, weight: .semibold))
-                                .foregroundStyle(.red)
+                                .font(.system(size: 15, weight: .bold))
+                                .foregroundStyle(.white)
                         }
                         DatePicker("Date", selection: $date, displayedComponents: .date)
                             .font(.subheadline)
@@ -52,12 +66,19 @@ struct EditWorkoutSheet: View {
                 Section {
                     HStack(alignment: .top, spacing: 12) {
                         ZStack {
-                            RoundedRectangle(cornerRadius: 8)
-                                .fill(Color.orange.opacity(0.12))
-                                .frame(width: 36, height: 36)
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .fill(
+                                    LinearGradient(
+                                        colors: [Color.orange, Color.orange.opacity(0.72)],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
+                                )
+                                .frame(width: 38, height: 38)
+                                .shadow(color: Color.orange.opacity(0.40), radius: 5, y: 2)
                             Image(systemName: "note.text")
-                                .font(.system(size: 14, weight: .semibold))
-                                .foregroundStyle(.orange)
+                                .font(.system(size: 15, weight: .bold))
+                                .foregroundStyle(.white)
                         }
                         TextField("Add notes…", text: $notes, axis: .vertical)
                             .font(.subheadline)

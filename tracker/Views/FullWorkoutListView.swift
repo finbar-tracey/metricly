@@ -292,37 +292,50 @@ struct FullWorkoutListView: View {
     private var workoutHeroCard: some View {
         ZStack(alignment: .topLeading) {
             LinearGradient(
-                colors: [Color.accentColor, Color.blue],
+                colors: AppTheme.Gradients.calm,
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
-            Circle().fill(.white.opacity(0.07)).frame(width: 180).offset(x: 110, y: -30)
-            Circle().fill(.white.opacity(0.05)).frame(width: 90).offset(x: -20, y: 70)
+            // Top sheen
+            LinearGradient(
+                colors: [.white.opacity(0.18), .clear],
+                startPoint: .top, endPoint: .center
+            )
+            .blendMode(.plusLighter)
+            Circle().fill(.white.opacity(0.10)).frame(width: 180).blur(radius: 11).offset(x: 110, y: -30)
+            Circle().fill(.white.opacity(0.06)).frame(width: 90).blur(radius: 8).offset(x: -20, y: 70)
 
             VStack(alignment: .leading, spacing: 14) {
                 HStack(spacing: 6) {
                     Image(systemName: "dumbbell.fill")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(.white.opacity(0.8))
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(.white.opacity(0.85))
                     Text("All Workouts")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.white.opacity(0.8))
+                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                        .foregroundStyle(.white.opacity(0.85))
+                        .tracking(0.5)
+                        .textCase(.uppercase)
                 }
 
                 HStack(spacing: 0) {
                     HeroStatCol(value: "\(workouts.count)", label: "Total", icon: "dumbbell.fill")
-                    Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 36)
+                    Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 40)
                     HeroStatCol(value: "\(thisWeekCount)", label: "This Week", icon: "calendar")
-                    Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 36)
+                    Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 40)
                     HeroStatCol(value: "\(thisMonthCount)", label: "This Month", icon: "calendar.badge.clock")
                 }
-                .padding(.vertical, 10)
-                .background(.white.opacity(0.12), in: RoundedRectangle(cornerRadius: 12))
+                .padding(.vertical, 12)
+                .background(.ultraThinMaterial.opacity(0.55), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .stroke(.white.opacity(0.18), lineWidth: 0.5)
+                )
             }
-            .padding(18)
+            .padding(20)
         }
-        .frame(minHeight: 130)
-        .clipShape(RoundedRectangle(cornerRadius: AppTheme.heroRadius))
+        .frame(minHeight: 145)
+        .clipShape(RoundedRectangle(cornerRadius: AppTheme.heroRadius, style: .continuous))
+        .shadow(color: .black.opacity(0.20), radius: 20, y: 8)
     }
 
     // MARK: - Filter Chip Label

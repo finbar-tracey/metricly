@@ -90,22 +90,37 @@ struct WorkoutTimerView: View {
             HStack(spacing: 8) {
                 ForEach(TimerMode.allCases, id: \.self) { mode in
                     Button {
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) { selectedMode = mode }
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        withAnimation(.spring(response: 0.42, dampingFraction: 0.78)) { selectedMode = mode }
                     } label: {
-                        VStack(spacing: 5) {
+                        VStack(spacing: 6) {
                             Image(systemName: mode.icon)
-                                .font(.system(size: 18, weight: .semibold))
+                                .font(.system(size: 20, weight: .bold))
                                 .foregroundStyle(selectedMode == mode ? .white : .primary)
                             Text(mode.rawValue)
-                                .font(.caption.bold())
+                                .font(.system(size: 13, weight: .bold, design: .rounded))
                                 .foregroundStyle(selectedMode == mode ? .white : .primary)
                         }
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
-                        .background(selectedMode == mode ? Color.accentColor : Color(.secondarySystemFill),
-                                    in: RoundedRectangle(cornerRadius: 12))
+                        .padding(.vertical, 14)
+                        .background {
+                            if selectedMode == mode {
+                                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                    .fill(
+                                        LinearGradient(
+                                            colors: [Color.accentColor, Color.accentColor.opacity(0.72)],
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        )
+                                    )
+                                    .shadow(color: Color.accentColor.opacity(0.45), radius: 8, y: 4)
+                            } else {
+                                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                    .fill(Color(.secondarySystemFill))
+                            }
+                        }
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressableCard)
                 }
             }
             Text(selectedMode.description)
@@ -150,38 +165,52 @@ struct WorkoutTimerView: View {
                 }
             }
             .background(Color(.tertiarySystemGroupedBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(Color.white.opacity(0.05), lineWidth: 0.5)
+            )
         }
         .appCard()
     }
 
     private func settingRow<T: View>(_ label: String, value: String, @ViewBuilder control: () -> T) -> some View {
         HStack(spacing: 12) {
-            Text(label).font(.subheadline)
+            Text(label)
+                .font(.system(size: 15, weight: .semibold, design: .rounded))
             Spacer()
             Text(value)
-                .font(.subheadline.bold().monospacedDigit())
+                .font(.system(size: 16, weight: .black, design: .rounded).monospacedDigit())
                 .foregroundStyle(Color.accentColor)
             control()
         }
-        .padding(.horizontal, 16).padding(.vertical, 12)
+        .padding(.horizontal, 16).padding(.vertical, 13)
     }
 
     // MARK: - Start Card
 
     private var startCard: some View {
-        Button { startTimer() } label: {
+        Button {
+            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+            startTimer()
+        } label: {
             Label("Start \(selectedMode.rawValue)", systemImage: "play.fill")
                 .font(.title3.bold())
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 16)
-                .background(LinearGradient(colors: selectedMode.gradientColors,
-                                           startPoint: .leading, endPoint: .trailing))
+                .padding(.vertical, 18)
+                .background(
+                    LinearGradient(colors: selectedMode.gradientColors,
+                                   startPoint: .topLeading, endPoint: .bottomTrailing)
+                )
                 .foregroundStyle(.white)
-                .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardRadius))
-                .shadow(color: (selectedMode.gradientColors.first ?? .clear).opacity(0.4), radius: 12, x: 0, y: 4)
+                .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardRadius, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppTheme.cardRadius, style: .continuous)
+                        .stroke(.white.opacity(0.20), lineWidth: 0.5)
+                )
+                .shadow(color: (selectedMode.gradientColors.first ?? .clear).opacity(0.50), radius: 14, x: 0, y: 6)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressableCard)
         .padding(.horizontal)
     }
 
@@ -191,49 +220,65 @@ struct WorkoutTimerView: View {
         ZStack(alignment: .topLeading) {
             LinearGradient(colors: selectedMode.gradientColors,
                            startPoint: .topLeading, endPoint: .bottomTrailing)
-            Circle().fill(.white.opacity(0.07)).frame(width: 200).offset(x: 160, y: -60)
+            // Top sheen
+            LinearGradient(
+                colors: [.white.opacity(0.18), .clear],
+                startPoint: .top, endPoint: .center
+            )
+            .blendMode(.plusLighter)
+            Circle().fill(.white.opacity(0.10)).frame(width: 200).blur(radius: 12).offset(x: 160, y: -60)
+            Circle().fill(.white.opacity(0.06)).frame(width: 110).blur(radius: 10).offset(x: -30, y: 80)
 
             VStack(alignment: .leading, spacing: 20) {
                 HStack {
                     if selectedMode == .tabata {
                         Text(isWorkPhase ? "WORK" : "REST")
-                            .font(.caption.weight(.black)).tracking(2)
-                            .padding(.horizontal, 10).padding(.vertical, 4)
-                            .background(isWorkPhase ? Color.green.opacity(0.3) : Color.orange.opacity(0.3), in: Capsule())
+                            .font(.system(size: 12, weight: .black, design: .rounded))
+                            .tracking(2)
+                            .padding(.horizontal, 12).padding(.vertical, 5)
+                            .background(.ultraThinMaterial.opacity(0.7), in: Capsule())
+                            .overlay(Capsule().stroke(.white.opacity(0.25), lineWidth: 0.5))
                             .foregroundStyle(.white)
                             .animation(.easeInOut(duration: 0.3), value: isWorkPhase)
                     } else {
                         Text(selectedMode.rawValue)
-                            .font(.caption.weight(.semibold)).foregroundStyle(.white.opacity(0.75))
+                            .font(.system(size: 12, weight: .bold, design: .rounded))
+                            .foregroundStyle(.white.opacity(0.82))
+                            .tracking(0.5)
+                            .textCase(.uppercase)
                     }
                     Spacer()
                     if selectedMode == .emom || selectedMode == .tabata {
                         Text("Round \(currentRound) / \(totalRounds)")
                             .font(.caption.bold())
-                            .padding(.horizontal, 10).padding(.vertical, 4)
-                            .background(.white.opacity(0.20), in: Capsule())
+                            .padding(.horizontal, 12).padding(.vertical, 5)
+                            .background(.ultraThinMaterial.opacity(0.7), in: Capsule())
+                            .overlay(Capsule().stroke(.white.opacity(0.25), lineWidth: 0.5))
                             .foregroundStyle(.white)
                     }
                 }
 
                 HStack(alignment: .center) {
                     Text(formatTime(timeRemaining))
-                        .font(.system(size: 72, weight: .black, design: .rounded))
-                        .foregroundStyle(.white).monospacedDigit()
+                        .font(.system(size: 80, weight: .black, design: .rounded))
+                        .foregroundStyle(.white)
+                        .monospacedDigit()
                         .contentTransition(.numericText())
+                        .shadow(color: .black.opacity(0.18), radius: 8, y: 4)
                     Spacer()
                     ZStack {
-                        Circle().stroke(.white.opacity(0.25), lineWidth: 8)
+                        Circle().stroke(.white.opacity(0.25), lineWidth: 9)
                         Circle()
                             .trim(from: 0, to: progress)
-                            .stroke(.white, style: StrokeStyle(lineWidth: 8, lineCap: .round))
+                            .stroke(.white, style: StrokeStyle(lineWidth: 9, lineCap: .round))
                             .rotationEffect(.degrees(-90))
                             .animation(.linear(duration: 0.5), value: progress)
+                            .shadow(color: .white.opacity(0.45), radius: 6, y: 1)
                     }
-                    .frame(width: 64, height: 64)
+                    .frame(width: 70, height: 70)
                 }
             }
-            .padding(20)
+            .padding(22)
         }
         .heroCard()
     }
@@ -246,45 +291,69 @@ struct WorkoutTimerView: View {
                 SectionHeader(title: "Rounds Completed", icon: "repeat", color: .orange)
                 HStack(spacing: 0) {
                     Button {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
                         if roundsCompleted > 0 { roundsCompleted -= 1 }
                     } label: {
                         Image(systemName: "minus.circle.fill")
-                            .font(.system(size: 36)).foregroundStyle(.secondary)
+                            .font(.system(size: 40))
+                            .foregroundStyle(.secondary)
                     }
-                    .buttonStyle(.plain).frame(maxWidth: .infinity)
+                    .buttonStyle(.pressableCard).frame(maxWidth: .infinity)
 
-                    Text("\(roundsCompleted)")
-                        .font(.system(size: 52, weight: .black, design: .rounded))
-                        .frame(maxWidth: .infinity)
+                    AnimatedInt(
+                        value: roundsCompleted,
+                        font: .system(size: 56, weight: .black, design: .rounded),
+                        color: Color.accentColor
+                    )
+                    .frame(maxWidth: .infinity)
 
-                    Button { roundsCompleted += 1 } label: {
+                    Button {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        roundsCompleted += 1
+                    } label: {
                         Image(systemName: "plus.circle.fill")
-                            .font(.system(size: 36)).foregroundStyle(Color.accentColor)
+                            .font(.system(size: 40))
+                            .foregroundStyle(Color.accentColor)
                     }
-                    .buttonStyle(.plain).frame(maxWidth: .infinity)
+                    .buttonStyle(.pressableCard).frame(maxWidth: .infinity)
                 }
-                .padding(.vertical, 8)
+                .padding(.vertical, 10)
             } else {
                 SectionHeader(title: "Progress", icon: "chart.bar.fill", color: .accentColor)
-                GradientProgressBar(value: progress, color: .accentColor, height: 10)
+                GradientProgressBar(value: progress, color: .accentColor, height: 12)
                 HStack {
                     Text("Elapsed: \(formatTime(totalTime - timeRemaining))")
-                        .font(.caption.monospacedDigit()).foregroundStyle(.secondary)
+                        .font(.caption.monospacedDigit().weight(.semibold))
+                        .foregroundStyle(.secondary)
                     Spacer()
                     Text("Remaining: \(formatTime(timeRemaining))")
-                        .font(.caption.monospacedDigit()).foregroundStyle(.secondary)
+                        .font(.caption.monospacedDigit().weight(.semibold))
+                        .foregroundStyle(Color.accentColor)
                 }
             }
 
-            Button(role: .destructive) { stopTimer() } label: {
+            Button(role: .destructive) {
+                UIImpactFeedbackGenerator(style: .heavy).impactOccurred()
+                stopTimer()
+            } label: {
                 Label("Stop Timer", systemImage: "stop.fill")
                     .font(.subheadline.bold())
-                    .frame(maxWidth: .infinity).padding(.vertical, 13)
-                    .background(Color.red.opacity(0.10))
+                    .frame(maxWidth: .infinity).padding(.vertical, 14)
+                    .background(
+                        LinearGradient(
+                            colors: [Color.red.opacity(0.18), Color.red.opacity(0.08)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
                     .foregroundStyle(.red)
-                    .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardRadius))
+                    .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardRadius, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: AppTheme.cardRadius, style: .continuous)
+                            .stroke(Color.red.opacity(0.20), lineWidth: 0.5)
+                    )
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressableCard)
         }
         .appCard()
     }

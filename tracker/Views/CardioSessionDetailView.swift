@@ -13,7 +13,7 @@ struct CardioSessionDetailView: View {
     @State private var shareImage: UIImage? = nil
     @State private var showShare = false
 
-    private var useKm: Bool { settingsArray.first?.useKilograms ?? true }
+    private var useKm: Bool { weightUnit.distanceUnit == .km }
 
     var body: some View {
         ScrollView {
@@ -69,36 +69,60 @@ struct CardioSessionDetailView: View {
     private var heroCard: some View {
         ZStack(alignment: .topLeading) {
             LinearGradient(
-                colors: [session.type.color, session.type.color.opacity(0.6)],
-                startPoint: .topLeading, endPoint: .bottomTrailing
+                colors: [
+                    session.type.color,
+                    session.type.color.opacity(0.78),
+                    session.type.color.opacity(0.55)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
             )
-            Circle().fill(.white.opacity(0.07)).frame(width: 200).offset(x: 160, y: -60)
+            // Top sheen
+            LinearGradient(
+                colors: [.white.opacity(0.18), .clear],
+                startPoint: .top, endPoint: .center
+            )
+            .blendMode(.plusLighter)
+            Circle().fill(.white.opacity(0.10)).frame(width: 200).blur(radius: 12).offset(x: 160, y: -60)
+            Circle().fill(.white.opacity(0.06)).frame(width: 110).blur(radius: 10).offset(x: -30, y: 80)
 
             VStack(alignment: .leading, spacing: 18) {
                 HStack(spacing: 14) {
                     ZStack {
-                        Circle().fill(.white.opacity(0.20)).frame(width: 52, height: 52)
+                        Circle()
+                            .fill(.ultraThinMaterial.opacity(0.7))
+                            .frame(width: 56, height: 56)
+                            .overlay(Circle().stroke(.white.opacity(0.25), lineWidth: 0.5))
                         Image(systemName: session.type.icon)
-                            .font(.system(size: 22, weight: .semibold)).foregroundStyle(.white)
+                            .font(.system(size: 24, weight: .bold))
+                            .foregroundStyle(.white)
                     }
-                    VStack(alignment: .leading, spacing: 3) {
+                    VStack(alignment: .leading, spacing: 2) {
                         Text(session.type.rawValue)
-                            .font(.caption.weight(.semibold)).foregroundStyle(.white.opacity(0.75))
+                            .font(.system(size: 12, weight: .bold, design: .rounded))
+                            .foregroundStyle(.white.opacity(0.82))
+                            .tracking(0.5)
+                            .textCase(.uppercase)
                         Text(session.date, format: .dateTime.weekday(.wide).month(.abbreviated).day())
-                            .font(.title3.weight(.bold)).foregroundStyle(.white)
+                            .font(.system(size: 22, weight: .bold, design: .rounded))
+                            .foregroundStyle(.white)
                     }
                     Spacer()
                 }
 
                 HStack(spacing: 0) {
                     HeroStatCol(value: session.formattedDistance(useKm: useKm), label: "Distance")
-                    Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 32)
+                    Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 36)
                     HeroStatCol(value: session.formattedDuration, label: "Duration")
-                    Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 32)
+                    Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 36)
                     HeroStatCol(value: session.formattedPace(useKm: useKm), label: "Avg Pace")
                 }
-                .padding(.vertical, 10)
-                .background(.white.opacity(0.12), in: RoundedRectangle(cornerRadius: 12))
+                .padding(.vertical, 12)
+                .background(.ultraThinMaterial.opacity(0.55), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .stroke(.white.opacity(0.18), lineWidth: 0.5)
+                )
             }
             .padding(20)
         }

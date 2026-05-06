@@ -3,6 +3,7 @@ import SwiftData
 
 struct CardioGoalsView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.weightUnit) private var weightUnit
     @Query private var settingsArray: [UserSettings]
     @Query(sort: \CardioSession.date, order: .reverse) private var sessions: [CardioSession]
 
@@ -12,8 +13,7 @@ struct CardioGoalsView: View {
     @State private var draftSessionCount: Int = 0
 
     private var settings: UserSettings? { settingsArray.first }
-    private var useKm: Bool { settings?.useKilograms ?? true }
-    private var distanceUnit: DistanceUnit { useKm ? .km : .mi }
+    private var distanceUnit: DistanceUnit { weightUnit.distanceUnit }
 
     private var weekStart: Date {
         Calendar.current.dateInterval(of: .weekOfYear, for: .now)?.start ?? .distantPast
@@ -67,19 +67,43 @@ struct CardioGoalsView: View {
             SectionHeader(title: "This Week", icon: "calendar.badge.checkmark", color: .orange)
 
             if distanceGoalKm == 0 && sessionGoal == 0 {
-                HStack(spacing: 12) {
-                    Image(systemName: "target")
-                        .font(.system(size: 28, weight: .semibold))
-                        .foregroundStyle(.orange)
+                HStack(spacing: 14) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .fill(
+                                LinearGradient(
+                                    colors: [.orange, Color(red: 0.95, green: 0.45, blue: 0.20)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .frame(width: 48, height: 48)
+                            .shadow(color: .orange.opacity(0.40), radius: 6, y: 3)
+                        Image(systemName: "target")
+                            .font(.system(size: 22, weight: .bold))
+                            .foregroundStyle(.white)
+                    }
                     VStack(alignment: .leading, spacing: 3) {
-                        Text("No goals set").font(.subheadline.weight(.semibold))
+                        Text("No goals set")
+                            .font(.system(size: 16, weight: .bold, design: .rounded))
                         Text("Set a weekly distance or session goal below.")
                             .font(.caption).foregroundStyle(.secondary)
                     }
                 }
                 .padding(16)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color.orange.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
+                .background(
+                    LinearGradient(
+                        colors: [Color.orange.opacity(0.10), Color.orange.opacity(0.04)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    in: RoundedRectangle(cornerRadius: 14, style: .continuous)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .stroke(Color.orange.opacity(0.20), lineWidth: 0.5)
+                )
             } else {
                 VStack(spacing: 16) {
                     if distanceGoalKm > 0 {
@@ -111,43 +135,45 @@ struct CardioGoalsView: View {
 
     private func goalProgressRow(title: String, icon: String, color: Color,
                                  current: String, goal: String, progress: Double) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 10) {
             HStack {
-                HStack(spacing: 6) {
-                    Image(systemName: icon)
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(color)
+                HStack(spacing: 7) {
+                    ZStack {
+                        Circle()
+                            .fill(color.opacity(0.16))
+                            .frame(width: 28, height: 28)
+                        Image(systemName: icon)
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundStyle(color)
+                    }
                     Text(title)
-                        .font(.subheadline.weight(.semibold))
+                        .font(.system(size: 15, weight: .semibold, design: .rounded))
                 }
                 Spacer()
                 HStack(alignment: .lastTextBaseline, spacing: 3) {
                     Text(current)
-                        .font(.subheadline.bold().monospacedDigit())
+                        .font(.system(size: 17, weight: .black, design: .rounded).monospacedDigit())
                         .foregroundStyle(color)
                     Text("/ \(goal)")
-                        .font(.caption).foregroundStyle(.secondary)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
                 }
             }
 
-            GeometryReader { geo in
-                ZStack(alignment: .leading) {
-                    RoundedRectangle(cornerRadius: 4)
-                        .fill(color.opacity(0.15))
-                        .frame(height: 8)
-                    RoundedRectangle(cornerRadius: 4)
-                        .fill(progress >= 1.0 ? Color.green : color)
-                        .frame(width: geo.size.width * progress, height: 8)
-                        .animation(.spring(response: 0.5, dampingFraction: 0.8), value: progress)
-                }
-            }
-            .frame(height: 8)
+            GradientProgressBar(value: progress, color: progress >= 1.0 ? .green : color, height: 10)
 
             if progress >= 1.0 {
-                HStack(spacing: 4) {
-                    Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
-                    Text("Goal achieved!").font(.caption.weight(.semibold)).foregroundStyle(.green)
+                HStack(spacing: 5) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundStyle(.green)
+                        .font(.caption.bold())
+                    Text("Goal achieved!")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(.green)
                 }
+                .padding(.horizontal, 10).padding(.vertical, 5)
+                .background(Color.green.opacity(0.12), in: Capsule())
+                .overlay(Capsule().stroke(Color.green.opacity(0.20), lineWidth: 0.5))
             }
         }
     }
@@ -161,10 +187,25 @@ struct CardioGoalsView: View {
             VStack(spacing: 0) {
                 // Distance goal
                 Button { editingDistance = true } label: {
-                    HStack {
+                    HStack(spacing: 12) {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .fill(
+                                    LinearGradient(
+                                        colors: [.orange, Color(red: 0.95, green: 0.45, blue: 0.20)],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
+                                )
+                                .frame(width: 36, height: 36)
+                                .shadow(color: .orange.opacity(0.40), radius: 5, y: 2)
+                            Image(systemName: "ruler")
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundStyle(.white)
+                        }
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Weekly Distance")
-                                .font(.subheadline.weight(.semibold))
+                                .font(.system(size: 15, weight: .semibold, design: .rounded))
                             Text("Set a distance target for each week")
                                 .font(.caption).foregroundStyle(.secondary)
                         }
@@ -172,23 +213,38 @@ struct CardioGoalsView: View {
                         Text(distanceGoalKm > 0
                              ? String(format: "%.0f %@", distanceUnit.display(distanceGoalKm), distanceUnit.label)
                              : "Not set")
-                            .font(.subheadline.weight(.semibold))
+                            .font(.subheadline.weight(.bold).monospacedDigit())
                             .foregroundStyle(distanceGoalKm > 0 ? .orange : .secondary)
                         Image(systemName: "chevron.right")
-                            .font(.caption2).foregroundStyle(.tertiary)
+                            .font(.caption2.weight(.semibold)).foregroundStyle(.tertiary)
                     }
                     .padding(.horizontal, 16).padding(.vertical, 14)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressableCard)
 
                 Divider().padding(.horizontal, 16)
 
                 // Session goal
                 Button { editingSessions = true } label: {
-                    HStack {
+                    HStack(spacing: 12) {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .fill(
+                                    LinearGradient(
+                                        colors: [.blue, Color(red: 0.30, green: 0.55, blue: 0.95)],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
+                                )
+                                .frame(width: 36, height: 36)
+                                .shadow(color: .blue.opacity(0.40), radius: 5, y: 2)
+                            Image(systemName: "calendar.badge.checkmark")
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundStyle(.white)
+                        }
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Weekly Sessions")
-                                .font(.subheadline.weight(.semibold))
+                                .font(.system(size: 15, weight: .semibold, design: .rounded))
                             Text("How many cardio sessions per week")
                                 .font(.caption).foregroundStyle(.secondary)
                         }
@@ -196,17 +252,21 @@ struct CardioGoalsView: View {
                         Text(sessionGoal > 0
                              ? "\(sessionGoal) session\(sessionGoal == 1 ? "" : "s")"
                              : "Not set")
-                            .font(.subheadline.weight(.semibold))
+                            .font(.subheadline.weight(.bold).monospacedDigit())
                             .foregroundStyle(sessionGoal > 0 ? .blue : .secondary)
                         Image(systemName: "chevron.right")
-                            .font(.caption2).foregroundStyle(.tertiary)
+                            .font(.caption2.weight(.semibold)).foregroundStyle(.tertiary)
                     }
                     .padding(.horizontal, 16).padding(.vertical, 14)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressableCard)
             }
             .background(Color(.tertiarySystemGroupedBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(Color.white.opacity(0.05), lineWidth: 0.5)
+            )
         }
         .appCard()
         .sheet(isPresented: $editingDistance) {
@@ -306,20 +366,32 @@ struct CardioGoalsView: View {
 
             HStack(spacing: 20) {
                 ZStack {
-                    Circle().fill(Color.red.opacity(0.12)).frame(width: 70, height: 70)
-                    VStack(spacing: 1) {
-                        Text("\(streak)")
-                            .font(.system(size: 28, weight: .black, design: .rounded))
-                            .foregroundStyle(.red)
-                        Text("weeks")
-                            .font(.system(size: 9, weight: .semibold))
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                colors: [Color.red.opacity(0.18), Color.red.opacity(0.08)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 78, height: 78)
+                        .overlay(Circle().stroke(Color.red.opacity(0.20), lineWidth: 1))
+                    VStack(spacing: 2) {
+                        AnimatedInt(
+                            value: streak,
+                            font: .system(size: 30, weight: .black, design: .rounded),
+                            color: .red
+                        )
+                        Text("WEEKS")
+                            .font(.system(size: 9, weight: .bold, design: .rounded))
+                            .tracking(0.5)
                             .foregroundStyle(.secondary)
                     }
                 }
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(streak == 0 ? "No streak yet" : "\(streak) week\(streak == 1 ? "" : "s") in a row")
-                        .font(.subheadline.weight(.semibold))
+                        .font(.system(size: 16, weight: .bold, design: .rounded))
                     Text(streak == 0
                          ? "Complete a cardio session this week to start your streak."
                          : "Keep going — don't break the chain!")
@@ -329,8 +401,18 @@ struct CardioGoalsView: View {
             }
             .padding(16)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color(.tertiarySystemGroupedBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .background(
+                LinearGradient(
+                    colors: [Color.red.opacity(0.08), Color(.tertiarySystemGroupedBackground)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(Color.red.opacity(0.12), lineWidth: 0.5)
+            )
         }
         .appCard()
     }

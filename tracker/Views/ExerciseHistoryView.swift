@@ -6,6 +6,11 @@ struct ExerciseHistoryView: View {
     @Environment(\.weightUnit) private var weightUnit
     @Query private var allExercises: [Exercise]
     let exerciseName: String
+
+    init(exerciseName: String) {
+        self.exerciseName = exerciseName
+        _allExercises = Query(filter: #Predicate<Exercise> { $0.name == exerciseName })
+    }
     @State private var showEstimated1RM = false
     @State private var sortOrder: HistorySortOrder = .date
 
@@ -154,50 +159,91 @@ struct ExerciseHistoryView: View {
 
     private func bestSetCard(_ best: ExerciseSet) -> some View {
         ZStack(alignment: .leading) {
-            LinearGradient(colors: [Color.orange, Color.orange.opacity(0.65)],
-                           startPoint: .leading, endPoint: .trailing)
-            Circle().fill(.white.opacity(0.08)).frame(width: 140).offset(x: 230, y: 0)
+            LinearGradient(
+                colors: [
+                    Color(red: 0.95, green: 0.62, blue: 0.10),
+                    Color(red: 0.85, green: 0.42, blue: 0.10),
+                    Color(red: 0.65, green: 0.28, blue: 0.30)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            // Top sheen
+            LinearGradient(
+                colors: [.white.opacity(0.18), .clear],
+                startPoint: .top, endPoint: .center
+            )
+            .blendMode(.plusLighter)
+            Circle().fill(.white.opacity(0.10)).frame(width: 140).blur(radius: 10).offset(x: 230, y: 0)
+
             HStack(spacing: 14) {
                 ZStack {
-                    Circle().fill(.white.opacity(0.20)).frame(width: 48, height: 48)
+                    Circle()
+                        .fill(.ultraThinMaterial.opacity(0.7))
+                        .frame(width: 52, height: 52)
+                        .overlay(Circle().stroke(.white.opacity(0.25), lineWidth: 0.5))
                     Image(systemName: "trophy.fill")
-                        .font(.system(size: 20, weight: .semibold)).foregroundStyle(.white)
+                        .font(.system(size: 22, weight: .bold))
+                        .foregroundStyle(.white)
                 }
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: 3) {
                     Text("Personal Best")
-                        .font(.caption.weight(.semibold)).foregroundStyle(.white.opacity(0.75))
+                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                        .foregroundStyle(.white.opacity(0.82))
+                        .tracking(0.5)
+                        .textCase(.uppercase)
                     if isCardioExercise {
                         Text([best.formattedDistance(unit: distanceUnit), best.formattedDuration]
                             .compactMap { $0 }.joined(separator: " in "))
-                            .font(.title3.bold()).foregroundStyle(.white)
+                            .font(.system(size: 20, weight: .bold, design: .rounded))
+                            .foregroundStyle(.white)
+                            .shadow(color: .black.opacity(0.18), radius: 4, y: 2)
                     } else {
                         Text("\(best.reps) reps @ \(weightUnit.format(best.weight))")
-                            .font(.title3.bold()).foregroundStyle(.white)
+                            .font(.system(size: 20, weight: .bold, design: .rounded))
+                            .foregroundStyle(.white)
+                            .shadow(color: .black.opacity(0.18), radius: 4, y: 2)
                         if let e1rm = currentEstimated1RM, e1rm > 0 {
                             Text("Est. 1RM: \(weightUnit.format(e1rm))")
-                                .font(.caption).foregroundStyle(.white.opacity(0.80))
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.white.opacity(0.85))
                         }
                     }
                 }
                 Spacer()
             }
-            .padding(16)
+            .padding(18)
         }
-        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .shadow(color: .black.opacity(0.18), radius: 16, y: 6)
         .accessibilityElement(children: .combine)
     }
 
     private func chartToggle(_ title: String, value: Bool) -> some View {
         Button {
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) { showEstimated1RM = value }
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            withAnimation(.spring(response: 0.42, dampingFraction: 0.78)) { showEstimated1RM = value }
         } label: {
             Text(title)
-                .font(.caption.bold())
-                .padding(.horizontal, 14).padding(.vertical, 7)
-                .background(showEstimated1RM == value ? Color.accentColor : Color(.secondarySystemFill), in: Capsule())
+                .font(.system(size: 13, weight: .bold, design: .rounded))
+                .padding(.horizontal, 14).padding(.vertical, 8)
+                .background {
+                    if showEstimated1RM == value {
+                        Capsule().fill(
+                            LinearGradient(
+                                colors: [Color.accentColor, Color.accentColor.opacity(0.72)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .shadow(color: Color.accentColor.opacity(0.40), radius: 6, y: 3)
+                    } else {
+                        Capsule().fill(Color(.secondarySystemFill))
+                    }
+                }
                 .foregroundStyle(showEstimated1RM == value ? .white : .primary)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressableCard)
     }
 
     // MARK: - Session Sets

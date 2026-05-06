@@ -131,42 +131,75 @@ struct OneRepMaxView: View {
 
     private var heroCard: some View {
         ZStack(alignment: .topLeading) {
-            LinearGradient(colors: [Color.blue, Color.cyan.opacity(0.7)],
-                           startPoint: .topLeading, endPoint: .bottomTrailing)
-            Circle().fill(.white.opacity(0.07)).frame(width: 200).offset(x: 160, y: -60)
+            LinearGradient(
+                colors: AppTheme.Gradients.calm,
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            // Top sheen
+            LinearGradient(
+                colors: [.white.opacity(0.18), .clear],
+                startPoint: .top, endPoint: .center
+            )
+            .blendMode(.plusLighter)
+            Circle().fill(.white.opacity(0.10)).frame(width: 200).blur(radius: 12).offset(x: 160, y: -60)
+            Circle().fill(.white.opacity(0.06)).frame(width: 110).blur(radius: 10).offset(x: -30, y: 80)
 
             VStack(alignment: .leading, spacing: 18) {
                 HStack(alignment: .center, spacing: 14) {
                     ZStack {
-                        Circle().fill(.white.opacity(0.20)).frame(width: 52, height: 52)
+                        Circle()
+                            .fill(.ultraThinMaterial.opacity(0.7))
+                            .frame(width: 56, height: 56)
+                            .overlay(Circle().stroke(.white.opacity(0.25), lineWidth: 0.5))
                         Image(systemName: "figure.strengthtraining.traditional")
-                            .font(.system(size: 22, weight: .semibold)).foregroundStyle(.white)
+                            .font(.system(size: 24, weight: .bold))
+                            .foregroundStyle(.white)
                     }
-                    VStack(alignment: .leading, spacing: 3) {
+                    VStack(alignment: .leading, spacing: 2) {
                         Text(selectedExercise ?? "")
-                            .font(.caption.weight(.semibold)).foregroundStyle(.white.opacity(0.75))
+                            .font(.system(size: 12, weight: .bold, design: .rounded))
+                            .foregroundStyle(.white.opacity(0.82))
+                            .tracking(0.5)
+                            .textCase(.uppercase)
                             .lineLimit(1)
                         Text(unit.format(currentE1RM))
-                            .font(.system(size: 36, weight: .black, design: .rounded))
-                            .foregroundStyle(.white).monospacedDigit()
+                            .font(.system(size: 42, weight: .black, design: .rounded))
+                            .foregroundStyle(.white)
+                            .monospacedDigit()
+                            .shadow(color: .black.opacity(0.18), radius: 5, y: 3)
                     }
                     Spacer()
-                    VStack(spacing: 3) {
-                        Text("Peak").font(.caption2).foregroundStyle(.white.opacity(0.70))
+                    VStack(spacing: 2) {
+                        Text("PEAK")
+                            .font(.system(size: 10, weight: .bold, design: .rounded))
+                            .tracking(0.5)
+                            .foregroundStyle(.white.opacity(0.78))
                         Text(unit.format(peakE1RM))
-                            .font(.subheadline.bold()).foregroundStyle(.white).monospacedDigit()
+                            .font(.subheadline.bold().monospacedDigit())
+                            .foregroundStyle(.white)
                     }
-                    .padding(.horizontal, 10).padding(.vertical, 8)
-                    .background(.white.opacity(0.20), in: RoundedRectangle(cornerRadius: 10))
+                    .padding(.horizontal, 11).padding(.vertical, 8)
+                    .background(.ultraThinMaterial.opacity(0.7), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .stroke(.white.opacity(0.25), lineWidth: 0.5)
+                    )
                 }
 
                 HStack(spacing: 0) {
                     HeroStatCol(value: "\(e1rmHistory.count)", label: "Sessions")
-                    Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 28)
+                    Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 32)
                     HeroStatCol(value: unit.format(currentE1RM), label: "Current")
-                    Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 28)
+                    Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 32)
                     HeroStatCol(value: unit.format(peakE1RM), label: "Peak")
                 }
+                .padding(.vertical, 10)
+                .background(.ultraThinMaterial.opacity(0.55), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(.white.opacity(0.18), lineWidth: 0.5)
+                )
             }
             .padding(20)
         }
@@ -234,24 +267,37 @@ struct OneRepMaxView: View {
                 ForEach(Array(percentageRows.enumerated()), id: \.offset) { idx, row in
                     HStack(spacing: 14) {
                         ZStack {
-                            RoundedRectangle(cornerRadius: 8)
-                                .fill(zoneColor(idx).opacity(0.12))
-                                .frame(width: 34, height: 34)
+                            RoundedRectangle(cornerRadius: 11, style: .continuous)
+                                .fill(
+                                    LinearGradient(
+                                        colors: [zoneColor(idx), zoneColor(idx).opacity(0.72)],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
+                                )
+                                .frame(width: 40, height: 40)
+                                .shadow(color: zoneColor(idx).opacity(0.40), radius: 5, y: 2)
                             Text(row.label)
-                                .font(.system(size: 11, weight: .bold))
-                                .foregroundStyle(zoneColor(idx))
+                                .font(.system(size: 12, weight: .black, design: .rounded))
+                                .foregroundStyle(.white)
                         }
-                        Text(zoneLabel(idx)).font(.subheadline.weight(.medium))
+                        Text(zoneLabel(idx))
+                            .font(.system(size: 15, weight: .semibold, design: .rounded))
                         Spacer()
                         Text(unit.format(row.value))
-                            .font(.subheadline.bold().monospacedDigit())
+                            .font(.system(size: 15, weight: .black, design: .rounded).monospacedDigit())
+                            .foregroundStyle(zoneColor(idx))
                     }
-                    .padding(.horizontal, 16).padding(.vertical, 11)
-                    if idx < percentageRows.count - 1 { Divider().padding(.leading, 62) }
+                    .padding(.horizontal, 16).padding(.vertical, 12)
+                    if idx < percentageRows.count - 1 { Divider().padding(.leading, 70) }
                 }
             }
             .background(Color(.tertiarySystemGroupedBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(Color.white.opacity(0.05), lineWidth: 0.5)
+            )
         }
         .appCard()
     }

@@ -39,25 +39,55 @@ struct WorkoutCalendarView: View {
     private var calendarCard: some View {
         VStack(spacing: 16) {
             HStack {
-                Button { shiftMonth(-1) } label: {
+                Button {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    shiftMonth(-1)
+                } label: {
                     ZStack {
-                        Circle().fill(Color(.secondarySystemFill)).frame(width: 34, height: 34)
-                        Image(systemName: "chevron.left").font(.system(size: 13, weight: .bold))
+                        Circle()
+                            .fill(
+                                LinearGradient(
+                                    colors: [Color.accentColor.opacity(0.20), Color.accentColor.opacity(0.10)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .frame(width: 38, height: 38)
+                            .overlay(Circle().stroke(Color.accentColor.opacity(0.22), lineWidth: 0.5))
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundStyle(Color.accentColor)
                     }
                 }
-                .buttonStyle(.plain).accessibilityLabel("Previous month")
+                .buttonStyle(.pressableCard).accessibilityLabel("Previous month")
 
                 Spacer()
-                Text(displayedMonth, format: .dateTime.month(.wide).year()).font(.title3.bold())
+                Text(displayedMonth, format: .dateTime.month(.wide).year())
+                    .font(.system(size: 18, weight: .bold, design: .rounded))
+                    .tracking(0.3)
                 Spacer()
 
-                Button { shiftMonth(1) } label: {
+                Button {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    shiftMonth(1)
+                } label: {
                     ZStack {
-                        Circle().fill(Color(.secondarySystemFill)).frame(width: 34, height: 34)
-                        Image(systemName: "chevron.right").font(.system(size: 13, weight: .bold))
+                        Circle()
+                            .fill(
+                                LinearGradient(
+                                    colors: [Color.accentColor.opacity(0.20), Color.accentColor.opacity(0.10)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .frame(width: 38, height: 38)
+                            .overlay(Circle().stroke(Color.accentColor.opacity(0.22), lineWidth: 0.5))
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundStyle(Color.accentColor)
                     }
                 }
-                .buttonStyle(.plain).accessibilityLabel("Next month")
+                .buttonStyle(.pressableCard).accessibilityLabel("Next month")
             }
 
             HStack(spacing: 0) {
@@ -96,18 +126,43 @@ struct WorkoutCalendarView: View {
     private func summaryTile(_ title: String, value: String, icon: String, color: Color) -> some View {
         HStack(spacing: 10) {
             ZStack {
-                RoundedRectangle(cornerRadius: 8).fill(color.opacity(0.12)).frame(width: 34, height: 34)
-                Image(systemName: icon).font(.system(size: 13, weight: .semibold)).foregroundStyle(color)
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [color, color.opacity(0.72)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 38, height: 38)
+                    .shadow(color: color.opacity(0.40), radius: 5, y: 2)
+                Image(systemName: icon)
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(.white)
             }
             VStack(alignment: .leading, spacing: 2) {
-                Text(value).font(.title3.bold().monospacedDigit())
-                Text(title).font(.caption2).foregroundStyle(.secondary)
+                Text(value).font(.system(size: 20, weight: .black, design: .rounded).monospacedDigit())
+                Text(title)
+                    .font(.system(size: 10, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.secondary)
+                    .tracking(0.3)
+                    .textCase(.uppercase)
             }
             Spacer(minLength: 0)
         }
         .padding(14)
-        .background(Color(.tertiarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .background(
+            LinearGradient(
+                colors: [color.opacity(0.10), Color(.tertiarySystemGroupedBackground)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(color.opacity(0.18), lineWidth: 0.5)
+        )
         .frame(maxWidth: .infinity)
     }
 
@@ -216,6 +271,7 @@ struct WorkoutCalendarView: View {
         let dayNum = calendar.component(.day, from: date)
 
         return Button {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
             withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                 let alreadySelected = selectedDate.map { calendar.isDate(date, inSameDayAs: $0) } ?? false
                 selectedDate = alreadySelected ? nil : date
@@ -223,22 +279,34 @@ struct WorkoutCalendarView: View {
         } label: {
             ZStack {
                 if isSelected {
-                    RoundedRectangle(cornerRadius: 8).fill(Color.accentColor).frame(width: 36, height: 36)
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: [Color.accentColor, Color.accentColor.opacity(0.78)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 38, height: 38)
+                        .shadow(color: Color.accentColor.opacity(0.50), radius: 6, y: 2)
                 } else {
-                    RoundedRectangle(cornerRadius: 8)
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
                         .fill(count > 0 ? heatmapColor(count: count) : .clear)
-                        .frame(width: 36, height: 36)
+                        .frame(width: 38, height: 38)
                 }
                 if isToday && !isSelected {
-                    RoundedRectangle(cornerRadius: 8).stroke(Color.accentColor, lineWidth: 2).frame(width: 36, height: 36)
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .stroke(Color.accentColor, lineWidth: 2)
+                        .frame(width: 38, height: 38)
                 }
                 Text("\(dayNum)")
-                    .font(.subheadline.weight(count > 0 ? .semibold : .regular))
+                    .font(.system(size: 14, weight: count > 0 ? .bold : .semibold, design: .rounded))
+                    .monospacedDigit()
                     .foregroundStyle(isSelected ? .white : isToday ? Color.accentColor : .primary)
             }
         }
-        .buttonStyle(.plain)
-        .frame(maxWidth: .infinity).frame(height: 42)
+        .buttonStyle(.pressableCard)
+        .frame(maxWidth: .infinity).frame(height: 44)
         .accessibilityLabel("\(dayNum), \(count) workout\(count == 1 ? "" : "s")\(isToday ? ", today" : "")")
     }
 

@@ -97,24 +97,47 @@ struct BodyMeasurementsView: View {
 
     private var heroCard: some View {
         ZStack(alignment: .topLeading) {
-            LinearGradient(colors: [Color.purple, Color.teal.opacity(0.8)],
-                           startPoint: .topLeading, endPoint: .bottomTrailing)
-            Circle().fill(.white.opacity(0.07)).frame(width: 200).offset(x: 160, y: -60)
+            LinearGradient(
+                colors: [
+                    Color(red: 0.55, green: 0.35, blue: 0.95),
+                    Color(red: 0.35, green: 0.55, blue: 0.85),
+                    Color(red: 0.20, green: 0.70, blue: 0.78)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            // Top sheen
+            LinearGradient(
+                colors: [.white.opacity(0.18), .clear],
+                startPoint: .top, endPoint: .center
+            )
+            .blendMode(.plusLighter)
+            Circle().fill(.white.opacity(0.10)).frame(width: 200).blur(radius: 12).offset(x: 160, y: -60)
+            Circle().fill(.white.opacity(0.06)).frame(width: 110).blur(radius: 10).offset(x: -30, y: 80)
 
             VStack(alignment: .leading, spacing: 18) {
                 HStack(alignment: .center, spacing: 14) {
                     ZStack {
-                        Circle().fill(.white.opacity(0.20)).frame(width: 52, height: 52)
+                        Circle()
+                            .fill(.ultraThinMaterial.opacity(0.7))
+                            .frame(width: 56, height: 56)
+                            .overlay(Circle().stroke(.white.opacity(0.25), lineWidth: 0.5))
                         Image(systemName: "ruler.fill")
-                            .font(.system(size: 22, weight: .semibold)).foregroundStyle(.white)
+                            .font(.system(size: 24, weight: .bold))
+                            .foregroundStyle(.white)
                     }
-                    VStack(alignment: .leading, spacing: 3) {
+                    VStack(alignment: .leading, spacing: 2) {
                         Text(selectedSite)
-                            .font(.caption.weight(.semibold)).foregroundStyle(.white.opacity(0.75))
+                            .font(.system(size: 12, weight: .bold, design: .rounded))
+                            .foregroundStyle(.white.opacity(0.82))
+                            .tracking(0.5)
+                            .textCase(.uppercase)
                         if let current = siteEntries.first {
                             Text(formatLength(current.value))
-                                .font(.system(size: 36, weight: .black, design: .rounded))
-                                .foregroundStyle(.white).monospacedDigit()
+                                .font(.system(size: 42, weight: .black, design: .rounded))
+                                .foregroundStyle(.white)
+                                .monospacedDigit()
+                                .shadow(color: .black.opacity(0.18), radius: 5, y: 3)
                         }
                     }
                     Spacer()
@@ -124,8 +147,9 @@ struct BodyMeasurementsView: View {
                             Image(systemName: isIncrease ? "arrow.up" : "arrow.down").font(.caption.bold())
                             Text(formatChange(change)).font(.caption.bold())
                         }
-                        .padding(.horizontal, 10).padding(.vertical, 5)
-                        .background(.white.opacity(0.20), in: Capsule())
+                        .padding(.horizontal, 11).padding(.vertical, 6)
+                        .background(.ultraThinMaterial.opacity(0.7), in: Capsule())
+                        .overlay(Capsule().stroke(.white.opacity(0.25), lineWidth: 0.5))
                         .foregroundStyle(.white)
                     }
                 }

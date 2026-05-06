@@ -33,6 +33,8 @@ struct HealthHubView: View {
                 }
             }
         }
+        .scrollContentBackground(.hidden)
+        .tabBackground(tint: .red, height: 280, intensity: 0.18)
         .navigationTitle("Health")
     }
 }

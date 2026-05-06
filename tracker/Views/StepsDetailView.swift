@@ -2,6 +2,7 @@ import SwiftUI
 import Charts
 
 struct StepsDetailView: View {
+    @Environment(\.weightUnit) private var weightUnit
     @State private var dailySteps: [(date: Date, steps: Double)] = []
     @State private var dailyDistance: [(date: Date, km: Double)] = []
     @State private var dailyEnergy: [(date: Date, kcal: Double)] = []
@@ -74,38 +75,48 @@ struct StepsDetailView: View {
     private var heroCard: some View {
         ZStack(alignment: .topLeading) {
             LinearGradient(
-                colors: [Color.green, Color(red: 0.1, green: 0.72, blue: 0.35).opacity(0.75)],
+                colors: AppTheme.Gradients.recovery,
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
-
-            Circle()
-                .fill(.white.opacity(0.07))
-                .frame(width: 220)
-                .offset(x: 160, y: -70)
+            // Top sheen
+            LinearGradient(
+                colors: [.white.opacity(0.18), .clear],
+                startPoint: .top, endPoint: .center
+            )
+            .blendMode(.plusLighter)
+            Circle().fill(.white.opacity(0.10)).frame(width: 220).blur(radius: 12).offset(x: 160, y: -70)
+            Circle().fill(.white.opacity(0.06)).frame(width: 110).blur(radius: 10).offset(x: -30, y: 80)
 
             VStack(alignment: .leading, spacing: 20) {
                 // Top: ring + step count
                 HStack(alignment: .center, spacing: 20) {
                     ZStack {
                         Circle()
-                            .stroke(.white.opacity(0.25), lineWidth: 8)
+                            .stroke(.white.opacity(0.25), lineWidth: 9)
                         Circle()
                             .trim(from: 0, to: min(1.0, todaySteps / stepGoal))
-                            .stroke(.white, style: StrokeStyle(lineWidth: 8, lineCap: .round))
+                            .stroke(.white, style: StrokeStyle(lineWidth: 9, lineCap: .round))
                             .rotationEffect(.degrees(-90))
                             .animation(.easeInOut(duration: 0.8), value: todaySteps)
+                            .shadow(color: .white.opacity(0.45), radius: 6, y: 1)
                     }
-                    .frame(width: 64, height: 64)
+                    .frame(width: 70, height: 70)
 
-                    VStack(alignment: .leading, spacing: 4) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Today")
+                            .font(.system(size: 12, weight: .bold, design: .rounded))
+                            .foregroundStyle(.white.opacity(0.82))
+                            .tracking(0.5)
+                            .textCase(.uppercase)
                         Text(HealthFormatters.formatSteps(todaySteps))
-                            .font(.system(size: 42, weight: .black, design: .rounded))
+                            .font(.system(size: 48, weight: .black, design: .rounded))
                             .foregroundStyle(.white)
                             .monospacedDigit()
+                            .shadow(color: .black.opacity(0.18), radius: 6, y: 3)
                         Text("of \(HealthFormatters.formatSteps(stepGoal)) goal")
                             .font(.subheadline.weight(.medium))
-                            .foregroundStyle(.white.opacity(0.75))
+                            .foregroundStyle(.white.opacity(0.78))
                     }
                 }
 
@@ -118,30 +129,36 @@ struct StepsDetailView: View {
                             .font(.caption.bold())
                     }
                     .foregroundStyle(.white)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 5)
-                    .background(.white.opacity(0.20), in: Capsule())
+                    .padding(.horizontal, 12).padding(.vertical, 6)
+                    .background(.ultraThinMaterial.opacity(0.7), in: Capsule())
+                    .overlay(Capsule().stroke(.white.opacity(0.25), lineWidth: 0.5))
                 } else {
                     let remaining = stepGoal - todaySteps
                     Text("\(HealthFormatters.formatSteps(remaining)) to go")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.white.opacity(0.80))
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 5)
-                        .background(.white.opacity(0.15), in: Capsule())
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 12).padding(.vertical, 6)
+                        .background(.ultraThinMaterial.opacity(0.6), in: Capsule())
+                        .overlay(Capsule().stroke(.white.opacity(0.22), lineWidth: 0.5))
                 }
 
                 // Stat columns
                 HStack(spacing: 0) {
-                    HeroStatCol(value: HealthFormatters.formatDistance(todayDistance),
+                    HeroStatCol(value: HealthFormatters.formatDistance(todayDistance, unit: weightUnit.distanceUnit),
                                 label: "Distance", icon: "figure.walk")
-                    Divider().frame(height: 32).overlay(.white.opacity(0.30))
+                    Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 36)
                     HeroStatCol(value: HealthFormatters.formatCalories(todayEnergy),
                                 label: "Active Cal", icon: "flame.fill")
-                    Divider().frame(height: 32).overlay(.white.opacity(0.30))
+                    Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 36)
                     let pct = Int(min(100, max(0, todaySteps / stepGoal * 100)))
                     HeroStatCol(value: "\(pct)%", label: "Goal %", icon: "target")
                 }
+                .padding(.vertical, 12)
+                .background(.ultraThinMaterial.opacity(0.55), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .stroke(.white.opacity(0.18), lineWidth: 0.5)
+                )
             }
             .padding(20)
         }
@@ -163,20 +180,40 @@ struct StepsDetailView: View {
                             x: .value("Date", point.date, unit: .day),
                             y: .value("Steps", point.steps)
                         )
-                        .foregroundStyle(point.steps >= stepGoal ? Color.green.gradient : Color.green.opacity(0.5).gradient)
-                        .cornerRadius(4)
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: point.steps >= stepGoal
+                                    ? [Color.green, Color(red: 0.05, green: 0.55, blue: 0.42)]
+                                    : [Color.green.opacity(0.55), Color.green.opacity(0.30)],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
+                        .cornerRadius(6)
                     }
                     RuleMark(y: .value("Goal", stepGoal))
-                        .lineStyle(StrokeStyle(dash: [5, 3]))
-                        .foregroundStyle(.secondary.opacity(0.5))
+                        .lineStyle(StrokeStyle(lineWidth: 1.5, dash: [5, 3]))
+                        .foregroundStyle(.secondary.opacity(0.6))
                         .annotation(position: .top, alignment: .trailing) {
                             Text(HealthFormatters.formatSteps(stepGoal))
-                                .font(.caption2)
+                                .font(.caption2.weight(.bold))
                                 .foregroundStyle(.secondary)
                         }
                 }
                 .chartYAxisLabel("steps")
-                .frame(height: 200)
+                .chartXAxis {
+                    AxisMarks(values: .automatic(desiredCount: 5)) { _ in
+                        AxisGridLine().foregroundStyle(.secondary.opacity(0.12))
+                        AxisValueLabel().font(.caption2).foregroundStyle(.secondary)
+                    }
+                }
+                .chartYAxis {
+                    AxisMarks(position: .leading) { _ in
+                        AxisGridLine().foregroundStyle(.secondary.opacity(0.12))
+                        AxisValueLabel().font(.caption2).foregroundStyle(.secondary)
+                    }
+                }
+                .frame(height: 220)
 
                 let daysMetGoal = chartSteps.filter { $0.steps >= stepGoal }.count
                 HStack(spacing: 6) {
@@ -209,8 +246,14 @@ struct StepsDetailView: View {
                     x: .value("Hour", point.hour),
                     y: .value("Steps", point.steps)
                 )
-                .foregroundStyle(.green.gradient)
-                .cornerRadius(2)
+                .foregroundStyle(
+                    LinearGradient(
+                        colors: [Color.green, Color(red: 0.05, green: 0.55, blue: 0.42)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
+                .cornerRadius(3)
             }
             .chartXAxis {
                 AxisMarks(values: .stride(by: 4)) { value in
@@ -300,6 +343,7 @@ struct StepsDetailView: View {
     @ViewBuilder
     private var distanceTrendCard: some View {
         let chartDistance = Array(dailyDistance.suffix(dayCount))
+        let distUnit = weightUnit.distanceUnit
         if !chartDistance.isEmpty && chartDistance.contains(where: { $0.km > 0.01 }) {
             VStack(alignment: .leading, spacing: 14) {
                 SectionHeader(title: "Distance", icon: "figure.walk", color: .teal)
@@ -307,26 +351,44 @@ struct StepsDetailView: View {
                 Chart(chartDistance, id: \.date) { point in
                     AreaMark(
                         x: .value("Date", point.date, unit: .day),
-                        y: .value("Distance", point.km)
+                        y: .value("Distance", distUnit.display(point.km))
                     )
                     .interpolationMethod(.catmullRom)
-                    .foregroundStyle(.teal.opacity(0.15).gradient)
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [
+                                Color.teal.opacity(0.55),
+                                Color.teal.opacity(0.22),
+                                Color.teal.opacity(0.02)
+                            ],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
 
                     LineMark(
                         x: .value("Date", point.date, unit: .day),
-                        y: .value("Distance", point.km)
+                        y: .value("Distance", distUnit.display(point.km))
                     )
                     .interpolationMethod(.catmullRom)
-                    .foregroundStyle(.teal)
+                    .lineStyle(StrokeStyle(lineWidth: 2.5, lineCap: .round, lineJoin: .round))
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [.teal, Color(red: 0.10, green: 0.65, blue: 0.62)],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .shadow(color: Color.teal.opacity(0.30), radius: 5, y: 2)
 
                     PointMark(
                         x: .value("Date", point.date, unit: .day),
-                        y: .value("Distance", point.km)
+                        y: .value("Distance", distUnit.display(point.km))
                     )
                     .symbolSize(20)
                     .foregroundStyle(.teal)
                 }
-                .chartYAxisLabel("km")
+                .chartYAxisLabel(distUnit.label)
                 .frame(height: 160)
 
                 let avgDist = chartDistance.map(\.km).reduce(0, +) / Double(max(1, chartDistance.count))
@@ -338,7 +400,7 @@ struct StepsDetailView: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                     Spacer()
-                    Text(HealthFormatters.formatDistance(avgDist))
+                    Text(HealthFormatters.formatDistance(avgDist, unit: distUnit))
                         .font(.caption.bold().monospacedDigit())
                         .foregroundStyle(.teal)
                 }

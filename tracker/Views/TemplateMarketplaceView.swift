@@ -100,16 +100,29 @@ struct TemplateMarketplaceView: View {
                 HStack(spacing: 8) {
                     ForEach(categories, id: \.self) { cat in
                         Button {
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) { selectedCategory = cat }
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            withAnimation(.spring(response: 0.42, dampingFraction: 0.78)) { selectedCategory = cat }
                         } label: {
                             Text(cat)
-                                .font(.caption.bold())
-                                .padding(.horizontal, 14).padding(.vertical, 8)
-                                .background(selectedCategory == cat ? Color.accentColor : Color(.secondarySystemFill),
-                                            in: Capsule())
-                                .foregroundStyle(selectedCategory == cat ? Color.white : Color.primary)
+                                .font(.system(size: 13, weight: .bold, design: .rounded))
+                                .padding(.horizontal, 14).padding(.vertical, 9)
+                                .background {
+                                    if selectedCategory == cat {
+                                        Capsule().fill(
+                                            LinearGradient(
+                                                colors: [Color.accentColor, Color.accentColor.opacity(0.72)],
+                                                startPoint: .topLeading,
+                                                endPoint: .bottomTrailing
+                                            )
+                                        )
+                                        .shadow(color: Color.accentColor.opacity(0.40), radius: 6, y: 3)
+                                    } else {
+                                        Capsule().fill(Color(.secondarySystemFill))
+                                    }
+                                }
+                                .foregroundStyle(selectedCategory == cat ? .white : .primary)
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.pressableCard)
                     }
                 }
             }
@@ -123,32 +136,47 @@ struct TemplateMarketplaceView: View {
         VStack(alignment: .leading, spacing: 0) {
             // Gradient header
             ZStack(alignment: .bottomLeading) {
-                LinearGradient(colors: template.difficulty.gradientColors,
-                               startPoint: .topLeading, endPoint: .bottomTrailing)
-                Circle().fill(.white.opacity(0.07)).frame(width: 140).offset(x: 220, y: -30)
+                LinearGradient(
+                    colors: template.difficulty.gradientColors,
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                // Top sheen
+                LinearGradient(
+                    colors: [.white.opacity(0.18), .clear],
+                    startPoint: .top, endPoint: .center
+                )
+                .blendMode(.plusLighter)
+                Circle().fill(.white.opacity(0.10)).frame(width: 140).blur(radius: 10).offset(x: 220, y: -30)
 
                 VStack(alignment: .leading, spacing: 8) {
                     HStack {
-                        Text(template.difficulty.rawValue)
-                            .font(.caption.bold())
-                            .padding(.horizontal, 8).padding(.vertical, 3)
-                            .background(.white.opacity(0.25), in: Capsule())
+                        Text(template.difficulty.rawValue.uppercased())
+                            .font(.system(size: 10, weight: .bold, design: .rounded))
+                            .tracking(0.5)
+                            .padding(.horizontal, 9).padding(.vertical, 4)
+                            .background(.ultraThinMaterial.opacity(0.7), in: Capsule())
+                            .overlay(Capsule().stroke(.white.opacity(0.25), lineWidth: 0.5))
                             .foregroundStyle(.white)
                         Spacer()
-                        Text(template.category)
-                            .font(.caption.bold())
-                            .padding(.horizontal, 8).padding(.vertical, 3)
-                            .background(.white.opacity(0.20), in: Capsule())
+                        Text(template.category.uppercased())
+                            .font(.system(size: 10, weight: .bold, design: .rounded))
+                            .tracking(0.5)
+                            .padding(.horizontal, 9).padding(.vertical, 4)
+                            .background(.ultraThinMaterial.opacity(0.6), in: Capsule())
+                            .overlay(Capsule().stroke(.white.opacity(0.22), lineWidth: 0.5))
                             .foregroundStyle(.white)
                     }
                     Text(template.name)
-                        .font(.title3.bold()).foregroundStyle(.white)
+                        .font(.system(size: 22, weight: .bold, design: .rounded))
+                        .foregroundStyle(.white)
                     Text(template.author)
-                        .font(.caption).foregroundStyle(.white.opacity(0.75))
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.white.opacity(0.78))
                 }
-                .padding(16)
+                .padding(18)
             }
-            .frame(height: 120)
+            .frame(height: 130)
 
             // Details
             VStack(alignment: .leading, spacing: 14) {
@@ -182,17 +210,25 @@ struct TemplateMarketplaceView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 10))
 
                 Button {
+                    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                     selectedTemplate = template
                     showingImportConfirm = true
                 } label: {
                     Label("Import Templates", systemImage: "square.and.arrow.down")
                         .font(.subheadline.bold())
-                        .frame(maxWidth: .infinity).padding(.vertical, 13)
-                        .background(Color.accentColor.gradient)
+                        .frame(maxWidth: .infinity).padding(.vertical, 14)
+                        .background(
+                            LinearGradient(
+                                colors: [Color.accentColor, Color.accentColor.opacity(0.72)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
                         .foregroundStyle(.white)
-                        .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardRadius))
+                        .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardRadius, style: .continuous))
+                        .shadow(color: Color.accentColor.opacity(0.40), radius: 8, y: 4)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressableCard)
             }
             .padding(16)
             .background(Color(.secondarySystemGroupedBackground))

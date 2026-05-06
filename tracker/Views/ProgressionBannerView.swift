@@ -33,14 +33,26 @@ struct ProgressionBannerView: View {
     }
 
     var body: some View {
-        HStack(spacing: 12) {
-            Image(systemName: icon)
-                .font(.title2)
-                .foregroundStyle(color)
+        HStack(spacing: 14) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [color, color.opacity(0.72)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 44, height: 44)
+                    .shadow(color: color.opacity(0.40), radius: 6, y: 3)
+                Image(systemName: icon)
+                    .font(.system(size: 19, weight: .bold))
+                    .foregroundStyle(.white)
+            }
 
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 3) {
                 Text(recommendation.headline)
-                    .font(.subheadline.weight(.semibold))
+                    .font(.system(size: 15, weight: .semibold, design: .rounded))
                 Text(formattedDetail)
                     .font(.caption)
                     .foregroundStyle(.secondary)

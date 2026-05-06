@@ -330,8 +330,10 @@ struct ExerciseDetailView: View {
     @ViewBuilder
     private func quickAddRow(index: Int, prevSet: ExerciseSet) -> some View {
         let isLogged = loggedPreviousIndices.contains(index)
-        Button {
+        let badgeColor: Color = isLogged ? .green : .accentColor
+        return Button {
             if !isLogged {
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
                 quickLog(from: prevSet)
                 loggedPreviousIndices.insert(index)
             }
@@ -339,15 +341,22 @@ struct ExerciseDetailView: View {
             HStack(spacing: 12) {
                 ZStack {
                     Circle()
-                        .fill(isLogged ? Color.green.opacity(0.15) : Color.accentColor.opacity(0.1))
-                        .frame(width: 36, height: 36)
+                        .fill(
+                            LinearGradient(
+                                colors: [badgeColor.opacity(0.22), badgeColor.opacity(0.10)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 40, height: 40)
+                        .overlay(Circle().stroke(badgeColor.opacity(0.20), lineWidth: 0.5))
                     Image(systemName: isLogged ? "checkmark" : "arrow.turn.down.right")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(isLogged ? .green : Color.accentColor)
+                        .font(.system(size: 15, weight: .bold))
+                        .foregroundStyle(badgeColor)
                 }
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: 3) {
                     Text("Set \(index + 1)")
-                        .font(.subheadline.weight(.semibold))
+                        .font(.system(size: 15, weight: .semibold, design: .rounded))
                         .foregroundStyle(isLogged ? .secondary : .primary)
                     if prevSet.isCardio {
                         Text([prevSet.formattedDistance(unit: weightUnit.distanceUnit), prevSet.formattedDuration].compactMap { $0 }.joined(separator: " in "))
@@ -361,12 +370,20 @@ struct ExerciseDetailView: View {
                 }
                 Spacer()
                 if isLogged {
-                    Text("Logged")
-                        .font(.caption2.bold())
-                        .foregroundStyle(.green)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 3)
-                        .background(.green.opacity(0.1), in: .capsule)
+                    Text("LOGGED")
+                        .font(.system(size: 10, weight: .bold, design: .rounded))
+                        .tracking(0.5)
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 9).padding(.vertical, 4)
+                        .background(
+                            LinearGradient(
+                                colors: [.green, Color(red: 0.05, green: 0.55, blue: 0.42)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            in: .capsule
+                        )
+                        .shadow(color: Color.green.opacity(0.40), radius: 4, y: 2)
                 } else {
                     Image(systemName: "plus.circle.fill")
                         .font(.title3)
@@ -394,39 +411,59 @@ struct ExerciseDetailView: View {
     @ViewBuilder
     private func setRow(index: Int, exerciseSet: ExerciseSet) -> some View {
         let setNumber = index + 1 - warmUpCountBefore(index)
-        HStack(spacing: 12) {
+        let badgeColor: Color = exerciseSet.isWarmUp ? .orange : .accentColor
+        return HStack(spacing: 12) {
             // Set number badge
             ZStack {
                 Circle()
-                    .fill(exerciseSet.isWarmUp ? .orange.opacity(0.15) : Color.accentColor.opacity(0.15))
-                    .frame(width: 36, height: 36)
+                    .fill(
+                        LinearGradient(
+                            colors: [badgeColor.opacity(0.22), badgeColor.opacity(0.10)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 40, height: 40)
+                    .overlay(Circle().stroke(badgeColor.opacity(0.20), lineWidth: 0.5))
                 if exerciseSet.isWarmUp {
                     Image(systemName: "flame.fill")
-                        .font(.system(size: 14, weight: .semibold))
+                        .font(.system(size: 15, weight: .bold))
                         .foregroundStyle(.orange)
                 } else {
                     Text("\(setNumber)")
-                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .font(.system(size: 16, weight: .black, design: .rounded))
                         .foregroundStyle(Color.accentColor)
                 }
             }
 
             // Labels
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 6) {
                     Text(exerciseSet.isWarmUp ? "Warm-up" : "Set \(setNumber)")
-                        .font(.subheadline.weight(.semibold))
+                        .font(.system(size: 15, weight: .semibold, design: .rounded))
                     if isPR(exerciseSet) {
                         HStack(spacing: 3) {
                             Image(systemName: "trophy.fill")
-                                .font(.system(size: 9))
+                                .font(.system(size: 9, weight: .bold))
                             Text("PR")
-                                .font(.caption2.bold())
+                                .font(.system(size: 10, weight: .bold, design: .rounded))
+                                .tracking(0.4)
                         }
-                        .foregroundStyle(.yellow)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(.yellow.opacity(0.15), in: .capsule)
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 3)
+                        .background(
+                            LinearGradient(
+                                colors: [
+                                    Color(red: 1.00, green: 0.85, blue: 0.20),
+                                    Color(red: 0.95, green: 0.62, blue: 0.10)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            in: .capsule
+                        )
+                        .shadow(color: Color.yellow.opacity(0.45), radius: 4, y: 1)
                     }
                 }
                 Text("Tap to edit")
@@ -541,38 +578,60 @@ struct ExerciseDetailView: View {
                 icon: "trophy.fill",
                 color: .yellow
             )
-            Rectangle().fill(Color(.separator)).frame(width: 1, height: 36)
+            Rectangle().fill(Color(.separator).opacity(0.5)).frame(width: 1, height: 40)
             bannerStat(
                 label: "Today",
                 value: "\(exercise.sets.filter { !$0.isWarmUp }.count) sets",
                 icon: "repeat",
                 color: .accentColor
             )
-            Rectangle().fill(Color(.separator)).frame(width: 1, height: 36)
-            // Category column uses MuscleIconView for visual consistency
-            VStack(spacing: 4) {
-                MuscleIconView(group: exercise.category ?? .other, color: .purple)
-                    .frame(width: 16, height: 16)
+            Rectangle().fill(Color(.separator).opacity(0.5)).frame(width: 1, height: 40)
+            VStack(spacing: 6) {
+                ZStack {
+                    Circle()
+                        .fill(Color.purple.opacity(0.16))
+                        .frame(width: 30, height: 30)
+                    MuscleIconView(group: exercise.category ?? .other, color: .purple)
+                        .frame(width: 16, height: 16)
+                }
                 Text(exercise.category?.rawValue ?? "–")
-                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                    .font(.system(size: 16, weight: .black, design: .rounded))
                     .lineLimit(1).minimumScaleFactor(0.75)
                 Text("Category")
-                    .font(.caption2.weight(.medium))
+                    .font(.system(size: 10, weight: .semibold, design: .rounded))
                     .foregroundStyle(.secondary)
+                    .tracking(0.3)
+                    .textCase(.uppercase)
             }
             .frame(maxWidth: .infinity)
         }
-        .padding(.vertical, 10)
-        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: AppTheme.cardRadius))
+        .padding(.vertical, 14)
+        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: AppTheme.cardRadius, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: AppTheme.cardRadius, style: .continuous)
+                .stroke(Color.white.opacity(0.06), lineWidth: 0.5)
+        )
+        .shadow(color: .black.opacity(0.10), radius: 14, x: 0, y: 4)
     }
 
     private func bannerStat(label: String, value: String, icon: String, color: Color) -> some View {
-        VStack(spacing: 4) {
-            Image(systemName: icon).font(.system(size: 13)).foregroundStyle(color)
+        VStack(spacing: 6) {
+            ZStack {
+                Circle()
+                    .fill(color.opacity(0.16))
+                    .frame(width: 30, height: 30)
+                Image(systemName: icon)
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(color)
+            }
             Text(value)
-                .font(.system(size: 14, weight: .bold, design: .rounded))
+                .font(.system(size: 16, weight: .black, design: .rounded))
                 .lineLimit(1).minimumScaleFactor(0.75)
-            Text(label).font(.caption2.weight(.medium)).foregroundStyle(.secondary)
+            Text(label)
+                .font(.system(size: 10, weight: .semibold, design: .rounded))
+                .foregroundStyle(.secondary)
+                .tracking(0.3)
+                .textCase(.uppercase)
         }
         .frame(maxWidth: .infinity)
     }
@@ -592,25 +651,31 @@ struct ExerciseDetailView: View {
 
             // Add button
             Button {
+                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                 addSet()
             } label: {
                 Label(
                     isCardioExercise ? "Add Entry" : (newIsWarmUp ? "Add Warm-up" : "Add Set"),
                     systemImage: "plus.circle.fill"
                 )
-                .font(.headline)
+                .font(.system(size: 16, weight: .bold, design: .rounded))
+                .tracking(0.4)
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
+                .padding(.vertical, 16)
                 .background(
                     newIsWarmUp
-                        ? AnyShapeStyle(LinearGradient(colors: [.orange, Color(red: 0.9, green: 0.5, blue: 0.1)], startPoint: .leading, endPoint: .trailing))
-                        : AnyShapeStyle(LinearGradient(colors: [Color.accentColor, Color.accentColor.opacity(0.7)], startPoint: .leading, endPoint: .trailing))
+                        ? AnyShapeStyle(LinearGradient(colors: [.orange, Color(red: 0.9, green: 0.5, blue: 0.1)], startPoint: .topLeading, endPoint: .bottomTrailing))
+                        : AnyShapeStyle(LinearGradient(colors: [Color.accentColor, Color.accentColor.opacity(0.78)], startPoint: .topLeading, endPoint: .bottomTrailing))
                 )
                 .foregroundStyle(.white)
-                .clipShape(RoundedRectangle(cornerRadius: 14))
-                .shadow(color: (newIsWarmUp ? Color.orange : Color.accentColor).opacity(0.30), radius: 8, x: 0, y: 4)
+                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .stroke(Color.white.opacity(0.20), lineWidth: 0.5)
+                )
+                .shadow(color: (newIsWarmUp ? Color.orange : Color.accentColor).opacity(0.45), radius: 12, y: 5)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressableCard)
             .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
             .listRowBackground(Color.clear)
         } header: {
@@ -624,42 +689,53 @@ struct ExerciseDetailView: View {
         HStack {
             Label {
                 Text("Distance")
-                    .font(.subheadline)
+                    .font(.system(size: 15, weight: .semibold, design: .rounded))
             } icon: {
-                Image(systemName: "point.bottomleft.forward.to.point.topright.scurvepath")
-                    .foregroundStyle(Color.accentColor)
+                ZStack {
+                    Circle().fill(Color.accentColor.opacity(0.16)).frame(width: 28, height: 28)
+                    Image(systemName: "point.bottomleft.forward.to.point.topright.scurvepath")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(Color.accentColor)
+                }
             }
             Spacer()
             Button {
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
                 newDistance = max(0.1, newDistance - weightUnit.distanceUnit.stepSize)
             } label: {
                 Image(systemName: "minus.circle.fill")
                     .font(.title2)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.accentColor.opacity(0.8))
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressableCard)
             Text(String(format: "%.1f %@", newDistance, weightUnit.distanceUnit.label))
-                .font(.system(.body, design: .rounded, weight: .bold))
+                .font(.system(size: 17, weight: .black, design: .rounded))
                 .monospacedDigit()
-                .frame(minWidth: 80)
+                .foregroundStyle(Color.accentColor)
+                .frame(minWidth: 90)
             Button {
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
                 newDistance += weightUnit.distanceUnit.stepSize
             } label: {
                 Image(systemName: "plus.circle.fill")
                     .font(.title2)
                     .foregroundStyle(Color.accentColor)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressableCard)
         }
 
         // Duration
         HStack {
             Label {
                 Text("Duration")
-                    .font(.subheadline)
+                    .font(.system(size: 15, weight: .semibold, design: .rounded))
             } icon: {
-                Image(systemName: "stopwatch")
-                    .foregroundStyle(Color.accentColor)
+                ZStack {
+                    Circle().fill(Color.accentColor.opacity(0.16)).frame(width: 28, height: 28)
+                    Image(systemName: "stopwatch")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(Color.accentColor)
+                }
             }
             Spacer()
             Picker("Min", selection: $newDurationMinutes) {
@@ -685,19 +761,26 @@ struct ExerciseDetailView: View {
         HStack {
             Label {
                 Text("Reps")
-                    .font(.subheadline)
+                    .font(.system(size: 15, weight: .semibold, design: .rounded))
             } icon: {
-                Image(systemName: "repeat")
-                    .foregroundStyle(Color.accentColor)
+                ZStack {
+                    Circle().fill(Color.accentColor.opacity(0.16)).frame(width: 28, height: 28)
+                    Image(systemName: "repeat")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(Color.accentColor)
+                }
             }
             Spacer()
             Stepper {
                 Text("\(newReps)")
-                    .font(.system(.body, design: .rounded, weight: .bold))
+                    .font(.system(size: 17, weight: .black, design: .rounded))
                     .monospacedDigit()
+                    .foregroundStyle(Color.accentColor)
             } onIncrement: {
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
                 newReps = min(100, newReps + 1)
             } onDecrement: {
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
                 newReps = max(1, newReps - 1)
             }
             .fixedSize()
@@ -707,20 +790,25 @@ struct ExerciseDetailView: View {
         HStack {
             Label {
                 Text("Weight")
-                    .font(.subheadline)
+                    .font(.system(size: 15, weight: .semibold, design: .rounded))
             } icon: {
-                Image(systemName: "scalemass.fill")
-                    .foregroundStyle(Color.accentColor)
+                ZStack {
+                    Circle().fill(Color.accentColor.opacity(0.16)).frame(width: 28, height: 28)
+                    Image(systemName: "scalemass.fill")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(Color.accentColor)
+                }
             }
             Spacer()
             Button {
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
                 newWeight = max(0, newWeight - weightIncrement)
             } label: {
                 Image(systemName: "minus.circle.fill")
                     .font(.title2)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.accentColor.opacity(0.8))
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressableCard)
             .accessibilityLabel("Decrease weight by \(weightUnit.formatShort(weightIncrement))")
             Text(weightUnit.format(newWeight))
                 .font(.system(.body, design: .rounded, weight: .bold))
@@ -744,13 +832,14 @@ struct ExerciseDetailView: View {
                         }
                 }
             Button {
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
                 newWeight += weightIncrement
             } label: {
                 Image(systemName: "plus.circle.fill")
                     .font(.title2)
                     .foregroundStyle(Color.accentColor)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressableCard)
             .accessibilityLabel("Increase weight by \(weightUnit.formatShort(weightIncrement))")
         }
 
@@ -758,7 +847,7 @@ struct ExerciseDetailView: View {
         Toggle(isOn: $newIsWarmUp) {
             Label {
                 Text("Warm-up Set")
-                    .font(.subheadline)
+                    .font(.system(size: 15, weight: .semibold, design: .rounded))
             } icon: {
                 Image(systemName: "flame.fill")
                     .foregroundStyle(.orange)
@@ -783,18 +872,26 @@ struct ExerciseDetailView: View {
                     Spacer()
                     if let rpe = newRPE {
                         Text("\(rpe)")
-                            .font(.caption.bold())
+                            .font(.caption.bold().monospacedDigit())
                             .foregroundStyle(.white)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 3)
-                            .background(Color.accentColor, in: .capsule)
+                            .padding(.horizontal, 9)
+                            .padding(.vertical, 4)
+                            .background(
+                                LinearGradient(
+                                    colors: [.purple, Color(red: 0.55, green: 0.35, blue: 0.95)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                ),
+                                in: .capsule
+                            )
+                            .shadow(color: .purple.opacity(0.40), radius: 4, y: 2)
                         Button("Clear") { newRPE = nil }
-                            .font(.caption)
+                            .font(.caption.weight(.semibold))
                             .foregroundStyle(.secondary)
                             .buttonStyle(.plain)
                     } else {
                         Image(systemName: showRPE ? "chevron.up" : "chevron.down")
-                            .font(.caption2)
+                            .font(.caption2.weight(.semibold))
                             .foregroundStyle(.tertiary)
                     }
                 }
@@ -805,17 +902,33 @@ struct ExerciseDetailView: View {
                 HStack(spacing: 6) {
                     ForEach(1...10, id: \.self) { value in
                         Button {
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
                             newRPE = value
-                            withAnimation(.easeInOut(duration: 0.2)) { showRPE = false }
+                            withAnimation(.spring(response: 0.42, dampingFraction: 0.78)) { showRPE = false }
                         } label: {
                             Text("\(value)")
-                                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                                .font(.system(size: 14, weight: .bold, design: .rounded))
                                 .frame(maxWidth: .infinity)
-                                .padding(.vertical, 8)
-                                .background(newRPE == value ? Color.accentColor : Color(.tertiarySystemFill), in: RoundedRectangle(cornerRadius: 8))
+                                .padding(.vertical, 9)
+                                .background {
+                                    if newRPE == value {
+                                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                            .fill(
+                                                LinearGradient(
+                                                    colors: [.purple, Color(red: 0.55, green: 0.35, blue: 0.95)],
+                                                    startPoint: .topLeading,
+                                                    endPoint: .bottomTrailing
+                                                )
+                                            )
+                                            .shadow(color: .purple.opacity(0.40), radius: 6, y: 3)
+                                    } else {
+                                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                            .fill(Color(.tertiarySystemFill))
+                                    }
+                                }
                                 .foregroundStyle(newRPE == value ? .white : .primary)
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.pressableCard)
                     }
                 }
                 .transition(.opacity.combined(with: .move(edge: .top)))
@@ -824,58 +937,68 @@ struct ExerciseDetailView: View {
     }
 
     private var timerBar: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 10) {
             GradientProgressBar(
                 value: Double(restDuration - restRemaining) / Double(max(1, restDuration)),
                 color: restRemaining <= 10 ? .red : .blue,
-                height: 6
+                height: 8
             )
             .accessibilityLabel("Rest timer: \(restRemaining) seconds remaining")
 
             HStack {
                 Button {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
                     adjustRest(-15)
                 } label: {
-                    Text("-15s")
-                        .font(.caption.bold())
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
+                    Text("−15s")
+                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 7)
                         .background(.ultraThinMaterial, in: .capsule)
+                        .overlay(Capsule().stroke(.white.opacity(0.06), lineWidth: 0.5))
                 }
+                .buttonStyle(.pressableCard)
                 .accessibilityLabel("Subtract 15 seconds")
                 Button {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
                     adjustRest(15)
                 } label: {
                     Text("+15s")
-                        .font(.caption.bold())
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
+                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 7)
                         .background(.ultraThinMaterial, in: .capsule)
+                        .overlay(Capsule().stroke(.white.opacity(0.06), lineWidth: 0.5))
                 }
+                .buttonStyle(.pressableCard)
                 .accessibilityLabel("Add 15 seconds")
 
                 Spacer()
 
                 Text(timerText)
-                    .font(.system(size: 32, weight: .bold, design: .rounded))
+                    .font(.system(size: 36, weight: .black, design: .rounded))
                     .monospacedDigit()
                     .foregroundStyle(restRemaining <= 10 ? .red : .primary)
+                    .contentTransition(.numericText())
+                    .animation(.spring(response: 0.45, dampingFraction: 0.85), value: restRemaining)
                     .accessibilityLabel("Rest timer: \(timerText)")
 
                 Spacer()
 
                 Button {
+                    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                     stopTimer()
                 } label: {
                     Text("Skip")
-                        .font(.caption.bold())
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
+                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 7)
                         .background(.ultraThinMaterial, in: .capsule)
+                        .overlay(Capsule().stroke(.white.opacity(0.06), lineWidth: 0.5))
                 }
+                .buttonStyle(.pressableCard)
                 .accessibilityLabel("Skip rest timer")
             }
-            .buttonStyle(.plain)
 
         }
         .padding()

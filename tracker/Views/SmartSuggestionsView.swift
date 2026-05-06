@@ -11,9 +11,10 @@ struct SmartSuggestionsView: View {
     @Query(sort: \CardioSession.date, order: .reverse) private var cardioSessions: [CardioSession]
     @State private var externalWorkouts: [ExternalWorkout] = []
     @State private var createdWorkout: Workout?
+    @State private var recoveryResult: RecoveryResult = .empty
 
-    private var recoveryResult: RecoveryResult {
-        RecoveryEngine.evaluate(
+    private func recomputeRecovery() {
+        recoveryResult = RecoveryEngine.evaluate(
             workouts: workouts,
             externalWorkouts: externalWorkouts,
             cardioSessions: Array(cardioSessions.prefix(50))
@@ -61,10 +62,16 @@ struct SmartSuggestionsView: View {
             WorkoutDetailView(workout: workout)
         }
         .task {
-            guard settingsArray.first?.healthKitEnabled == true else { return }
+            guard settingsArray.first?.healthKitEnabled == true else {
+                recomputeRecovery()
+                return
+            }
             let hk = HealthKitManager.shared
             externalWorkouts = (try? await hk.fetchExternalWorkouts(days: 7)) ?? []
+            recomputeRecovery()
         }
+        .onChange(of: workouts) { recomputeRecovery() }
+        .onChange(of: cardioSessions) { recomputeRecovery() }
     }
 
     // MARK: - Hero Card
@@ -72,31 +79,42 @@ struct SmartSuggestionsView: View {
     private var heroCard: some View {
         ZStack(alignment: .topLeading) {
             LinearGradient(
-                colors: [Color.accentColor, Color.accentColor.opacity(0.65)],
+                colors: [
+                    Color(red: 0.55, green: 0.35, blue: 0.95),
+                    Color(red: 0.40, green: 0.40, blue: 0.92),
+                    Color(red: 0.30, green: 0.55, blue: 0.95)
+                ],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
-            Circle()
-                .fill(.white.opacity(0.07))
-                .frame(width: 200)
-                .offset(x: 160, y: -60)
+            // Top sheen
+            LinearGradient(
+                colors: [.white.opacity(0.18), .clear],
+                startPoint: .top, endPoint: .center
+            )
+            .blendMode(.plusLighter)
+            Circle().fill(.white.opacity(0.10)).frame(width: 200).blur(radius: 12).offset(x: 160, y: -60)
+            Circle().fill(.white.opacity(0.06)).frame(width: 110).blur(radius: 10).offset(x: -30, y: 80)
 
             VStack(alignment: .leading, spacing: 18) {
                 HStack(alignment: .center, spacing: 14) {
                     ZStack {
                         Circle()
-                            .fill(.white.opacity(0.20))
-                            .frame(width: 52, height: 52)
+                            .fill(.ultraThinMaterial.opacity(0.7))
+                            .frame(width: 56, height: 56)
+                            .overlay(Circle().stroke(.white.opacity(0.25), lineWidth: 0.5))
                         Image(systemName: "brain.head.profile")
-                            .font(.system(size: 22, weight: .semibold))
+                            .font(.system(size: 24, weight: .bold))
                             .foregroundStyle(.white)
                     }
-                    VStack(alignment: .leading, spacing: 3) {
+                    VStack(alignment: .leading, spacing: 2) {
                         Text("Suggested")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(.white.opacity(0.75))
+                            .font(.system(size: 12, weight: .bold, design: .rounded))
+                            .foregroundStyle(.white.opacity(0.82))
+                            .tracking(0.5)
+                            .textCase(.uppercase)
                         Text(suggestedWorkoutType)
-                            .font(.title3.weight(.bold))
+                            .font(.system(size: 24, weight: .bold, design: .rounded))
                             .foregroundStyle(.white)
                     }
                     Spacer()
@@ -105,23 +123,25 @@ struct SmartSuggestionsView: View {
                 // Readiness chips
                 FlowLayout(spacing: 6) {
                     ForEach(muscleReadiness, id: \.0) { group, freshness in
-                        HStack(spacing: 4) {
+                        HStack(spacing: 5) {
                             Circle()
                                 .fill(RecoveryEngine.freshnessColor(freshness))
-                                .frame(width: 7, height: 7)
+                                .frame(width: 8, height: 8)
+                                .shadow(color: RecoveryEngine.freshnessColor(freshness).opacity(0.6), radius: 3)
                             Text(group.rawValue)
-                                .font(.caption2.weight(.medium))
+                                .font(.caption2.weight(.semibold))
                         }
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 5)
-                        .background(.white.opacity(0.15), in: Capsule())
+                        .padding(.horizontal, 11)
+                        .padding(.vertical, 6)
+                        .background(.ultraThinMaterial.opacity(0.6), in: Capsule())
+                        .overlay(Capsule().stroke(.white.opacity(0.20), lineWidth: 0.5))
                         .foregroundStyle(.white)
                     }
                 }
 
                 Text("Based on your recovery and training history")
                     .font(.caption)
-                    .foregroundStyle(.white.opacity(0.70))
+                    .foregroundStyle(.white.opacity(0.78))
             }
             .padding(20)
         }

@@ -6,6 +6,7 @@ import StoreKit
 
 struct SettingsView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.scenePhase) private var scenePhase
     @Query private var settingsArray: [UserSettings]
     @Query(filter: #Predicate<Workout> { $0.isTemplate }, sort: \Workout.name)
     private var templates: [Workout]
@@ -41,15 +42,22 @@ struct SettingsView: View {
                 HStack(spacing: 16) {
                     ZStack {
                         Circle()
-                            .fill(Color.accentColor.opacity(0.15))
-                            .frame(width: 56, height: 56)
+                            .fill(
+                                LinearGradient(
+                                    colors: [Color.accentColor, Color.accentColor.opacity(0.65)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .frame(width: 60, height: 60)
+                            .shadow(color: Color.accentColor.opacity(0.45), radius: 10, y: 5)
                         Image(systemName: "person.fill")
-                            .font(.system(size: 24, weight: .semibold))
-                            .foregroundStyle(Color.accentColor)
+                            .font(.system(size: 26, weight: .bold))
+                            .foregroundStyle(.white)
                     }
-                    VStack(alignment: .leading, spacing: 3) {
+                    VStack(alignment: .leading, spacing: 4) {
                         Text(settings.userName.isEmpty ? "Your Name" : settings.userName)
-                            .font(.title3.weight(.semibold))
+                            .font(.system(size: 20, weight: .bold, design: .rounded))
                             .foregroundStyle(settings.userName.isEmpty ? .secondary : .primary)
                         Text(settings.useKilograms ? "Kilograms · " : "Pounds · ")
                             .font(.caption)
@@ -60,7 +68,7 @@ struct SettingsView: View {
                     }
                     Spacer()
                 }
-                .padding(.vertical, 4)
+                .padding(.vertical, 6)
             }
 
             // MARK: ── WORKOUT ─────────────────────────────
@@ -480,8 +488,10 @@ struct SettingsView: View {
         .task {
             notificationStatus = await ReminderManager.checkAuthorizationStatus()
         }
-        .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
-            Task { notificationStatus = await ReminderManager.checkAuthorizationStatus() }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active {
+                Task { notificationStatus = await ReminderManager.checkAuthorizationStatus() }
+            }
         }
         .navigationTitle("Settings")
         .navigationDestination(for: Workout.self) { template in
@@ -563,11 +573,18 @@ struct SettingsView: View {
 
     private func settingsIcon(_ name: String, color: Color) -> some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 7)
-                .fill(color.gradient)
-                .frame(width: 28, height: 28)
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [color, color.opacity(0.72)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .frame(width: 30, height: 30)
+                .shadow(color: color.opacity(0.40), radius: 4, y: 2)
             Image(systemName: name)
-                .font(.system(size: 13, weight: .semibold))
+                .font(.system(size: 14, weight: .bold))
                 .foregroundStyle(.white)
         }
     }

@@ -9,7 +9,11 @@ struct StreakCalendarView: View {
     private var cardioSessions: [CardioSession]
 
     @State private var monthsBack: Int = 6
-    @State private var restDayDismissed = false
+    /// Stored as seconds-since-epoch; banner stays hidden for the rest of the calendar day it was dismissed.
+    @AppStorage("restDayBannerDismissedAt") private var restDayBannerDismissedAt: Double = 0
+    private var restDayDismissed: Bool {
+        Calendar.current.isDateInToday(Date(timeIntervalSince1970: restDayBannerDismissedAt))
+    }
 
     private var cal: Calendar { Calendar.current }
 
@@ -101,47 +105,86 @@ struct StreakCalendarView: View {
 
     private var heroCard: some View {
         ZStack(alignment: .topLeading) {
-            LinearGradient(colors: [Color.orange, Color.red.opacity(0.75)],
-                           startPoint: .topLeading, endPoint: .bottomTrailing)
-            Circle().fill(.white.opacity(0.07)).frame(width: 200).offset(x: 160, y: -60)
+            LinearGradient(
+                colors: AppTheme.Gradients.caution,
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            // Top sheen
+            LinearGradient(
+                colors: [.white.opacity(0.18), .clear],
+                startPoint: .top, endPoint: .center
+            )
+            .blendMode(.plusLighter)
+            Circle().fill(.white.opacity(0.10)).frame(width: 200).blur(radius: 12).offset(x: 160, y: -60)
+            Circle().fill(.white.opacity(0.06)).frame(width: 110).blur(radius: 10).offset(x: -30, y: 80)
 
             VStack(alignment: .leading, spacing: 18) {
                 HStack(alignment: .center, spacing: 14) {
                     ZStack {
-                        Circle().fill(.white.opacity(0.20)).frame(width: 52, height: 52)
+                        Circle()
+                            .fill(.ultraThinMaterial.opacity(0.7))
+                            .frame(width: 56, height: 56)
+                            .overlay(Circle().stroke(.white.opacity(0.25), lineWidth: 0.5))
                         Image(systemName: "flame.fill")
-                            .font(.system(size: 22, weight: .semibold)).foregroundStyle(.white)
+                            .font(.system(size: 24, weight: .bold))
+                            .foregroundStyle(.white)
                     }
-                    VStack(alignment: .leading, spacing: 3) {
+                    VStack(alignment: .leading, spacing: 2) {
                         Text("Current Streak")
-                            .font(.caption.weight(.semibold)).foregroundStyle(.white.opacity(0.75))
-                        HStack(alignment: .firstTextBaseline, spacing: 4) {
-                            Text("\(currentStreak)")
-                                .font(.system(size: 36, weight: .black, design: .rounded))
-                                .foregroundStyle(.white).monospacedDigit()
+                            .font(.system(size: 12, weight: .bold, design: .rounded))
+                            .foregroundStyle(.white.opacity(0.82))
+                            .tracking(0.5)
+                            .textCase(.uppercase)
+                        HStack(alignment: .firstTextBaseline, spacing: 6) {
+                            AnimatedInt(
+                                value: currentStreak,
+                                font: .system(size: 44, weight: .black, design: .rounded),
+                                color: .white
+                            )
+                            .shadow(color: .black.opacity(0.18), radius: 5, y: 3)
                             Text(currentStreak == 1 ? "day" : "days")
-                                .font(.subheadline.weight(.medium)).foregroundStyle(.white.opacity(0.75))
+                                .font(.system(size: 18, weight: .heavy, design: .rounded))
+                                .foregroundStyle(.white.opacity(0.78))
                         }
                     }
                     Spacer()
                     if longestStreak > 0 {
                         VStack(spacing: 4) {
-                            Image(systemName: "trophy.fill").font(.caption.bold()).foregroundStyle(.white.opacity(0.9))
-                            Text("\(longestStreak)").font(.title3.bold()).foregroundStyle(.white).monospacedDigit()
-                            Text("best").font(.caption2).foregroundStyle(.white.opacity(0.70))
+                            Image(systemName: "trophy.fill")
+                                .font(.caption.bold())
+                                .foregroundStyle(.white.opacity(0.95))
+                            Text("\(longestStreak)")
+                                .font(.system(size: 18, weight: .black, design: .rounded))
+                                .foregroundStyle(.white)
+                                .monospacedDigit()
+                            Text("BEST")
+                                .font(.system(size: 10, weight: .bold, design: .rounded))
+                                .foregroundStyle(.white.opacity(0.78))
+                                .tracking(0.5)
                         }
                         .padding(.horizontal, 12).padding(.vertical, 8)
-                        .background(.white.opacity(0.20), in: RoundedRectangle(cornerRadius: 12))
+                        .background(.ultraThinMaterial.opacity(0.7), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                .stroke(.white.opacity(0.25), lineWidth: 0.5)
+                        )
                     }
                 }
 
                 HStack(spacing: 0) {
                     HeroStatCol(value: "\(thisWeekCount)", label: "This Week")
-                    Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 28)
+                    Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 32)
                     HeroStatCol(value: "\(thisMonthCount)", label: "This Month")
-                    Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 28)
+                    Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 32)
                     HeroStatCol(value: "\(totalWorkouts)", label: "Total")
                 }
+                .padding(.vertical, 10)
+                .background(.ultraThinMaterial.opacity(0.55), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(.white.opacity(0.18), lineWidth: 0.5)
+                )
             }
             .padding(20)
         }
@@ -154,23 +197,38 @@ struct StreakCalendarView: View {
     private var restDayCard: some View {
         HStack(spacing: 14) {
             ZStack {
-                Circle().fill(Color.orange.opacity(0.12)).frame(width: 48, height: 48)
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [.indigo, Color(red: 0.40, green: 0.30, blue: 0.85)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 52, height: 52)
+                    .shadow(color: .indigo.opacity(0.40), radius: 6, y: 3)
                 Image(systemName: "bed.double.fill")
-                    .font(.system(size: 20, weight: .semibold)).foregroundStyle(.orange)
+                    .font(.system(size: 22, weight: .bold))
+                    .foregroundStyle(.white)
             }
             VStack(alignment: .leading, spacing: 3) {
-                Text("Consider a rest day").font(.subheadline.weight(.semibold))
+                Text("Consider a rest day")
+                    .font(.system(size: 16, weight: .bold, design: .rounded))
                 Text("\(currentStreak)-day streak — recovery helps muscles grow.")
                     .font(.caption).foregroundStyle(.secondary)
             }
             Spacer()
             Button {
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) { restDayDismissed = true }
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                withAnimation(.spring(response: 0.42, dampingFraction: 0.78)) {
+                    restDayBannerDismissedAt = Date.now.timeIntervalSince1970
+                }
             } label: {
                 Image(systemName: "xmark.circle.fill")
-                    .font(.system(size: 20)).foregroundStyle(Color(.tertiaryLabel))
+                    .font(.system(size: 22))
+                    .foregroundStyle(Color(.tertiaryLabel))
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressableCard)
         }
         .appCard()
         .transition(.opacity.combined(with: .move(edge: .top)))
@@ -216,15 +274,19 @@ struct StreakCalendarView: View {
                             let count = activeDates[cal.startOfDay(for: day)] ?? 0
                             let level = intensityLevel(count)
                             let isFuture = day > cal.startOfDay(for: .now)
-                            RoundedRectangle(cornerRadius: 2)
+                            RoundedRectangle(cornerRadius: 3, style: .continuous)
                                 .fill(isFuture ? Color.clear : colorForLevel(level))
-                                .frame(width: 14, height: 14)
+                                .frame(width: 15, height: 15)
+                                .shadow(
+                                    color: level >= 3 ? Color.orange.opacity(0.45) : .clear,
+                                    radius: 3, y: 1
+                                )
                                 .overlay {
                                     if cal.isDateInToday(day) {
-                                        RoundedRectangle(cornerRadius: 2)
-                                            .stroke(Color.orange, lineWidth: 1.5)
+                                        RoundedRectangle(cornerRadius: 3, style: .continuous)
+                                            .stroke(Color.orange, lineWidth: 2)
                                     } else if !isFuture && level == 0 {
-                                        RoundedRectangle(cornerRadius: 2)
+                                        RoundedRectangle(cornerRadius: 3, style: .continuous)
                                             .stroke(.primary.opacity(0.06), lineWidth: 0.5)
                                     }
                                 }
@@ -246,33 +308,50 @@ struct StreakCalendarView: View {
             VStack(spacing: 0) {
                 ForEach(Array(monthlyBreakdown.enumerated()), id: \.offset) { idx, month in
                     HStack(spacing: 12) {
-                        Text(month.label)
-                            .font(.subheadline.weight(.medium))
-                            .frame(width: 36, alignment: .leading)
+                        Text(month.label.uppercased())
+                            .font(.system(size: 11, weight: .bold, design: .rounded))
+                            .tracking(0.4)
+                            .frame(width: 40, alignment: .leading)
+                            .foregroundStyle(.secondary)
                         GeometryReader { geo in
                             let width = maxCount > 0 ? geo.size.width * CGFloat(month.count) / CGFloat(maxCount) : 0
                             ZStack(alignment: .leading) {
-                                RoundedRectangle(cornerRadius: 4)
-                                    .fill(Color.orange.opacity(0.10))
+                                RoundedRectangle(cornerRadius: 5, style: .continuous)
+                                    .fill(Color.orange.opacity(0.12))
                                     .frame(maxWidth: .infinity)
-                                RoundedRectangle(cornerRadius: 4)
-                                    .fill(LinearGradient(colors: [Color.orange, Color.red.opacity(0.7)],
-                                                         startPoint: .leading, endPoint: .trailing))
-                                    .frame(width: max(width, month.count > 0 ? 4 : 0))
+                                RoundedRectangle(cornerRadius: 5, style: .continuous)
+                                    .fill(
+                                        LinearGradient(
+                                            colors: [Color.orange, Color(red: 0.85, green: 0.30, blue: 0.20)],
+                                            startPoint: .leading,
+                                            endPoint: .trailing
+                                        )
+                                    )
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 5, style: .continuous)
+                                            .stroke(.white.opacity(0.20), lineWidth: 0.5)
+                                    )
+                                    .frame(width: max(width, month.count > 0 ? 5 : 0))
+                                    .shadow(color: Color.orange.opacity(0.40), radius: 4, y: 1)
                             }
                         }
-                        .frame(height: 20)
+                        .frame(height: 22)
                         Text("\(month.count)")
-                            .font(.subheadline.bold().monospacedDigit())
-                            .frame(width: 24, alignment: .trailing)
-                            .foregroundStyle(month.count == 0 ? .tertiary : .primary)
+                            .font(.system(size: 15, weight: .black, design: .rounded))
+                            .monospacedDigit()
+                            .frame(width: 26, alignment: .trailing)
+                            .foregroundStyle(month.count == 0 ? Color.secondary : Color.orange)
                     }
-                    .padding(.horizontal, 16).padding(.vertical, 10)
+                    .padding(.horizontal, 16).padding(.vertical, 11)
                     if idx < monthlyBreakdown.count - 1 { Divider().padding(.leading, 16) }
                 }
             }
             .background(Color(.tertiarySystemGroupedBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(Color.white.opacity(0.05), lineWidth: 0.5)
+            )
         }
         .appCard()
     }
@@ -294,20 +373,47 @@ struct StreakCalendarView: View {
     }
 
     private func statTile(_ title: String, value: String, icon: String, color: Color) -> some View {
-        HStack(spacing: 10) {
+        HStack(spacing: 12) {
             ZStack {
-                RoundedRectangle(cornerRadius: 8).fill(color.opacity(0.12)).frame(width: 34, height: 34)
-                Image(systemName: icon).font(.system(size: 13, weight: .semibold)).foregroundStyle(color)
+                RoundedRectangle(cornerRadius: 11, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [color, color.opacity(0.72)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 38, height: 38)
+                    .shadow(color: color.opacity(0.40), radius: 5, y: 2)
+                Image(systemName: icon)
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(.white)
             }
-            VStack(alignment: .leading, spacing: 2) {
-                Text(value).font(.subheadline.bold().monospacedDigit())
-                Text(title).font(.caption2).foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(value)
+                    .font(.system(size: 15, weight: .black, design: .rounded))
+                    .monospacedDigit()
+                    .foregroundStyle(color)
+                Text(title.uppercased())
+                    .font(.system(size: 10, weight: .bold, design: .rounded))
+                    .tracking(0.4)
+                    .foregroundStyle(.secondary)
             }
             Spacer(minLength: 0)
         }
-        .padding(12)
-        .background(Color(.tertiarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .padding(14)
+        .background(
+            LinearGradient(
+                colors: [color.opacity(0.10), Color(.tertiarySystemGroupedBackground)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(color.opacity(0.18), lineWidth: 0.5)
+        )
     }
 
     // MARK: - Helpers
@@ -346,9 +452,9 @@ struct StreakCalendarView: View {
     private func colorForLevel(_ level: Int) -> Color {
         switch level {
         case 0: return Color(.systemFill)
-        case 1: return Color.orange.opacity(0.25)
-        case 2: return Color.orange.opacity(0.45)
-        case 3: return Color.orange.opacity(0.70)
+        case 1: return Color.orange.opacity(0.30)
+        case 2: return Color.orange.opacity(0.55)
+        case 3: return Color.orange.opacity(0.85)
         default: return Color.orange
         }
     }

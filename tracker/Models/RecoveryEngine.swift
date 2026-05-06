@@ -36,6 +36,8 @@ struct RecoveryResult {
     let readinessScore: Double         // 0...1
     let muscleResults: [MuscleFatigueResult]
     let suggestedWorkoutType: String
+
+    static let empty = RecoveryResult(readinessScore: 0.75, muscleResults: [], suggestedWorkoutType: "Anything")
 }
 
 // MARK: - Internal Types

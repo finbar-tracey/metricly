@@ -90,45 +90,64 @@ struct PersonalRecordsView: View {
     private var heroCard: some View {
         ZStack(alignment: .topLeading) {
             LinearGradient(
-                colors: [Color(red: 0.78, green: 0.60, blue: 0.08), Color.orange.opacity(0.75)],
+                colors: [
+                    Color(red: 0.95, green: 0.62, blue: 0.10),
+                    Color(red: 0.85, green: 0.42, blue: 0.10),
+                    Color(red: 0.65, green: 0.28, blue: 0.30)
+                ],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
-            Circle()
-                .fill(.white.opacity(0.07))
-                .frame(width: 200)
-                .offset(x: 160, y: -60)
+            // Top sheen
+            LinearGradient(
+                colors: [.white.opacity(0.18), .clear],
+                startPoint: .top, endPoint: .center
+            )
+            .blendMode(.plusLighter)
+            Circle().fill(.white.opacity(0.10)).frame(width: 200).blur(radius: 12).offset(x: 160, y: -60)
+            Circle().fill(.white.opacity(0.06)).frame(width: 110).blur(radius: 10).offset(x: -30, y: 80)
 
             VStack(alignment: .leading, spacing: 20) {
                 HStack(alignment: .center, spacing: 16) {
                     ZStack {
                         Circle()
-                            .fill(.white.opacity(0.20))
-                            .frame(width: 60, height: 60)
+                            .fill(.ultraThinMaterial.opacity(0.7))
+                            .frame(width: 64, height: 64)
+                            .overlay(Circle().stroke(.white.opacity(0.25), lineWidth: 0.5))
                         Image(systemName: "trophy.fill")
-                            .font(.system(size: 28, weight: .semibold))
+                            .font(.system(size: 30, weight: .bold))
                             .foregroundStyle(.white)
                     }
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("\(records.count)")
-                            .font(.system(size: 48, weight: .black, design: .rounded))
-                            .foregroundStyle(.white)
-                            .monospacedDigit()
+                    VStack(alignment: .leading, spacing: 2) {
+                        AnimatedInt(
+                            value: records.count,
+                            font: .system(size: 56, weight: .black, design: .rounded),
+                            color: .white
+                        )
+                        .shadow(color: .black.opacity(0.18), radius: 6, y: 3)
                         Text("Personal Records")
-                            .font(.subheadline.weight(.medium))
-                            .foregroundStyle(.white.opacity(0.75))
+                            .font(.system(size: 13, weight: .bold, design: .rounded))
+                            .foregroundStyle(.white.opacity(0.82))
+                            .tracking(0.5)
+                            .textCase(.uppercase)
                     }
                 }
 
                 HStack(spacing: 0) {
                     HeroStatCol(value: "\(records.count)", label: "Exercises")
-                    Divider().frame(height: 30).overlay(.white.opacity(0.30))
+                    Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 32)
                     HeroStatCol(value: "\(groupedRecords.count)", label: "Groups")
                     if let heaviest = records.first {
-                        Divider().frame(height: 30).overlay(.white.opacity(0.30))
+                        Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 32)
                         HeroStatCol(value: unit.formatShort(heaviest.weight), label: "Heaviest")
                     }
                 }
+                .padding(.vertical, 10)
+                .background(.ultraThinMaterial.opacity(0.55), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .stroke(.white.opacity(0.18), lineWidth: 0.5)
+                )
             }
             .padding(20)
         }

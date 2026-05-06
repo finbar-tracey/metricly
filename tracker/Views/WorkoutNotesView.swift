@@ -51,9 +51,19 @@ struct WorkoutNotesView: View {
             Text(LocalizedStringKey(workout.notes))
                 .font(.body)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(16)
-                .background(Color(.tertiarySystemGroupedBackground))
-                .clipShape(RoundedRectangle(cornerRadius: 14))
+                .padding(18)
+                .background(
+                    LinearGradient(
+                        colors: [Color.accentColor.opacity(0.06), Color(.tertiarySystemGroupedBackground)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .stroke(Color.accentColor.opacity(0.12), lineWidth: 0.5)
+                )
         }
         .appCard()
     }
@@ -98,15 +108,29 @@ struct WorkoutNotesView: View {
     }
 
     private func formatButton(_ label: String, icon: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
+        Button(action: {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            action()
+        }) {
             Image(systemName: icon)
-                .font(.subheadline.weight(.semibold))
-                .frame(width: 38, height: 38)
-                .background(Color(.secondarySystemFill), in: RoundedRectangle(cornerRadius: 10))
-                .foregroundStyle(.primary)
+                .font(.system(size: 14, weight: .bold))
+                .frame(width: 40, height: 40)
+                .background(
+                    LinearGradient(
+                        colors: [Color.accentColor.opacity(0.16), Color.accentColor.opacity(0.08)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    in: RoundedRectangle(cornerRadius: 11, style: .continuous)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 11, style: .continuous)
+                        .stroke(Color.accentColor.opacity(0.20), lineWidth: 0.5)
+                )
+                .foregroundStyle(Color.accentColor)
         }
         .accessibilityLabel(label)
-        .buttonStyle(.plain)
+        .buttonStyle(.pressableCard)
     }
 
     private func insertFormatting(_ prefix: String, _ suffix: String) {
@@ -148,26 +172,60 @@ struct WorkoutNotesView: View {
     // MARK: - Empty State
 
     private var emptyStateCard: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: 22) {
             ZStack {
-                Circle().fill(Color.accentColor.opacity(0.12)).frame(width: 70, height: 70)
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            colors: [Color.accentColor.opacity(0.22), Color.accentColor.opacity(0.06)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 86, height: 86)
+                    .overlay(Circle().stroke(Color.accentColor.opacity(0.18), lineWidth: 1))
                 Image(systemName: "note.text")
-                    .font(.system(size: 28, weight: .semibold)).foregroundStyle(Color.accentColor)
+                    .font(.system(size: 34, weight: .bold))
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [Color.accentColor, Color.accentColor.opacity(0.7)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
             }
-            VStack(spacing: 6) {
-                Text("No Notes Yet").font(.headline)
+            VStack(spacing: 8) {
+                Text("No Notes Yet")
+                    .font(.system(size: 19, weight: .bold, design: .rounded))
                 Text("Add notes about this workout — techniques, feelings, PRs, or anything worth remembering.")
                     .font(.subheadline).foregroundStyle(.secondary).multilineTextAlignment(.center)
             }
             Button {
+                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                 editText = workout.notes
                 isEditing = true
             } label: {
-                Text("Add Notes")
-                    .font(.subheadline.bold()).padding(.horizontal, 24).padding(.vertical, 12)
-                    .background(Color.accentColor.gradient).foregroundStyle(.white).clipShape(Capsule())
+                HStack(spacing: 8) {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.system(size: 14, weight: .bold))
+                    Text("Add Notes")
+                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .tracking(0.4)
+                }
+                .padding(.horizontal, 28).padding(.vertical, 14)
+                .background(
+                    LinearGradient(
+                        colors: [Color.accentColor, Color.accentColor.opacity(0.78)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .foregroundStyle(.white)
+                .clipShape(Capsule())
+                .overlay(Capsule().stroke(Color.white.opacity(0.20), lineWidth: 0.5))
+                .shadow(color: Color.accentColor.opacity(0.45), radius: 12, y: 5)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressableCard)
         }
         .frame(maxWidth: .infinity).padding(.vertical, 40)
         .appCard()

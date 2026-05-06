@@ -16,9 +16,10 @@ struct MuscleRecoveryView: View {
     @State private var healthDataLoaded = false
     @Query(sort: \CardioSession.date, order: .reverse) private var cardioSessions: [CardioSession]
     @State private var externalWorkouts: [ExternalWorkout] = []
+    @State private var recoveryResult: RecoveryResult = .empty
 
-    private var recoveryResult: RecoveryResult {
-        RecoveryEngine.evaluate(
+    private func recomputeRecovery() {
+        recoveryResult = RecoveryEngine.evaluate(
             workouts: workouts,
             health: HealthSignals(
                 todayHRV: latestHRV,
@@ -70,7 +71,10 @@ struct MuscleRecoveryView: View {
             if !rhrHistory.isEmpty { averageRestingHR = rhrHistory.map(\.bpm).reduce(0, +) / Double(rhrHistory.count) }
             externalWorkouts = (try? await externalResult) ?? []
             healthDataLoaded = true
+            recomputeRecovery()
         }
+        .onChange(of: workouts) { recomputeRecovery() }
+        .onChange(of: cardioSessions) { recomputeRecovery() }
     }
 
     // MARK: - Hero Card
@@ -78,62 +82,76 @@ struct MuscleRecoveryView: View {
     private var heroCard: some View {
         let score = recoveryResult.readinessScore
         let readinessColor = RecoveryEngine.freshnessColor(score)
+        let palette: [Color] = score >= 0.70
+            ? AppTheme.Gradients.recovery
+            : (score >= 0.45 ? AppTheme.Gradients.caution : AppTheme.Gradients.strain)
 
         return ZStack(alignment: .topLeading) {
             LinearGradient(
-                colors: [readinessColor, readinessColor.opacity(0.65)],
+                colors: palette,
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
-            Circle()
-                .fill(.white.opacity(0.07))
-                .frame(width: 200)
-                .offset(x: 160, y: -60)
+            // Top sheen
+            LinearGradient(
+                colors: [.white.opacity(0.18), .clear],
+                startPoint: .top, endPoint: .center
+            )
+            .blendMode(.plusLighter)
+            Circle().fill(.white.opacity(0.10)).frame(width: 200).blur(radius: 12).offset(x: 160, y: -60)
+            Circle().fill(.white.opacity(0.06)).frame(width: 110).blur(radius: 10).offset(x: -30, y: 80)
 
             VStack(alignment: .leading, spacing: 20) {
                 HStack(alignment: .center, spacing: 20) {
                     ZStack {
                         Circle()
-                            .stroke(.white.opacity(0.25), lineWidth: 8)
+                            .stroke(.white.opacity(0.25), lineWidth: 9)
                         Circle()
                             .trim(from: 0, to: score)
-                            .stroke(.white, style: StrokeStyle(lineWidth: 8, lineCap: .round))
+                            .stroke(.white, style: StrokeStyle(lineWidth: 9, lineCap: .round))
                             .rotationEffect(.degrees(-90))
                             .animation(.easeInOut(duration: 0.8), value: score)
+                            .shadow(color: .white.opacity(0.45), radius: 6, y: 1)
                     }
-                    .frame(width: 64, height: 64)
+                    .frame(width: 72, height: 72)
 
-                    VStack(alignment: .leading, spacing: 4) {
-                        HStack(alignment: .firstTextBaseline, spacing: 4) {
-                            Text("\(Int(score * 100))")
-                                .font(.system(size: 48, weight: .black, design: .rounded))
-                                .foregroundStyle(.white)
-                                .monospacedDigit()
-                            Text("%")
-                                .font(.title3.weight(.semibold))
-                                .foregroundStyle(.white.opacity(0.75))
-                        }
+                    VStack(alignment: .leading, spacing: 2) {
                         Text("Overall Readiness")
-                            .font(.subheadline.weight(.medium))
-                            .foregroundStyle(.white.opacity(0.75))
+                            .font(.system(size: 12, weight: .bold, design: .rounded))
+                            .foregroundStyle(.white.opacity(0.82))
+                            .tracking(0.5)
+                            .textCase(.uppercase)
+                        HStack(alignment: .firstTextBaseline, spacing: 4) {
+                            AnimatedInt(
+                                value: Int(score * 100),
+                                font: .system(size: 56, weight: .black, design: .rounded),
+                                color: .white
+                            )
+                            .shadow(color: .black.opacity(0.18), radius: 6, y: 3)
+                            Text("%")
+                                .font(.system(size: 22, weight: .heavy, design: .rounded))
+                                .foregroundStyle(.white.opacity(0.78))
+                        }
                     }
                 }
 
                 Text(RecoveryEngine.readinessLabel(score))
-                    .font(.caption.weight(.semibold))
+                    .font(.caption.weight(.bold))
                     .foregroundStyle(.white)
-                    .padding(.horizontal, 12).padding(.vertical, 5)
-                    .background(.white.opacity(0.20), in: Capsule())
+                    .padding(.horizontal, 12).padding(.vertical, 6)
+                    .background(.ultraThinMaterial.opacity(0.7), in: Capsule())
+                    .overlay(Capsule().stroke(.white.opacity(0.25), lineWidth: 0.5))
 
                 Text(healthDataLoaded
                     ? "Based on workouts, sleep, heart rate & HRV"
                     : "Based on recent workouts and training volume")
                     .font(.caption)
-                    .foregroundStyle(.white.opacity(0.70))
+                    .foregroundStyle(.white.opacity(0.78))
             }
             .padding(20)
         }
         .heroCard()
+        .accessibilityHint(readinessColor.description)
     }
 
     // MARK: - Health Factors Card
@@ -168,16 +186,25 @@ struct MuscleRecoveryView: View {
     private func healthRow(icon: String, color: Color, label: String, value: String, indicator: some View) -> some View {
         HStack(spacing: 12) {
             ZStack {
-                Circle().fill(color.opacity(0.12)).frame(width: 34, height: 34)
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [color, color.opacity(0.72)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 38, height: 38)
+                    .shadow(color: color.opacity(0.40), radius: 5, y: 2)
                 Image(systemName: icon)
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(color)
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(.white)
             }
-            Text(label).font(.subheadline)
+            Text(label).font(.system(size: 15, weight: .semibold, design: .rounded))
             Spacer()
             Text(value)
                 .font(.subheadline.bold().monospacedDigit())
-                .foregroundStyle(.secondary)
+                .foregroundStyle(color)
             indicator
         }
         .padding(.horizontal, 16).padding(.vertical, 12)
@@ -223,31 +250,47 @@ struct MuscleRecoveryView: View {
                 ForEach(Array(externalWorkouts.prefix(5).enumerated()), id: \.element.id) { idx, workout in
                     HStack(spacing: 12) {
                         ZStack {
-                            Circle().fill(Color.orange.opacity(0.12)).frame(width: 36, height: 36)
+                            RoundedRectangle(cornerRadius: 11, style: .continuous)
+                                .fill(
+                                    LinearGradient(
+                                        colors: [.orange, Color(red: 0.95, green: 0.45, blue: 0.20)],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
+                                )
+                                .frame(width: 40, height: 40)
+                                .shadow(color: .orange.opacity(0.40), radius: 5, y: 2)
                             Image(systemName: workout.icon)
-                                .font(.system(size: 14, weight: .semibold))
-                                .foregroundStyle(.orange)
+                                .font(.system(size: 16, weight: .bold))
+                                .foregroundStyle(.white)
                         }
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(workout.displayName).font(.subheadline.weight(.medium))
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(workout.displayName)
+                                .font(.system(size: 15, weight: .semibold, design: .rounded))
                             HStack(spacing: 6) {
-                                Text(workout.sourceName).font(.caption2).foregroundStyle(.secondary)
+                                Text(workout.sourceName)
+                                    .font(.caption2.weight(.semibold))
+                                    .foregroundStyle(.secondary)
                                 if workout.duration > 0 {
-                                    Text(formatDuration(workout.duration)).font(.caption2).foregroundStyle(.secondary)
+                                    Text(formatDuration(workout.duration))
+                                        .font(.caption2.weight(.semibold))
+                                        .foregroundStyle(.secondary)
                                 }
                                 if let dist = workout.totalDistance, dist > 0 {
                                     Text(String(format: "%.1f %@",
                                          weightUnit.distanceUnit.display(dist / 1000),
                                          weightUnit.distanceUnit.label))
-                                        .font(.caption2).foregroundStyle(.secondary)
+                                        .font(.caption2.weight(.semibold))
+                                        .foregroundStyle(.orange)
                                 }
                             }
                         }
                         Spacer()
                         Text(workout.startDate, style: .relative)
-                            .font(.caption2).foregroundStyle(.tertiary)
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
                     }
-                    .padding(.horizontal, 16).padding(.vertical, 11)
+                    .padding(.horizontal, 16).padding(.vertical, 12)
                     if idx < min(externalWorkouts.count, 5) - 1 {
                         Divider().padding(.leading, 64)
                     }
@@ -283,19 +326,40 @@ struct MuscleRecoveryView: View {
         let color = RecoveryEngine.freshnessColor(result.freshness)
         return HStack(spacing: 14) {
             ZStack {
-                Circle().fill(color.opacity(0.12)).frame(width: 36, height: 36)
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            colors: [color.opacity(0.20), color.opacity(0.10)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 42, height: 42)
+                    .overlay(Circle().stroke(color.opacity(0.20), lineWidth: 0.5))
                 MuscleIconView(group: result.group, color: color)
-                    .frame(width: 16, height: 16)
+                    .frame(width: 18, height: 18)
             }
-            VStack(alignment: .leading, spacing: 5) {
+            VStack(alignment: .leading, spacing: 6) {
                 HStack {
-                    Text(result.group.rawValue).font(.subheadline.weight(.medium))
+                    Text(result.group.rawValue)
+                        .font(.system(size: 15, weight: .semibold, design: .rounded))
                     Spacer()
-                    Text(RecoveryEngine.freshnessLabel(result.freshness))
-                        .font(.caption.bold())
-                        .foregroundStyle(color)
+                    Text(RecoveryEngine.freshnessLabel(result.freshness).uppercased())
+                        .font(.system(size: 10, weight: .bold, design: .rounded))
+                        .tracking(0.4)
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 9).padding(.vertical, 3)
+                        .background(
+                            LinearGradient(
+                                colors: [color, color.opacity(0.72)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            in: Capsule()
+                        )
+                        .shadow(color: color.opacity(0.40), radius: 4, y: 2)
                 }
-                GradientProgressBar(value: result.freshness, color: color, height: 5)
+                GradientProgressBar(value: result.freshness, color: color, height: 7)
                 if let last = result.lastTrained {
                     Text(RecoveryEngine.timeAgoText(from: last))
                         .font(.caption2).foregroundStyle(.secondary)
@@ -305,7 +369,7 @@ struct MuscleRecoveryView: View {
                 }
             }
         }
-        .padding(.horizontal, 16).padding(.vertical, 11)
+        .padding(.horizontal, 16).padding(.vertical, 12)
     }
 
     // MARK: - Suggested Today Card
@@ -318,10 +382,19 @@ struct MuscleRecoveryView: View {
             if ready.isEmpty {
                 HStack(spacing: 12) {
                     ZStack {
-                        Circle().fill(Color.orange.opacity(0.12)).frame(width: 40, height: 40)
+                        RoundedRectangle(cornerRadius: 11, style: .continuous)
+                            .fill(
+                                LinearGradient(
+                                    colors: [.orange, Color(red: 0.95, green: 0.45, blue: 0.20)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .frame(width: 44, height: 44)
+                            .shadow(color: .orange.opacity(0.40), radius: 6, y: 3)
                         Image(systemName: "moon.zzz.fill")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundStyle(.orange)
+                            .font(.system(size: 18, weight: .bold))
+                            .foregroundStyle(.white)
                     }
                     Text("All muscles are still recovering. Consider a rest day or light cardio.")
                         .font(.subheadline)
@@ -331,16 +404,33 @@ struct MuscleRecoveryView: View {
             } else {
                 LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
                     ForEach(ready) { result in
-                        HStack(spacing: 8) {
-                            MuscleIconView(group: result.group, color: .green)
-                                .frame(width: 14, height: 14)
+                        HStack(spacing: 9) {
+                            ZStack {
+                                Circle()
+                                    .fill(Color.green.opacity(0.16))
+                                    .frame(width: 28, height: 28)
+                                MuscleIconView(group: result.group, color: .green)
+                                    .frame(width: 14, height: 14)
+                            }
                             Text(result.group.rawValue)
-                                .font(.caption.weight(.semibold))
+                                .font(.system(size: 14, weight: .semibold, design: .rounded))
                                 .foregroundStyle(.primary)
+                            Spacer(minLength: 0)
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.horizontal, 12).padding(.vertical, 8)
-                        .background(Color.green.opacity(0.10), in: RoundedRectangle(cornerRadius: 10))
+                        .padding(.horizontal, 12).padding(.vertical, 9)
+                        .background(
+                            LinearGradient(
+                                colors: [Color.green.opacity(0.16), Color.green.opacity(0.08)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            in: RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                .stroke(Color.green.opacity(0.20), lineWidth: 0.5)
+                        )
                     }
                 }
             }

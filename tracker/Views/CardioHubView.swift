@@ -12,10 +12,11 @@ struct CardioHubView: View {
     @State private var navigateToSession = false
     @State private var showHistory = false
     @State private var showGoals = false
+    @State private var showBests = false
     @State private var completedSession: CardioSession? = nil
     @State private var showCompletedDetail = false
 
-    private var useKm: Bool { settingsArray.first?.useKilograms ?? true }
+    private var useKm: Bool { weightUnit.distanceUnit == .km }
 
     private var totalDistanceKm: Double {
         sessions.reduce(0) { $0 + $1.distanceMeters } / 1000
@@ -35,6 +36,7 @@ struct CardioHubView: View {
             LazyVStack(spacing: AppTheme.sectionSpacing) {
                 if !sessions.isEmpty { heroCard }
                 startCard
+                if !sessions.isEmpty { personalBestsCard }
                 if !sessions.isEmpty { recentSessionsCard }
                 if sessions.isEmpty { emptyStateCard }
             }
@@ -46,8 +48,13 @@ struct CardioHubView: View {
         .navigationTitle("Cardio")
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                Button { showGoals = true } label: {
-                    Image(systemName: "target")
+                HStack(spacing: 2) {
+                    Button { showBests = true } label: {
+                        Image(systemName: "trophy")
+                    }
+                    Button { showGoals = true } label: {
+                        Image(systemName: "target")
+                    }
                 }
             }
         }
@@ -62,7 +69,7 @@ struct CardioHubView: View {
                     completedSession = session
                     showCompletedDetail = true
                 }
-                .navigationBarHidden(true)
+                .toolbar(.hidden, for: .navigationBar)
             }
             .environment(\.weightUnit, weightUnit)
         }
@@ -80,6 +87,10 @@ struct CardioHubView: View {
         .navigationDestination(isPresented: $showGoals) {
             CardioGoalsView()
         }
+        // Personal Bests
+        .navigationDestination(isPresented: $showBests) {
+            CardioBestsView()
+        }
     }
 
     // MARK: - Hero Card
@@ -87,16 +98,29 @@ struct CardioHubView: View {
     private var heroCard: some View {
         ZStack(alignment: .topLeading) {
             LinearGradient(
-                colors: [Color.orange, Color(red: 0.85, green: 0.35, blue: 0.1)],
-                startPoint: .topLeading, endPoint: .bottomTrailing
+                colors: AppTheme.Gradients.caution,
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
             )
-            Circle().fill(.white.opacity(0.07)).frame(width: 200).offset(x: 160, y: -60)
+            // Top sheen
+            LinearGradient(
+                colors: [.white.opacity(0.18), .clear],
+                startPoint: .top, endPoint: .center
+            )
+            .blendMode(.plusLighter)
+            Circle().fill(.white.opacity(0.10)).frame(width: 200).blur(radius: 12).offset(x: 160, y: -50)
+            Circle().fill(.white.opacity(0.06)).frame(width: 110).blur(radius: 10).offset(x: -30, y: 80)
 
             VStack(alignment: .leading, spacing: 18) {
                 HStack(spacing: 6) {
                     Image(systemName: "figure.run")
-                        .font(.system(size: 13, weight: .semibold)).foregroundStyle(.white.opacity(0.8))
-                    Text("Cardio").font(.caption.weight(.semibold)).foregroundStyle(.white.opacity(0.8))
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(.white.opacity(0.85))
+                    Text("Cardio")
+                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                        .foregroundStyle(.white.opacity(0.85))
+                        .tracking(0.6)
+                        .textCase(.uppercase)
                 }
 
                 let distUnit: DistanceUnit = useKm ? .km : .mi
@@ -105,21 +129,26 @@ struct CardioHubView: View {
                         value: String(format: "%.1f %@", distUnit.display(totalDistanceKm), distUnit.label),
                         label: "All Time"
                     )
-                    Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 32)
+                    Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 36)
                     HeroStatCol(value: "\(sessions.count)", label: "Sessions")
-                    Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 32)
+                    Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 36)
                     HeroStatCol(
                         value: String(format: "%.1f %@", distUnit.display(thisWeekDistanceKm), distUnit.label),
                         label: "This Week"
                     )
                 }
-                .padding(.vertical, 10)
-                .background(.white.opacity(0.12), in: RoundedRectangle(cornerRadius: 12))
+                .padding(.vertical, 12)
+                .background(.ultraThinMaterial.opacity(0.55), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .stroke(.white.opacity(0.18), lineWidth: 0.5)
+                )
             }
-            .padding(18)
+            .padding(20)
         }
-        .frame(minHeight: 130)
-        .clipShape(RoundedRectangle(cornerRadius: AppTheme.heroRadius))
+        .frame(minHeight: 145)
+        .clipShape(RoundedRectangle(cornerRadius: AppTheme.heroRadius, style: .continuous))
+        .shadow(color: .black.opacity(0.22), radius: 24, x: 0, y: 10)
     }
 
     // MARK: - Start Card
@@ -133,26 +162,34 @@ struct CardioHubView: View {
                 HStack(spacing: 10) {
                     ForEach(CardioType.allCases) { type in
                         Button {
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
                             selectedType = type
                         } label: {
                             HStack(spacing: 7) {
                                 Image(systemName: type.icon)
-                                    .font(.system(size: 13, weight: .semibold))
+                                    .font(.system(size: 13, weight: .bold))
                                 Text(type.rawValue)
-                                    .font(.subheadline.weight(.semibold))
+                                    .font(.system(size: 14, weight: .semibold, design: .rounded))
                             }
                             .foregroundStyle(selectedType == type ? .white : .primary)
                             .padding(.horizontal, 14).padding(.vertical, 9)
-                            .background(
-                                selectedType == type
-                                    ? AnyShapeStyle(type.color)
-                                    : AnyShapeStyle(Color(.tertiarySystemGroupedBackground)),
-                                in: Capsule()
-                            )
-                            .shadow(color: selectedType == type ? type.color.opacity(0.35) : .clear, radius: 6, y: 2)
+                            .background {
+                                if selectedType == type {
+                                    Capsule().fill(
+                                        LinearGradient(
+                                            colors: [type.color, type.color.opacity(0.72)],
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        )
+                                    )
+                                    .shadow(color: type.color.opacity(0.45), radius: 8, y: 3)
+                                } else {
+                                    Capsule().fill(Color(.tertiarySystemGroupedBackground))
+                                }
+                            }
                         }
-                        .buttonStyle(.plain)
-                        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: selectedType)
+                        .buttonStyle(.pressableCard)
+                        .animation(.spring(response: 0.42, dampingFraction: 0.78), value: selectedType)
                     }
                 }
                 .padding(.horizontal, 2)
@@ -181,6 +218,80 @@ struct CardioHubView: View {
             .buttonStyle(.plain)
         }
         .appCard()
+    }
+
+    // MARK: - Personal Bests Card
+
+    private var personalBestsCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack {
+                SectionHeader(title: "Personal Bests", icon: "trophy.fill", color: .yellow)
+                Spacer()
+                Button { showBests = true } label: {
+                    Text("See All").font(.caption.weight(.semibold)).foregroundStyle(.orange)
+                }
+            }
+
+            // Quick preview: 5K and fastest pace
+            let runSessions = sessions.filter { $0.cardioType == CardioType.outdoorRun.rawValue || $0.cardioType == CardioType.indoorRun.rawValue }
+            let best5k = runSessions
+                .filter { $0.distanceMeters >= 4750 && $0.avgPaceSecPerKm > 0 }
+                .min(by: { $0.avgPaceSecPerKm < $1.avgPaceSecPerKm })
+            let bestPace = runSessions
+                .filter { $0.distanceMeters > 500 && $0.avgPaceSecPerKm > 0 }
+                .min(by: { $0.avgPaceSecPerKm < $1.avgPaceSecPerKm })
+            let longest = sessions.max(by: { $0.distanceMeters < $1.distanceMeters })
+
+            HStack(spacing: 12) {
+                bestPreviewTile(
+                    label: "5K Best",
+                    value: best5k.map { s in
+                        let t = s.avgPaceSecPerKm * 5
+                        return String(format: "%d:%02d", Int(t) / 60, Int(t) % 60)
+                    } ?? "—",
+                    icon: "figure.run",
+                    color: .orange
+                )
+                Divider().frame(height: 44)
+                bestPreviewTile(
+                    label: "Best Pace",
+                    value: bestPace.map { $0.formattedPace(useKm: useKm) } ?? "—",
+                    icon: "speedometer",
+                    color: .purple
+                )
+                Divider().frame(height: 44)
+                bestPreviewTile(
+                    label: "Longest",
+                    value: longest.map { $0.formattedDistance(useKm: useKm) } ?? "—",
+                    icon: "ruler",
+                    color: .blue
+                )
+            }
+            .padding(.vertical, 8)
+            .background(Color(.tertiarySystemGroupedBackground),
+                        in: RoundedRectangle(cornerRadius: 12))
+        }
+        .appCard()
+    }
+
+    private func bestPreviewTile(label: String, value: String, icon: String, color: Color) -> some View {
+        VStack(spacing: 5) {
+            ZStack {
+                Circle().fill(color.opacity(0.12)).frame(width: 30, height: 30)
+                Image(systemName: icon)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(color)
+            }
+            Text(value)
+                .font(.system(size: 14, weight: .bold, design: .rounded))
+                .monospacedDigit()
+                .minimumScaleFactor(0.7)
+                .lineLimit(1)
+            Text(label)
+                .font(.caption2.weight(.medium))
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity)
     }
 
     // MARK: - Recent Sessions Card

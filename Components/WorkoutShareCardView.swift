@@ -61,7 +61,18 @@ struct WorkoutShareCardView: View {
                 .foregroundStyle(.secondary)
             }
             .padding(20)
-            .background(Color.accentColor.opacity(0.1))
+            .background(
+                LinearGradient(
+                    colors: [Color.accentColor.opacity(0.18), Color.accentColor.opacity(0.06)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            )
+            .overlay(alignment: .bottom) {
+                Rectangle()
+                    .fill(Color.accentColor.opacity(0.18))
+                    .frame(height: 0.5)
+            }
 
             // Stats bar
             HStack(spacing: 0) {

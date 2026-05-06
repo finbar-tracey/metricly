@@ -141,16 +141,18 @@ struct FinishWorkoutSheet: View {
                     HStack(spacing: 12) {
                         ForEach(1...5, id: \.self) { value in
                             Button {
+                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
                                 withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
                                     rating = value
                                 }
                             } label: {
                                 Image(systemName: value <= rating ? "star.fill" : "star")
-                                    .font(.title2)
+                                    .font(.system(size: 26, weight: .bold))
                                     .foregroundStyle(value <= rating ? .yellow : .white.opacity(0.50))
-                                    .scaleEffect(value <= rating ? 1.15 : 1.0)
+                                    .scaleEffect(value <= rating ? 1.18 : 1.0)
+                                    .shadow(color: value <= rating ? Color.yellow.opacity(0.55) : .clear, radius: 6, y: 1)
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(.pressableCard)
                             .accessibilityLabel("\(value) star\(value == 1 ? "" : "s")")
                             .accessibilityAddTraits(value <= rating ? .isSelected : [])
                         }

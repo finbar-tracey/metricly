@@ -1,11 +1,15 @@
 import Foundation
 
 enum HealthFormatters {
+    private static let intFormatter: NumberFormatter = {
+        let f = NumberFormatter()
+        f.numberStyle = .decimal
+        f.maximumFractionDigits = 0
+        return f
+    }()
+
     static func formatSteps(_ steps: Double) -> String {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .decimal
-        formatter.maximumFractionDigits = 0
-        return formatter.string(from: NSNumber(value: steps)) ?? "0"
+        intFormatter.string(from: NSNumber(value: steps)) ?? "0"
     }
 
     static func formatSleepShort(_ minutes: Double) -> String {
@@ -21,11 +25,13 @@ enum HealthFormatters {
         return String(format: "%.1f km", km)
     }
 
+    static func formatDistance(_ km: Double, unit: DistanceUnit) -> String {
+        if km < 0.01 { return "—" }
+        return String(format: "%.1f \(unit.label)", unit.display(km))
+    }
+
     static func formatCalories(_ kcal: Double) -> String {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .decimal
-        formatter.maximumFractionDigits = 0
-        return (formatter.string(from: NSNumber(value: kcal)) ?? "0") + " kcal"
+        (intFormatter.string(from: NSNumber(value: kcal)) ?? "0") + " kcal"
     }
 
     static func formatSleepDuration(_ minutes: Double) -> String {

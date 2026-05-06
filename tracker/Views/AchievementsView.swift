@@ -97,55 +97,85 @@ struct AchievementsView: View {
 
         return ZStack(alignment: .topLeading) {
             LinearGradient(
-                colors: [Color(red: 0.78, green: 0.60, blue: 0.08), Color.orange.opacity(0.70)],
-                startPoint: .topLeading, endPoint: .bottomTrailing
+                colors: [
+                    Color(red: 0.95, green: 0.62, blue: 0.10),
+                    Color(red: 0.85, green: 0.42, blue: 0.10),
+                    Color(red: 0.65, green: 0.28, blue: 0.30)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
             )
-            Circle().fill(.white.opacity(0.07)).frame(width: 200).offset(x: 160, y: -60)
+            // Top sheen
+            LinearGradient(
+                colors: [.white.opacity(0.18), .clear],
+                startPoint: .top, endPoint: .center
+            )
+            .blendMode(.plusLighter)
+            Circle().fill(.white.opacity(0.10)).frame(width: 200).blur(radius: 12).offset(x: 160, y: -60)
+            Circle().fill(.white.opacity(0.06)).frame(width: 110).blur(radius: 10).offset(x: -30, y: 80)
 
             VStack(alignment: .leading, spacing: 18) {
                 HStack(alignment: .center, spacing: 14) {
                     ZStack {
-                        Circle().fill(.white.opacity(0.20)).frame(width: 52, height: 52)
+                        Circle()
+                            .fill(.ultraThinMaterial.opacity(0.7))
+                            .frame(width: 56, height: 56)
+                            .overlay(Circle().stroke(.white.opacity(0.25), lineWidth: 0.5))
                         Image(systemName: "medal.fill")
-                            .font(.system(size: 22, weight: .semibold)).foregroundStyle(.white)
+                            .font(.system(size: 24, weight: .bold))
+                            .foregroundStyle(.white)
                     }
-                    VStack(alignment: .leading, spacing: 3) {
+                    VStack(alignment: .leading, spacing: 2) {
                         Text("Achievements")
-                            .font(.caption.weight(.semibold)).foregroundStyle(.white.opacity(0.75))
+                            .font(.system(size: 12, weight: .bold, design: .rounded))
+                            .foregroundStyle(.white.opacity(0.82))
+                            .tracking(0.5)
+                            .textCase(.uppercase)
                         HStack(alignment: .firstTextBaseline, spacing: 4) {
-                            Text("\(unlocked)")
-                                .font(.system(size: 36, weight: .black, design: .rounded))
-                                .foregroundStyle(.white).monospacedDigit()
+                            AnimatedInt(
+                                value: unlocked,
+                                font: .system(size: 42, weight: .black, design: .rounded),
+                                color: .white
+                            )
+                            .shadow(color: .black.opacity(0.18), radius: 5, y: 3)
                             Text("/ \(total)")
-                                .font(.title3.weight(.semibold)).foregroundStyle(.white.opacity(0.75))
+                                .font(.system(size: 20, weight: .heavy, design: .rounded))
+                                .foregroundStyle(.white.opacity(0.78))
                         }
                     }
                     Spacer()
                     Text("\(Int(Double(unlocked) / Double(max(1, total)) * 100))%")
-                        .font(.caption.bold())
-                        .padding(.horizontal, 10).padding(.vertical, 5)
-                        .background(.white.opacity(0.20), in: Capsule())
+                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                        .padding(.horizontal, 11).padding(.vertical, 5)
+                        .background(.ultraThinMaterial.opacity(0.70), in: Capsule())
+                        .overlay(Capsule().stroke(.white.opacity(0.25), lineWidth: 0.5))
                         .foregroundStyle(.white)
                 }
 
-                GradientProgressBar(value: Double(unlocked) / Double(max(1, total)), color: .white, height: 6)
-                    .opacity(0.80)
+                GradientProgressBar(value: Double(unlocked) / Double(max(1, total)), color: .white, height: 8)
 
                 HStack(spacing: 0) {
                     ForEach(Achievement.Category.allCases, id: \.self) { cat in
                         let catAll = all.filter { $0.category == cat }
                         let catUnlocked = catAll.filter(\.isUnlocked).count
-                        VStack(spacing: 4) {
+                        VStack(spacing: 5) {
                             Image(systemName: cat.icon)
-                                .font(.system(size: 14, weight: .semibold))
-                                .foregroundStyle(.white.opacity(0.85))
+                                .font(.system(size: 15, weight: .bold))
+                                .foregroundStyle(.white.opacity(0.92))
                             Text("\(catUnlocked)/\(catAll.count)")
-                                .font(.caption2.bold().monospacedDigit())
-                                .foregroundStyle(.white.opacity(0.70))
+                                .font(.system(size: 11, weight: .bold, design: .rounded))
+                                .foregroundStyle(.white.opacity(0.78))
+                                .monospacedDigit()
                         }
                         .frame(maxWidth: .infinity)
                     }
                 }
+                .padding(.vertical, 10)
+                .background(.ultraThinMaterial.opacity(0.55), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(.white.opacity(0.18), lineWidth: 0.5)
+                )
             }
             .padding(20)
         }

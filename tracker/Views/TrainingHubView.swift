@@ -28,17 +28,17 @@ struct TrainingHubView: View {
             // ── Hero stats strip ──────────────────────────────────────────
             Section {
                 HStack(spacing: 0) {
-                    heroStat(value: "\(finishedWorkouts.count)",
+                    heroStat(intValue: finishedWorkouts.count,
                              label: "Workouts",
                              icon: "figure.strengthtraining.traditional",
                              color: .blue)
                     Divider().frame(height: 44)
-                    heroStat(value: "\(currentStreak)",
+                    heroStat(intValue: currentStreak,
                              label: "Streak",
                              icon: "flame.fill",
                              color: .orange)
                     Divider().frame(height: 44)
-                    heroStat(value: "\(uniqueExerciseCount)",
+                    heroStat(intValue: uniqueExerciseCount,
                              label: "Exercises",
                              icon: "dumbbell.fill",
                              color: .purple)
@@ -118,6 +118,8 @@ struct TrainingHubView: View {
                 }
             }
         }
+        .scrollContentBackground(.hidden)
+        .tabBackground(tint: AppTheme.Signal.calm, height: 320)
         .navigationTitle("Training")
     }
 
@@ -134,6 +136,29 @@ struct TrainingHubView: View {
             Text(value)
                 .font(.system(size: 20, weight: .black, design: .rounded))
                 .monospacedDigit()
+            Text(label)
+                .font(.caption2.weight(.medium))
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    /// Integer variant — animates digit changes via contentTransition(.numericText).
+    private func heroStat(intValue: Int, label: String, icon: String, color: Color) -> some View {
+        VStack(spacing: 5) {
+            ZStack {
+                Circle().fill(color.opacity(0.12)).frame(width: 34, height: 34)
+                Image(systemName: icon)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(color)
+            }
+            AnimatedInt(
+                value: intValue,
+                font: .system(size: 20, weight: .black, design: .rounded),
+                color: .primary
+            )
             Text(label)
                 .font(.caption2.weight(.medium))
                 .foregroundStyle(.secondary)

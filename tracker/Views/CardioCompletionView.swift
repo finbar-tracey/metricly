@@ -81,13 +81,25 @@ struct CardioCompletionView: View {
         ZStack {
             // Background gradient matching activity type
             LinearGradient(
-                colors: [session.type.color, session.type.color.opacity(0.55)],
-                startPoint: .topLeading, endPoint: .bottomTrailing
+                colors: [
+                    session.type.color,
+                    session.type.color.opacity(0.78),
+                    session.type.color.opacity(0.55)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
             )
             .ignoresSafeArea()
+            // Top sheen
+            LinearGradient(
+                colors: [.white.opacity(0.18), .clear],
+                startPoint: .top, endPoint: .center
+            )
+            .blendMode(.plusLighter)
+            .ignoresSafeArea()
 
-            Circle().fill(.white.opacity(0.06)).frame(width: 300).offset(x: 130, y: -200)
-            Circle().fill(.white.opacity(0.04)).frame(width: 180).offset(x: -80, y: 250)
+            Circle().fill(.white.opacity(0.10)).frame(width: 300).blur(radius: 18).offset(x: 130, y: -200)
+            Circle().fill(.white.opacity(0.06)).frame(width: 180).blur(radius: 14).offset(x: -80, y: 250)
 
             ScrollView {
                 VStack(spacing: 28) {
@@ -95,11 +107,17 @@ struct CardioCompletionView: View {
 
                     // Trophy / icon
                     ZStack {
-                        Circle().fill(.white.opacity(0.18)).frame(width: 110, height: 110)
-                        Circle().fill(.white.opacity(0.10)).frame(width: 82, height: 82)
+                        Circle()
+                            .fill(.ultraThinMaterial.opacity(0.7))
+                            .frame(width: 116, height: 116)
+                            .overlay(Circle().stroke(.white.opacity(0.30), lineWidth: 0.8))
+                        Circle()
+                            .fill(.white.opacity(0.18))
+                            .frame(width: 86, height: 86)
                         Image(systemName: prs.isEmpty ? "checkmark.circle.fill" : "trophy.fill")
-                            .font(.system(size: 46, weight: .semibold))
+                            .font(.system(size: 50, weight: .bold))
                             .foregroundStyle(.white)
+                            .shadow(color: .black.opacity(0.25), radius: 8, y: 4)
                     }
                     .scaleEffect(appeared ? 1 : 0.4)
                     .animation(.spring(response: 0.55, dampingFraction: 0.65).delay(0.1), value: appeared)
@@ -119,13 +137,17 @@ struct CardioCompletionView: View {
                     // Key stats strip
                     HStack(spacing: 0) {
                         completionStat(label: "Distance", value: session.formattedDistance(useKm: useKm))
-                        Rectangle().fill(.white.opacity(0.3)).frame(width: 1, height: 36)
+                        Rectangle().fill(.white.opacity(0.3)).frame(width: 1, height: 40)
                         completionStat(label: "Duration", value: session.formattedDuration)
-                        Rectangle().fill(.white.opacity(0.3)).frame(width: 1, height: 36)
+                        Rectangle().fill(.white.opacity(0.3)).frame(width: 1, height: 40)
                         completionStat(label: "Avg Pace", value: session.formattedPace(useKm: useKm))
                     }
-                    .padding(.vertical, 14)
-                    .background(.white.opacity(0.14), in: RoundedRectangle(cornerRadius: 16))
+                    .padding(.vertical, 16)
+                    .background(.ultraThinMaterial.opacity(0.6), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 18, style: .continuous)
+                            .stroke(.white.opacity(0.20), lineWidth: 0.5)
+                    )
                     .padding(.horizontal, 24)
                     .opacity(appeared ? 1 : 0)
                     .animation(.easeOut(duration: 0.4).delay(0.35), value: appeared)
@@ -153,26 +175,35 @@ struct CardioCompletionView: View {
                             ForEach(prs) { pr in
                                 HStack(spacing: 12) {
                                     ZStack {
-                                        Circle().fill(.white.opacity(0.2)).frame(width: 40, height: 40)
+                                        Circle()
+                                            .fill(.ultraThinMaterial.opacity(0.7))
+                                            .frame(width: 44, height: 44)
+                                            .overlay(Circle().stroke(.white.opacity(0.25), lineWidth: 0.5))
                                         Image(systemName: pr.icon)
-                                            .font(.system(size: 15, weight: .semibold))
+                                            .font(.system(size: 17, weight: .bold))
                                             .foregroundStyle(.white)
                                     }
-                                    VStack(alignment: .leading, spacing: 2) {
-                                        Text(pr.label)
-                                            .font(.caption.weight(.semibold))
-                                            .foregroundStyle(.white.opacity(0.75))
+                                    VStack(alignment: .leading, spacing: 3) {
+                                        Text(pr.label.uppercased())
+                                            .font(.system(size: 10, weight: .bold, design: .rounded))
+                                            .tracking(0.4)
+                                            .foregroundStyle(.white.opacity(0.78))
                                         Text(pr.value)
-                                            .font(.subheadline.bold())
+                                            .font(.system(size: 16, weight: .black, design: .rounded))
                                             .foregroundStyle(.white)
                                     }
                                     Spacer()
                                     Image(systemName: "star.fill")
                                         .foregroundStyle(.yellow)
-                                        .font(.system(size: 14))
+                                        .font(.system(size: 16, weight: .bold))
+                                        .shadow(color: .yellow.opacity(0.5), radius: 4)
                                 }
-                                .padding(.horizontal, 16).padding(.vertical, 10)
-                                .background(.white.opacity(0.14), in: RoundedRectangle(cornerRadius: 14))
+                                .padding(.horizontal, 16).padding(.vertical, 12)
+                                .background(.ultraThinMaterial.opacity(0.55), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                        .stroke(.white.opacity(0.20), lineWidth: 0.5)
+                                )
                             }
                         }
                         .padding(.horizontal, 24)
@@ -182,17 +213,27 @@ struct CardioCompletionView: View {
 
                     // Notes field
                     VStack(alignment: .leading, spacing: 8) {
-                        Label("Add a note", systemImage: "note.text")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(.white.opacity(0.7))
+                        Label {
+                            Text("Add a note")
+                                .font(.system(size: 11, weight: .bold, design: .rounded))
+                                .tracking(0.5)
+                                .textCase(.uppercase)
+                        } icon: {
+                            Image(systemName: "note.text").font(.caption.bold())
+                        }
+                        .foregroundStyle(.white.opacity(0.78))
                         TextField("How did it feel?", text: $notes, axis: .vertical)
                             .lineLimit(2...4)
                             .font(.subheadline)
                             .foregroundStyle(.white)
                             .tint(.white)
                             .focused($notesFocused)
-                            .padding(12)
-                            .background(.white.opacity(0.14), in: RoundedRectangle(cornerRadius: 12))
+                            .padding(14)
+                            .background(.ultraThinMaterial.opacity(0.55), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                    .stroke(.white.opacity(0.20), lineWidth: 0.5)
+                            )
                     }
                     .padding(.horizontal, 24)
                     .opacity(appeared ? 1 : 0)
@@ -203,20 +244,23 @@ struct CardioCompletionView: View {
                     // Action buttons
                     VStack(spacing: 12) {
                         Button {
+                            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                             session.notes = notes
                             onDone()
                         } label: {
                             Text("View Full Report")
                                 .font(.headline)
                                 .frame(maxWidth: .infinity)
-                                .padding(.vertical, 16)
+                                .padding(.vertical, 17)
                                 .background(.white)
                                 .foregroundStyle(session.type.color)
-                                .clipShape(RoundedRectangle(cornerRadius: 14))
+                                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                                .shadow(color: .black.opacity(0.20), radius: 10, y: 5)
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.pressableCard)
 
                         Button {
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
                             let img = renderCardioShareImage(session: session, useKm: useKm)
                             guard let img else { return }
                             let av = UIActivityViewController(activityItems: [img], applicationActivities: nil)
@@ -229,13 +273,17 @@ struct CardioCompletionView: View {
                                 Image(systemName: "square.and.arrow.up")
                                 Text("Share Run")
                             }
-                            .font(.subheadline.weight(.semibold))
+                            .font(.subheadline.weight(.bold))
                             .foregroundStyle(.white)
                             .frame(maxWidth: .infinity)
-                            .padding(.vertical, 14)
-                            .background(.white.opacity(0.2), in: RoundedRectangle(cornerRadius: 14))
+                            .padding(.vertical, 15)
+                            .background(.ultraThinMaterial.opacity(0.65), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                    .stroke(.white.opacity(0.22), lineWidth: 0.5)
+                            )
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.pressableCard)
                     }
                     .padding(.horizontal, 24)
                     .padding(.bottom, 40)
@@ -248,27 +296,40 @@ struct CardioCompletionView: View {
     }
 
     private func completionStat(label: String, value: String) -> some View {
-        VStack(spacing: 4) {
+        VStack(spacing: 5) {
             Text(value)
-                .font(.system(size: 16, weight: .bold, design: .rounded))
+                .font(.system(size: 18, weight: .black, design: .rounded))
                 .monospacedDigit()
                 .foregroundStyle(.white)
-            Text(label)
-                .font(.system(size: 10, weight: .medium))
-                .foregroundStyle(.white.opacity(0.7))
+            Text(label.uppercased())
+                .font(.system(size: 10, weight: .bold, design: .rounded))
+                .tracking(0.5)
+                .foregroundStyle(.white.opacity(0.78))
         }
         .frame(maxWidth: .infinity)
     }
 
     private func miniStat(icon: String, value: String, label: String, color: Color) -> some View {
         VStack(spacing: 4) {
-            HStack(spacing: 3) {
-                Image(systemName: icon).font(.system(size: 10, weight: .semibold)).foregroundStyle(color)
-                Text(value).font(.system(size: 14, weight: .bold, design: .rounded)).monospacedDigit().foregroundStyle(.white)
+            HStack(spacing: 4) {
+                Image(systemName: icon)
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(color)
+                Text(value)
+                    .font(.system(size: 15, weight: .black, design: .rounded))
+                    .monospacedDigit()
+                    .foregroundStyle(.white)
             }
-            Text(label).font(.system(size: 9, weight: .medium)).foregroundStyle(.white.opacity(0.65))
+            Text(label.uppercased())
+                .font(.system(size: 9, weight: .bold, design: .rounded))
+                .tracking(0.5)
+                .foregroundStyle(.white.opacity(0.72))
         }
-        .padding(.horizontal, 12).padding(.vertical, 8)
-        .background(.white.opacity(0.12), in: RoundedRectangle(cornerRadius: 10))
+        .padding(.horizontal, 13).padding(.vertical, 9)
+        .background(.ultraThinMaterial.opacity(0.55), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(.white.opacity(0.20), lineWidth: 0.5)
+        )
     }
 }

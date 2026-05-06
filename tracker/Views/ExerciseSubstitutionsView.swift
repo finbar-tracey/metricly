@@ -56,22 +56,37 @@ struct ExerciseSubstitutionsView: View {
                     .enumerated()), id: \.offset) { idx, exercise in
                     HStack(spacing: 12) {
                         ZStack {
-                            Circle().fill(Color.accentColor.opacity(0.12)).frame(width: 32, height: 32)
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .fill(
+                                    LinearGradient(
+                                        colors: [Color.accentColor, Color.accentColor.opacity(0.72)],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
+                                )
+                                .frame(width: 36, height: 36)
+                                .shadow(color: Color.accentColor.opacity(0.40), radius: 5, y: 2)
                             Image(systemName: "arrow.right.circle.fill")
-                                .font(.system(size: 13, weight: .semibold)).foregroundStyle(Color.accentColor)
+                                .font(.system(size: 15, weight: .bold))
+                                .foregroundStyle(.white)
                         }
-                        Text(exercise).font(.subheadline.weight(.medium))
+                        Text(exercise)
+                            .font(.system(size: 15, weight: .semibold, design: .rounded))
                         Spacer()
                     }
-                    .padding(.horizontal, 16).padding(.vertical, 11)
+                    .padding(.horizontal, 16).padding(.vertical, 12)
 
                     if idx < group.exercises.filter({ $0.lowercased() != exerciseName.lowercased() }).count - 1 {
-                        Divider().padding(.leading, 60)
+                        Divider().padding(.leading, 64)
                     }
                 }
             }
             .background(Color(.tertiarySystemGroupedBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(Color.white.opacity(0.05), lineWidth: 0.5)
+            )
 
             if !group.notes.isEmpty {
                 HStack(spacing: 8) {

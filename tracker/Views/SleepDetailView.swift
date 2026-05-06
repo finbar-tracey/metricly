@@ -62,37 +62,61 @@ struct SleepDetailView: View {
 
     private var scoreSection: some View {
         ZStack(alignment: .topLeading) {
-            LinearGradient(colors: [Color.indigo, Color.indigo.opacity(0.55)],
-                           startPoint: .topLeading, endPoint: .bottomTrailing)
-            Circle().fill(.white.opacity(0.07)).frame(width: 220).offset(x: 170, y: -65)
-            Circle().fill(.white.opacity(0.04)).frame(width: 130).offset(x: 250, y: 60)
+            LinearGradient(
+                colors: [
+                    Color(red: 0.30, green: 0.20, blue: 0.55),
+                    Color(red: 0.42, green: 0.30, blue: 0.78),
+                    Color(red: 0.30, green: 0.40, blue: 0.85)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            // Top sheen
+            LinearGradient(
+                colors: [.white.opacity(0.18), .clear],
+                startPoint: .top, endPoint: .center
+            )
+            .blendMode(.plusLighter)
+            Circle().fill(.white.opacity(0.10)).frame(width: 220).blur(radius: 12).offset(x: 170, y: -65)
+            Circle().fill(.white.opacity(0.06)).frame(width: 130).blur(radius: 10).offset(x: 250, y: 60)
 
             VStack(alignment: .leading, spacing: 20) {
                 HStack(alignment: .center, spacing: 20) {
                     ZStack {
-                        Circle().stroke(.white.opacity(0.20), lineWidth: 8)
+                        Circle().stroke(.white.opacity(0.22), lineWidth: 9)
                         Circle()
                             .trim(from: 0, to: min(1.0, todaySleep.totalMinutes / 480))
-                            .stroke(.white, style: StrokeStyle(lineWidth: 8, lineCap: .round))
+                            .stroke(.white, style: StrokeStyle(lineWidth: 9, lineCap: .round))
                             .rotationEffect(.degrees(-90))
                             .animation(.easeInOut(duration: 0.8), value: sleepScore)
+                            .shadow(color: .white.opacity(0.45), radius: 6, y: 1)
                         VStack(spacing: 1) {
-                            Text("\(sleepScore)")
-                                .font(.system(size: 30, weight: .black, design: .rounded))
-                                .foregroundStyle(.white).monospacedDigit()
+                            AnimatedInt(
+                                value: sleepScore,
+                                font: .system(size: 32, weight: .black, design: .rounded),
+                                color: .white
+                            )
                             Text(sleepScoreLabel)
-                                .font(.system(size: 10, weight: .bold))
-                                .foregroundStyle(.white.opacity(0.80))
+                                .font(.system(size: 10, weight: .bold, design: .rounded))
+                                .foregroundStyle(.white.opacity(0.82))
+                                .tracking(0.4)
+                                .textCase(.uppercase)
                         }
                     }
-                    .frame(width: 86, height: 86)
+                    .frame(width: 92, height: 92)
                     .accessibilityElement(children: .ignore)
                     .accessibilityLabel("Sleep score \(sleepScore), \(sleepScoreLabel)")
 
-                    VStack(alignment: .leading, spacing: 4) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Last Night")
+                            .font(.system(size: 12, weight: .bold, design: .rounded))
+                            .foregroundStyle(.white.opacity(0.82))
+                            .tracking(0.5)
+                            .textCase(.uppercase)
                         Text(HealthFormatters.formatSleepShort(todaySleep.totalMinutes))
-                            .font(.system(size: 38, weight: .black, design: .rounded)).foregroundStyle(.white)
-                        Text("Last night").font(.subheadline).foregroundStyle(.white.opacity(0.72))
+                            .font(.system(size: 42, weight: .black, design: .rounded))
+                            .foregroundStyle(.white)
+                            .shadow(color: .black.opacity(0.18), radius: 5, y: 3)
                     }
                 }
 
@@ -235,23 +259,41 @@ struct SleepDetailView: View {
                     ForEach(chartSleep, id: \.date) { point in
                         BarMark(x: .value("Date", point.date, unit: .day),
                                 y: .value("Hours", point.minutes / 60))
-                            .foregroundStyle(Color.indigo.gradient).cornerRadius(5)
+                            .foregroundStyle(
+                                LinearGradient(
+                                    colors: [
+                                        Color(red: 0.42, green: 0.30, blue: 0.78),
+                                        Color(red: 0.30, green: 0.40, blue: 0.85)
+                                    ],
+                                    startPoint: .top,
+                                    endPoint: .bottom
+                                )
+                            )
+                            .cornerRadius(6)
                     }
                     RuleMark(y: .value("Target", 8))
-                        .lineStyle(StrokeStyle(dash: [5, 3]))
-                        .foregroundStyle(.secondary.opacity(0.5))
+                        .lineStyle(StrokeStyle(lineWidth: 1.5, dash: [5, 3]))
+                        .foregroundStyle(.secondary.opacity(0.6))
                         .annotation(position: .top, alignment: .trailing) {
-                            Text("8h target").font(.caption2).foregroundStyle(.secondary)
+                            Text("8h target")
+                                .font(.caption2.weight(.bold))
+                                .foregroundStyle(.secondary)
                         }
                 }
                 .chartYAxisLabel("hours")
                 .chartXAxis {
-                    AxisMarks { _ in
-                        AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5)).foregroundStyle(.secondary.opacity(0.3))
-                        AxisValueLabel().font(.caption2)
+                    AxisMarks(values: .automatic(desiredCount: 5)) { _ in
+                        AxisGridLine().foregroundStyle(.secondary.opacity(0.12))
+                        AxisValueLabel().font(.caption2).foregroundStyle(.secondary)
                     }
                 }
-                .frame(height: 200).padding(.vertical, 4)
+                .chartYAxis {
+                    AxisMarks(position: .leading) { _ in
+                        AxisGridLine().foregroundStyle(.secondary.opacity(0.12))
+                        AxisValueLabel().font(.caption2).foregroundStyle(.secondary)
+                    }
+                }
+                .frame(height: 220).padding(.vertical, 4)
             } else if !isLoading {
                 Text("No sleep data available.")
                     .foregroundStyle(.secondary).frame(maxWidth: .infinity, minHeight: 80)
@@ -315,15 +357,30 @@ struct SleepDetailView: View {
                         BarMark(x: .value("Date", day.date, unit: .day),
                                 yStart: .value("Bed", shiftedMinutes(day.inBed!)),
                                 yEnd: .value("Wake", shiftedMinutes(day.wakeUp!)))
-                            .foregroundStyle(Color.indigo.opacity(0.20)).cornerRadius(4)
+                            .foregroundStyle(
+                                LinearGradient(
+                                    colors: [Color.indigo.opacity(0.40), Color.indigo.opacity(0.18)],
+                                    startPoint: .top,
+                                    endPoint: .bottom
+                                )
+                            )
+                            .cornerRadius(6)
 
                         PointMark(x: .value("Date", day.date, unit: .day),
                                   y: .value("Bed", shiftedMinutes(day.inBed!)))
-                            .foregroundStyle(Color.indigo).symbolSize(35)
+                            .foregroundStyle(Color.indigo)
+                            .symbolSize(48)
+                            .annotation(position: .overlay) {
+                                Circle().fill(.white).frame(width: 4, height: 4)
+                            }
 
                         PointMark(x: .value("Date", day.date, unit: .day),
                                   y: .value("Wake", shiftedMinutes(day.wakeUp!)))
-                            .foregroundStyle(Color.orange).symbolSize(35)
+                            .foregroundStyle(Color.orange)
+                            .symbolSize(48)
+                            .annotation(position: .overlay) {
+                                Circle().fill(.white).frame(width: 4, height: 4)
+                            }
                     }
                     .chartYAxis {
                         AxisMarks(values: .stride(by: 60)) { value in

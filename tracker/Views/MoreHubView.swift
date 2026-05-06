@@ -27,6 +27,8 @@ struct MoreHubView: View {
                 }
             }
         }
+        .scrollContentBackground(.hidden)
+        .tabBackground(tint: .yellow, height: 240, intensity: 0.18)
         .navigationTitle("More")
     }
 }

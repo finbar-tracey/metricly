@@ -73,54 +73,66 @@ struct HeartRateDetailView: View {
     private var heroCard: some View {
         ZStack(alignment: .topLeading) {
             LinearGradient(
-                colors: [Color(red: 0.88, green: 0.15, blue: 0.25), Color(red: 0.95, green: 0.35, blue: 0.35).opacity(0.75)],
+                colors: AppTheme.Gradients.strain,
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
-
-            Circle()
-                .fill(.white.opacity(0.07))
-                .frame(width: 220)
-                .offset(x: 160, y: -70)
+            // Top sheen
+            LinearGradient(
+                colors: [.white.opacity(0.18), .clear],
+                startPoint: .top, endPoint: .center
+            )
+            .blendMode(.plusLighter)
+            Circle().fill(.white.opacity(0.10)).frame(width: 220).blur(radius: 12).offset(x: 160, y: -70)
+            Circle().fill(.white.opacity(0.06)).frame(width: 110).blur(radius: 10).offset(x: -30, y: 80)
 
             VStack(alignment: .leading, spacing: 20) {
                 // Top: icon + primary BPM
                 HStack(alignment: .center, spacing: 16) {
                     ZStack {
                         Circle()
-                            .fill(.white.opacity(0.20))
-                            .frame(width: 56, height: 56)
+                            .fill(.ultraThinMaterial.opacity(0.7))
+                            .frame(width: 60, height: 60)
+                            .overlay(Circle().stroke(.white.opacity(0.25), lineWidth: 0.5))
                         Image(systemName: "heart.fill")
-                            .font(.system(size: 26, weight: .semibold))
+                            .font(.system(size: 28, weight: .bold))
                             .foregroundStyle(.white)
                     }
-                    VStack(alignment: .leading, spacing: 4) {
+                    VStack(alignment: .leading, spacing: 2) {
                         if let resting = todayResting {
-                            HStack(alignment: .firstTextBaseline, spacing: 4) {
-                                Text("\(Int(resting))")
-                                    .font(.system(size: 48, weight: .black, design: .rounded))
-                                    .foregroundStyle(.white)
-                                    .monospacedDigit()
-                                Text("bpm")
-                                    .font(.title3.weight(.semibold))
-                                    .foregroundStyle(.white.opacity(0.75))
-                            }
                             Text("Resting Heart Rate")
-                                .font(.subheadline.weight(.medium))
-                                .foregroundStyle(.white.opacity(0.75))
-                        } else if let stats = todayStats {
+                                .font(.system(size: 12, weight: .bold, design: .rounded))
+                                .foregroundStyle(.white.opacity(0.82))
+                                .tracking(0.5)
+                                .textCase(.uppercase)
                             HStack(alignment: .firstTextBaseline, spacing: 4) {
-                                Text("\(Int(stats.avg))")
-                                    .font(.system(size: 48, weight: .black, design: .rounded))
-                                    .foregroundStyle(.white)
-                                    .monospacedDigit()
+                                AnimatedInt(
+                                    value: Int(resting),
+                                    font: .system(size: 54, weight: .black, design: .rounded),
+                                    color: .white
+                                )
+                                .shadow(color: .black.opacity(0.18), radius: 6, y: 3)
                                 Text("bpm")
-                                    .font(.title3.weight(.semibold))
-                                    .foregroundStyle(.white.opacity(0.75))
+                                    .font(.system(size: 22, weight: .heavy, design: .rounded))
+                                    .foregroundStyle(.white.opacity(0.78))
                             }
+                        } else if let stats = todayStats {
                             Text("Average Today")
-                                .font(.subheadline.weight(.medium))
-                                .foregroundStyle(.white.opacity(0.75))
+                                .font(.system(size: 12, weight: .bold, design: .rounded))
+                                .foregroundStyle(.white.opacity(0.82))
+                                .tracking(0.5)
+                                .textCase(.uppercase)
+                            HStack(alignment: .firstTextBaseline, spacing: 4) {
+                                AnimatedInt(
+                                    value: Int(stats.avg),
+                                    font: .system(size: 54, weight: .black, design: .rounded),
+                                    color: .white
+                                )
+                                .shadow(color: .black.opacity(0.18), radius: 6, y: 3)
+                                Text("bpm")
+                                    .font(.system(size: 22, weight: .heavy, design: .rounded))
+                                    .foregroundStyle(.white.opacity(0.78))
+                            }
                         } else {
                             Text("No Data")
                                 .font(.system(size: 32, weight: .black, design: .rounded))
@@ -133,9 +145,9 @@ struct HeartRateDetailView: View {
                 HStack(spacing: 0) {
                     if let stats = todayStats {
                         HeroStatCol(value: "\(Int(stats.min)) bpm", label: "Min", icon: "arrow.down.heart.fill")
-                        Divider().frame(height: 32).overlay(.white.opacity(0.30))
+                        Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 36)
                         HeroStatCol(value: "\(Int(stats.max)) bpm", label: "Max", icon: "arrow.up.heart.fill")
-                        Divider().frame(height: 32).overlay(.white.opacity(0.30))
+                        Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 36)
                     }
                     if let hrv = todayHRV {
                         HeroStatCol(value: "\(Int(hrv)) ms", label: "HRV", icon: "waveform.path.ecg")
@@ -143,10 +155,16 @@ struct HeartRateDetailView: View {
                         HeroStatCol(value: "—", label: "HRV", icon: "waveform.path.ecg")
                     }
                     if let stats = todayStats {
-                        Divider().frame(height: 32).overlay(.white.opacity(0.30))
+                        Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 36)
                         HeroStatCol(value: "\(Int(stats.max - stats.min))", label: "Range", icon: "arrow.up.arrow.down")
                     }
                 }
+                .padding(.vertical, 12)
+                .background(.ultraThinMaterial.opacity(0.55), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .stroke(.white.opacity(0.18), lineWidth: 0.5)
+                )
             }
             .padding(20)
         }
@@ -163,35 +181,55 @@ struct HeartRateDetailView: View {
             VStack(spacing: 0) {
                 ForEach(Array(zones.enumerated()), id: \.element.name) { idx, zone in
                     HStack(spacing: 14) {
-                        RoundedRectangle(cornerRadius: 3)
-                            .fill(zone.color.gradient)
-                            .frame(width: 4, height: 36)
-                        VStack(alignment: .leading, spacing: 2) {
+                        RoundedRectangle(cornerRadius: 4, style: .continuous)
+                            .fill(
+                                LinearGradient(
+                                    colors: [zone.color, zone.color.opacity(0.6)],
+                                    startPoint: .top,
+                                    endPoint: .bottom
+                                )
+                            )
+                            .frame(width: 5, height: 42)
+                            .shadow(color: zone.color.opacity(0.40), radius: 4, x: 0, y: 0)
+                        VStack(alignment: .leading, spacing: 3) {
                             Text(zone.name)
-                                .font(.subheadline.weight(.semibold))
+                                .font(.system(size: 15, weight: .semibold, design: .rounded))
                             Text(zone.range)
-                                .font(.caption)
+                                .font(.caption.weight(.semibold))
                                 .foregroundStyle(.secondary)
                         }
                         Spacer()
                         if zone.isActive {
-                            Text("Active")
-                                .font(.caption2.bold())
+                            Text("ACTIVE")
+                                .font(.system(size: 10, weight: .bold, design: .rounded))
+                                .tracking(0.5)
                                 .padding(.horizontal, 10)
-                                .padding(.vertical, 4)
-                                .background(zone.color.opacity(0.15), in: Capsule())
-                                .foregroundStyle(zone.color)
+                                .padding(.vertical, 5)
+                                .background(
+                                    LinearGradient(
+                                        colors: [zone.color, zone.color.opacity(0.72)],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    ),
+                                    in: Capsule()
+                                )
+                                .foregroundStyle(.white)
+                                .shadow(color: zone.color.opacity(0.40), radius: 5, y: 2)
                         }
                     }
                     .padding(.horizontal, 16)
-                    .padding(.vertical, 10)
+                    .padding(.vertical, 11)
                     if idx < zones.count - 1 {
-                        Divider().padding(.leading, 34)
+                        Divider().padding(.leading, 35)
                     }
                 }
             }
             .background(Color(.tertiarySystemGroupedBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(Color.white.opacity(0.05), lineWidth: 0.5)
+            )
         }
         .appCard()
     }
@@ -209,36 +247,73 @@ struct HeartRateDetailView: View {
                         y: .value("BPM", point.bpm)
                     )
                     .interpolationMethod(.catmullRom)
-                    .foregroundStyle(.red.opacity(0.15).gradient)
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [
+                                Color.red.opacity(0.55),
+                                Color.red.opacity(0.22),
+                                Color.red.opacity(0.02)
+                            ],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
 
                     LineMark(
                         x: .value("Date", point.date, unit: .day),
                         y: .value("BPM", point.bpm)
                     )
                     .interpolationMethod(.catmullRom)
-                    .foregroundStyle(.red)
+                    .lineStyle(StrokeStyle(lineWidth: 2.5, lineCap: .round, lineJoin: .round))
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [.red, Color(red: 0.85, green: 0.20, blue: 0.30)],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .shadow(color: Color.red.opacity(0.30), radius: 5, y: 2)
 
                     PointMark(
                         x: .value("Date", point.date, unit: .day),
                         y: .value("BPM", point.bpm)
                     )
-                    .symbolSize(20)
-                    .foregroundStyle(.red)
+                    .symbolSize(36)
+                    .foregroundStyle(Color.red)
+                    .annotation(position: .overlay) {
+                        Circle().fill(.white).frame(width: 4, height: 4)
+                    }
                 }
                 .chartYAxisLabel("bpm")
                 .chartYScale(domain: restingChartDomain)
-                .frame(height: 200)
+                .chartXAxis {
+                    AxisMarks(values: .automatic(desiredCount: 5)) { _ in
+                        AxisGridLine().foregroundStyle(.secondary.opacity(0.12))
+                        AxisValueLabel().font(.caption2).foregroundStyle(.secondary)
+                    }
+                }
+                .chartYAxis {
+                    AxisMarks(position: .leading) { _ in
+                        AxisGridLine().foregroundStyle(.secondary.opacity(0.12))
+                        AxisValueLabel().font(.caption2).foregroundStyle(.secondary)
+                    }
+                }
+                .frame(height: 220)
 
                 if let trend = restingTrend {
-                    HStack(spacing: 6) {
+                    HStack(spacing: 7) {
                         Image(systemName: trend <= 0 ? "arrow.down.right.circle.fill" : "arrow.up.right.circle.fill")
-                            .font(.caption2)
+                            .font(.caption.bold())
                             .foregroundStyle(trend <= 0 ? .green : .orange)
                         Text("\(trend <= 0 ? "Improving" : "Increasing") — \(abs(Int(trend))) bpm vs start of period")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .font(.caption.weight(.semibold))
                         Spacer()
                     }
+                    .foregroundStyle(trend <= 0 ? .green : .orange)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background((trend <= 0 ? Color.green : Color.orange).opacity(0.12), in: Capsule())
+                    .overlay(Capsule().stroke((trend <= 0 ? Color.green : Color.orange).opacity(0.20), lineWidth: 0.5))
                 }
             } else if !isLoading {
                 Text("No resting heart rate data available.")
@@ -262,35 +337,67 @@ struct HeartRateDetailView: View {
                     yStart: .value("Min", point.min),
                     yEnd: .value("Max", point.max)
                 )
-                .foregroundStyle(.red.opacity(0.3).gradient)
-                .cornerRadius(3)
+                .foregroundStyle(
+                    LinearGradient(
+                        colors: [Color.orange.opacity(0.55), Color.red.opacity(0.30)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
+                .cornerRadius(5)
 
                 PointMark(
                     x: .value("Date", point.date, unit: .day),
                     y: .value("Min", point.min)
                 )
-                .symbolSize(16)
-                .foregroundStyle(.blue)
+                .symbolSize(36)
+                .foregroundStyle(Color.blue)
+                .annotation(position: .overlay) {
+                    Circle().fill(.white).frame(width: 4, height: 4)
+                }
 
                 PointMark(
                     x: .value("Date", point.date, unit: .day),
                     y: .value("Max", point.max)
                 )
-                .symbolSize(16)
-                .foregroundStyle(.orange)
+                .symbolSize(36)
+                .foregroundStyle(Color.orange)
+                .annotation(position: .overlay) {
+                    Circle().fill(.white).frame(width: 4, height: 4)
+                }
             }
             .chartYAxisLabel("bpm")
             .chartYScale(domain: rangeChartDomain)
-            .frame(height: 180)
+            .chartXAxis {
+                AxisMarks(values: .automatic(desiredCount: 5)) { _ in
+                    AxisGridLine().foregroundStyle(.secondary.opacity(0.12))
+                    AxisValueLabel().font(.caption2).foregroundStyle(.secondary)
+                }
+            }
+            .chartYAxis {
+                AxisMarks(position: .leading) { _ in
+                    AxisGridLine().foregroundStyle(.secondary.opacity(0.12))
+                    AxisValueLabel().font(.caption2).foregroundStyle(.secondary)
+                }
+            }
+            .frame(height: 200)
 
             HStack(spacing: 16) {
                 HStack(spacing: 5) {
-                    Circle().fill(.blue).frame(width: 7, height: 7)
-                    Text("Min").font(.caption2).foregroundStyle(.secondary)
+                    Circle().fill(.blue).frame(width: 8, height: 8)
+                        .shadow(color: .blue.opacity(0.5), radius: 3)
+                    Text("MIN")
+                        .font(.system(size: 10, weight: .bold, design: .rounded))
+                        .tracking(0.5)
+                        .foregroundStyle(.secondary)
                 }
                 HStack(spacing: 5) {
-                    Circle().fill(.orange).frame(width: 7, height: 7)
-                    Text("Max").font(.caption2).foregroundStyle(.secondary)
+                    Circle().fill(.orange).frame(width: 8, height: 8)
+                        .shadow(color: .orange.opacity(0.5), radius: 3)
+                    Text("MAX")
+                        .font(.system(size: 10, weight: .bold, design: .rounded))
+                        .tracking(0.5)
+                        .foregroundStyle(.secondary)
                 }
                 Spacer()
             }
@@ -310,39 +417,79 @@ struct HeartRateDetailView: View {
                     y: .value("HRV", point.ms)
                 )
                 .interpolationMethod(.catmullRom)
-                .foregroundStyle(.purple.opacity(0.15).gradient)
+                .foregroundStyle(
+                    LinearGradient(
+                        colors: [
+                            Color.purple.opacity(0.55),
+                            Color.purple.opacity(0.22),
+                            Color.purple.opacity(0.02)
+                        ],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
 
                 LineMark(
                     x: .value("Date", point.date, unit: .day),
                     y: .value("HRV", point.ms)
                 )
                 .interpolationMethod(.catmullRom)
-                .foregroundStyle(.purple)
+                .lineStyle(StrokeStyle(lineWidth: 2.5, lineCap: .round, lineJoin: .round))
+                .foregroundStyle(
+                    LinearGradient(
+                        colors: [.purple, Color(red: 0.55, green: 0.35, blue: 0.95)],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                )
+                .shadow(color: Color.purple.opacity(0.30), radius: 5, y: 2)
 
                 PointMark(
                     x: .value("Date", point.date, unit: .day),
                     y: .value("HRV", point.ms)
                 )
-                .symbolSize(20)
-                .foregroundStyle(.purple)
+                .symbolSize(36)
+                .foregroundStyle(Color.purple)
+                .annotation(position: .overlay) {
+                    Circle().fill(.white).frame(width: 4, height: 4)
+                }
             }
             .chartYAxisLabel("ms")
             .chartYScale(domain: hrvChartDomain)
-            .frame(height: 160)
+            .chartXAxis {
+                AxisMarks(values: .automatic(desiredCount: 5)) { _ in
+                    AxisGridLine().foregroundStyle(.secondary.opacity(0.12))
+                    AxisValueLabel().font(.caption2).foregroundStyle(.secondary)
+                }
+            }
+            .chartYAxis {
+                AxisMarks(position: .leading) { _ in
+                    AxisGridLine().foregroundStyle(.secondary.opacity(0.12))
+                    AxisValueLabel().font(.caption2).foregroundStyle(.secondary)
+                }
+            }
+            .frame(height: 180)
 
             let avgHRV = dailyHRV.map(\.ms).reduce(0, +) / Double(dailyHRV.count)
             HStack(spacing: 12) {
                 ZStack {
-                    Circle()
-                        .fill(Color.purple.opacity(0.12))
-                        .frame(width: 38, height: 38)
+                    RoundedRectangle(cornerRadius: 11, style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: [.purple, Color(red: 0.55, green: 0.35, blue: 0.95)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 42, height: 42)
+                        .shadow(color: .purple.opacity(0.40), radius: 6, y: 3)
                     Image(systemName: "waveform.path.ecg")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(.purple)
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundStyle(.white)
                 }
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: 3) {
                     Text("Average \(Int(avgHRV)) ms")
-                        .font(.subheadline.bold())
+                        .font(.system(size: 16, weight: .bold, design: .rounded))
                     Text(hrvInterpretation(avgHRV))
                         .font(.caption)
                         .foregroundStyle(.secondary)
@@ -361,15 +508,17 @@ struct HeartRateDetailView: View {
 
             let delta = thisWeekAvgResting - lastWeekAvgResting
             HStack(spacing: 0) {
-                VStack(spacing: 4) {
-                    Text("This Week")
-                        .font(.caption.weight(.medium))
+                VStack(spacing: 5) {
+                    Text("THIS WEEK")
+                        .font(.system(size: 10, weight: .bold, design: .rounded))
+                        .tracking(0.5)
                         .foregroundStyle(.secondary)
                     Text("\(Int(thisWeekAvgResting))")
-                        .font(.system(size: 22, weight: .bold, design: .rounded))
+                        .font(.system(size: 26, weight: .black, design: .rounded))
                         .monospacedDigit()
+                        .foregroundStyle(.red)
                     Text("bpm avg")
-                        .font(.caption2)
+                        .font(.caption2.weight(.semibold))
                         .foregroundStyle(.tertiary)
                 }
                 .frame(maxWidth: .infinity)
@@ -377,23 +526,35 @@ struct HeartRateDetailView: View {
                 VStack(spacing: 4) {
                     // Lower resting HR is better → down arrow is green
                     Image(systemName: delta <= 0 ? "arrow.down.right.circle.fill" : "arrow.up.right.circle.fill")
-                        .font(.title2)
-                        .foregroundStyle(delta <= 0 ? .green : .orange)
+                        .font(.title2.weight(.bold))
+                        .foregroundStyle(.white)
+                        .padding(8)
+                        .background(
+                            LinearGradient(
+                                colors: delta <= 0 ? [.green, Color(red: 0.05, green: 0.55, blue: 0.42)]
+                                                   : [.orange, Color(red: 0.95, green: 0.45, blue: 0.20)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            in: Circle()
+                        )
+                        .shadow(color: (delta <= 0 ? Color.green : Color.orange).opacity(0.40), radius: 6, y: 3)
                     Text("\(abs(Int(delta))) bpm")
                         .font(.caption.bold().monospacedDigit())
                         .foregroundStyle(delta <= 0 ? .green : .orange)
                 }
 
-                VStack(spacing: 4) {
-                    Text("Last Week")
-                        .font(.caption.weight(.medium))
+                VStack(spacing: 5) {
+                    Text("LAST WEEK")
+                        .font(.system(size: 10, weight: .bold, design: .rounded))
+                        .tracking(0.5)
                         .foregroundStyle(.secondary)
                     Text("\(Int(lastWeekAvgResting))")
-                        .font(.system(size: 22, weight: .bold, design: .rounded))
+                        .font(.system(size: 26, weight: .black, design: .rounded))
                         .monospacedDigit()
                         .foregroundStyle(.secondary)
                     Text("bpm avg")
-                        .font(.caption2)
+                        .font(.caption2.weight(.semibold))
                         .foregroundStyle(.tertiary)
                 }
                 .frame(maxWidth: .infinity)

@@ -24,40 +24,55 @@ struct WorkoutShareCard: View {
         ZStack(alignment: .topLeading) {
             // Background gradient
             LinearGradient(
-                colors: [Color(red: 1.0, green: 0.52, blue: 0.15),
-                         Color(red: 0.88, green: 0.22, blue: 0.10)],
+                colors: [
+                    Color(red: 1.0, green: 0.55, blue: 0.18),
+                    Color(red: 0.95, green: 0.35, blue: 0.15),
+                    Color(red: 0.78, green: 0.22, blue: 0.30)
+                ],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
-
-            // Decorative circles
-            Circle().fill(.white.opacity(0.06)).frame(width: 220).offset(x: 240, y: -80)
-            Circle().fill(.white.opacity(0.04)).frame(width: 140).offset(x: 280, y: 100)
+            // Top sheen
+            LinearGradient(
+                colors: [.white.opacity(0.18), .clear],
+                startPoint: .top, endPoint: .center
+            )
+            .blendMode(.plusLighter)
+            // Decorative circles (blurred for depth)
+            Circle().fill(.white.opacity(0.10)).frame(width: 220).blur(radius: 14).offset(x: 240, y: -80)
+            Circle().fill(.white.opacity(0.06)).frame(width: 140).blur(radius: 10).offset(x: 280, y: 100)
 
             VStack(alignment: .leading, spacing: 18) {
 
                 // ── Header ───────────────────────────────────────────────────
                 HStack(spacing: 10) {
                     ZStack {
-                        Circle().fill(.white.opacity(0.20)).frame(width: 48, height: 48)
+                        Circle()
+                            .fill(.ultraThinMaterial.opacity(0.7))
+                            .frame(width: 52, height: 52)
+                            .overlay(Circle().stroke(.white.opacity(0.25), lineWidth: 0.5))
                         Image(systemName: "dumbbell.fill")
-                            .font(.system(size: 20, weight: .semibold))
+                            .font(.system(size: 22, weight: .bold))
                             .foregroundStyle(.white)
                     }
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Strength Training")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(.white.opacity(0.75))
+                            .font(.system(size: 12, weight: .bold, design: .rounded))
+                            .foregroundStyle(.white.opacity(0.82))
+                            .tracking(0.5)
+                            .textCase(.uppercase)
                         Text(workout.date, format: .dateTime.weekday(.wide).month(.abbreviated).day().year())
                             .font(.subheadline.weight(.bold))
                             .foregroundStyle(.white)
                     }
                     Spacer()
-                    Text("Metricly")
-                        .font(.caption2.weight(.bold))
-                        .foregroundStyle(.white.opacity(0.6))
-                        .padding(.horizontal, 8).padding(.vertical, 4)
-                        .background(.white.opacity(0.15), in: Capsule())
+                    Text("METRICLY")
+                        .font(.system(size: 10, weight: .bold, design: .rounded))
+                        .tracking(0.6)
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 9).padding(.vertical, 5)
+                        .background(.ultraThinMaterial.opacity(0.7), in: Capsule())
+                        .overlay(Capsule().stroke(.white.opacity(0.25), lineWidth: 0.5))
                 }
 
                 // ── Workout name ─────────────────────────────────────────────

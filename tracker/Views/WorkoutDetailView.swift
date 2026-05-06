@@ -381,14 +381,19 @@ struct WorkoutDetailView: View {
         ZStack(alignment: .topLeading) {
             LinearGradient(
                 colors: workout.isFinished
-                    ? [Color(red: 0.12, green: 0.68, blue: 0.42), Color(red: 0.0, green: 0.48, blue: 0.58)]
-                    : [Color.accentColor, Color.blue],
+                    ? AppTheme.Gradients.recovery
+                    : AppTheme.Gradients.calm,
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
-
-            Circle().fill(.white.opacity(0.07)).frame(width: 200).offset(x: 120, y: -40)
-            Circle().fill(.white.opacity(0.05)).frame(width: 110).offset(x: -30, y: 80)
+            // Top sheen for depth
+            LinearGradient(
+                colors: [.white.opacity(0.18), .clear],
+                startPoint: .top, endPoint: .center
+            )
+            .blendMode(.plusLighter)
+            Circle().fill(.white.opacity(0.10)).frame(width: 200).blur(radius: 12).offset(x: 160, y: -50)
+            Circle().fill(.white.opacity(0.06)).frame(width: 110).blur(radius: 10).offset(x: -30, y: 80)
 
             VStack(alignment: .leading, spacing: 14) {
                 HStack {
@@ -396,11 +401,11 @@ struct WorkoutDetailView: View {
                         workout.isFinished ? "Completed" : "In Progress",
                         systemImage: workout.isFinished ? "checkmark.circle.fill" : "timer"
                     )
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.white.opacity(0.9))
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 5)
-                    .background(.white.opacity(0.2), in: .capsule)
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 11).padding(.vertical, 5)
+                    .background(.ultraThinMaterial.opacity(0.65), in: Capsule())
+                    .overlay(Capsule().stroke(.white.opacity(0.22), lineWidth: 0.5))
 
                     Spacer()
 
@@ -416,8 +421,8 @@ struct WorkoutDetailView: View {
                 }
 
                 Text(workout.date, format: .dateTime.weekday(.wide).month(.abbreviated).day().hour().minute())
-                    .font(.subheadline)
-                    .foregroundStyle(.white.opacity(0.8))
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(.white.opacity(0.85))
 
                 HStack(spacing: 0) {
                     HeroStatCol(value: "\(workout.exercises.count)",
@@ -432,13 +437,18 @@ struct WorkoutDetailView: View {
                                 label: "Duration",
                                 icon: "clock")
                 }
-                .padding(.vertical, 10)
-                .background(.white.opacity(0.12), in: RoundedRectangle(cornerRadius: 12))
+                .padding(.vertical, 12)
+                .background(.ultraThinMaterial.opacity(0.55), in: RoundedRectangle(cornerRadius: 14))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14)
+                        .stroke(.white.opacity(0.18), lineWidth: 0.5)
+                )
             }
             .padding(20)
         }
-        .frame(minHeight: 185)
+        .frame(minHeight: 195)
         .clipShape(RoundedRectangle(cornerRadius: AppTheme.heroRadius))
+        .shadow(color: .black.opacity(0.18), radius: 20, x: 0, y: 8)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(workout.isFinished
             ? "Workout completed, duration \(workout.formattedDuration ?? "")"
@@ -447,28 +457,34 @@ struct WorkoutDetailView: View {
 
     private var finishButton: some View {
         Button {
+            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
             showingFinishSheet = true
         } label: {
-            HStack(spacing: 8) {
+            HStack(spacing: 10) {
                 Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(.system(size: 17, weight: .bold))
                 Text("Finish Workout")
-                    .font(.headline)
+                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .tracking(0.4)
             }
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 14)
+            .padding(.vertical, 16)
             .background(
                 LinearGradient(
                     colors: [Color.green, Color(red: 0.1, green: 0.72, blue: 0.35)],
-                    startPoint: .leading,
-                    endPoint: .trailing
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
                 )
             )
             .foregroundStyle(.white)
-            .clipShape(RoundedRectangle(cornerRadius: 14))
-            .shadow(color: .green.opacity(0.35), radius: 10, x: 0, y: 4)
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(Color.white.opacity(0.20), lineWidth: 0.5)
+            )
+            .shadow(color: .green.opacity(0.45), radius: 14, y: 6)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressableCard)
     }
 
     // MARK: - Exercise Row
@@ -479,23 +495,33 @@ struct WorkoutDetailView: View {
                 supersetIndicator(for: exercise)
             }
             ZStack {
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(Color.accentColor.opacity(0.12))
-                    .frame(width: 40, height: 40)
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [Color.accentColor.opacity(0.22), Color.accentColor.opacity(0.10)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 44, height: 44)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .stroke(Color.accentColor.opacity(0.20), lineWidth: 0.5)
+                    )
                 MuscleIconView(group: exercise.category ?? .other, color: Color.accentColor)
                     .frame(width: 22, height: 22)
             }
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 6) {
                     Text(exercise.name)
-                        .font(.subheadline.weight(.semibold))
+                        .font(.system(size: 16, weight: .semibold, design: .rounded))
                     if exercise.supersetGroup != nil {
                         Text("SS")
                             .font(.system(size: 9, weight: .bold))
                             .foregroundStyle(Color.accentColor)
-                            .padding(.horizontal, 5)
+                            .padding(.horizontal, 6)
                             .padding(.vertical, 2)
-                            .background(Color.accentColor.opacity(0.12), in: .capsule)
+                            .background(Color.accentColor.opacity(0.14), in: .capsule)
                     }
                 }
                 HStack(spacing: 8) {
@@ -699,10 +725,16 @@ struct WorkoutDetailView: View {
 
     private func supersetIndicator(for exercise: Exercise) -> some View {
         let color = supersetColor(for: exercise.supersetGroup ?? 0)
-        return Rectangle()
-            .fill(color)
-            .frame(width: 4)
-            .clipShape(.rect(cornerRadius: 2))
+        return RoundedRectangle(cornerRadius: 3, style: .continuous)
+            .fill(
+                LinearGradient(
+                    colors: [color, color.opacity(0.6)],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+            )
+            .frame(width: 5)
+            .shadow(color: color.opacity(0.45), radius: 4, x: 0, y: 0)
             .padding(.trailing, 10)
             .padding(.vertical, -4)
     }

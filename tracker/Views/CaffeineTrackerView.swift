@@ -278,39 +278,64 @@ struct CaffeineTrackerView: View {
 
     private func heroCard(remaining: Double, readiness: (label: String, color: Color, icon: String), now: Date) -> some View {
         ZStack(alignment: .topLeading) {
-            LinearGradient(colors: [Color.brown, Color.orange.opacity(0.7)],
-                           startPoint: .topLeading, endPoint: .bottomTrailing)
-            Circle().fill(.white.opacity(0.07)).frame(width: 200).offset(x: 160, y: -60)
+            LinearGradient(
+                colors: [
+                    Color(red: 0.55, green: 0.32, blue: 0.18),
+                    Color(red: 0.78, green: 0.45, blue: 0.18),
+                    Color(red: 0.95, green: 0.55, blue: 0.20)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            // Top sheen
+            LinearGradient(
+                colors: [.white.opacity(0.18), .clear],
+                startPoint: .top, endPoint: .center
+            )
+            .blendMode(.plusLighter)
+            Circle().fill(.white.opacity(0.10)).frame(width: 200).blur(radius: 12).offset(x: 160, y: -60)
+            Circle().fill(.white.opacity(0.06)).frame(width: 110).blur(radius: 10).offset(x: -30, y: 80)
 
             VStack(alignment: .leading, spacing: 18) {
                 HStack(alignment: .center, spacing: 20) {
                     ZStack {
-                        Circle().stroke(.white.opacity(0.20), lineWidth: 8)
+                        Circle().stroke(.white.opacity(0.22), lineWidth: 9)
                         Circle()
                             .trim(from: 0, to: min(1.0, remaining / dailyLimit))
-                            .stroke(.white, style: StrokeStyle(lineWidth: 8, lineCap: .round))
+                            .stroke(.white, style: StrokeStyle(lineWidth: 9, lineCap: .round))
                             .rotationEffect(.degrees(-90))
                             .animation(.easeInOut(duration: 0.8), value: remaining)
+                            .shadow(color: .white.opacity(0.45), radius: 6, y: 1)
                         VStack(spacing: 1) {
-                            Text("\(Int(remaining))")
-                                .font(.system(size: 26, weight: .black, design: .rounded))
-                                .foregroundStyle(.white).monospacedDigit()
-                            Text("mg").font(.system(size: 10, weight: .bold)).foregroundStyle(.white.opacity(0.80))
+                            AnimatedInt(
+                                value: Int(remaining),
+                                font: .system(size: 28, weight: .black, design: .rounded),
+                                color: .white
+                            )
+                            Text("mg")
+                                .font(.system(size: 10, weight: .bold, design: .rounded))
+                                .foregroundStyle(.white.opacity(0.82))
+                                .tracking(0.4)
+                                .textCase(.uppercase)
                         }
                     }
-                    .frame(width: 80, height: 80)
+                    .frame(width: 84, height: 84)
 
                     VStack(alignment: .leading, spacing: 8) {
                         Text("System Caffeine")
-                            .font(.caption.weight(.semibold)).foregroundStyle(.white.opacity(0.75))
+                            .font(.system(size: 12, weight: .bold, design: .rounded))
+                            .foregroundStyle(.white.opacity(0.82))
+                            .tracking(0.5)
+                            .textCase(.uppercase)
 
                         HStack(spacing: 5) {
-                            Image(systemName: readiness.icon).font(.caption)
-                            Text(readiness.label).font(.caption.weight(.semibold))
+                            Image(systemName: readiness.icon).font(.caption.bold())
+                            Text(readiness.label).font(.caption.weight(.bold))
                         }
                         .foregroundStyle(.white)
-                        .padding(.horizontal, 10).padding(.vertical, 5)
-                        .background(.white.opacity(0.20), in: Capsule())
+                        .padding(.horizontal, 11).padding(.vertical, 5)
+                        .background(.ultraThinMaterial.opacity(0.7), in: Capsule())
+                        .overlay(Capsule().stroke(.white.opacity(0.22), lineWidth: 0.5))
 
                         if let clearTime = caffeineClearTime(from: now), remaining >= 25 {
                             HStack(spacing: 4) {

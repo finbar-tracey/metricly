@@ -55,38 +55,57 @@ struct PlateCalculatorView: View {
 
     private var inputHeroCard: some View {
         ZStack(alignment: .topLeading) {
-            LinearGradient(colors: [Color.indigo, Color.purple.opacity(0.7)],
-                           startPoint: .topLeading, endPoint: .bottomTrailing)
-            Circle().fill(.white.opacity(0.07)).frame(width: 200).offset(x: 160, y: -60)
+            LinearGradient(
+                colors: [
+                    Color(red: 0.30, green: 0.20, blue: 0.85),
+                    Color(red: 0.55, green: 0.25, blue: 0.85),
+                    Color(red: 0.78, green: 0.30, blue: 0.78)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            // Top sheen
+            LinearGradient(
+                colors: [.white.opacity(0.18), .clear],
+                startPoint: .top, endPoint: .center
+            )
+            .blendMode(.plusLighter)
+            Circle().fill(.white.opacity(0.10)).frame(width: 200).blur(radius: 12).offset(x: 160, y: -60)
+            Circle().fill(.white.opacity(0.06)).frame(width: 110).blur(radius: 10).offset(x: -30, y: 80)
 
             VStack(alignment: .leading, spacing: 18) {
+                Text("Target Weight")
+                    .font(.system(size: 12, weight: .bold, design: .rounded))
+                    .foregroundStyle(.white.opacity(0.82))
+                    .tracking(0.5)
+                    .textCase(.uppercase)
+
                 HStack(alignment: .firstTextBaseline, spacing: 6) {
                     TextField("0", text: $targetWeight)
                         .keyboardType(.decimalPad)
-                        .font(.system(size: 64, weight: .black, design: .rounded))
+                        .font(.system(size: 72, weight: .black, design: .rounded))
                         .foregroundStyle(.white)
                         .frame(maxWidth: 220)
+                        .shadow(color: .black.opacity(0.18), radius: 6, y: 3)
                     Text(unit.label)
-                        .font(.title2.weight(.semibold))
-                        .foregroundStyle(.white.opacity(0.70))
+                        .font(.system(size: 26, weight: .heavy, design: .rounded))
+                        .foregroundStyle(.white.opacity(0.78))
                 }
-
-                Text("Target Weight")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.white.opacity(0.75))
 
                 HStack(spacing: 0) {
                     Text("Bar weight")
-                        .font(.caption).foregroundStyle(.white.opacity(0.75))
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(.white.opacity(0.85))
                     Spacer()
                     HStack(spacing: 12) {
                         Button {
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
                             if barWeight >= 2.5 { barWeight -= 2.5 }
                         } label: {
                             Image(systemName: "minus.circle.fill")
-                                .font(.title3).foregroundStyle(.white.opacity(0.80))
+                                .font(.title3).foregroundStyle(.white.opacity(0.85))
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.pressableCard)
 
                         Text(unit.format(barWeight))
                             .font(.subheadline.bold().monospacedDigit())
@@ -94,17 +113,21 @@ struct PlateCalculatorView: View {
                             .frame(minWidth: 54)
 
                         Button {
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
                             if barWeight <= 57.5 { barWeight += 2.5 }
                         } label: {
                             Image(systemName: "plus.circle.fill")
-                                .font(.title3).foregroundStyle(.white.opacity(0.80))
+                                .font(.title3).foregroundStyle(.white.opacity(0.85))
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.pressableCard)
                     }
+                    .padding(.horizontal, 12).padding(.vertical, 6)
+                    .background(.ultraThinMaterial.opacity(0.6), in: Capsule())
+                    .overlay(Capsule().stroke(.white.opacity(0.20), lineWidth: 0.5))
                 }
                 .padding(.top, 4)
             }
-            .padding(20)
+            .padding(22)
         }
         .heroCard()
     }
@@ -130,23 +153,36 @@ struct PlateCalculatorView: View {
             VStack(spacing: 0) {
                 ForEach(Array(sorted.enumerated()), id: \.element.key) { idx, pair in
                     let (plate, items) = pair
+                    let pColor = plateColors[plate] ?? .gray
                     HStack(spacing: 14) {
                         Circle()
-                            .fill(plateColors[plate] ?? .gray)
-                            .frame(width: 32, height: 32)
-                            .overlay { Circle().stroke(.primary.opacity(0.2), lineWidth: 1) }
+                            .fill(
+                                LinearGradient(
+                                    colors: [pColor, pColor.opacity(0.78)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .frame(width: 36, height: 36)
+                            .overlay(Circle().stroke(.white.opacity(0.30), lineWidth: 1))
+                            .shadow(color: pColor.opacity(0.40), radius: 5, y: 2)
                         Text("\(items.count)× \(unit.format(plate))")
-                            .font(.subheadline.weight(.medium))
+                            .font(.system(size: 15, weight: .semibold, design: .rounded))
                         Spacer()
                         Text(unit.format(plate * Double(items.count) * 2) + " total")
-                            .font(.caption).foregroundStyle(.secondary)
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
                     }
-                    .padding(.horizontal, 16).padding(.vertical, 10)
-                    if idx < sorted.count - 1 { Divider().padding(.leading, 62) }
+                    .padding(.horizontal, 16).padding(.vertical, 11)
+                    if idx < sorted.count - 1 { Divider().padding(.leading, 66) }
                 }
             }
             .background(Color(.tertiarySystemGroupedBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(Color.white.opacity(0.05), lineWidth: 0.5)
+            )
 
             HStack {
                 if abs(actualWeight - targetKg) > 0.01 {
@@ -168,12 +204,23 @@ struct PlateCalculatorView: View {
     private var justTheBarCard: some View {
         HStack(spacing: 16) {
             ZStack {
-                Circle().fill(Color.indigo.opacity(0.12)).frame(width: 48, height: 48)
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [.indigo, Color(red: 0.40, green: 0.30, blue: 0.92)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 52, height: 52)
+                    .shadow(color: .indigo.opacity(0.40), radius: 6, y: 3)
                 Image(systemName: "info.circle.fill")
-                    .font(.system(size: 20, weight: .semibold)).foregroundStyle(.indigo)
+                    .font(.system(size: 22, weight: .bold))
+                    .foregroundStyle(.white)
             }
             VStack(alignment: .leading, spacing: 3) {
-                Text("Just the bar!").font(.subheadline.weight(.semibold))
+                Text("Just the bar!")
+                    .font(.system(size: 16, weight: .bold, design: .rounded))
                 Text("Target is at or below the bar weight.")
                     .font(.caption).foregroundStyle(.secondary)
             }
@@ -190,15 +237,27 @@ struct PlateCalculatorView: View {
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 70), spacing: 8)], spacing: 8) {
                 ForEach(quickWeights, id: \.self) { w in
                     Button {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
                         targetWeight = String(format: "%.0f", unit.display(w))
                     } label: {
                         Text(unit.formatShort(w))
-                            .font(.subheadline.bold())
-                            .frame(maxWidth: .infinity).padding(.vertical, 11)
-                            .background(Color.indigo.opacity(0.12), in: RoundedRectangle(cornerRadius: 10))
+                            .font(.system(size: 15, weight: .black, design: .rounded))
+                            .frame(maxWidth: .infinity).padding(.vertical, 12)
+                            .background(
+                                LinearGradient(
+                                    colors: [Color.indigo.opacity(0.20), Color.indigo.opacity(0.10)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                ),
+                                in: RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                    .stroke(Color.indigo.opacity(0.20), lineWidth: 0.5)
+                            )
                             .foregroundStyle(Color.indigo)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressableCard)
                 }
             }
         }
@@ -215,30 +274,59 @@ struct PlateCalculatorView: View {
             let maxPlateWeight = availablePlatesKg.first ?? 25
 
             HStack(spacing: 0) {
-                HStack(spacing: 2) {
+                HStack(spacing: 3) {
                     Spacer(minLength: 0)
                     ForEach(Array(platesPerSide.reversed().enumerated()), id: \.offset) { _, plate in
                         let heightRatio = max(0.3, plate / maxPlateWeight)
-                        RoundedRectangle(cornerRadius: 3)
-                            .fill(plateColors[plate] ?? .gray)
-                            .overlay { RoundedRectangle(cornerRadius: 3).stroke(.primary.opacity(0.2), lineWidth: 0.5) }
-                            .frame(width: max(8, sideWidth / CGFloat(max(platesPerSide.count, 1)) - 2),
+                        let plateColor = plateColors[plate] ?? .gray
+                        RoundedRectangle(cornerRadius: 4, style: .continuous)
+                            .fill(
+                                LinearGradient(
+                                    colors: [plateColor, plateColor.opacity(0.78)],
+                                    startPoint: .top,
+                                    endPoint: .bottom
+                                )
+                            )
+                            .overlay {
+                                RoundedRectangle(cornerRadius: 4, style: .continuous)
+                                    .stroke(.white.opacity(0.30), lineWidth: 0.5)
+                            }
+                            .shadow(color: plateColor.opacity(0.45), radius: 4, y: 2)
+                            .frame(width: max(8, sideWidth / CGFloat(max(platesPerSide.count, 1)) - 3),
                                    height: geo.size.height * heightRatio)
                     }
                 }
                 .frame(width: sideWidth)
 
-                RoundedRectangle(cornerRadius: 4)
-                    .fill(Color(.systemGray3))
-                    .frame(width: barWidth, height: 14)
+                RoundedRectangle(cornerRadius: 5, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [Color(.systemGray2), Color(.systemGray3), Color(.systemGray2)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                    .frame(width: barWidth, height: 16)
+                    .shadow(color: .black.opacity(0.18), radius: 3, y: 1)
 
-                HStack(spacing: 2) {
+                HStack(spacing: 3) {
                     ForEach(Array(platesPerSide.enumerated()), id: \.offset) { _, plate in
                         let heightRatio = max(0.3, plate / maxPlateWeight)
-                        RoundedRectangle(cornerRadius: 3)
-                            .fill(plateColors[plate] ?? .gray)
-                            .overlay { RoundedRectangle(cornerRadius: 3).stroke(.primary.opacity(0.2), lineWidth: 0.5) }
-                            .frame(width: max(8, sideWidth / CGFloat(max(platesPerSide.count, 1)) - 2),
+                        let plateColor = plateColors[plate] ?? .gray
+                        RoundedRectangle(cornerRadius: 4, style: .continuous)
+                            .fill(
+                                LinearGradient(
+                                    colors: [plateColor, plateColor.opacity(0.78)],
+                                    startPoint: .top,
+                                    endPoint: .bottom
+                                )
+                            )
+                            .overlay {
+                                RoundedRectangle(cornerRadius: 4, style: .continuous)
+                                    .stroke(.white.opacity(0.30), lineWidth: 0.5)
+                            }
+                            .shadow(color: plateColor.opacity(0.45), radius: 4, y: 2)
+                            .frame(width: max(8, sideWidth / CGFloat(max(platesPerSide.count, 1)) - 3),
                                    height: geo.size.height * heightRatio)
                     }
                     Spacer(minLength: 0)

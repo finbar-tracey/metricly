@@ -86,34 +86,69 @@ struct ProgressPhotosView: View {
 
     private var heroCard: some View {
         ZStack(alignment: .topLeading) {
-            LinearGradient(colors: [Color.purple, Color.indigo.opacity(0.7)],
-                           startPoint: .topLeading, endPoint: .bottomTrailing)
-            Circle().fill(.white.opacity(0.07)).frame(width: 200).offset(x: 160, y: -60)
+            LinearGradient(
+                colors: [
+                    Color(red: 0.55, green: 0.30, blue: 0.95),
+                    Color(red: 0.40, green: 0.30, blue: 0.85),
+                    Color(red: 0.30, green: 0.40, blue: 0.85)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            // Top sheen
+            LinearGradient(
+                colors: [.white.opacity(0.18), .clear],
+                startPoint: .top, endPoint: .center
+            )
+            .blendMode(.plusLighter)
+            Circle().fill(.white.opacity(0.10)).frame(width: 200).blur(radius: 12).offset(x: 160, y: -60)
+            Circle().fill(.white.opacity(0.06)).frame(width: 110).blur(radius: 10).offset(x: -30, y: 80)
 
             VStack(alignment: .leading, spacing: 18) {
                 HStack(alignment: .center, spacing: 14) {
                     ZStack {
-                        Circle().fill(.white.opacity(0.20)).frame(width: 52, height: 52)
+                        Circle()
+                            .fill(.ultraThinMaterial.opacity(0.7))
+                            .frame(width: 56, height: 56)
+                            .overlay(Circle().stroke(.white.opacity(0.25), lineWidth: 0.5))
                         Image(systemName: "camera.fill")
-                            .font(.system(size: 22, weight: .semibold)).foregroundStyle(.white)
+                            .font(.system(size: 24, weight: .bold))
+                            .foregroundStyle(.white)
                     }
-                    VStack(alignment: .leading, spacing: 3) {
+                    VStack(alignment: .leading, spacing: 2) {
                         Text("Progress Photos")
-                            .font(.caption.weight(.semibold)).foregroundStyle(.white.opacity(0.75))
-                        HStack(alignment: .firstTextBaseline, spacing: 4) {
-                            Text("\(photos.count)")
-                                .font(.system(size: 36, weight: .black, design: .rounded))
-                                .foregroundStyle(.white).monospacedDigit()
-                            Text("photos").font(.subheadline.weight(.medium)).foregroundStyle(.white.opacity(0.75))
+                            .font(.system(size: 12, weight: .bold, design: .rounded))
+                            .foregroundStyle(.white.opacity(0.82))
+                            .tracking(0.5)
+                            .textCase(.uppercase)
+                        HStack(alignment: .firstTextBaseline, spacing: 6) {
+                            AnimatedInt(
+                                value: photos.count,
+                                font: .system(size: 42, weight: .black, design: .rounded),
+                                color: .white
+                            )
+                            .shadow(color: .black.opacity(0.18), radius: 5, y: 3)
+                            Text("photos")
+                                .font(.system(size: 18, weight: .heavy, design: .rounded))
+                                .foregroundStyle(.white.opacity(0.78))
                         }
                     }
                     Spacer()
                     if !photos.isEmpty, let latest = photos.first {
                         VStack(alignment: .trailing, spacing: 2) {
-                            Text("Latest").font(.caption2).foregroundStyle(.white.opacity(0.65))
+                            Text("LATEST")
+                                .font(.system(size: 10, weight: .bold, design: .rounded))
+                                .foregroundStyle(.white.opacity(0.78))
+                                .tracking(0.5)
                             Text(latest.date, format: .dateTime.month(.abbreviated).day())
                                 .font(.caption.bold()).foregroundStyle(.white)
                         }
+                        .padding(.horizontal, 11).padding(.vertical, 6)
+                        .background(.ultraThinMaterial.opacity(0.7), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .stroke(.white.opacity(0.25), lineWidth: 0.5)
+                        )
                     }
                 }
 
@@ -122,10 +157,16 @@ struct ProgressPhotosView: View {
                         let count = photos.filter { $0.category == cat }.count
                         HeroStatCol(value: "\(count)", label: cat)
                         if cat != categories.last {
-                            Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 28)
+                            Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 32)
                         }
                     }
                 }
+                .padding(.vertical, 10)
+                .background(.ultraThinMaterial.opacity(0.55), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(.white.opacity(0.18), lineWidth: 0.5)
+                )
             }
             .padding(20)
         }
@@ -187,9 +228,10 @@ struct ProgressPhotosView: View {
 
     private func photoThumbnail(_ photo: ProgressPhoto) -> some View {
         Button {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
             selectedPhoto = photo
         } label: {
-            VStack(spacing: 5) {
+            VStack(spacing: 6) {
                 Group {
                     if let uiImage = UIImage(data: photo.imageData) {
                         Image(uiImage: uiImage)
@@ -199,19 +241,26 @@ struct ProgressPhotosView: View {
                         Color(.tertiarySystemGroupedBackground)
                             .overlay {
                                 Image(systemName: "photo")
+                                    .font(.title2)
                                     .foregroundStyle(.secondary)
                             }
                     }
                 }
-                .frame(height: 110)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .frame(height: 120)
+                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .stroke(Color.white.opacity(0.10), lineWidth: 0.5)
+                )
+                .shadow(color: .black.opacity(0.18), radius: 8, y: 3)
 
                 Text(photo.date, format: .dateTime.month(.abbreviated).day())
-                    .font(.caption2)
+                    .font(.system(size: 11, weight: .bold, design: .rounded))
+                    .tracking(0.4)
                     .foregroundStyle(.secondary)
             }
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressableCard)
         .contextMenu {
             Button(role: .destructive) {
                 photoToDelete = photo

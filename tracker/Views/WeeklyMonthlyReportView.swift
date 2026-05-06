@@ -8,6 +8,15 @@ enum ReportPeriod: String, CaseIterable {
 }
 
 struct WeeklyMonthlyReportView: View {
+    // Cached formatters — DateFormatter() is expensive; never create one inside a computed property
+    private static let shortDateFormatter: DateFormatter = {
+        let f = DateFormatter(); f.dateFormat = "MMM d"; return f
+    }()
+    private static let monthYearFormatter: DateFormatter = {
+        let f = DateFormatter(); f.dateFormat = "MMMM yyyy"; return f
+    }()
+    private static let weekdaySymbols: [String] = DateFormatter().weekdaySymbols ?? []   // locale-aware day names
+
     @Query(filter: #Predicate<Workout> { !$0.isTemplate }, sort: \Workout.date, order: .reverse)
     private var allWorkouts: [Workout]
     @Query(sort: \CardioSession.date, order: .reverse) private var cardioSessions: [CardioSession]
@@ -169,18 +178,17 @@ struct WeeklyMonthlyReportView: View {
         var dayCounts: [Int: Int] = [:]
         for workout in periodWorkouts { dayCounts[calendar.component(.weekday, from: workout.date), default: 0] += 1 }
         guard let bestWeekday = dayCounts.max(by: { $0.value < $1.value })?.key else { return nil }
-        return DateFormatter().weekdaySymbols[bestWeekday - 1]
+        return Self.weekdaySymbols[bestWeekday - 1]
     }
 
     private var periodLabel: String {
-        let formatter = DateFormatter(); let range = currentPeriodRange
+        let range = currentPeriodRange
         switch selectedPeriod {
         case .week:
-            formatter.dateFormat = "MMM d"
             let endOfWeek = Calendar.current.date(byAdding: .day, value: 6, to: range.start) ?? range.end
-            return "\(formatter.string(from: range.start)) – \(formatter.string(from: min(endOfWeek, .now)))"
+            return "\(Self.shortDateFormatter.string(from: range.start)) – \(Self.shortDateFormatter.string(from: min(endOfWeek, .now)))"
         case .month:
-            formatter.dateFormat = "MMMM yyyy"; return formatter.string(from: range.start)
+            return Self.monthYearFormatter.string(from: range.start)
         }
     }
 
@@ -266,18 +274,36 @@ struct WeeklyMonthlyReportView: View {
 
     private var heroCard: some View {
         ZStack(alignment: .topLeading) {
-            LinearGradient(colors: [Color.accentColor, Color.accentColor.opacity(0.65)],
-                           startPoint: .topLeading, endPoint: .bottomTrailing)
-            Circle().fill(.white.opacity(0.07)).frame(width: 200).offset(x: 160, y: -60)
+            LinearGradient(
+                colors: AppTheme.Gradients.calm,
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            // Top sheen
+            LinearGradient(
+                colors: [.white.opacity(0.18), .clear],
+                startPoint: .top, endPoint: .center
+            )
+            .blendMode(.plusLighter)
+            Circle().fill(.white.opacity(0.10)).frame(width: 200).blur(radius: 12).offset(x: 160, y: -60)
+            Circle().fill(.white.opacity(0.06)).frame(width: 110).blur(radius: 10).offset(x: -30, y: 80)
 
             VStack(alignment: .leading, spacing: 18) {
                 HStack(alignment: .center, spacing: 14) {
-                    Text(vibeEmoji).font(.system(size: 38))
-                    VStack(alignment: .leading, spacing: 3) {
+                    Text(vibeEmoji)
+                        .font(.system(size: 42))
+                        .padding(8)
+                        .background(.ultraThinMaterial.opacity(0.7), in: Circle())
+                        .overlay(Circle().stroke(.white.opacity(0.25), lineWidth: 0.5))
+                    VStack(alignment: .leading, spacing: 2) {
                         Text(selectedPeriod == .week ? "Weekly Report" : "Monthly Report")
-                            .font(.caption.weight(.semibold)).foregroundStyle(.white.opacity(0.75))
+                            .font(.system(size: 12, weight: .bold, design: .rounded))
+                            .foregroundStyle(.white.opacity(0.82))
+                            .tracking(0.5)
+                            .textCase(.uppercase)
                         Text(periodLabel)
-                            .font(.title3.weight(.bold)).foregroundStyle(.white)
+                            .font(.system(size: 22, weight: .bold, design: .rounded))
+                            .foregroundStyle(.white)
                     }
                     Spacer()
                     if prsHitCount > 0 {
@@ -285,25 +311,32 @@ struct WeeklyMonthlyReportView: View {
                             Image(systemName: "star.fill").font(.caption.bold())
                             Text("\(prsHitCount) PR\(prsHitCount == 1 ? "" : "s")").font(.caption.bold())
                         }
-                        .padding(.horizontal, 10).padding(.vertical, 5)
-                        .background(.white.opacity(0.20), in: Capsule())
+                        .padding(.horizontal, 11).padding(.vertical, 6)
+                        .background(.ultraThinMaterial.opacity(0.7), in: Capsule())
+                        .overlay(Capsule().stroke(.white.opacity(0.25), lineWidth: 0.5))
                         .foregroundStyle(.white)
                     }
                 }
 
                 if periodWorkouts.isEmpty {
                     Text("No workouts logged \(selectedPeriod == .week ? "this week" : "this month") yet.")
-                        .font(.subheadline).foregroundStyle(.white.opacity(0.75))
+                        .font(.subheadline).foregroundStyle(.white.opacity(0.78))
                 } else {
                     HStack(spacing: 0) {
                         HeroStatCol(value: "\(workoutCount)", label: "Workouts")
-                        Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 28)
+                        Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 32)
                         HeroStatCol(value: "\(totalSets)", label: "Sets")
-                        Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 28)
+                        Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 32)
                         HeroStatCol(value: formattedDuration, label: "Duration")
-                        Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 28)
+                        Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 32)
                         HeroStatCol(value: formatVolume(totalVolume), label: "Volume")
                     }
+                    .padding(.vertical, 10)
+                    .background(.ultraThinMaterial.opacity(0.55), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .stroke(.white.opacity(0.18), lineWidth: 0.5)
+                    )
                 }
             }
             .padding(20)
@@ -331,13 +364,29 @@ struct WeeklyMonthlyReportView: View {
     }
 
     private func statTile(icon: String, value: String, label: String, color: Color, change: Double? = nil) -> some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 10) {
             ZStack {
-                RoundedRectangle(cornerRadius: 10).fill(color.opacity(0.12)).frame(width: 40, height: 40)
-                Image(systemName: icon).font(.system(size: 15, weight: .semibold)).foregroundStyle(color)
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [color, color.opacity(0.72)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 44, height: 44)
+                    .shadow(color: color.opacity(0.40), radius: 6, y: 2)
+                Image(systemName: icon)
+                    .font(.system(size: 17, weight: .bold))
+                    .foregroundStyle(.white)
             }
-            Text(value).font(.system(size: 18, weight: .bold, design: .rounded)).monospacedDigit()
-            Text(label).font(.caption2.weight(.medium)).foregroundStyle(.secondary)
+            Text(value)
+                .font(.system(size: 22, weight: .black, design: .rounded))
+                .monospacedDigit()
+            Text(label.uppercased())
+                .font(.system(size: 10, weight: .bold, design: .rounded))
+                .tracking(0.4)
+                .foregroundStyle(.secondary)
             if let change {
                 HStack(spacing: 2) {
                     Image(systemName: change >= 0 ? "arrow.up.right" : "arrow.down.right").imageScale(.small)
@@ -345,11 +394,23 @@ struct WeeklyMonthlyReportView: View {
                 }
                 .font(.caption2.bold())
                 .foregroundStyle(change >= 0 ? .green : .red)
+                .padding(.horizontal, 7).padding(.vertical, 2)
+                .background((change >= 0 ? Color.green : Color.red).opacity(0.12), in: Capsule())
             }
         }
-        .frame(maxWidth: .infinity).padding(.vertical, 14)
-        .background(Color(.tertiarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .frame(maxWidth: .infinity).padding(.vertical, 16)
+        .background(
+            LinearGradient(
+                colors: [color.opacity(0.10), Color(.tertiarySystemGroupedBackground)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(color.opacity(0.18), lineWidth: 0.5)
+        )
     }
 
     // MARK: - PRs Card
@@ -362,28 +423,60 @@ struct WeeklyMonthlyReportView: View {
                 ForEach(Array(prExerciseNames.prefix(5).enumerated()), id: \.offset) { idx, name in
                     HStack(spacing: 12) {
                         ZStack {
-                            Circle().fill(Color.yellow.opacity(0.15)).frame(width: 32, height: 32)
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .fill(
+                                    LinearGradient(
+                                        colors: [
+                                            Color(red: 1.00, green: 0.85, blue: 0.20),
+                                            Color(red: 0.95, green: 0.62, blue: 0.10)
+                                        ],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
+                                )
+                                .frame(width: 38, height: 38)
+                                .shadow(color: Color.yellow.opacity(0.45), radius: 5, y: 2)
                             Image(systemName: "star.fill")
-                                .font(.system(size: 12, weight: .semibold)).foregroundStyle(.yellow)
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundStyle(.white)
                         }
-                        Text(name).font(.subheadline.weight(.medium))
+                        Text(name)
+                            .font(.system(size: 15, weight: .semibold, design: .rounded))
                         Spacer()
-                        Text("New PR").font(.caption.bold())
-                            .padding(.horizontal, 8).padding(.vertical, 2)
-                            .background(Color.yellow.opacity(0.15), in: Capsule())
-                            .foregroundStyle(.yellow)
+                        Text("NEW PR")
+                            .font(.system(size: 10, weight: .bold, design: .rounded))
+                            .tracking(0.5)
+                            .padding(.horizontal, 9).padding(.vertical, 4)
+                            .background(
+                                LinearGradient(
+                                    colors: [
+                                        Color(red: 1.00, green: 0.85, blue: 0.20),
+                                        Color(red: 0.95, green: 0.62, blue: 0.10)
+                                    ],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                ),
+                                in: Capsule()
+                            )
+                            .foregroundStyle(.white)
+                            .shadow(color: Color.yellow.opacity(0.40), radius: 4, y: 2)
                     }
-                    .padding(.horizontal, 16).padding(.vertical, 11)
-                    if idx < min(prExerciseNames.count, 5) - 1 { Divider().padding(.leading, 60) }
+                    .padding(.horizontal, 16).padding(.vertical, 12)
+                    if idx < min(prExerciseNames.count, 5) - 1 { Divider().padding(.leading, 66) }
                 }
                 if prExerciseNames.count > 5 {
                     Text("+ \(prExerciseNames.count - 5) more PRs")
-                        .font(.caption).foregroundStyle(.secondary)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
                         .padding(.horizontal, 16).padding(.vertical, 10)
                 }
             }
             .background(Color(.tertiarySystemGroupedBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(Color.white.opacity(0.05), lineWidth: 0.5)
+            )
         }
         .appCard()
     }
@@ -395,18 +488,24 @@ struct WeeklyMonthlyReportView: View {
             SectionHeader(title: "Muscle Groups", icon: "figure.strengthtraining.traditional", color: .accentColor)
 
             let maxSets = Double(muscleGroupSetCounts.first?.sets ?? 1)
-            VStack(spacing: 10) {
+            VStack(spacing: 12) {
                 ForEach(muscleGroupSetCounts.prefix(6), id: \.group) { item in
-                    HStack(spacing: 10) {
-                        MuscleIconView(group: item.group, color: Color.accentColor)
-                            .frame(width: 14, height: 14)
+                    HStack(spacing: 12) {
+                        ZStack {
+                            Circle()
+                                .fill(Color.accentColor.opacity(0.16))
+                                .frame(width: 28, height: 28)
+                            MuscleIconView(group: item.group, color: Color.accentColor)
+                                .frame(width: 14, height: 14)
+                        }
                         Text(item.group.rawValue)
-                            .font(.caption.weight(.medium))
-                            .frame(width: 70, alignment: .leading)
-                        GradientProgressBar(value: Double(item.sets) / maxSets, color: .accentColor, height: 6)
+                            .font(.system(size: 13, weight: .semibold, design: .rounded))
+                            .frame(width: 76, alignment: .leading)
+                        GradientProgressBar(value: Double(item.sets) / maxSets, color: .accentColor, height: 7)
                         Text("\(item.sets)")
-                            .font(.caption.bold().monospacedDigit()).foregroundStyle(.secondary)
-                            .frame(width: 24, alignment: .trailing)
+                            .font(.system(size: 14, weight: .black, design: .rounded).monospacedDigit())
+                            .foregroundStyle(Color.accentColor)
+                            .frame(width: 26, alignment: .trailing)
                     }
                 }
             }
@@ -425,35 +524,68 @@ struct WeeklyMonthlyReportView: View {
                 VStack(spacing: 0) {
                     HStack {
                         VStack(alignment: .leading, spacing: 3) {
-                            Text("Start").font(.caption2).foregroundStyle(.tertiary)
+                            Text("START")
+                                .font(.system(size: 10, weight: .bold, design: .rounded))
+                                .tracking(0.4)
+                                .foregroundStyle(.tertiary)
                             Text(weightUnit.format(startW))
-                                .font(.title3.bold().monospacedDigit())
+                                .font(.system(size: 20, weight: .black, design: .rounded).monospacedDigit())
                         }
                         Spacer()
-                        Image(systemName: "arrow.right").foregroundStyle(.tertiary)
+                        Image(systemName: "arrow.right")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.tertiary)
                         Spacer()
                         VStack(alignment: .trailing, spacing: 3) {
-                            Text("Latest").font(.caption2).foregroundStyle(.tertiary)
+                            Text("LATEST")
+                                .font(.system(size: 10, weight: .bold, design: .rounded))
+                                .tracking(0.4)
+                                .foregroundStyle(.tertiary)
                             Text(weightUnit.format(endW))
-                                .font(.title3.bold().monospacedDigit())
+                                .font(.system(size: 20, weight: .black, design: .rounded).monospacedDigit())
+                                .foregroundStyle(Color.indigo)
                         }
                         if let change = bodyWeightChange {
                             Spacer()
                             VStack(alignment: .trailing, spacing: 3) {
-                                Text("Change").font(.caption2).foregroundStyle(.tertiary)
-                                HStack(spacing: 2) {
+                                Text("CHANGE")
+                                    .font(.system(size: 10, weight: .bold, design: .rounded))
+                                    .tracking(0.4)
+                                    .foregroundStyle(.tertiary)
+                                HStack(spacing: 3) {
                                     Image(systemName: change > 0 ? "arrow.up.right" : "arrow.down.right").imageScale(.small)
                                     Text(weightUnit.format(abs(change)))
                                 }
                                 .font(.subheadline.bold())
-                                .foregroundStyle(change > 0 ? .red : .green)
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 9).padding(.vertical, 4)
+                                .background(
+                                    LinearGradient(
+                                        colors: change > 0 ? [.red, Color(red: 0.78, green: 0.20, blue: 0.20)]
+                                                            : [.green, Color(red: 0.05, green: 0.55, blue: 0.42)],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    ),
+                                    in: Capsule()
+                                )
+                                .shadow(color: (change > 0 ? Color.red : Color.green).opacity(0.40), radius: 4, y: 2)
                             }
                         }
                     }
                     .padding(.horizontal, 16).padding(.vertical, 14)
                 }
-                .background(Color(.tertiarySystemGroupedBackground))
-                .clipShape(RoundedRectangle(cornerRadius: 14))
+                .background(
+                    LinearGradient(
+                        colors: [Color.indigo.opacity(0.08), Color(.tertiarySystemGroupedBackground)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .stroke(Color.indigo.opacity(0.14), lineWidth: 0.5)
+                )
             }
             .appCard()
         }
@@ -504,23 +636,44 @@ struct WeeklyMonthlyReportView: View {
     private func healthTile(icon: String, value: String, label: String, color: Color, trend: (icon: String, isGood: Bool)?) -> some View {
         HStack(spacing: 10) {
             ZStack {
-                RoundedRectangle(cornerRadius: 8).fill(color.opacity(0.12)).frame(width: 34, height: 34)
-                Image(systemName: icon).font(.system(size: 13, weight: .semibold)).foregroundStyle(color)
+                RoundedRectangle(cornerRadius: 11, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [color, color.opacity(0.72)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 38, height: 38)
+                    .shadow(color: color.opacity(0.40), radius: 5, y: 2)
+                Image(systemName: icon)
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(.white)
             }
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 4) {
-                    Text(value).font(.subheadline.bold().monospacedDigit())
+                    Text(value)
+                        .font(.system(size: 15, weight: .black, design: .rounded).monospacedDigit())
                     if let trend {
-                        Image(systemName: trend.icon).font(.caption2)
+                        Image(systemName: trend.icon).font(.caption2.weight(.bold))
                             .foregroundStyle(trend.isGood ? .green : .red)
                     }
                 }
-                Text(label).font(.caption2).foregroundStyle(.secondary)
+                Text(label.uppercased())
+                    .font(.system(size: 10, weight: .bold, design: .rounded))
+                    .tracking(0.3)
+                    .foregroundStyle(.secondary)
             }
             Spacer(minLength: 0)
         }
-        .padding(12)
-        .background(Color(.tertiarySystemGroupedBackground))
+        .padding(13)
+        .background(
+            LinearGradient(
+                colors: [color.opacity(0.10), Color(.tertiarySystemGroupedBackground)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        )
         .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 
@@ -543,7 +696,11 @@ struct WeeklyMonthlyReportView: View {
                 }
             }
             .background(Color(.tertiarySystemGroupedBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(Color.white.opacity(0.05), lineWidth: 0.5)
+            )
         }
         .appCard()
     }
@@ -551,14 +708,28 @@ struct WeeklyMonthlyReportView: View {
     private func consistencyRow(icon: String, color: Color, label: String, value: String) -> some View {
         HStack(spacing: 12) {
             ZStack {
-                Circle().fill(color.opacity(0.12)).frame(width: 34, height: 34)
-                Image(systemName: icon).font(.system(size: 13, weight: .semibold)).foregroundStyle(color)
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [color, color.opacity(0.72)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 38, height: 38)
+                    .shadow(color: color.opacity(0.40), radius: 5, y: 2)
+                Image(systemName: icon)
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(.white)
             }
-            Text(label).font(.subheadline).foregroundStyle(.secondary)
+            Text(label)
+                .font(.system(size: 15, weight: .semibold, design: .rounded))
             Spacer()
-            Text(value).font(.subheadline.bold().monospacedDigit())
+            Text(value)
+                .font(.subheadline.bold().monospacedDigit())
+                .foregroundStyle(color)
         }
-        .padding(.horizontal, 16).padding(.vertical, 12)
+        .padding(.horizontal, 16).padding(.vertical, 13)
     }
 
     // MARK: - Trend Helper

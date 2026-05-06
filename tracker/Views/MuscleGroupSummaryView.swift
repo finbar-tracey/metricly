@@ -70,41 +70,71 @@ struct MuscleGroupSummaryView: View {
 
     private var heroCard: some View {
         ZStack(alignment: .topLeading) {
-            LinearGradient(colors: [Color.accentColor, Color.accentColor.opacity(0.65)],
-                           startPoint: .topLeading, endPoint: .bottomTrailing)
-            Circle().fill(.white.opacity(0.07)).frame(width: 200).offset(x: 160, y: -60)
+            LinearGradient(
+                colors: [
+                    Color(red: 0.55, green: 0.30, blue: 0.95),
+                    Color(red: 0.55, green: 0.40, blue: 0.92),
+                    Color(red: 0.30, green: 0.55, blue: 0.95)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            // Top sheen
+            LinearGradient(
+                colors: [.white.opacity(0.18), .clear],
+                startPoint: .top, endPoint: .center
+            )
+            .blendMode(.plusLighter)
+            Circle().fill(.white.opacity(0.10)).frame(width: 200).blur(radius: 12).offset(x: 160, y: -60)
+            Circle().fill(.white.opacity(0.06)).frame(width: 110).blur(radius: 10).offset(x: -30, y: 80)
 
             VStack(alignment: .leading, spacing: 18) {
                 HStack(alignment: .center, spacing: 14) {
                     ZStack {
-                        Circle().fill(.white.opacity(0.20)).frame(width: 52, height: 52)
+                        Circle()
+                            .fill(.ultraThinMaterial.opacity(0.7))
+                            .frame(width: 56, height: 56)
+                            .overlay(Circle().stroke(.white.opacity(0.25), lineWidth: 0.5))
                         Image(systemName: "figure.strengthtraining.traditional")
-                            .font(.system(size: 22, weight: .semibold)).foregroundStyle(.white)
+                            .font(.system(size: 24, weight: .bold))
+                            .foregroundStyle(.white)
                     }
-                    VStack(alignment: .leading, spacing: 3) {
+                    VStack(alignment: .leading, spacing: 2) {
                         Text(selectedPeriod.rawValue)
-                            .font(.caption.weight(.semibold)).foregroundStyle(.white.opacity(0.75))
+                            .font(.system(size: 12, weight: .bold, design: .rounded))
+                            .foregroundStyle(.white.opacity(0.82))
+                            .tracking(0.5)
+                            .textCase(.uppercase)
                         Text(formatVolume(totalVolume))
-                            .font(.system(size: 36, weight: .black, design: .rounded))
-                            .foregroundStyle(.white).monospacedDigit()
+                            .font(.system(size: 42, weight: .black, design: .rounded))
+                            .foregroundStyle(.white)
+                            .monospacedDigit()
+                            .shadow(color: .black.opacity(0.18), radius: 5, y: 3)
                     }
                     Spacer()
                     HStack(spacing: 4) {
                         Image(systemName: "arrow.up.right.circle.fill").font(.caption.bold())
                         Text("\(totalSets) sets").font(.caption.bold())
                     }
-                    .padding(.horizontal, 10).padding(.vertical, 5)
-                    .background(.white.opacity(0.20), in: Capsule())
+                    .padding(.horizontal, 11).padding(.vertical, 6)
+                    .background(.ultraThinMaterial.opacity(0.7), in: Capsule())
+                    .overlay(Capsule().stroke(.white.opacity(0.25), lineWidth: 0.5))
                     .foregroundStyle(.white)
                 }
 
                 HStack(spacing: 0) {
                     HeroStatCol(value: "\(chartData.count)", label: "Muscles")
-                    Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 28)
+                    Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 32)
                     HeroStatCol(value: "\(filteredWorkouts.count)", label: "Workouts")
-                    Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 28)
+                    Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 32)
                     HeroStatCol(value: chartData.first?.group.rawValue ?? "—", label: "Top")
                 }
+                .padding(.vertical, 10)
+                .background(.ultraThinMaterial.opacity(0.55), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(.white.opacity(0.18), lineWidth: 0.5)
+                )
             }
             .padding(20)
         }
@@ -144,34 +174,53 @@ struct MuscleGroupSummaryView: View {
 
             VStack(spacing: 0) {
                 ForEach(Array(chartData.enumerated()), id: \.element.id) { idx, item in
-                    VStack(spacing: 8) {
+                    VStack(spacing: 10) {
                         HStack(spacing: 12) {
                             ZStack {
-                                RoundedRectangle(cornerRadius: 8)
-                                    .fill(colorFor(item.group).opacity(0.12))
-                                    .frame(width: 34, height: 34)
+                                RoundedRectangle(cornerRadius: 11, style: .continuous)
+                                    .fill(
+                                        LinearGradient(
+                                            colors: [colorFor(item.group).opacity(0.20), colorFor(item.group).opacity(0.10)],
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        )
+                                    )
+                                    .frame(width: 38, height: 38)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 11, style: .continuous)
+                                            .stroke(colorFor(item.group).opacity(0.20), lineWidth: 0.5)
+                                    )
                                 MuscleIconView(group: item.group, color: colorFor(item.group))
-                                    .frame(width: 14, height: 14)
+                                    .frame(width: 16, height: 16)
                             }
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(item.group.rawValue).font(.subheadline.weight(.semibold))
-                                Text("\(item.sets) sets").font(.caption2).foregroundStyle(.secondary)
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(item.group.rawValue)
+                                    .font(.system(size: 15, weight: .semibold, design: .rounded))
+                                Text("\(item.sets) sets")
+                                    .font(.caption2.weight(.semibold))
+                                    .foregroundStyle(.secondary)
                             }
                             Spacer()
                             Text(formatVolume(item.volume))
-                                .font(.subheadline.bold().monospacedDigit())
+                                .font(.system(size: 15, weight: .black, design: .rounded))
+                                .monospacedDigit()
+                                .foregroundStyle(colorFor(item.group))
                         }
-                        GradientProgressBar(value: item.volume / maxVol, color: colorFor(item.group), height: 4)
+                        GradientProgressBar(value: item.volume / maxVol, color: colorFor(item.group), height: 6)
                     }
                     .padding(.horizontal, 16).padding(.vertical, 12)
                     .accessibilityElement(children: .combine)
                     .accessibilityLabel("\(item.group.rawValue): \(formatVolume(item.volume)), \(item.sets) sets")
 
-                    if idx < chartData.count - 1 { Divider().padding(.leading, 62) }
+                    if idx < chartData.count - 1 { Divider().padding(.leading, 66) }
                 }
             }
             .background(Color(.tertiarySystemGroupedBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(Color.white.opacity(0.05), lineWidth: 0.5)
+            )
         }
         .appCard()
     }

@@ -10,9 +10,10 @@ struct ContentView: View {
     @State private var workoutToDelete: Workout?
     @State private var showingOnboarding = false
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.scenePhase) private var scenePhase
 
     // iPad
-    @State private var selectedSidebarItem: SidebarItem? = .workouts
+    @State private var selectedSidebarItem: SidebarItem? = .home
 
     // iPhone
     @State private var selectedTab: AppTab = .home
@@ -22,6 +23,8 @@ struct ContentView: View {
     }
 
     enum SidebarItem: String, Hashable, CaseIterable {
+        // Home
+        case home = "Home"
         // Track
         case workouts = "Workouts"
         case programs = "Programs"
@@ -57,6 +60,7 @@ struct ContentView: View {
 
         var icon: String {
             switch self {
+            case .home:             return "house"
             case .workouts:         return "dumbbell"
             case .programs:         return "calendar.badge.clock"
             case .schedule:         return "calendar.badge.checkmark"
@@ -132,6 +136,12 @@ struct ContentView: View {
             if !reminderDays.isEmpty {
                 ReminderManager.scheduleStreakNudges(days: reminderDays)
             }
+            // Inactivity nudge — 3 days after last logged activity
+            let lastWorkout = workouts.first?.date
+            let lastCardio  = cardioSessions.first?.date
+            if let lastActive = [lastWorkout, lastCardio].compactMap({ $0 }).max() {
+                ReminderManager.scheduleInactivityNudge(lastActivityDate: lastActive)
+            }
             // Push today's scheduled workout name to the Today's Plan widget
             let weekday = Calendar.current.component(.weekday, from: Date())
             let scheduled = settings.weeklyPlan[weekday] ?? ""
@@ -149,6 +159,14 @@ struct ContentView: View {
                 weeklyCardioGoalKm: settings.weeklyCardioDistanceGoalKm,
                 todayScheduledName: scheduled
             )
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            guard newPhase == .active else { return }
+            let lastWorkout = workouts.first?.date
+            let lastCardio  = cardioSessions.first?.date
+            if let lastActive = [lastWorkout, lastCardio].compactMap({ $0 }).max() {
+                ReminderManager.scheduleInactivityNudge(lastActivityDate: lastActive)
+            }
         }
         .onReceive(NotificationCenter.default.publisher(for: .openTrainingTab)) { _ in
             withAnimation { selectedTab = .training }
@@ -176,6 +194,9 @@ struct ContentView: View {
     private var iPadLayout: some View {
         NavigationSplitView {
             List(selection: $selectedSidebarItem) {
+                Section {
+                    Label("Home", systemImage: "house").tag(SidebarItem.home)
+                }
                 Section("Track") {
                     Label("Workouts",     systemImage: "dumbbell")                  .tag(SidebarItem.workouts)
                     Label("Programs",     systemImage: "calendar.badge.clock")      .tag(SidebarItem.programs)
@@ -216,6 +237,7 @@ struct ContentView: View {
                 }
             }
             .navigationTitle("Metricly")
+            .navigationSplitViewColumnWidth(min: 220, ideal: 260, max: 300)
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
                     Button { showingSearch = true } label: {
@@ -227,7 +249,8 @@ struct ContentView: View {
         } detail: {
             NavigationStack {
                 switch selectedSidebarItem {
-                case .workouts, .none:  HomeDashboardView()
+                case .home, .none:      HomeDashboardView()
+                case .workouts:         FullWorkoutListView()
                 case .programs:         TrainingProgramsView().navigationTitle("Programs")
                 case .schedule:         WorkoutScheduleView()
                 case .calendar:         WorkoutCalendarView().navigationTitle("Calendar")
@@ -258,6 +281,7 @@ struct ContentView: View {
             .navigationDestination(for: Workout.self) { workout in WorkoutDetailView(workout: workout) }
             .navigationDestination(for: String.self)  { name in ExerciseHistoryView(exerciseName: name) }
         }
+        .navigationSplitViewStyle(.balanced)
     }
 
     // MARK: - iPhone Layout (TabView)

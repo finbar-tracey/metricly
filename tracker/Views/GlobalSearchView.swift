@@ -58,8 +58,7 @@ struct GlobalSearchView: View {
         !matchedWorkouts.isEmpty || !matchedExercises.isEmpty || !matchedCardio.isEmpty
     }
 
-    private var useKm: Bool { settingsArray.first?.useKilograms ?? true }
-    private var distanceUnit: DistanceUnit { useKm ? .km : .mi }
+    private var distanceUnit: DistanceUnit { weightUnit.distanceUnit }
 
     // MARK: - Body
 
@@ -92,11 +91,29 @@ struct GlobalSearchView: View {
     private var emptyPrompt: some View {
         VStack(spacing: 20) {
             Spacer()
-            Image(systemName: "magnifyingglass")
-                .font(.system(size: 56, weight: .light))
-                .foregroundStyle(.quaternary)
+            ZStack {
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            colors: [Color.accentColor.opacity(0.18), Color.accentColor.opacity(0.04)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 110, height: 110)
+                    .overlay(Circle().stroke(Color.accentColor.opacity(0.18), lineWidth: 1))
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: 44, weight: .bold))
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [Color.accentColor, Color.accentColor.opacity(0.7)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+            }
             Text("Search everything")
-                .font(.title3.weight(.semibold))
+                .font(.system(size: 22, weight: .bold, design: .rounded))
             Text("Workouts, exercises, runs, and cardio sessions")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)

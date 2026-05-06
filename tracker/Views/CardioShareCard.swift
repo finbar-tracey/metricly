@@ -10,44 +10,64 @@ struct CardioShareCard: View {
         ZStack(alignment: .topLeading) {
             // Background gradient
             LinearGradient(
-                colors: [session.type.color, session.type.color.opacity(0.6)],
-                startPoint: .topLeading, endPoint: .bottomTrailing
+                colors: [
+                    session.type.color,
+                    session.type.color.opacity(0.78),
+                    session.type.color.opacity(0.55)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
             )
+            // Top sheen
+            LinearGradient(
+                colors: [.white.opacity(0.18), .clear],
+                startPoint: .top, endPoint: .center
+            )
+            .blendMode(.plusLighter)
 
-            // Decorative circles
+            // Decorative circles (blurred for depth)
             Circle()
-                .fill(.white.opacity(0.06))
+                .fill(.white.opacity(0.10))
                 .frame(width: 220)
+                .blur(radius: 14)
                 .offset(x: 240, y: -80)
             Circle()
-                .fill(.white.opacity(0.04))
+                .fill(.white.opacity(0.06))
                 .frame(width: 140)
+                .blur(radius: 10)
                 .offset(x: 280, y: 100)
 
             VStack(alignment: .leading, spacing: 20) {
                 // Header
                 HStack(spacing: 10) {
                     ZStack {
-                        Circle().fill(.white.opacity(0.2)).frame(width: 48, height: 48)
+                        Circle()
+                            .fill(.ultraThinMaterial.opacity(0.7))
+                            .frame(width: 52, height: 52)
+                            .overlay(Circle().stroke(.white.opacity(0.25), lineWidth: 0.5))
                         Image(systemName: session.type.icon)
-                            .font(.system(size: 20, weight: .semibold))
+                            .font(.system(size: 22, weight: .bold))
                             .foregroundStyle(.white)
                     }
                     VStack(alignment: .leading, spacing: 2) {
                         Text(session.type.rawValue)
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(.white.opacity(0.75))
+                            .font(.system(size: 12, weight: .bold, design: .rounded))
+                            .foregroundStyle(.white.opacity(0.82))
+                            .tracking(0.5)
+                            .textCase(.uppercase)
                         Text(session.date, format: .dateTime.weekday(.wide).month(.abbreviated).day().year())
                             .font(.subheadline.weight(.bold))
                             .foregroundStyle(.white)
                     }
                     Spacer()
                     // App badge
-                    Text("Metricly")
-                        .font(.caption2.weight(.bold))
-                        .foregroundStyle(.white.opacity(0.6))
-                        .padding(.horizontal, 8).padding(.vertical, 4)
-                        .background(.white.opacity(0.15), in: Capsule())
+                    Text("METRICLY")
+                        .font(.system(size: 10, weight: .bold, design: .rounded))
+                        .tracking(0.6)
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 9).padding(.vertical, 5)
+                        .background(.ultraThinMaterial.opacity(0.7), in: Capsule())
+                        .overlay(Capsule().stroke(.white.opacity(0.25), lineWidth: 0.5))
                 }
 
                 // Main stat — distance

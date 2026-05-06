@@ -68,26 +68,39 @@ struct WorkoutScheduleView: View {
                     let name = plan[day.weekday]
 
                     Button {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
                         draftName = name ?? ""
                         editingDay = day.weekday
                     } label: {
                         HStack(spacing: 14) {
                             Text(day.short)
-                                .font(.system(size: 12, weight: .bold))
-                                .frame(width: 38, height: 38)
-                                .background(
-                                    isToday ? Color.accentColor : Color(.tertiarySystemGroupedBackground),
-                                    in: RoundedRectangle(cornerRadius: 10)
-                                )
+                                .font(.system(size: 13, weight: .bold, design: .rounded))
+                                .frame(width: 42, height: 42)
+                                .background {
+                                    if isToday {
+                                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                            .fill(
+                                                LinearGradient(
+                                                    colors: [Color.accentColor, Color.accentColor.opacity(0.72)],
+                                                    startPoint: .topLeading,
+                                                    endPoint: .bottomTrailing
+                                                )
+                                            )
+                                            .shadow(color: Color.accentColor.opacity(0.40), radius: 6, y: 3)
+                                    } else {
+                                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                            .fill(Color(.tertiarySystemGroupedBackground))
+                                    }
+                                }
                                 .foregroundStyle(isToday ? .white : .secondary)
 
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(day.label)
-                                    .font(.subheadline.weight(isToday ? .semibold : .regular))
+                                    .font(.system(size: 12, weight: .semibold, design: .rounded))
                                     .foregroundStyle(isToday ? .primary : .secondary)
                                 if let n = name, !n.isEmpty {
                                     Text(n)
-                                        .font(.subheadline.weight(.semibold))
+                                        .font(.system(size: 15, weight: .semibold, design: .rounded))
                                         .foregroundStyle(.primary)
                                 } else {
                                     Text("Rest day")
@@ -100,25 +113,29 @@ struct WorkoutScheduleView: View {
 
                             if let n = name, !n.isEmpty {
                                 Image(systemName: "dumbbell.fill")
-                                    .font(.caption)
+                                    .font(.caption.weight(.semibold))
                                     .foregroundStyle(Color.accentColor)
                             }
                             Image(systemName: "chevron.right")
-                                .font(.caption2)
+                                .font(.caption2.weight(.semibold))
                                 .foregroundStyle(.tertiary)
                         }
                         .padding(.horizontal, 16)
-                        .padding(.vertical, 12)
+                        .padding(.vertical, 13)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressableCard)
 
                     if day.weekday != 1 {
-                        Divider().padding(.leading, 68)
+                        Divider().padding(.leading, 72)
                     }
                 }
             }
             .background(Color(.tertiarySystemGroupedBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(Color.white.opacity(0.05), lineWidth: 0.5)
+            )
         }
         .appCard()
     }
@@ -135,16 +152,26 @@ struct WorkoutScheduleView: View {
             FlowLayout(spacing: 8) {
                 ForEach(templates) { template in
                     Button {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
                         draftName = template.name
                         editingDay = todayWeekday
                     } label: {
                         Text(template.name)
-                            .font(.caption.bold())
-                            .padding(.horizontal, 12).padding(.vertical, 7)
-                            .background(Color.accentColor.opacity(0.1), in: Capsule())
+                            .font(.system(size: 12, weight: .bold, design: .rounded))
+                            .tracking(0.3)
+                            .padding(.horizontal, 14).padding(.vertical, 8)
+                            .background(
+                                LinearGradient(
+                                    colors: [Color.accentColor.opacity(0.18), Color.accentColor.opacity(0.10)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                ),
+                                in: Capsule()
+                            )
+                            .overlay(Capsule().stroke(Color.accentColor.opacity(0.30), lineWidth: 0.5))
                             .foregroundStyle(Color.accentColor)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressableCard)
                 }
             }
         }

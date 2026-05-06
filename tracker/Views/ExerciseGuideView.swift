@@ -42,38 +42,53 @@ struct ExerciseGuideView: View {
     private func guideHeroCard(guide: ExerciseGuide) -> some View {
         ZStack(alignment: .topLeading) {
             LinearGradient(
-                colors: [Color.indigo, Color.purple],
+                colors: [
+                    Color(red: 0.30, green: 0.20, blue: 0.85),
+                    Color(red: 0.55, green: 0.30, blue: 0.95),
+                    Color(red: 0.78, green: 0.30, blue: 0.78)
+                ],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
-            Circle().fill(.white.opacity(0.07)).frame(width: 160).offset(x: 100, y: -20)
-            Circle().fill(.white.opacity(0.05)).frame(width: 80).offset(x: -10, y: 60)
+            // Top sheen
+            LinearGradient(
+                colors: [.white.opacity(0.18), .clear],
+                startPoint: .top, endPoint: .center
+            )
+            .blendMode(.plusLighter)
+            Circle().fill(.white.opacity(0.10)).frame(width: 160).blur(radius: 11).offset(x: 100, y: -20)
+            Circle().fill(.white.opacity(0.06)).frame(width: 80).blur(radius: 8).offset(x: -10, y: 60)
 
-            VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: 12) {
                 Label("Form Guide", systemImage: "text.book.closed")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.white.opacity(0.8))
-                    .padding(.horizontal, 10)
+                    .font(.system(size: 12, weight: .bold, design: .rounded))
+                    .tracking(0.4)
+                    .textCase(.uppercase)
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 11)
                     .padding(.vertical, 5)
-                    .background(.white.opacity(0.2), in: .capsule)
+                    .background(.ultraThinMaterial.opacity(0.7), in: Capsule())
+                    .overlay(Capsule().stroke(.white.opacity(0.25), lineWidth: 0.5))
 
                 Text(exerciseName)
-                    .font(.title2.weight(.bold))
+                    .font(.system(size: 26, weight: .bold, design: .rounded))
                     .foregroundStyle(.white)
+                    .shadow(color: .black.opacity(0.18), radius: 4, y: 2)
 
                 HStack(spacing: 12) {
                     Label("\(guide.primaryMuscles.count) primary", systemImage: "circle.fill")
-                        .font(.caption.weight(.medium))
-                        .foregroundStyle(.white.opacity(0.85))
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.white.opacity(0.88))
                     Label("\(guide.formTips.count) tips", systemImage: "checkmark.seal.fill")
-                        .font(.caption.weight(.medium))
-                        .foregroundStyle(.white.opacity(0.85))
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.white.opacity(0.88))
                 }
             }
             .padding(20)
         }
-        .frame(minHeight: 140)
-        .clipShape(RoundedRectangle(cornerRadius: AppTheme.heroRadius))
+        .frame(minHeight: 150)
+        .clipShape(RoundedRectangle(cornerRadius: AppTheme.heroRadius, style: .continuous))
+        .shadow(color: .black.opacity(0.20), radius: 20, y: 8)
     }
 
     private func descriptionCard(guide: ExerciseGuide) -> some View {

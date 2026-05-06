@@ -599,16 +599,18 @@
 				CODE_SIGN_ENTITLEMENTS = MetriclyWatchComplications/MetriclyWatchComplications.entitlements;
 				DEVELOPMENT_TEAM = R4CNRLU7KW;
 				INFOPLIST_FILE = MetriclyWatchComplications/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Metricly;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
+				MARKETING_VERSION = 1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = Findows.tracker.watchkitapp.complications;
 				PRODUCT_NAME = MetriclyWatchComplications;
 				SDKROOT = watchos;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 4;
-				WATCHOS_DEPLOYMENT_TARGET = 10.0;
+				WATCHOS_DEPLOYMENT_TARGET = 26.0;
 			};
 			name = Debug;
 		};
@@ -897,17 +899,19 @@
 				DEVELOPMENT_TEAM = R4CNRLU7KW;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = MetriclyWatch/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Metricly;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
+				MARKETING_VERSION = 1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = Findows.tracker.watchkitapp;
 				PRODUCT_NAME = MetriclyWatch;
 				SDKROOT = watchos;
 				SKIP_INSTALL = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 4;
-				WATCHOS_DEPLOYMENT_TARGET = 10.0;
+				WATCHOS_DEPLOYMENT_TARGET = 26.0;
 			};
 			name = Debug;
 		};
@@ -917,17 +921,19 @@
 				CODE_SIGN_ENTITLEMENTS = MetriclyWatchComplications/MetriclyWatchComplications.entitlements;
 				DEVELOPMENT_TEAM = R4CNRLU7KW;
 				INFOPLIST_FILE = MetriclyWatchComplications/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Metricly;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
+				MARKETING_VERSION = 1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = Findows.tracker.watchkitapp.complications;
 				PRODUCT_NAME = MetriclyWatchComplications;
 				SDKROOT = watchos;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 4;
 				VALIDATE_PRODUCT = YES;
-				WATCHOS_DEPLOYMENT_TARGET = 10.0;
+				WATCHOS_DEPLOYMENT_TARGET = 26.0;
 			};
 			name = Release;
 		};
@@ -941,10 +947,12 @@
 				DEVELOPMENT_TEAM = R4CNRLU7KW;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = MetriclyWatch/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Metricly;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
+				MARKETING_VERSION = 1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = Findows.tracker.watchkitapp;
 				PRODUCT_NAME = MetriclyWatch;
 				SDKROOT = watchos;
@@ -952,7 +960,7 @@
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 4;
 				VALIDATE_PRODUCT = YES;
-				WATCHOS_DEPLOYMENT_TARGET = 10.0;
+				WATCHOS_DEPLOYMENT_TARGET = 26.0;
 			};
 			name = Release;
 		};

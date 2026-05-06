@@ -138,14 +138,22 @@ struct WaterTrackerView: View {
     private var heroCard: some View {
         ZStack(alignment: .topLeading) {
             LinearGradient(
-                colors: [Color.cyan, Color(red: 0.0, green: 0.75, blue: 0.85).opacity(0.75)],
+                colors: [
+                    Color.cyan,
+                    Color(red: 0.20, green: 0.62, blue: 0.92),
+                    Color(red: 0.30, green: 0.40, blue: 0.95)
+                ],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
-            Circle()
-                .fill(.white.opacity(0.07))
-                .frame(width: 200)
-                .offset(x: 160, y: -60)
+            // Top sheen
+            LinearGradient(
+                colors: [.white.opacity(0.18), .clear],
+                startPoint: .top, endPoint: .center
+            )
+            .blendMode(.plusLighter)
+            Circle().fill(.white.opacity(0.10)).frame(width: 200).blur(radius: 12).offset(x: 160, y: -60)
+            Circle().fill(.white.opacity(0.06)).frame(width: 110).blur(radius: 10).offset(x: -30, y: 80)
 
             VStack(alignment: .leading, spacing: 20) {
                 HStack(alignment: .center, spacing: 20) {
@@ -157,22 +165,30 @@ struct WaterTrackerView: View {
                             .stroke(.white, style: StrokeStyle(lineWidth: 8, lineCap: .round))
                             .rotationEffect(.degrees(-90))
                             .animation(.easeInOut(duration: 0.6), value: progress)
+                            .shadow(color: .white.opacity(0.5), radius: 6, y: 1)
                     }
-                    .frame(width: 64, height: 64)
+                    .frame(width: 68, height: 68)
 
-                    VStack(alignment: .leading, spacing: 4) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Today")
+                            .font(.system(size: 12, weight: .bold, design: .rounded))
+                            .foregroundStyle(.white.opacity(0.82))
+                            .tracking(0.5)
+                            .textCase(.uppercase)
                         HStack(alignment: .firstTextBaseline, spacing: 4) {
-                            Text("\(Int(todayTotalMl))")
-                                .font(.system(size: 42, weight: .black, design: .rounded))
-                                .foregroundStyle(.white)
-                                .monospacedDigit()
+                            AnimatedInt(
+                                value: Int(todayTotalMl),
+                                font: .system(size: 48, weight: .black, design: .rounded),
+                                color: .white
+                            )
+                            .shadow(color: .black.opacity(0.18), radius: 6, y: 3)
                             Text("ml")
-                                .font(.title3.weight(.semibold))
-                                .foregroundStyle(.white.opacity(0.75))
+                                .font(.system(size: 22, weight: .heavy, design: .rounded))
+                                .foregroundStyle(.white.opacity(0.78))
                         }
                         Text("of \(Int(goalMl)) ml goal")
                             .font(.subheadline.weight(.medium))
-                            .foregroundStyle(.white.opacity(0.75))
+                            .foregroundStyle(.white.opacity(0.78))
                     }
                 }
 
@@ -183,18 +199,19 @@ struct WaterTrackerView: View {
                             .font(.caption.bold())
                     }
                     .foregroundStyle(.white)
-                    .padding(.horizontal, 12).padding(.vertical, 5)
-                    .background(.white.opacity(0.20), in: Capsule())
+                    .padding(.horizontal, 12).padding(.vertical, 6)
+                    .background(.ultraThinMaterial.opacity(0.7), in: Capsule())
+                    .overlay(Capsule().stroke(.white.opacity(0.25), lineWidth: 0.5))
                 } else {
                     Text("\(Int(goalMl - todayTotalMl)) ml remaining")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.white.opacity(0.80))
-                        .padding(.horizontal, 12).padding(.vertical, 5)
-                        .background(.white.opacity(0.15), in: Capsule())
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 12).padding(.vertical, 6)
+                        .background(.ultraThinMaterial.opacity(0.6), in: Capsule())
+                        .overlay(Capsule().stroke(.white.opacity(0.22), lineWidth: 0.5))
                 }
 
-                GradientProgressBar(value: progress, color: .white, height: 6)
-                    .opacity(0.7)
+                GradientProgressBar(value: progress, color: .white, height: 8)
             }
             .padding(20)
         }

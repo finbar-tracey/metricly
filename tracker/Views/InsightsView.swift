@@ -19,6 +19,16 @@ enum InsightsTab: String, CaseIterable, Identifiable {
         case .recap: return "doc.text.magnifyingglass"
         }
     }
+
+    var tint: Color {
+        switch self {
+        case .volume: return .green
+        case .muscles: return .purple
+        case .recovery: return .red
+        case .bodyWeight: return .blue
+        case .recap: return .orange
+        }
+    }
 }
 
 struct InsightsView: View {
@@ -31,35 +41,41 @@ struct InsightsView: View {
                 HStack(spacing: 8) {
                     ForEach(InsightsTab.allCases) { tab in
                         Button {
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            withAnimation(.spring(response: 0.42, dampingFraction: 0.78)) {
                                 selectedTab = tab
                             }
                         } label: {
-                            HStack(spacing: 5) {
+                            HStack(spacing: 6) {
                                 Image(systemName: tab.icon)
-                                    .font(.system(size: 12, weight: .semibold))
+                                    .font(.system(size: 12, weight: .bold))
                                 Text(tab.rawValue)
-                                    .font(.subheadline.weight(.semibold))
+                                    .font(.system(size: 14, weight: .semibold, design: .rounded))
                             }
                             .padding(.horizontal, 14)
-                            .padding(.vertical, 8)
-                            .background(
-                                selectedTab == tab
-                                    ? AnyShapeStyle(Color.accentColor)
-                                    : AnyShapeStyle(Color(.secondarySystemGroupedBackground)),
-                                in: Capsule()
-                            )
-                            .foregroundStyle(selectedTab == tab ? .white : .secondary)
-                            .shadow(
-                                color: selectedTab == tab ? Color.accentColor.opacity(0.35) : .clear,
-                                radius: 6, x: 0, y: 3
-                            )
+                            .padding(.vertical, 9)
+                            .background {
+                                if selectedTab == tab {
+                                    Capsule()
+                                        .fill(
+                                            LinearGradient(
+                                                colors: [tab.tint, tab.tint.opacity(0.72)],
+                                                startPoint: .topLeading,
+                                                endPoint: .bottomTrailing
+                                            )
+                                        )
+                                        .shadow(color: tab.tint.opacity(0.45), radius: 8, x: 0, y: 4)
+                                } else {
+                                    Capsule().fill(Color(.secondarySystemGroupedBackground))
+                                }
+                            }
+                            .foregroundStyle(selectedTab == tab ? .white : .primary)
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.pressableCard)
                     }
                 }
                 .padding(.horizontal)
-                .padding(.vertical, 10)
+                .padding(.vertical, 12)
             }
 
             Group {

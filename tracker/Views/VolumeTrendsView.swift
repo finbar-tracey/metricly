@@ -36,23 +36,42 @@ struct VolumeTrendsView: View {
 
     private var heroCard: some View {
         ZStack(alignment: .topLeading) {
-            LinearGradient(colors: [Color.blue, Color.blue.opacity(0.65)],
-                           startPoint: .topLeading, endPoint: .bottomTrailing)
-            Circle().fill(.white.opacity(0.07)).frame(width: 200).offset(x: 160, y: -60)
+            LinearGradient(
+                colors: [
+                    Color.blue,
+                    Color.blue.opacity(0.78),
+                    Color(red: 0.10, green: 0.40, blue: 0.85)
+                ],
+                startPoint: .topLeading, endPoint: .bottomTrailing
+            )
+            LinearGradient(
+                colors: [.white.opacity(0.18), .clear],
+                startPoint: .top, endPoint: .center
+            )
+            .blendMode(.plusLighter)
+            Circle().fill(.white.opacity(0.10)).frame(width: 200).blur(radius: 12).offset(x: 160, y: -50)
+            Circle().fill(.white.opacity(0.06)).frame(width: 110).blur(radius: 10).offset(x: -30, y: 80)
 
             VStack(alignment: .leading, spacing: 18) {
                 HStack(alignment: .center, spacing: 14) {
                     ZStack {
-                        Circle().fill(.white.opacity(0.20)).frame(width: 52, height: 52)
+                        Circle()
+                            .fill(.ultraThinMaterial.opacity(0.7))
+                            .frame(width: 56, height: 56)
+                            .overlay(Circle().stroke(.white.opacity(0.25), lineWidth: 0.5))
                         Image(systemName: "chart.bar.fill")
-                            .font(.system(size: 22, weight: .semibold)).foregroundStyle(.white)
+                            .font(.system(size: 24, weight: .bold)).foregroundStyle(.white)
                     }
                     VStack(alignment: .leading, spacing: 3) {
                         Text("This Week")
-                            .font(.caption.weight(.semibold)).foregroundStyle(.white.opacity(0.75))
+                            .font(.system(size: 11, weight: .bold, design: .rounded))
+                            .tracking(0.5)
+                            .textCase(.uppercase)
+                            .foregroundStyle(.white.opacity(0.75))
                         Text(formatVolume(totalVolumeThisWeek))
-                            .font(.system(size: 36, weight: .black, design: .rounded))
+                            .font(.system(size: 38, weight: .black, design: .rounded))
                             .foregroundStyle(.white).monospacedDigit()
+                            .contentTransition(.numericText())
                     }
                     Spacer()
                     if totalVolumeLastWeek > 0 {
@@ -61,19 +80,26 @@ struct VolumeTrendsView: View {
                                 .font(.caption.bold())
                             Text(String(format: "%.0f%%", abs(volumeChange))).font(.caption.bold())
                         }
-                        .padding(.horizontal, 10).padding(.vertical, 5)
-                        .background(.white.opacity(0.20), in: Capsule())
+                        .padding(.horizontal, 11).padding(.vertical, 5)
+                        .background(.ultraThinMaterial.opacity(0.65), in: Capsule())
+                        .overlay(Capsule().stroke(.white.opacity(0.22), lineWidth: 0.5))
                         .foregroundStyle(.white)
                     }
                 }
 
                 HStack(spacing: 0) {
                     HeroStatCol(value: formatVolume(totalVolumeLastWeek), label: "Last Week")
-                    Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 28)
+                    Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 36)
                     HeroStatCol(value: totalVolumeLastWeek > 0 ? String(format: "%+.0f%%", volumeChange) : "—", label: "WoW")
-                    Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 28)
+                    Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 36)
                     HeroStatCol(value: "\(workoutsThisWeek)", label: "Workouts")
                 }
+                .padding(.vertical, 12)
+                .background(.ultraThinMaterial.opacity(0.55), in: RoundedRectangle(cornerRadius: 14))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14)
+                        .stroke(.white.opacity(0.18), lineWidth: 0.5)
+                )
             }
             .padding(20)
         }
@@ -90,15 +116,28 @@ struct VolumeTrendsView: View {
             HStack(spacing: 6) {
                 ForEach(TimeRange.allCases, id: \.self) { range in
                     Button {
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) { timeRange = range }
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        withAnimation(.spring(response: 0.4, dampingFraction: 0.78)) { timeRange = range }
                     } label: {
                         Text(range.rawValue)
                             .font(.caption.bold())
                             .padding(.horizontal, 16).padding(.vertical, 7)
-                            .background(timeRange == range ? Color.blue : Color(.secondarySystemFill), in: Capsule())
+                            .background {
+                                if timeRange == range {
+                                    Capsule().fill(
+                                        LinearGradient(
+                                            colors: [.blue, Color(red: 0.30, green: 0.55, blue: 0.95)],
+                                            startPoint: .topLeading, endPoint: .bottomTrailing
+                                        )
+                                    )
+                                    .shadow(color: .blue.opacity(0.40), radius: 6, y: 3)
+                                } else {
+                                    Capsule().fill(Color(.secondarySystemFill))
+                                }
+                            }
                             .foregroundStyle(timeRange == range ? .white : .primary)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressableCard)
                 }
                 Spacer()
             }
@@ -113,10 +152,32 @@ struct VolumeTrendsView: View {
                         x: .value("Period", point.date, unit: timeRange == .weekly ? .weekOfYear : .month),
                         y: .value("Volume", unit.display(point.volume))
                     )
-                    .foregroundStyle(Color.blue.gradient).cornerRadius(4)
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [
+                                Color(red: 0.30, green: 0.55, blue: 0.95),
+                                Color(red: 0.45, green: 0.30, blue: 0.95)
+                            ],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                    .cornerRadius(6)
                 }
                 .chartYAxisLabel(unit.label)
-                .frame(height: 200).padding(.vertical, 4)
+                .chartXAxis {
+                    AxisMarks(values: .automatic(desiredCount: 5)) { _ in
+                        AxisGridLine().foregroundStyle(.secondary.opacity(0.12))
+                        AxisValueLabel().font(.caption2).foregroundStyle(.secondary)
+                    }
+                }
+                .chartYAxis {
+                    AxisMarks(position: .leading) { _ in
+                        AxisGridLine().foregroundStyle(.secondary.opacity(0.12))
+                        AxisValueLabel().font(.caption2).foregroundStyle(.secondary)
+                    }
+                }
+                .frame(height: 220).padding(.vertical, 4)
             }
         }
         .appCard()

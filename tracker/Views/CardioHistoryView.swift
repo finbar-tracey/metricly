@@ -5,12 +5,12 @@ struct CardioHistoryView: View {
     @Query(sort: \CardioSession.date, order: .reverse) private var sessions: [CardioSession]
     @Query private var settingsArray: [UserSettings]
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.weightUnit) private var weightUnit
 
     @State private var filterType: CardioType? = nil
     @State private var searchText = ""
 
-    private var useKm: Bool { settingsArray.first?.useKilograms ?? true }
-    private var distanceUnit: DistanceUnit { useKm ? .km : .mi }
+    private var distanceUnit: DistanceUnit { weightUnit.distanceUnit }
 
     private var filtered: [CardioSession] {
         var result = sessions
@@ -54,7 +54,7 @@ struct CardioHistoryView: View {
             // Session list
             if filtered.isEmpty {
                 ContentUnavailableView(
-                    filterType == nil ? "No Sessions" : "No \(filterType!.rawValue) Sessions",
+                    filterType.map { "No \($0.rawValue) Sessions" } ?? "No Sessions",
                     systemImage: filterType?.icon ?? "figure.run",
                     description: Text(filterType == nil ? "Start a session to see it here." : "Try a different filter.")
                 )
@@ -72,7 +72,7 @@ struct CardioHistoryView: View {
                 } header: {
                     HStack {
                         SectionHeader(
-                            title: filterType == nil ? "All Sessions" : filterType!.rawValue,
+                            title: filterType?.rawValue ?? "All Sessions",
                             icon: filterType?.icon ?? "list.bullet",
                             color: filterType?.color ?? .orange
                         )
@@ -95,30 +95,49 @@ struct CardioHistoryView: View {
     private var statsBanner: some View {
         ZStack(alignment: .topLeading) {
             LinearGradient(
-                colors: [.orange, Color(red: 0.85, green: 0.35, blue: 0.1)],
-                startPoint: .topLeading, endPoint: .bottomTrailing
+                colors: AppTheme.Gradients.caution,
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
             )
-            Circle().fill(.white.opacity(0.07)).frame(width: 150).offset(x: 200, y: -30)
+            // Top sheen
+            LinearGradient(
+                colors: [.white.opacity(0.18), .clear],
+                startPoint: .top, endPoint: .center
+            )
+            .blendMode(.plusLighter)
+            Circle().fill(.white.opacity(0.10)).frame(width: 150).blur(radius: 10).offset(x: 200, y: -30)
 
             VStack(alignment: .leading, spacing: 12) {
                 HStack(spacing: 6) {
-                    Image(systemName: "figure.run").foregroundStyle(.white.opacity(0.8))
-                        .font(.system(size: 12, weight: .semibold))
-                    Text("All Cardio").font(.caption.weight(.semibold)).foregroundStyle(.white.opacity(0.8))
+                    Image(systemName: "figure.run")
+                        .foregroundStyle(.white.opacity(0.85))
+                        .font(.system(size: 13, weight: .bold))
+                    Text("All Cardio")
+                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                        .foregroundStyle(.white.opacity(0.85))
+                        .tracking(0.5)
+                        .textCase(.uppercase)
                 }
                 HStack(spacing: 0) {
                     bannerCol(label: "Sessions",   value: "\(sessions.count)")
-                    Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 28)
+                    Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 32)
                     bannerCol(label: "Total \(distanceUnit.label)",
                               value: String(format: "%.1f", distanceUnit.display(totalDistanceKm)))
-                    Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 28)
+                    Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 32)
                     bannerCol(label: "This Week",  value: "\(thisWeekCount)")
                 }
+                .padding(.vertical, 10)
+                .background(.ultraThinMaterial.opacity(0.55), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(.white.opacity(0.18), lineWidth: 0.5)
+                )
             }
-            .padding(16)
+            .padding(18)
         }
-        .frame(minHeight: 110)
-        .clipShape(RoundedRectangle(cornerRadius: AppTheme.heroRadius))
+        .frame(minHeight: 130)
+        .clipShape(RoundedRectangle(cornerRadius: AppTheme.heroRadius, style: .continuous))
+        .shadow(color: .black.opacity(0.20), radius: 20, y: 8)
     }
 
     private var thisWeekCount: Int {
@@ -127,10 +146,15 @@ struct CardioHistoryView: View {
     }
 
     private func bannerCol(label: String, value: String) -> some View {
-        VStack(spacing: 2) {
-            Text(value).font(.system(size: 18, weight: .bold, design: .rounded))
-                .foregroundStyle(.white).monospacedDigit()
-            Text(label).font(.caption2).foregroundStyle(.white.opacity(0.7))
+        VStack(spacing: 3) {
+            Text(value)
+                .font(.system(size: 20, weight: .black, design: .rounded))
+                .foregroundStyle(.white)
+                .monospacedDigit()
+            Text(label.uppercased())
+                .font(.system(size: 10, weight: .bold, design: .rounded))
+                .foregroundStyle(.white.opacity(0.78))
+                .tracking(0.4)
         }
         .frame(maxWidth: .infinity)
     }
@@ -139,18 +163,33 @@ struct CardioHistoryView: View {
 
     private func filterChip(label: String, type: CardioType?) -> some View {
         let isActive = filterType == type
+        let activeColor = type?.color ?? Color.orange
         return Button {
-            withAnimation(.spring(response: 0.3)) { filterType = type }
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            withAnimation(.spring(response: 0.42, dampingFraction: 0.78)) { filterType = type }
         } label: {
-            HStack(spacing: 4) {
-                if let type { Image(systemName: type.icon).font(.system(size: 10)) }
-                Text(label).font(.caption.weight(.medium))
+            HStack(spacing: 5) {
+                if let type { Image(systemName: type.icon).font(.system(size: 11, weight: .bold)) }
+                Text(label).font(.system(size: 13, weight: .semibold, design: .rounded))
             }
-            .padding(.horizontal, 10).padding(.vertical, 6)
-            .background(isActive ? (type?.color ?? Color.orange) : Color(.tertiarySystemFill), in: Capsule())
+            .padding(.horizontal, 12).padding(.vertical, 7)
+            .background {
+                if isActive {
+                    Capsule().fill(
+                        LinearGradient(
+                            colors: [activeColor, activeColor.opacity(0.72)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .shadow(color: activeColor.opacity(0.40), radius: 6, y: 3)
+                } else {
+                    Capsule().fill(Color(.tertiarySystemFill))
+                }
+            }
             .foregroundStyle(isActive ? .white : .primary)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressableCard)
     }
 
     // MARK: - Session Row
@@ -167,14 +206,14 @@ struct CardioHistoryView: View {
                     Text(session.date, format: .dateTime.month(.abbreviated).day().year())
                         .font(.caption).foregroundStyle(.secondary)
                     Text("·").foregroundStyle(.tertiary)
-                    Text(session.formattedDistance(useKm: useKm))
+                    Text(session.formattedDistance(useKm: distanceUnit == .km))
                         .font(.caption.bold()).foregroundStyle(session.type.color)
                 }
             }
             Spacer()
             VStack(alignment: .trailing, spacing: 2) {
                 Text(session.formattedDuration).font(.caption.bold().monospacedDigit())
-                Text(session.formattedPace(useKm: useKm)).font(.caption2.monospacedDigit()).foregroundStyle(.secondary)
+                Text(session.formattedPace(useKm: distanceUnit == .km)).font(.caption2.monospacedDigit()).foregroundStyle(.secondary)
             }
         }
         .padding(.vertical, 4)

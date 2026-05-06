@@ -34,15 +34,22 @@ struct OnboardingView: View {
         .overlay(alignment: .topTrailing) {
             if currentPage > 0 && currentPage < 4 {
                 Button {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
                     withAnimation { currentPage = 4 }
                 } label: {
                     Text("Skip")
-                        .font(.subheadline.weight(.medium))
+                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                        .tracking(0.5)
+                        .textCase(.uppercase)
                         .foregroundStyle(.secondary)
-                        .padding(.horizontal, 16)
+                        .padding(.horizontal, 14)
                         .padding(.vertical, 8)
+                        .background(.ultraThinMaterial.opacity(0.8), in: Capsule())
+                        .overlay(Capsule().stroke(Color.white.opacity(0.18), lineWidth: 0.5))
                 }
+                .buttonStyle(.pressableCard)
                 .padding(.top, 56)
+                .padding(.trailing, 16)
                 .transition(.opacity)
             }
         }
@@ -260,8 +267,9 @@ struct OnboardingView: View {
                     }
                     nextButton
                 } else {
-                    VStack(spacing: 12) {
+                    VStack(spacing: 14) {
                         Button {
+                            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                             Task {
                                 do {
                                     try await HealthKitManager.shared.requestAuthorization()
@@ -270,28 +278,45 @@ struct OnboardingView: View {
                                 healthKitRequested = true
                             }
                         } label: {
-                            HStack(spacing: 8) {
+                            HStack(spacing: 10) {
                                 Image(systemName: "heart.fill")
+                                    .font(.system(size: 15, weight: .bold))
                                 Text("Connect Apple Health")
+                                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                                    .tracking(0.4)
                             }
-                            .font(.headline)
                             .frame(maxWidth: .infinity)
-                            .padding(.vertical, 14)
-                            .background(LinearGradient(colors: [.red, Color(red: 0.85, green: 0.15, blue: 0.2)], startPoint: .leading, endPoint: .trailing))
+                            .padding(.vertical, 16)
+                            .background(
+                                LinearGradient(
+                                    colors: [Color.red, Color(red: 0.85, green: 0.15, blue: 0.2)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
                             .foregroundStyle(.white)
-                            .clipShape(RoundedRectangle(cornerRadius: 14))
-                            .shadow(color: .red.opacity(0.3), radius: 10, y: 4)
+                            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                    .stroke(Color.white.opacity(0.20), lineWidth: 0.5)
+                            )
+                            .shadow(color: .red.opacity(0.45), radius: 14, y: 6)
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.pressableCard)
 
                         Button {
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
                             healthKitRequested = true
                             withAnimation { currentPage = 4 }
                         } label: {
                             Text("Skip for now")
-                                .font(.subheadline)
+                                .font(.system(size: 14, weight: .semibold, design: .rounded))
+                                .tracking(0.3)
                                 .foregroundStyle(.secondary)
+                                .padding(.vertical, 8)
+                                .padding(.horizontal, 16)
                         }
+                        .buttonStyle(.pressableCard)
                     }
                 }
             }
@@ -350,32 +375,66 @@ struct OnboardingView: View {
 
     private var nextButton: some View {
         Button {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
             withAnimation { currentPage += 1 }
         } label: {
-            Text("Continue")
-                .font(.headline)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
-                .background(Color.accentColor)
-                .foregroundStyle(.white)
-                .clipShape(RoundedRectangle(cornerRadius: 14))
+            HStack(spacing: 8) {
+                Text("Continue")
+                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .tracking(0.4)
+                Image(systemName: "arrow.right")
+                    .font(.system(size: 14, weight: .bold))
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 16)
+            .background(
+                LinearGradient(
+                    colors: [Color.accentColor, Color.accentColor.opacity(0.78)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            )
+            .foregroundStyle(.white)
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(Color.white.opacity(0.20), lineWidth: 0.5)
+            )
+            .shadow(color: Color.accentColor.opacity(0.45), radius: 14, y: 6)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressableCard)
     }
 
     private func gradientNextButton(label: String, color: Color, textColor: Color, action: (() -> Void)? = nil) -> some View {
         Button {
+            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
             if let action { action() } else { withAnimation { currentPage += 1 } }
         } label: {
-            Text(label)
-                .font(.headline)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
-                .background(color)
-                .foregroundStyle(textColor)
-                .clipShape(RoundedRectangle(cornerRadius: 14))
+            HStack(spacing: 8) {
+                Text(label)
+                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .tracking(0.4)
+                Image(systemName: "arrow.right")
+                    .font(.system(size: 14, weight: .bold))
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 16)
+            .background(
+                LinearGradient(
+                    colors: [color, color.opacity(0.86)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            )
+            .foregroundStyle(textColor)
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(Color.white.opacity(0.30), lineWidth: 0.5)
+            )
+            .shadow(color: textColor.opacity(0.18), radius: 14, y: 6)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressableCard)
     }
 
     private func featureCard(icon: String, color: Color, title: String, subtitle: String) -> some View {

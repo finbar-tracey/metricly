@@ -53,70 +53,81 @@ struct TrainingProgramsView: View {
     private func activeProgramHeroCard(_ program: TrainingProgram) -> some View {
         ZStack(alignment: .topLeading) {
             LinearGradient(
-                colors: [Color.accentColor, Color.accentColor.opacity(0.65)],
+                colors: AppTheme.Gradients.calm,
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
-            Circle()
-                .fill(.white.opacity(0.07))
-                .frame(width: 200)
-                .offset(x: 160, y: -60)
+            // Top sheen
+            LinearGradient(
+                colors: [.white.opacity(0.18), .clear],
+                startPoint: .top, endPoint: .center
+            )
+            .blendMode(.plusLighter)
+            Circle().fill(.white.opacity(0.10)).frame(width: 200).blur(radius: 12).offset(x: 160, y: -60)
+            Circle().fill(.white.opacity(0.06)).frame(width: 110).blur(radius: 10).offset(x: -30, y: 80)
 
             VStack(alignment: .leading, spacing: 16) {
                 HStack(spacing: 14) {
                     ZStack {
                         Circle()
-                            .fill(.white.opacity(0.20))
-                            .frame(width: 52, height: 52)
+                            .fill(.ultraThinMaterial.opacity(0.7))
+                            .frame(width: 56, height: 56)
+                            .overlay(Circle().stroke(.white.opacity(0.25), lineWidth: 0.5))
                         Image(systemName: "figure.strengthtraining.traditional")
-                            .font(.system(size: 22, weight: .semibold))
+                            .font(.system(size: 24, weight: .bold))
                             .foregroundStyle(.white)
                     }
-                    VStack(alignment: .leading, spacing: 3) {
+                    VStack(alignment: .leading, spacing: 2) {
                         Text("Active Program")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(.white.opacity(0.75))
+                            .font(.system(size: 12, weight: .bold, design: .rounded))
+                            .foregroundStyle(.white.opacity(0.82))
+                            .tracking(0.5)
+                            .textCase(.uppercase)
                         Text(program.name)
-                            .font(.title3.weight(.bold))
+                            .font(.system(size: 22, weight: .bold, design: .rounded))
                             .foregroundStyle(.white)
                     }
                     Spacer()
                 }
 
-                VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .leading, spacing: 8) {
                     HStack {
                         Text(program.formattedProgress)
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(.white.opacity(0.85))
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(.white.opacity(0.88))
                         Spacer()
                         if let todayWorkout = todayProgramDay(program) {
                             Text("Today: \(todayWorkout.workoutName)")
                                 .font(.caption.bold())
                                 .foregroundStyle(.white)
+                                .padding(.horizontal, 10).padding(.vertical, 4)
+                                .background(.ultraThinMaterial.opacity(0.7), in: Capsule())
+                                .overlay(Capsule().stroke(.white.opacity(0.22), lineWidth: 0.5))
                         } else {
                             Text("Rest day")
-                                .font(.caption)
-                                .foregroundStyle(.white.opacity(0.65))
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.white.opacity(0.78))
                         }
                     }
 
-                    GradientProgressBar(value: program.progress, color: .white, height: 6)
-                        .opacity(0.85)
+                    GradientProgressBar(value: program.progress, color: .white, height: 8)
                 }
 
                 Button {
+                    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                     if program.currentWeek < program.totalWeeks {
                         program.currentWeek += 1
                     }
                 } label: {
                     Text("Advance to Week \(program.currentWeek + 1)")
                         .font(.subheadline.bold())
-                        .foregroundStyle(Color.accentColor)
+                        .foregroundStyle(Color(red: 0.30, green: 0.55, blue: 0.95))
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 11)
+                        .padding(.vertical, 12)
                         .background(.white, in: Capsule())
+                        .shadow(color: .black.opacity(0.18), radius: 8, y: 4)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressableCard)
                 .disabled(program.currentWeek >= program.totalWeeks)
                 .opacity(program.currentWeek >= program.totalWeeks ? 0.5 : 1)
             }

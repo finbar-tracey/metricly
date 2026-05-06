@@ -4,10 +4,64 @@ import SwiftData
 // MARK: - Design tokens
 
 enum AppTheme {
+    // Radii
     static let heroRadius: CGFloat = 28
     static let cardRadius: CGFloat = 20
+    static let tileRadius: CGFloat = 14
+    static let chipRadius: CGFloat = 10
+
+    // Spacing
     static let sectionSpacing: CGFloat = 28
     static let cardPadding: CGFloat = 18
+    static let tilePadding: CGFloat = 14
+
+    // Signal palette — semantic colors per metric type.
+    enum Signal {
+        static let recovery     = Color(red: 0.20, green: 0.78, blue: 0.45)
+        static let recoveryDeep = Color(red: 0.00, green: 0.52, blue: 0.42)
+        static let strain       = Color(red: 0.95, green: 0.30, blue: 0.30)
+        static let strainDeep   = Color(red: 0.78, green: 0.20, blue: 0.20)
+        static let caution      = Color.orange
+        static let cautionDeep  = Color(red: 0.85, green: 0.50, blue: 0.10)
+        static let focus        = Color(red: 0.55, green: 0.35, blue: 0.95)
+        static let calm         = Color(red: 0.30, green: 0.55, blue: 0.95)
+    }
+
+    // Gradient palette — multi-stop palettes for hero surfaces.
+    enum Gradients {
+        static let recovery: [Color] = [
+            Color(red: 0.20, green: 0.78, blue: 0.50),
+            Color(red: 0.05, green: 0.55, blue: 0.55),
+            Color(red: 0.00, green: 0.40, blue: 0.60)
+        ]
+        static let caution: [Color] = [
+            Color(red: 0.98, green: 0.65, blue: 0.20),
+            Color(red: 0.92, green: 0.45, blue: 0.20),
+            Color(red: 0.78, green: 0.30, blue: 0.30)
+        ]
+        static let strain: [Color] = [
+            Color(red: 0.95, green: 0.30, blue: 0.35),
+            Color(red: 0.78, green: 0.20, blue: 0.30),
+            Color(red: 0.55, green: 0.15, blue: 0.35)
+        ]
+        static let calm: [Color] = [
+            Color(red: 0.30, green: 0.55, blue: 0.95),
+            Color(red: 0.40, green: 0.40, blue: 0.92),
+            Color(red: 0.55, green: 0.35, blue: 0.95)
+        ]
+    }
+
+    // Motion — named springs you reuse instead of inventing per-call.
+    enum Motion {
+        /// Quick, snappy press / tap reactions.
+        static let snappy  = Animation.spring(response: 0.32, dampingFraction: 0.78)
+        /// Default for value changes, transitions, layout shifts.
+        static let smooth  = Animation.spring(response: 0.45, dampingFraction: 0.82)
+        /// Playful for celebrations / highlights.
+        static let bouncy  = Animation.spring(response: 0.55, dampingFraction: 0.62)
+        /// Numeric tweens / chart entries.
+        static let numeric = Animation.spring(response: 0.6, dampingFraction: 0.85)
+    }
 }
 
 // MARK: - View modifiers
@@ -17,14 +71,18 @@ extension View {
         self
             .padding(padding)
             .background(Color(.secondarySystemGroupedBackground))
-            .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardRadius))
-            .shadow(color: .black.opacity(0.08), radius: 16, x: 0, y: 4)
+            .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardRadius, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: AppTheme.cardRadius, style: .continuous)
+                    .stroke(Color.white.opacity(0.08), lineWidth: 0.5)
+            )
+            .shadow(color: .black.opacity(0.12), radius: 22, x: 0, y: 8)
     }
 
     func heroCard() -> some View {
         self
-            .clipShape(RoundedRectangle(cornerRadius: AppTheme.heroRadius))
-            .shadow(color: .black.opacity(0.22), radius: 24, x: 0, y: 8)
+            .clipShape(RoundedRectangle(cornerRadius: AppTheme.heroRadius, style: .continuous))
+            .shadow(color: .black.opacity(0.28), radius: 30, x: 0, y: 12)
     }
 }
 
@@ -36,13 +94,14 @@ struct SectionHeader: View {
     let color: Color
 
     var body: some View {
-        HStack(spacing: 5) {
+        HStack(spacing: 7) {
             Image(systemName: icon)
-                .font(.system(size: 11, weight: .bold))
+                .font(.system(size: 13, weight: .bold))
                 .foregroundStyle(color)
             Text(title.uppercased())
-                .font(.system(size: 11, weight: .bold, design: .rounded))
-                .foregroundStyle(.secondary)
+                .font(.system(size: 13, weight: .bold, design: .rounded))
+                .foregroundStyle(.primary)
+                .tracking(0.7)
         }
         .padding(.leading, 2)
     }
@@ -57,11 +116,22 @@ struct GradientProgressBar: View {
         GeometryReader { geo in
             ZStack(alignment: .leading) {
                 RoundedRectangle(cornerRadius: height / 2)
-                    .fill(color.opacity(0.15))
+                    .fill(color.opacity(0.16))
                     .frame(height: height)
                 RoundedRectangle(cornerRadius: height / 2)
-                    .fill(color.gradient)
+                    .fill(
+                        LinearGradient(
+                            colors: [color, color.opacity(0.72)],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: height / 2)
+                            .stroke(.white.opacity(0.20), lineWidth: 0.5)
+                    )
                     .frame(width: geo.size.width * min(1, max(0, value)), height: height)
+                    .shadow(color: color.opacity(0.45), radius: 4, x: 0, y: 2)
                     .animation(.spring(response: 0.6, dampingFraction: 0.8), value: value)
             }
         }

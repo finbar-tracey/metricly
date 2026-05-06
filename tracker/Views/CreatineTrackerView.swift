@@ -127,22 +127,27 @@ struct CreatineTrackerView: View {
         ZStack(alignment: .topLeading) {
             LinearGradient(
                 colors: todayComplete
-                    ? [Color.green, Color(red: 0.1, green: 0.72, blue: 0.35).opacity(0.75)]
-                    : [Color(red: 0.22, green: 0.45, blue: 0.95), Color.blue.opacity(0.75)],
+                    ? AppTheme.Gradients.recovery
+                    : AppTheme.Gradients.calm,
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
-            Circle()
-                .fill(.white.opacity(0.07))
-                .frame(width: 200)
-                .offset(x: 160, y: -60)
+            // Top sheen
+            LinearGradient(
+                colors: [.white.opacity(0.18), .clear],
+                startPoint: .top, endPoint: .center
+            )
+            .blendMode(.plusLighter)
+            Circle().fill(.white.opacity(0.10)).frame(width: 200).blur(radius: 12).offset(x: 160, y: -60)
+            Circle().fill(.white.opacity(0.06)).frame(width: 110).blur(radius: 10).offset(x: -30, y: 80)
 
             VStack(alignment: .leading, spacing: 20) {
                 HStack(alignment: .center, spacing: 20) {
                     ZStack {
                         Circle()
-                            .fill(.white.opacity(0.20))
-                            .frame(width: 72, height: 72)
+                            .fill(.ultraThinMaterial.opacity(0.7))
+                            .frame(width: 76, height: 76)
+                            .overlay(Circle().stroke(.white.opacity(0.25), lineWidth: 0.5))
                         if todayComplete {
                             Image(systemName: "checkmark.circle.fill")
                                 .font(.system(size: 36, weight: .semibold))

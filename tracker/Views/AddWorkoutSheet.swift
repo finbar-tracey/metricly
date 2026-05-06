@@ -17,22 +17,36 @@ struct AddWorkoutSheet: View {
                 Section {
                     HStack(spacing: 12) {
                         ZStack {
-                            RoundedRectangle(cornerRadius: 7)
-                                .fill(Color.accentColor.gradient)
-                                .frame(width: 28, height: 28)
+                            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                .fill(
+                                    LinearGradient(
+                                        colors: [Color.accentColor, Color.accentColor.opacity(0.72)],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
+                                )
+                                .frame(width: 32, height: 32)
+                                .shadow(color: Color.accentColor.opacity(0.40), radius: 4, y: 2)
                             Image(systemName: "pencil")
-                                .font(.system(size: 13, weight: .semibold))
+                                .font(.system(size: 14, weight: .bold))
                                 .foregroundStyle(.white)
                         }
                         TextField("Workout Name", text: $name)
                     }
                     HStack(spacing: 12) {
                         ZStack {
-                            RoundedRectangle(cornerRadius: 7)
-                                .fill(Color.red.gradient)
-                                .frame(width: 28, height: 28)
+                            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                .fill(
+                                    LinearGradient(
+                                        colors: [Color.red, Color.red.opacity(0.72)],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
+                                )
+                                .frame(width: 32, height: 32)
+                                .shadow(color: Color.red.opacity(0.40), radius: 4, y: 2)
                             Image(systemName: "calendar")
-                                .font(.system(size: 13, weight: .semibold))
+                                .font(.system(size: 14, weight: .bold))
                                 .foregroundStyle(.white)
                         }
                         DatePicker("Date", selection: $date, displayedComponents: .date)
@@ -53,19 +67,33 @@ struct AddWorkoutSheet: View {
                             } label: {
                                 HStack(spacing: 12) {
                                     ZStack {
-                                        RoundedRectangle(cornerRadius: 8)
-                                            .fill(isSelected ? Color.accentColor : Color(.tertiarySystemFill))
-                                            .frame(width: 36, height: 36)
+                                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                            .fill(
+                                                isSelected
+                                                    ? AnyShapeStyle(
+                                                        LinearGradient(
+                                                            colors: [Color.accentColor, Color.accentColor.opacity(0.72)],
+                                                            startPoint: .topLeading,
+                                                            endPoint: .bottomTrailing
+                                                        )
+                                                    )
+                                                    : AnyShapeStyle(Color(.tertiarySystemFill))
+                                            )
+                                            .frame(width: 40, height: 40)
+                                            .shadow(
+                                                color: isSelected ? Color.accentColor.opacity(0.40) : .clear,
+                                                radius: 6, y: 2
+                                            )
                                         Image(systemName: isSelected ? "checkmark" : "doc.text")
-                                            .font(.system(size: 14, weight: .semibold))
+                                            .font(.system(size: 15, weight: .bold))
                                             .foregroundStyle(isSelected ? .white : .secondary)
                                     }
-                                    VStack(alignment: .leading, spacing: 2) {
+                                    VStack(alignment: .leading, spacing: 3) {
                                         Text(template.name)
-                                            .font(.subheadline.weight(.semibold))
+                                            .font(.system(size: 15, weight: .semibold, design: .rounded))
                                             .foregroundStyle(.primary)
                                         Text("\(template.exercises.count) exercises")
-                                            .font(.caption)
+                                            .font(.caption.weight(.semibold))
                                             .foregroundStyle(.secondary)
                                     }
                                     Spacer()
@@ -77,7 +105,7 @@ struct AddWorkoutSheet: View {
                                 }
                                 .padding(.vertical, isSelected ? 2 : 0)
                                 .overlay(
-                                    RoundedRectangle(cornerRadius: 10)
+                                    RoundedRectangle(cornerRadius: 12, style: .continuous)
                                         .stroke(Color.accentColor.opacity(isSelected ? 0.4 : 0), lineWidth: 1.5)
                                         .padding(-6)
                                 )
@@ -93,22 +121,27 @@ struct AddWorkoutSheet: View {
                 if let template = selectedTemplate, !template.exercises.isEmpty {
                     Section {
                         ForEach(template.exercises.sorted { $0.order < $1.order }) { exercise in
-                            HStack(spacing: 10) {
-                                if let category = exercise.category {
-                                    MuscleIconView(group: category, color: Color.accentColor)
-                                        .frame(width: 16, height: 16)
-                                } else {
-                                    Image(systemName: "dumbbell")
-                                        .font(.caption)
-                                        .foregroundStyle(Color.accentColor)
-                                        .frame(width: 16)
+                            HStack(spacing: 12) {
+                                ZStack {
+                                    Circle()
+                                        .fill(Color.accentColor.opacity(0.16))
+                                        .frame(width: 30, height: 30)
+                                    if let category = exercise.category {
+                                        MuscleIconView(group: category, color: Color.accentColor)
+                                            .frame(width: 14, height: 14)
+                                    } else {
+                                        Image(systemName: "dumbbell")
+                                            .font(.system(size: 12, weight: .bold))
+                                            .foregroundStyle(Color.accentColor)
+                                    }
                                 }
                                 Text(exercise.name)
-                                    .font(.subheadline)
+                                    .font(.system(size: 14, weight: .semibold, design: .rounded))
                                 Spacer()
                                 if let category = exercise.category {
-                                    Text(category.rawValue)
-                                        .font(.caption2)
+                                    Text(category.rawValue.uppercased())
+                                        .font(.system(size: 10, weight: .bold, design: .rounded))
+                                        .tracking(0.4)
                                         .foregroundStyle(.tertiary)
                                 }
                             }
