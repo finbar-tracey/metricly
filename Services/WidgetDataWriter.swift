@@ -27,30 +27,40 @@ struct WidgetDataWriter {
         var todayScheduledName: String = ""
     }
 
+    /// Merge-update the widget snapshot. Pass `nil` (or omit) any field the caller
+    /// doesn't have authoritative data for — the existing value is preserved.
+    /// Pass an explicit value to overwrite that field.
     static func update(
-        streakDays: Int,
-        todayWorkoutName: String,
-        weeklyCardioKm: Double,
-        lastRunPace: String,
-        lastRunDist: String,
-        weeklyGoal: Int,
-        workoutsThisWeek: Int,
-        weeklyCardioGoalKm: Double = 0,
-        todayScheduledName: String = ""
+        streakDays: Int? = nil,
+        todayWorkoutName: String? = nil,
+        weeklyCardioKm: Double? = nil,
+        lastRunPace: String? = nil,
+        lastRunDist: String? = nil,
+        weeklyGoal: Int? = nil,
+        workoutsThisWeek: Int? = nil,
+        weeklyCardioGoalKm: Double? = nil,
+        todayScheduledName: String? = nil
     ) {
-        let snapshot = WidgetSnapshot(
-            streakDays: streakDays,
-            todayWorkoutName: todayWorkoutName,
-            weeklyCardioKm: weeklyCardioKm,
-            lastRunPace: lastRunPace,
-            lastRunDist: lastRunDist,
-            weeklyGoal: weeklyGoal,
-            workoutsThisWeek: workoutsThisWeek,
-            weeklyCardioGoalKm: weeklyCardioGoalKm,
-            todayScheduledName: todayScheduledName
-        )
+        var snapshot = readMainSnapshot() ?? WidgetSnapshot()
+        if let v = streakDays         { snapshot.streakDays = v }
+        if let v = todayWorkoutName   { snapshot.todayWorkoutName = v }
+        if let v = weeklyCardioKm     { snapshot.weeklyCardioKm = v }
+        if let v = lastRunPace        { snapshot.lastRunPace = v }
+        if let v = lastRunDist        { snapshot.lastRunDist = v }
+        if let v = weeklyGoal         { snapshot.weeklyGoal = v }
+        if let v = workoutsThisWeek   { snapshot.workoutsThisWeek = v }
+        if let v = weeklyCardioGoalKm { snapshot.weeklyCardioGoalKm = v }
+        if let v = todayScheduledName { snapshot.todayScheduledName = v }
         write(snapshot, forKey: "widgetData")
         WidgetCenter.shared.reloadAllTimelines()
+    }
+
+    private static func readMainSnapshot() -> WidgetSnapshot? {
+        guard let defaults = UserDefaults(suiteName: suiteName),
+              let data = defaults.data(forKey: "widgetData"),
+              let snapshot = try? JSONDecoder().decode(WidgetSnapshot.self, from: data)
+        else { return nil }
+        return snapshot
     }
 
     // MARK: - Caffeine snapshot

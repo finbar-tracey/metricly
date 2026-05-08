@@ -64,6 +64,15 @@ struct ExerciseDetailView: View {
                     .listRowInsets(.init(top: 4, leading: 16, bottom: 4, trailing: 16))
             }
 
+            // MARK: - Today's Plan exercise-level hint
+            if let hint = exercisePlanHint {
+                Section {
+                    hint
+                        .listRowBackground(Color.clear)
+                        .listRowInsets(.init(top: 0, leading: 16, bottom: 4, trailing: 16))
+                }
+            }
+
             // MARK: - Quick Log
             if let lastSession = previousSession, !lastSession.sets.isEmpty {
                 Section(isExpanded: $showQuickLog) {
@@ -566,6 +575,40 @@ struct ExerciseDetailView: View {
 
     private var isCardioExercise: Bool {
         exercise.category == .cardio
+    }
+
+    // MARK: - Today's Plan hint (per-exercise)
+
+    /// Shows a small callout if today's plan flagged this exercise's muscle group
+    /// as one to "go easy on" or "avoid". Returns nil if no hint applies.
+    private var exercisePlanHint: ExercisePlanHintView? {
+        guard let cat = exercise.category,
+              let plan = TodayPlanStore.load(),
+              !plan.alreadyTrainedToday
+        else { return nil }
+
+        if plan.avoidGroups.contains(cat) {
+            return ExercisePlanHintView(
+                tone: .warning,
+                icon: "exclamationmark.triangle.fill",
+                message: "You've trained \(cat.rawValue.lowercased()) several times this week — consider a different focus today."
+            )
+        }
+        if plan.goEasyOnGroups.contains(cat) {
+            return ExercisePlanHintView(
+                tone: .caution,
+                icon: "leaf.fill",
+                message: "\(cat.rawValue) is still recovering — go light, leave 1–2 reps in the tank."
+            )
+        }
+        if plan.intensity == .light {
+            return ExercisePlanHintView(
+                tone: .info,
+                icon: "leaf.fill",
+                message: "Today is a lighter session — reduce volume by ~1 set and stop short of failure."
+            )
+        }
+        return nil
     }
 
     // MARK: - Stats Banner

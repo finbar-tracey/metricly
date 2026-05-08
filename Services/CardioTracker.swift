@@ -48,9 +48,14 @@ final class CardioTracker: NSObject {
     var audioCuesEnabled = true
     private let speechSynth      = AVSpeechSynthesizer()
 
+    // Heart rate sample accumulator (one entry per HK sample received)
+    private var heartRateSamples: [Double] = []
+    private var sessionMaxHR: Double = 0
+
     // Auto-pause
     var autoPauseEnabled: Bool = true
     private var autoPauseWorkItem: DispatchWorkItem?
+    private var pausedByAutoPause = false
 
     // HealthKit for live heart rate streaming
     private let healthStore = HKHealthStore()
@@ -103,6 +108,13 @@ final class CardioTracker: NSObject {
         totalPausedSeconds  = 0
         splitStartElapsed   = 0
         currentHeartRate    = nil
+        heartRateSamples    = []
+        sessionMaxHR        = 0
+
+        // Configure audio session for background speech cues
+        let audioSession = AVAudioSession.sharedInstance()
+        try? audioSession.setCategory(.playback, mode: .voicePrompt, options: [.duckOthers, .mixWithOthers])
+        try? audioSession.setActive(true)
 
         sessionStart = .now
         state = .active
@@ -128,10 +140,22 @@ final class CardioTracker: NSObject {
         state    = .paused
         pauseStart = .now
         autoPauseWorkItem?.cancel(); autoPauseWorkItem = nil
+        pausedByAutoPause = false
         locationManager.stopUpdatingLocation()
         if !currentType.usesGPS { pedometer.stopUpdates() }
         timer?.invalidate(); timer = nil
         speakCue("Paused. Distance: \(formattedDistanceSpoken(useKm: splitDistMeters < 1500))")
+    }
+
+    /// Auto-pause keeps location updates running so we can detect motion and auto-resume.
+    private func autoPause() {
+        guard state == .active else { return }
+        state    = .paused
+        pauseStart = .now
+        pausedByAutoPause = true
+        // NB: do NOT stop location updates — we need them to detect resumed motion.
+        timer?.invalidate(); timer = nil
+        speakCue("Auto paused")
     }
 
     func resume() {
@@ -139,11 +163,15 @@ final class CardioTracker: NSObject {
         if let ps = pauseStart { totalPausedSeconds += Date.now.timeIntervalSince(ps) }
         pauseStart = nil
         state = .active
-        if currentType.usesGPS {
-            locationManager.startUpdatingLocation()
-        } else {
-            startPedometer()
+        // Only restart location/pedometer if a manual pause stopped them.
+        if !pausedByAutoPause {
+            if currentType.usesGPS {
+                locationManager.startUpdatingLocation()
+            } else {
+                startPedometer()
+            }
         }
+        pausedByAutoPause = false
         timer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
             self?.tick()
         }
@@ -157,7 +185,12 @@ final class CardioTracker: NSObject {
         locationManager.stopUpdatingLocation()
         pedometer.stopUpdates()
         stopHeartRateStreaming()
+        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
         state = .finished
+
+        let avgHR: Double? = heartRateSamples.isEmpty
+            ? nil
+            : heartRateSamples.reduce(0, +) / Double(heartRateSamples.count)
 
         return SessionResult(
             type:               currentType,
@@ -166,7 +199,7 @@ final class CardioTracker: NSObject {
             elevationGainMeters: elevationGainMeters,
             splits:             splits,
             locations:          locations,
-            avgHeartRate:       currentHeartRate
+            avgHeartRate:       avgHR
         )
     }
 
@@ -312,9 +345,19 @@ final class CardioTracker: NSObject {
     }
 
     private func processHRSamples(_ samples: [HKSample]?) {
-        guard let samples = samples as? [HKQuantitySample], let last = samples.last else { return }
-        let bpm = last.quantity.doubleValue(for: HKUnit(from: "count/min"))
-        DispatchQueue.main.async { self.currentHeartRate = bpm }
+        guard let samples = samples as? [HKQuantitySample], !samples.isEmpty else { return }
+        let unit = HKUnit(from: "count/min")
+        let bpms = samples.map { $0.quantity.doubleValue(for: unit) }
+        let last = bpms.last ?? 0
+        DispatchQueue.main.async {
+            self.currentHeartRate = last
+            // Only record samples while actively tracking (skip pauses)
+            guard self.state == .active else { return }
+            self.heartRateSamples.append(contentsOf: bpms)
+            if let peak = bpms.max(), peak > self.sessionMaxHR {
+                self.sessionMaxHR = peak
+            }
+        }
     }
 
     // MARK: - Formatted helpers (for UI binding)
@@ -367,7 +410,11 @@ extension CardioTracker: CLLocationManagerDelegate {
     }
 
     func locationManager(_ manager: CLLocationManager, didUpdateLocations newLocations: [CLLocation]) {
-        guard state == .active else { return }
+        // Auto-resume needs to react to motion while we're auto-paused, so we can't
+        // bail out for non-active state here — only skip distance/elevation accumulation.
+        guard state == .active || (state == .paused && pausedByAutoPause) else { return }
+        let isAutoPaused = (state == .paused && pausedByAutoPause)
+
         for loc in newLocations {
             guard loc.horizontalAccuracy >= 0 && loc.horizontalAccuracy < 50 else { continue }
 
@@ -375,11 +422,10 @@ extension CardioTracker: CLLocationManagerDelegate {
             if autoPauseEnabled && currentType.usesGPS {
                 let spd = loc.speed   // -1 if unavailable
                 if spd >= 0 && spd < 0.5 {
-                    if autoPauseWorkItem == nil {
+                    if autoPauseWorkItem == nil && state == .active {
                         let work = DispatchWorkItem { [weak self] in
                             guard let self, state == .active else { return }
-                            pause()
-                            speakCue("Auto paused")
+                            autoPause()
                             autoPauseWorkItem = nil
                         }
                         autoPauseWorkItem = work
@@ -389,9 +435,17 @@ extension CardioTracker: CLLocationManagerDelegate {
                     // Moving — cancel pending auto-pause
                     autoPauseWorkItem?.cancel()
                     autoPauseWorkItem = nil
-                    // Auto-resume if we were auto-paused
-                    if state == .paused { resume() }
+                    // Auto-resume only if we were the ones who paused (not a manual pause)
+                    if state == .paused && pausedByAutoPause { resume() }
                 }
+            }
+
+            // While auto-paused: refresh the anchor but don't accumulate distance,
+            // elevation, pace or route — otherwise GPS jitter inflates the run.
+            if isAutoPaused {
+                lastLocation = loc
+                lastAltitude = loc.altitude
+                continue
             }
 
             if let last = lastLocation {

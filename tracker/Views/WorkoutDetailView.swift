@@ -25,6 +25,8 @@ struct WorkoutDetailView: View {
     @State private var showWorkoutTimer = false
     @State private var showFocusPrompt = false
     @State private var showFocusEndReminder = false
+    @State private var planAdjustments: TodayPlan?
+    @State private var planAdjustmentsDismissed = false
     @Query private var settingsArray: [UserSettings]
     @Environment(\.dismiss) private var dismiss
 
@@ -57,6 +59,20 @@ struct WorkoutDetailView: View {
                         finishButton
                             .listRowBackground(Color.clear)
                             .listRowInsets(.init(top: 8, leading: 16, bottom: 8, trailing: 16))
+                    }
+                }
+
+                // MARK: - Today's Plan adjustments
+                if let plan = planAdjustments,
+                   !plan.adjustments.isEmpty,
+                   !planAdjustmentsDismissed,
+                   !workout.isFinished {
+                    Section {
+                        TodayPlanAdjustmentsBanner(plan: plan) {
+                            withAnimation { planAdjustmentsDismissed = true }
+                        }
+                        .listRowBackground(Color.clear)
+                        .listRowInsets(.init(top: 0, leading: 16, bottom: 8, trailing: 16))
                     }
                 }
             }
@@ -360,6 +376,11 @@ struct WorkoutDetailView: View {
             startLiveActivityIfNeeded()
             if settings.focusModeReminder && !workout.isFinished && !workout.isTemplate {
                 showFocusPrompt = true
+            }
+            // Pull today's plan once when entering — banner only shows if there
+            // are adjustments and the user hasn't already trained today.
+            if let plan = TodayPlanStore.load(), !plan.alreadyTrainedToday {
+                planAdjustments = plan
             }
         }
         .onDisappear {

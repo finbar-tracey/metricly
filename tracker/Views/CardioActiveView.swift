@@ -590,16 +590,12 @@ struct CardioActiveView: View {
         tracker.reset()
         UIImpactFeedbackGenerator(style: .heavy).impactOccurred()
 
-        // Push fresh cardio data to home screen widget
+        // Push fresh cardio data to home screen widget — only what we know.
+        // Streak / weekly cardio km are recomputed by ContentView's full update.
         let useKmWidget = weightUnit.distanceUnit == .km
         WidgetDataWriter.update(
-            streakDays: 0,
-            todayWorkoutName: "",
-            weeklyCardioKm: 0,      // CardioHubView will write the full weekly total separately
             lastRunPace: session.formattedPace(useKm: useKmWidget),
-            lastRunDist: session.formattedDistance(useKm: useKmWidget),
-            weeklyGoal: 0,
-            workoutsThisWeek: 0
+            lastRunDist: session.formattedDistance(useKm: useKmWidget)
         )
 
         // Show completion screen; it will call onComplete when dismissed

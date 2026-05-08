@@ -25,6 +25,7 @@ struct HomeDashboardView: View {
     @State private var externalWorkouts: [ExternalWorkout] = []
     @State private var animateRings = false
     @State private var showingAddWorkout = false
+    @State private var showingPlanDetail = false
     @State private var repeatConfirmation = false
     @State private var tappedDayWorkout: Workout?
     @State private var cachedProgressionSuggestions: [ProgressionSuggestion] = []
@@ -101,17 +102,37 @@ struct HomeDashboardView: View {
         return name.map { "\(timeGreeting), \($0)" } ?? timeGreeting
     }
 
-    private var recoveryResult: RecoveryResult {
-        RecoveryEngine.evaluate(
+    @State private var recoveryResult: RecoveryResult = .empty
+    @State private var todayPlan: TodayPlan = .empty
+
+    private var liveHealthSignals: HealthSignals {
+        HealthSignals(
+            todayHRV: hrv, averageHRV: averageHRV,
+            todayRestingHR: restingHR, averageRestingHR: averageRestingHR,
+            sleepMinutes: healthDataLoaded ? sleepMinutes : nil
+        )
+    }
+
+    private func recomputeRecoveryAndPlan() {
+        let recovery = RecoveryEngine.evaluate(
             workouts: finishedWorkouts,
-            health: HealthSignals(
-                todayHRV: hrv, averageHRV: averageHRV,
-                todayRestingHR: restingHR, averageRestingHR: averageRestingHR,
-                sleepMinutes: healthDataLoaded ? sleepMinutes : nil
-            ),
+            health: liveHealthSignals,
             externalWorkouts: externalWorkouts,
             cardioSessions: Array(cardioSessions.prefix(50))
         )
+        let twoWeeksAgo = Calendar.current.date(byAdding: .day, value: -14, to: .now) ?? .distantPast
+        let recent = finishedWorkouts.filter { $0.date >= twoWeeksAgo }
+        let plan = TodayPlanEngine.generate(
+            scheduledName: settings.weeklyPlan[todayWeekday],
+            recovery: recovery,
+            health: liveHealthSignals,
+            recentWorkouts: recent,
+            alreadyTrainedToday: !todaysWorkouts.filter(\.isFinished).isEmpty
+                || cardioSessions.contains { Calendar.current.isDateInToday($0.date) }
+        )
+        self.recoveryResult = recovery
+        self.todayPlan = plan
+        TodayPlanStore.save(plan)
     }
 
     private var averageRating: Double? {
@@ -185,44 +206,9 @@ struct HomeDashboardView: View {
     var body: some View {
         ScrollView {
             LazyVStack(spacing: AppTheme.sectionSpacing) {
-                heroSection
-
-                // Continue / great-session banner only — readyToTrain is now in the hero chip
-                if let cta = contextualCTA {
-                    switch cta {
-                    case .continueWorkout, .greatSession:
-                        contextualCTACard(cta)
-                    default:
-                        EmptyView()
-                    }
-                }
-
-                planAndMetricsRow
-
-                if healthKitEnabled && healthDataLoaded {
-                    muscleReadinessCard
-                }
-
-                if !caffeineEntries.isEmpty && totalCaffeineMg(at: .now) >= 25 {
-                    bedtimeSuggestionCard
-                }
-
-                trainingStatusCard
-
-                if !cardioSessions.isEmpty {
-                    cardioCard
-                }
-
-                if !cachedProgressionSuggestions.isEmpty {
-                    progressionCard
-                }
-
-                if healthKitEnabled && healthDataLoaded {
-                    healthGlanceCard
-                }
-
-                recentWorkoutsCard
-                quickLinksCard
+                topSection
+                middleSection
+                bottomSection
             }
             .padding(.horizontal)
             .padding(.bottom, 36)
@@ -249,16 +235,33 @@ struct HomeDashboardView: View {
         .navigationDestination(item: $tappedDayWorkout) { workout in
             WorkoutDetailView(workout: workout)
         }
+        .navigationDestination(isPresented: $showingPlanDetail) {
+            TodayPlanDetailView(
+                plan: todayPlan,
+                recovery: recoveryResult,
+                health: liveHealthSignals
+            )
+        }
         .confirmationDialog("Repeat your last workout?", isPresented: $repeatConfirmation) {
             Button("Repeat \"\(allWorkouts.first?.name ?? "")\"") { repeatLastWorkout() }
         } message: {
             Text("This will create a new workout with the same exercises (no sets copied).")
         }
-        .onAppear { buildProgressionSuggestions() }
+        .onAppear {
+            buildProgressionSuggestions()
+            recomputeRecoveryAndPlan()
+            if recoveryResult.readinessScore < 0.40 {
+                ReminderManager.scheduleRecoveryRestReminder()
+            }
+        }
         .onChange(of: allWorkouts.count) { buildProgressionSuggestions() }
+        .onChange(of: finishedWorkouts.count) { recomputeRecoveryAndPlan() }
+        .onChange(of: cardioSessions.count) { recomputeRecoveryAndPlan() }
+        .onChange(of: healthDataLoaded) { recomputeRecoveryAndPlan() }
         .task {
             guard healthKitEnabled else { return }
             await loadHealthData()
+            recomputeRecoveryAndPlan()
             withAnimation(.easeOut(duration: 0.8)) { animateRings = true }
         }
         .refreshable {
@@ -285,6 +288,64 @@ struct HomeDashboardView: View {
         } else {
             return AppTheme.Gradients.strain
         }
+    }
+
+    // MARK: - Body Sections
+    //
+    // We split the body into three sections AND type-erase each with AnyView.
+    // Without erasure, every `some View` getter accumulates into one giant
+    // opaque-type chain at the body root — large enough that the Swift runtime
+    // metadata builder overflows the stack while demangling. AnyView breaks
+    // that chain into three independent type-checking scopes.
+
+    private var topSection: AnyView {
+        AnyView(
+            VStack(spacing: AppTheme.sectionSpacing) {
+                heroSection
+                if let cta = contextualCTA {
+                    switch cta {
+                    case .continueWorkout, .greatSession:
+                        contextualCTACard(cta)
+                    default:
+                        EmptyView()
+                    }
+                }
+                adaptivePlanCard
+                planAndMetricsRow
+            }
+        )
+    }
+
+    private var middleSection: AnyView {
+        AnyView(
+            VStack(spacing: AppTheme.sectionSpacing) {
+                if healthKitEnabled && healthDataLoaded {
+                    muscleReadinessCard
+                }
+                if !caffeineEntries.isEmpty && totalCaffeineMg(at: .now) >= 25 {
+                    bedtimeSuggestionCard
+                }
+                trainingStatusCard
+                if !cardioSessions.isEmpty {
+                    cardioCard
+                }
+            }
+        )
+    }
+
+    private var bottomSection: AnyView {
+        AnyView(
+            VStack(spacing: AppTheme.sectionSpacing) {
+                if !cachedProgressionSuggestions.isEmpty {
+                    progressionCard
+                }
+                if healthKitEnabled && healthDataLoaded {
+                    healthGlanceCard
+                }
+                recentWorkoutsCard
+                quickLinksCard
+            }
+        )
     }
 
     private var heroSection: some View {
@@ -656,6 +717,16 @@ struct HomeDashboardView: View {
             }
             .appCard()
         }
+    }
+
+    // MARK: - Adaptive Plan Card
+
+    private var adaptivePlanCard: some View {
+        AdaptivePlanCardView(
+            plan: todayPlan,
+            onStart: { showingAddWorkout = true },
+            onTapDetail: { showingPlanDetail = true }
+        )
     }
 
     // MARK: - Plan + Metrics Row

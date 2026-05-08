@@ -98,7 +98,7 @@ struct TrainingHubView: View {
                 }
                 NavigationLink { SmartSuggestionsView() } label: {
                     hubRow(icon: "brain.head.profile", color: .purple,
-                           title: "Smart Suggestions", subtitle: "AI-driven workout ideas")
+                           title: "Smart Suggestions", subtitle: "Recovery-based workout ideas")
                 }
             }
 

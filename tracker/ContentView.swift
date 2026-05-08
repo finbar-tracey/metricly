@@ -148,12 +148,13 @@ struct ContentView: View {
             let weekStart = Calendar.current.dateInterval(of: .weekOfYear, for: .now)?.start ?? .distantPast
             let activitiesThisWeek = workouts.filter { $0.date >= weekStart }.count
                                    + cardioSessions.filter { $0.date >= weekStart }.count
+            let weeklyCardioKm = cardioSessions
+                .filter { $0.date >= weekStart }
+                .reduce(0.0) { $0 + $1.distanceMeters } / 1000
             WidgetDataWriter.update(
                 streakDays: Workout.currentStreak(from: workouts, cardioSessions: cardioSessions),
                 todayWorkoutName: workouts.first(where: { Calendar.current.isDateInToday($0.date) })?.name ?? "",
-                weeklyCardioKm: 0,
-                lastRunPace: "",
-                lastRunDist: "",
+                weeklyCardioKm: weeklyCardioKm,
                 weeklyGoal: settings.weeklyGoal,
                 workoutsThisWeek: activitiesThisWeek,
                 weeklyCardioGoalKm: settings.weeklyCardioDistanceGoalKm,

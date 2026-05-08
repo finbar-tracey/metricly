@@ -347,15 +347,11 @@ struct FinishWorkoutSheet: View {
             }
         }
 
-        // Push fresh data to home screen widget
+        // Push fresh data to home screen widget — only the fields we know about.
+        // Streak / weekly counts are recomputed by ContentView's full update.
         WidgetDataWriter.update(
-            streakDays: 0,          // caller doesn't have streak — widget reads from shared store; 0 = unchanged
             todayWorkoutName: workout.name,
-            weeklyCardioKm: 0,
-            lastRunPace: "",
-            lastRunDist: "",
-            weeklyGoal: settingsArray.first?.weeklyGoal ?? 0,
-            workoutsThisWeek: 0     // widget re-computes from stored value
+            weeklyGoal: settingsArray.first?.weeklyGoal
         )
 
         dismiss()
