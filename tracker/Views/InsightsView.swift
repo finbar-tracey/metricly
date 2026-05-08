@@ -2,6 +2,7 @@ import SwiftUI
 import SwiftData
 
 enum InsightsTab: String, CaseIterable, Identifiable {
+    case patterns = "Patterns"
     case volume = "Volume"
     case muscles = "Muscles"
     case recovery = "Recovery"
@@ -12,6 +13,7 @@ enum InsightsTab: String, CaseIterable, Identifiable {
 
     var icon: String {
         switch self {
+        case .patterns: return "sparkles"
         case .volume: return "chart.bar"
         case .muscles: return "figure.strengthtraining.traditional"
         case .recovery: return "heart.text.square"
@@ -22,6 +24,7 @@ enum InsightsTab: String, CaseIterable, Identifiable {
 
     var tint: Color {
         switch self {
+        case .patterns: return .indigo
         case .volume: return .green
         case .muscles: return .purple
         case .recovery: return .red
@@ -32,7 +35,7 @@ enum InsightsTab: String, CaseIterable, Identifiable {
 }
 
 struct InsightsView: View {
-    @State private var selectedTab: InsightsTab = .volume
+    @State private var selectedTab: InsightsTab = .patterns
     @Environment(\.weightUnit) private var weightUnit
 
     var body: some View {
@@ -80,6 +83,8 @@ struct InsightsView: View {
 
             Group {
                 switch selectedTab {
+                case .patterns:
+                    PersonalInsightsView()
                 case .volume:
                     VolumeTrendsView()
                 case .muscles:

@@ -434,6 +434,15 @@ struct SettingsView: View {
                 Text("Completed workouts and body weight entries will be saved to Apple Health.")
             }
 
+            // MARK: - iCloud Sync status
+            Section {
+                CloudSyncStatusRow(manager: SyncStatusManager.shared)
+            } header: {
+                Text("iCloud Sync")
+            } footer: {
+                Text("Your workout data syncs automatically across devices signed in to the same iCloud account.")
+            }
+
             Section {
                 Button {
                     sendFeedbackEmail()

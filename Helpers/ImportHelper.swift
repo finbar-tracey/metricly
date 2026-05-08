@@ -137,16 +137,36 @@ struct ImportHelper {
 
     // MARK: - CSV Parsing
 
-    private static func parseCSVRows(_ text: String) -> [[String]] {
+    /// RFC 4180-style CSV parser. Handles:
+    /// - Quoted fields containing commas, quotes, and newlines
+    /// - Doubled-quote escape inside quoted fields (`""` → `"`)
+    /// - Mixed line endings (LF, CRLF) — bare CR characters are stripped
+    static func parseCSVRows(_ text: String) -> [[String]] {
         var rows: [[String]] = []
         var currentRow: [String] = []
         var currentField = ""
         var inQuotes = false
 
-        for char in text {
+        // Normalise line endings before iterating. Swift treats "\r\n" as a single
+        // grapheme cluster, so neither the "\r" nor "\n" case below would match
+        // CRLF input. Collapse to "\n" upfront, then strip any lone CRs.
+        let normalized = text
+            .replacingOccurrences(of: "\r\n", with: "\n")
+            .replacingOccurrences(of: "\r", with: "\n")
+        let chars = Array(normalized)
+        var i = 0
+        while i < chars.count {
+            let char = chars[i]
+
             if inQuotes {
                 if char == "\"" {
-                    // Check for escaped quote
+                    // Doubled-quote escape: emit one quote, stay in quotes
+                    if i + 1 < chars.count && chars[i + 1] == "\"" {
+                        currentField.append("\"")
+                        i += 2
+                        continue
+                    }
+                    // Otherwise it's a closing quote
                     inQuotes = false
                 } else {
                     currentField.append(char)
@@ -165,15 +185,14 @@ struct ImportHelper {
                         rows.append(currentRow)
                     }
                     currentRow = []
-                case "\r":
-                    break // skip carriage returns
                 default:
                     currentField.append(char)
                 }
             }
+            i += 1
         }
 
-        // Handle last row
+        // Handle last row (no trailing newline)
         if !currentField.isEmpty || !currentRow.isEmpty {
             currentRow.append(currentField)
             if !currentRow.allSatisfy({ $0.isEmpty }) {

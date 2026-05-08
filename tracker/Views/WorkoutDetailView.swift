@@ -243,6 +243,17 @@ struct WorkoutDetailView: View {
         .navigationDestination(for: Exercise.self) { exercise in
             ExerciseDetailView(exercise: exercise)
         }
+        // MARK: - Gym Dock — sticky bottom bar for the in-workout primary loop
+        .safeAreaInset(edge: .bottom) {
+            if let active = activeDockExercise, !workout.isFinished, !workout.isTemplate {
+                GymDockView(
+                    exercise: active,
+                    lastSet: lastWorkingSet(for: active),
+                    weightUnitLabel: weightUnit == .kg ? "km" : "mi",
+                    onAddSet: { quickAddSet(for: active) }
+                )
+            }
+        }
         .toolbar {
             ToolbarItemGroup(placement: .topBarTrailing) {
                 Button {
@@ -583,6 +594,44 @@ struct WorkoutDetailView: View {
             Spacer()
         }
         .padding(.vertical, 4)
+    }
+
+    // MARK: - Gym Dock helpers
+
+    /// Which exercise the dock should show. Heuristic: the last exercise (by
+    /// the user's chosen order) that has at least one logged set — i.e. the
+    /// one they're most likely currently working on. Falls back to the first
+    /// exercise if nothing's been logged yet.
+    private var activeDockExercise: Exercise? {
+        guard !workout.exercises.isEmpty else { return nil }
+        let ordered = sortedExercises
+        return ordered.last(where: { !$0.sets.isEmpty }) ?? ordered.first
+    }
+
+    /// The most recent working set on the given exercise — preferred source for
+    /// the "+1 Set" replication. Falls back to any set (warm-up or otherwise)
+    /// if no working sets exist yet.
+    private func lastWorkingSet(for exercise: Exercise) -> ExerciseSet? {
+        exercise.sets.last(where: { !$0.isWarmUp }) ?? exercise.sets.last
+    }
+
+    /// Replicate the most recent working set onto the active exercise.
+    /// If there are no prior sets, do nothing — the user can tap the dock's
+    /// name to open the exercise's full detail and add their first set there.
+    private func quickAddSet(for exercise: Exercise) {
+        guard let template = lastWorkingSet(for: exercise) else { return }
+        let newSet = ExerciseSet(
+            reps: template.reps,
+            weight: template.weight,
+            distance: template.distance,
+            durationSeconds: template.durationSeconds,
+            exercise: exercise
+        )
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+            modelContext.insert(newSet)
+            exercise.sets.append(newSet)
+        }
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
     }
 
     // MARK: - Computed

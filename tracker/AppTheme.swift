@@ -224,4 +224,8 @@ extension Notification.Name {
     /// Posted by AppDelegate when the user taps a workout reminder notification.
     /// ContentView observes this to switch to the Training tab.
     static let openTrainingTab = Notification.Name("openTrainingTab")
+
+    /// Posted by Home when the user taps the top-insight card. ContentView
+    /// observes this to switch to the Insights tab.
+    static let openInsightsTab = Notification.Name("openInsightsTab")
 }

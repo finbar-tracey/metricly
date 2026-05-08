@@ -172,6 +172,14 @@ struct ContentView: View {
         .onReceive(NotificationCenter.default.publisher(for: .openTrainingTab)) { _ in
             withAnimation { selectedTab = .training }
         }
+        .onReceive(NotificationCenter.default.publisher(for: .openInsightsTab)) { _ in
+            // iPad picks up via the sidebar; iPhone routes Insights under the
+            // More tab, so we send users there.
+            withAnimation {
+                selectedSidebarItem = .insights
+                selectedTab = .more
+            }
+        }
         .alert("Delete Workout?", isPresented: Binding(
             get: { workoutToDelete != nil },
             set: { if !$0 { workoutToDelete = nil } }

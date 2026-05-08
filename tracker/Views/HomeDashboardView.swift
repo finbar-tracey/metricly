@@ -26,6 +26,7 @@ struct HomeDashboardView: View {
     @State private var animateRings = false
     @State private var showingAddWorkout = false
     @State private var showingPlanDetail = false
+    @State private var topInsight: Insight?
     @State private var repeatConfirmation = false
     @State private var tappedDayWorkout: Workout?
     @State private var cachedProgressionSuggestions: [ProgressionSuggestion] = []
@@ -250,6 +251,10 @@ struct HomeDashboardView: View {
         .onAppear {
             buildProgressionSuggestions()
             recomputeRecoveryAndPlan()
+            // Pull the most-recent top insight from the cache populated by
+            // PersonalInsightsView. We don't recompute here — that's expensive
+            // and happens when the user actually visits the Patterns tab.
+            topInsight = InsightsStore.load()?.first
             if recoveryResult.readinessScore < 0.40 {
                 ReminderManager.scheduleRecoveryRestReminder()
             }
@@ -311,6 +316,11 @@ struct HomeDashboardView: View {
                     }
                 }
                 adaptivePlanCard
+                if let insight = topInsight {
+                    TopInsightCardView(insight: insight) {
+                        NotificationCenter.default.post(name: .openInsightsTab, object: nil)
+                    }
+                }
                 planAndMetricsRow
             }
         )
