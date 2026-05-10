@@ -137,6 +137,84 @@ final class SuggestedSetEngineTests: XCTestCase {
         XCTAssertNil(result, "No real history available")
     }
 
+    // MARK: - Within-session RPE coaching
+
+    func testRpeLowSinglePushesARep() {
+        let exercise = makeExercise(name: "Bench")
+        addSet(to: exercise, reps: 8, weight: 80, rpe: 6)
+        let r = SuggestedSetEngine.suggestNextSet(for: exercise, history: [exercise])
+        XCTAssertEqual(r?.source, .rpeCoach)
+        XCTAssertEqual(r?.reps, 9, "Single low-RPE set should push +1 rep, not weight")
+        XCTAssertEqual(r?.weight, 80)
+        XCTAssertEqual(r?.label, "Push +1 rep")
+    }
+
+    func testRpeTwoLowsAddWeight() {
+        let exercise = makeExercise(name: "Bench")
+        addSet(to: exercise, reps: 8, weight: 80, rpe: 6)
+        addSet(to: exercise, reps: 8, weight: 80, rpe: 5)
+        let r = SuggestedSetEngine.suggestNextSet(for: exercise, history: [exercise])
+        XCTAssertEqual(r?.source, .rpeCoach)
+        XCTAssertEqual(r?.weight, 82.5, "Two-in-a-row low RPE should add the muscle-group increment")
+        XCTAssertEqual(r?.reps, 8)
+        XCTAssertEqual(r?.label, "Add weight")
+    }
+
+    func testRpeSevenMatches() {
+        let exercise = makeExercise(name: "Bench")
+        addSet(to: exercise, reps: 8, weight: 80, rpe: 7)
+        let r = SuggestedSetEngine.suggestNextSet(for: exercise, history: [exercise])
+        XCTAssertEqual(r?.source, .rpeCoach)
+        XCTAssertEqual(r?.label, "Match it")
+        XCTAssertEqual(r?.reps, 8)
+        XCTAssertEqual(r?.weight, 80)
+    }
+
+    func testRpeEightMatches() {
+        let exercise = makeExercise(name: "Bench")
+        addSet(to: exercise, reps: 8, weight: 80, rpe: 8)
+        let r = SuggestedSetEngine.suggestNextSet(for: exercise, history: [exercise])
+        XCTAssertEqual(r?.source, .rpeCoach)
+        XCTAssertEqual(r?.label, "Match it")
+    }
+
+    func testRpeNineFlagsLastHardSet() {
+        let exercise = makeExercise(name: "Bench")
+        addSet(to: exercise, reps: 8, weight: 80, rpe: 9)
+        let r = SuggestedSetEngine.suggestNextSet(for: exercise, history: [exercise])
+        XCTAssertEqual(r?.source, .rpeCoach)
+        XCTAssertEqual(r?.label, "Last hard set")
+        XCTAssertEqual(r?.reps, 8)
+    }
+
+    func testRpeTenDropsARepEarlyInSession() {
+        let exercise = makeExercise(name: "Bench")
+        addSet(to: exercise, reps: 8, weight: 80, rpe: 10)
+        let r = SuggestedSetEngine.suggestNextSet(for: exercise, history: [exercise])
+        XCTAssertEqual(r?.source, .rpeCoach)
+        XCTAssertEqual(r?.label, "Drop a rep")
+        XCTAssertEqual(r?.reps, 7)
+    }
+
+    func testRpeTenAfterThreeSetsCallsIt() {
+        let exercise = makeExercise(name: "Bench")
+        addSet(to: exercise, reps: 8, weight: 80, rpe: 8)
+        addSet(to: exercise, reps: 8, weight: 80, rpe: 9)
+        addSet(to: exercise, reps: 6, weight: 80, rpe: 10)
+        let r = SuggestedSetEngine.suggestNextSet(for: exercise, history: [exercise])
+        XCTAssertEqual(r?.source, .rpeCoach)
+        XCTAssertEqual(r?.label, "Call it")
+    }
+
+    func testNoRpeFallsBackToRepeatLast() {
+        // Sanity check: the new coach must NOT engage without an RPE signal.
+        let exercise = makeExercise(name: "Bench")
+        addSet(to: exercise, reps: 8, weight: 80) // no rpe
+        let r = SuggestedSetEngine.suggestNextSet(for: exercise, history: [exercise])
+        XCTAssertEqual(r?.source, .repeatInSession,
+                       "Without RPE we should fall back to the conservative repeat-last default")
+    }
+
     // MARK: - Helpers
 
     private func makeExercise(name: String, category: MuscleGroup = .chest) -> Exercise {
@@ -164,8 +242,10 @@ final class SuggestedSetEngineTests: XCTestCase {
     }
 
     @discardableResult
-    private func addSet(to exercise: Exercise, reps: Int, weight: Double, isWarmUp: Bool = false) -> ExerciseSet {
-        let set = ExerciseSet(reps: reps, weight: weight, isWarmUp: isWarmUp, exercise: exercise)
+    private func addSet(to exercise: Exercise, reps: Int, weight: Double,
+                        isWarmUp: Bool = false, rpe: Int? = nil) -> ExerciseSet {
+        let set = ExerciseSet(reps: reps, weight: weight,
+                              isWarmUp: isWarmUp, rpe: rpe, exercise: exercise)
         exercise.sets.append(set)
         return set
     }

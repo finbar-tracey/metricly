@@ -11,43 +11,47 @@ struct SuggestedSetPill: View {
     let onApply: () -> Void
 
     var body: some View {
-        HStack(spacing: 12) {
-            ZStack {
-                Circle()
-                    .fill(accentColor.opacity(0.16))
-                    .frame(width: 32, height: 32)
-                Image(systemName: icon)
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(accentColor)
+        HStack(spacing: 10) {
+            Image(systemName: icon)
+                .font(.system(size: 13, weight: .bold))
+                .foregroundStyle(accentColor)
+                .frame(width: 18)
+
+            VStack(alignment: .leading, spacing: 1) {
+                HStack(spacing: 6) {
+                    Text(suggestion.label.uppercased())
+                        .font(.system(size: 9, weight: .bold))
+                        .tracking(0.4)
+                        .foregroundStyle(accentColor)
+                    Text(headline)
+                        .font(.subheadline.weight(.semibold).monospacedDigit())
+                }
+                // RPE-coached suggestions justify themselves with a one-line
+                // reason; surface it inline so the user sees the why, not
+                // just the what. Other sources keep the previous compact look.
+                if suggestion.source == .rpeCoach {
+                    Text(suggestion.reasoning)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
             }
-            VStack(alignment: .leading, spacing: 2) {
-                Text(suggestion.label)
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(accentColor)
-                Text(headline)
-                    .font(.subheadline.weight(.semibold).monospacedDigit())
-                Text(suggestion.reasoning)
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(2)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
+
             Spacer(minLength: 0)
-            Button("Apply", action: onApply)
-                .font(.caption.weight(.bold))
-                .foregroundStyle(.white)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
-                .background(accentColor, in: Capsule())
-                .buttonStyle(.plain)
+
+            Button(action: onApply) {
+                Text("Apply")
+                    .font(.caption2.weight(.bold))
+                    .foregroundStyle(accentColor)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(accentColor.opacity(0.18), in: Capsule())
+            }
+            .buttonStyle(.plain)
         }
-        .padding(12)
-        .background(accentColor.opacity(0.08),
-                    in: RoundedRectangle(cornerRadius: 12))
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .strokeBorder(accentColor.opacity(0.25), lineWidth: 1)
-        )
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .background(accentColor.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
     }
 
     // MARK: - Style
@@ -63,6 +67,7 @@ struct SuggestedSetPill: View {
             return "arrow.up.right.circle.fill"
         case .progression: return "arrow.up.circle.fill"
         case .deload:      return "arrow.down.circle.fill"
+        case .rpeCoach:    return rpeCoachIcon
         default:           return "arrow.clockwise.circle.fill"
         }
     }
@@ -71,7 +76,28 @@ struct SuggestedSetPill: View {
         switch suggestion.source {
         case .progression: return .green
         case .deload:      return .orange
+        case .rpeCoach:    return rpeCoachColor
         default:           return .blue
         }
+    }
+
+    /// RPE-coached suggestions span the full spectrum from "push harder"
+    /// (green up arrow) through "match it" (blue) to "back off" (orange down
+    /// arrow). We sniff the label for direction so the engine doesn't need a
+    /// separate direction enum just for pill styling.
+    private var rpeCoachIcon: String {
+        let l = suggestion.label
+        if l.contains("Add weight") { return "arrow.up.circle.fill" }
+        if l.contains("Push") || l.contains("rep") { return "arrow.up.right.circle.fill" }
+        if l.contains("Drop") { return "arrow.down.right.circle.fill" }
+        if l.contains("Call it") || l.contains("Last hard") { return "checkmark.seal.fill" }
+        return "equal.circle.fill"   // "Match it"
+    }
+
+    private var rpeCoachColor: Color {
+        let l = suggestion.label
+        if l.contains("Add weight") || l.contains("Push") { return .green }
+        if l.contains("Drop") || l.contains("Last hard") || l.contains("Call it") { return .orange }
+        return .blue   // "Match it"
     }
 }
