@@ -10,9 +10,13 @@ import SwiftUI
 struct GymDockView: View {
     let exercise: Exercise
     let lastSet: ExerciseSet?
+    /// Forward-looking suggestion from `SuggestedSetEngine`. When present, the
+    /// dock shows the suggested values + an action label; when nil, it falls
+    /// back to the "Last: …" view of `lastSet`.
+    let suggestion: SuggestedSet?
     let weightUnitLabel: String
-    /// Called when the user taps the "+1 Set" button. Caller should replicate
-    /// the most recent working set onto `exercise`.
+    /// Called when the user taps the action button. Caller should apply the
+    /// current `suggestion` to `exercise` (or replicate `lastSet` for cardio).
     let onAddSet: () -> Void
 
     var body: some View {
@@ -39,23 +43,25 @@ struct GymDockView: View {
             }
             .buttonStyle(.plain)
 
-            // Right: +1 set quick action
+            // Right: action button. Label reflects the suggestion type
+            // ("Add weight" / "Add a rep" / "Deload" / "Repeat last") so the
+            // user knows what one tap will do before tapping.
             Button(action: onAddSet) {
                 HStack(spacing: 6) {
-                    Image(systemName: "plus.circle.fill")
-                        .font(.system(size: 16, weight: .semibold))
-                    Text("Set")
-                        .font(.subheadline.weight(.bold))
+                    Image(systemName: actionIcon)
+                        .font(.system(size: 14, weight: .semibold))
+                    Text(actionLabel)
+                        .font(.caption.weight(.bold))
                 }
                 .foregroundStyle(.white)
-                .padding(.horizontal, 16)
+                .padding(.horizontal, 14)
                 .padding(.vertical, 10)
-                .background(canAddSet ? Color.accentColor : Color.gray.opacity(0.5),
+                .background(canAddSet ? actionColor : Color.gray.opacity(0.5),
                             in: Capsule())
             }
             .buttonStyle(.plain)
             .disabled(!canAddSet)
-            .accessibilityLabel("Add a set to \(exercise.name)")
+            .accessibilityLabel("\(actionLabel) for \(exercise.name)")
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
@@ -112,6 +118,15 @@ struct GymDockView: View {
     }
 
     private var lastSetSummary: String {
+        // Prefer the forward-looking suggestion when available — it tells the
+        // user exactly what the action button will do.
+        if let s = suggestion, s.source != .repeatInSession {
+            return String(format: "Suggested: %d reps · %.1f kg", s.reps, s.weight)
+        }
+        if let s = suggestion, s.source == .repeatInSession,
+           let last = lastSet, !last.isCardio, last.weight > 0 {
+            return String(format: "Last: %d reps · %.1f kg", last.reps, last.weight)
+        }
         guard let last = lastSet else { return "No sets logged yet — tap to begin" }
         if last.isCardio {
             if let d = last.distance, d > 0 {
@@ -129,5 +144,29 @@ struct GymDockView: View {
         }()
         let warmupTag = last.isWarmUp ? " · warm-up" : ""
         return "Last: \(last.reps) reps\(weightStr)\(warmupTag)"
+    }
+
+    // MARK: - Action button styling
+
+    private var actionLabel: String {
+        suggestion?.label ?? "Set"
+    }
+
+    private var actionIcon: String {
+        switch suggestion?.source {
+        case .progression where (suggestion?.label.contains("rep") ?? false):
+            return "arrow.up.right.circle.fill"
+        case .progression: return "arrow.up.circle.fill"
+        case .deload:      return "arrow.down.circle.fill"
+        default:           return "plus.circle.fill"
+        }
+    }
+
+    private var actionColor: Color {
+        switch suggestion?.source {
+        case .progression: return .green
+        case .deload:      return .orange
+        default:           return .accentColor
+        }
     }
 }

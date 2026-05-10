@@ -31,13 +31,15 @@ final class PhoneConnectivityManager: NSObject, ObservableObject {
 
     /// Call this whenever the user's exercise library changes, or on app foreground.
     func pushExerciseLibrary(exercises: [String], todayPlanName: String = "",
+                             todayPlannedExercises: [String] = [],
                              useKilograms: Bool = true, currentStreak: Int = 0) {
         guard WCSession.default.activationState == .activated else { return }
         let context: [String: Any] = [
-            WatchMessageKey.exerciseList:  exercises,
-            WatchMessageKey.todayPlan:     todayPlanName,
-            WatchMessageKey.useKilograms:  useKilograms,
-            WatchMessageKey.currentStreak: currentStreak
+            WatchMessageKey.exerciseList:    exercises,
+            WatchMessageKey.todayPlan:       todayPlanName,
+            WatchMessageKey.todayExercises:  todayPlannedExercises,
+            WatchMessageKey.useKilograms:    useKilograms,
+            WatchMessageKey.currentStreak:   currentStreak
         ]
         try? WCSession.default.updateApplicationContext(context)
     }

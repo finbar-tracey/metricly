@@ -51,6 +51,10 @@ enum WatchMessageKey {
     static let cardioPayload  = "cardioPayload"
     static let exerciseList   = "exerciseList"
     static let todayPlan      = "todayPlan"
+    /// Names of the exercises in today's most-recent matching workout, in order.
+    /// Used by the Watch to pre-populate the exercise list on Start Gym so users
+    /// don't begin from an empty session.
+    static let todayExercises = "todayExercises"
     static let useKilograms   = "useKilograms"
     static let currentStreak  = "currentStreak"
     static let requestExercises = "requestExercises"

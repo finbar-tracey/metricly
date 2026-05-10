@@ -95,23 +95,28 @@ struct WatchRestTimerView: View {
     private func start() {
         remaining = duration
         finished  = false
-        timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
-            guard remaining > 0 else { return }
-            remaining -= 1
+        let t = Timer(timeInterval: 1, repeats: true) { _ in
+            // Hop onto the main actor before mutating @State — Timer fires
+            // on whatever run loop it's on, and writing SwiftUI state from
+            // the wrong context causes flaky crashes on watchOS.
+            Task { @MainActor in
+                guard remaining > 0 else { return }
+                remaining -= 1
 
-            if remaining == 3 {
-                WKInterfaceDevice.current().play(.notification)
-            }
-            if remaining == 0 {
-                WKInterfaceDevice.current().play(.success)
-                finished = true
-                stop()
-                // Auto-dismiss after a brief moment
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+                if remaining == 3 {
+                    WKInterfaceDevice.current().play(.notification)
+                }
+                if remaining == 0 {
+                    WKInterfaceDevice.current().play(.success)
+                    finished = true
+                    stop()
+                    try? await Task.sleep(for: .milliseconds(1200))
                     dismiss()
                 }
             }
         }
+        RunLoop.main.add(t, forMode: .common)
+        timer = t
     }
 
     private func stop() {

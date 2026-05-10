@@ -78,6 +78,49 @@ final class PersonalInsightsEngineTests: XCTestCase {
         }
     }
 
+    // MARK: - Training frequency trend
+
+    func testFrequencyTrendUpDetectsIncrease() {
+        // 10 sessions in last 28 days, 4 in the prior 28 — strong upward shift
+        var workouts: [Workout] = []
+        for i in 0..<10 {
+            workouts.append(makeWorkout(daysAgo: i * 2))         // every 2 days, recent
+        }
+        for i in 0..<4 {
+            workouts.append(makeWorkout(daysAgo: 30 + i * 7))    // sparse, prior month
+        }
+        let inputs = PersonalInsightsEngine.Inputs(workouts: workouts)
+        let insights = PersonalInsightsEngine.generate(inputs)
+        XCTAssertTrue(insights.contains { $0.category == .consistency && $0.title.contains("more") })
+    }
+
+    func testFrequencyTrendDownDetectsDecrease() {
+        var workouts: [Workout] = []
+        for i in 0..<4 {
+            workouts.append(makeWorkout(daysAgo: i * 7))        // sparse recent
+        }
+        for i in 0..<10 {
+            workouts.append(makeWorkout(daysAgo: 28 + i * 2))    // dense prior month
+        }
+        let inputs = PersonalInsightsEngine.Inputs(workouts: workouts)
+        let insights = PersonalInsightsEngine.generate(inputs)
+        XCTAssertTrue(insights.contains { $0.category == .consistency && $0.title.contains("less") })
+    }
+
+    func testFrequencyTrendIgnoredWhenNoBaseline() {
+        // Only 3 sessions in the prior month — below the 4-session baseline
+        var workouts: [Workout] = []
+        for i in 0..<10 {
+            workouts.append(makeWorkout(daysAgo: i * 2))
+        }
+        for i in 0..<3 {
+            workouts.append(makeWorkout(daysAgo: 30 + i * 7))
+        }
+        let inputs = PersonalInsightsEngine.Inputs(workouts: workouts)
+        let insights = PersonalInsightsEngine.generate(inputs)
+        XCTAssertFalse(insights.contains { $0.title.contains("more lately") || $0.title.contains("less lately") })
+    }
+
     // MARK: - Helpers
 
     private func makeWorkout(daysAgo: Int) -> Workout {

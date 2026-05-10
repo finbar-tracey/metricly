@@ -12,6 +12,8 @@ struct PersonalInsightsView: View {
     private var cardioSessions: [CardioSession]
     @Query(sort: \CaffeineEntry.date, order: .reverse)
     private var caffeineEntries: [CaffeineEntry]
+    @Query(sort: \BodyWeightEntry.date, order: .reverse)
+    private var bodyWeights: [BodyWeightEntry]
     @Query private var settingsArray: [UserSettings]
 
     @State private var insights: [Insight] = []
@@ -120,7 +122,8 @@ struct PersonalInsightsView: View {
         var inputs = PersonalInsightsEngine.Inputs(
             workouts: workouts,
             cardioSessions: cardioSessions,
-            caffeine: caffeineEntries
+            caffeine: caffeineEntries,
+            bodyWeights: bodyWeights
         )
 
         if healthKitEnabled {

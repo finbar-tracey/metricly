@@ -66,6 +66,7 @@ enum PersonalInsightsEngine {
         var workouts: [Workout] = []
         var cardioSessions: [CardioSession] = []
         var caffeine: [CaffeineEntry] = []
+        var bodyWeights: [BodyWeightEntry] = []
         var sleepByDay: [(date: Date, minutes: Double)] = []
         var hrvByDay: [(date: Date, ms: Double)] = []
         var rhrByDay: [(date: Date, bpm: Double)] = []
@@ -79,6 +80,9 @@ enum PersonalInsightsEngine {
         if let i = lateCaffeineVsSleep(inputs)   { insights.append(i) }
         if let i = highVolumeVsHRV(inputs)       { insights.append(i) }
         if let i = longRunVsLegs(inputs)         { insights.append(i) }
+        if let i = bodyWeightVsStrength(inputs)  { insights.append(i) }
+        if let i = timeOfDayVsPerformance(inputs) { insights.append(i) }
+        if let i = trainingFrequencyTrend(inputs) { insights.append(i) }
         if let i = trainingFrequency(inputs)     { insights.append(i) }
 
         return insights.sorted { $0.weight > $1.weight }
@@ -400,6 +404,208 @@ enum PersonalInsightsEngine {
             strength: strength,
             icon: "figure.run",
             weight: 0.6 * Double(longGaps.count + shortGaps.count) + diff * 5
+        )
+    }
+
+    // MARK: - Insight: Body weight × strength
+
+    /// Compare top working-set weight on the user's most-frequent compound
+    /// lift between days when their body weight is above and below their
+    /// 60-day average. Surfaces "do you lift better when you're heavier?"
+    static func bodyWeightVsStrength(_ inputs: Inputs) -> Insight? {
+        guard inputs.bodyWeights.count >= 6 else { return nil }
+        let cutoff = Calendar.current.date(byAdding: .day, value: -90, to: .now) ?? .distantPast
+        let workouts = inputs.workouts.filter { $0.date >= cutoff && $0.endTime != nil }
+        guard workouts.count >= 6 else { return nil }
+
+        // Pick the top-frequency exercise across recent workouts
+        let allExercises = workouts.flatMap(\.exercises)
+        let counts = Dictionary(grouping: allExercises, by: { $0.name.lowercased() })
+            .mapValues { $0.count }
+        guard let topName = counts.max(by: { $0.value < $1.value })?.key,
+              counts[topName, default: 0] >= 6
+        else { return nil }
+
+        // Average body weight over the window (in kg)
+        let recentWeights = inputs.bodyWeights
+            .filter { $0.date >= cutoff }
+            .map(\.weight)
+        guard recentWeights.count >= 4 else { return nil }
+        let avgBW = recentWeights.reduce(0, +) / Double(recentWeights.count)
+
+        // Build (workout date → top-set weight) for the chosen exercise
+        let perSession: [(date: Date, topWeight: Double)] = workouts.compactMap { w in
+            let sets = w.exercises
+                .filter { $0.name.lowercased() == topName }
+                .flatMap(\.sets)
+                .filter { !$0.isWarmUp && $0.weight > 0 }
+            guard let m = sets.map(\.weight).max() else { return nil }
+            return (w.date, m)
+        }
+
+        // For each session, find the closest body-weight reading within 7 days
+        let bwByDay = inputs.bodyWeights.sorted { $0.date < $1.date }
+        var heavier: [Double] = []
+        var lighter: [Double] = []
+        for s in perSession {
+            guard let nearest = bwByDay
+                .filter({ abs($0.date.timeIntervalSince(s.date)) <= 7 * 24 * 3600 })
+                .min(by: { abs($0.date.timeIntervalSince(s.date)) < abs($1.date.timeIntervalSince(s.date)) })
+            else { continue }
+            if nearest.weight > avgBW { heavier.append(s.topWeight) }
+            else if nearest.weight < avgBW { lighter.append(s.topWeight) }
+        }
+        guard heavier.count >= 3, lighter.count >= 3 else { return nil }
+
+        let avgHeavy = heavier.reduce(0, +) / Double(heavier.count)
+        let avgLight = lighter.reduce(0, +) / Double(lighter.count)
+        guard avgLight > 0 else { return nil }
+        let pct = (avgHeavy - avgLight) / avgLight * 100
+        guard abs(pct) >= 4 else { return nil }
+
+        let displayName = workouts
+            .flatMap(\.exercises)
+            .first { $0.name.lowercased() == topName }?.name ?? topName.capitalized
+
+        let strength: Insight.Strength = {
+            if abs(pct) >= 8 && heavier.count + lighter.count >= 12 { return .strong }
+            if abs(pct) >= 6 { return .moderate }
+            return .weak
+        }()
+        let direction = pct >= 0 ? "stronger" : "weaker"
+
+        return Insight(
+            category: .performance,
+            title: "Body weight and your \(displayName.lowercased())",
+            message: String(
+                format: "When your body weight is above your average, your %@ is about %.0f%% %@.",
+                displayName.lowercased(), abs(pct), direction
+            ),
+            detail: "Based on \(heavier.count + lighter.count) sessions in the last 90 days",
+            strength: strength,
+            icon: "scalemass.fill",
+            weight: 0.7 * Double(heavier.count + lighter.count) + abs(pct)
+        )
+    }
+
+    // MARK: - Insight: Time of day × performance
+
+    /// Compare top working-set weight on the user's most-frequent lift between
+    /// morning, afternoon, and evening sessions. Reports the strongest time
+    /// of day if the gap is meaningful.
+    static func timeOfDayVsPerformance(_ inputs: Inputs) -> Insight? {
+        let cutoff = Calendar.current.date(byAdding: .day, value: -90, to: .now) ?? .distantPast
+        let workouts = inputs.workouts.filter { $0.date >= cutoff && $0.endTime != nil }
+        guard workouts.count >= 8 else { return nil }
+
+        // Most-frequent compound lift
+        let allExercises = workouts.flatMap(\.exercises)
+        let counts = Dictionary(grouping: allExercises, by: { $0.name.lowercased() })
+            .mapValues { $0.count }
+        guard let topName = counts.max(by: { $0.value < $1.value })?.key,
+              counts[topName, default: 0] >= 8
+        else { return nil }
+
+        // Bucket sessions by time of day
+        var morning: [Double] = []     // before 12
+        var afternoon: [Double] = []   // 12 – 17
+        var evening: [Double] = []     // 17+
+        for w in workouts {
+            let hour = Calendar.current.component(.hour, from: w.startTime ?? w.date)
+            let topSet = w.exercises
+                .filter { $0.name.lowercased() == topName }
+                .flatMap(\.sets)
+                .filter { !$0.isWarmUp && $0.weight > 0 }
+                .map(\.weight).max()
+            guard let weight = topSet else { continue }
+
+            if hour < 12 { morning.append(weight) }
+            else if hour < 17 { afternoon.append(weight) }
+            else { evening.append(weight) }
+        }
+
+        // Need ≥3 sessions in at least 2 buckets
+        let buckets: [(label: String, values: [Double])] = [
+            ("morning",   morning),
+            ("afternoon", afternoon),
+            ("evening",   evening),
+        ].filter { $0.values.count >= 3 }
+        guard buckets.count >= 2 else { return nil }
+
+        // Find the strongest and weakest by average
+        let averaged = buckets.map { (label: $0.label, avg: $0.values.reduce(0, +) / Double($0.values.count), n: $0.values.count) }
+        guard let best = averaged.max(by: { $0.avg < $1.avg }),
+              let worst = averaged.min(by: { $0.avg < $1.avg }),
+              best.label != worst.label,
+              worst.avg > 0
+        else { return nil }
+        let pct = (best.avg - worst.avg) / worst.avg * 100
+        guard pct >= 4 else { return nil }
+
+        let displayName = workouts
+            .flatMap(\.exercises)
+            .first { $0.name.lowercased() == topName }?.name ?? topName.capitalized
+
+        let strength: Insight.Strength = {
+            if pct >= 8 && best.n + worst.n >= 10 { return .strong }
+            if pct >= 6 { return .moderate }
+            return .weak
+        }()
+
+        return Insight(
+            category: .performance,
+            title: "You're strongest in the \(best.label)",
+            message: String(
+                format: "Your %@ averages %.0f%% more weight in the %@ than in the %@.",
+                displayName.lowercased(), pct, best.label, worst.label
+            ),
+            detail: "Based on \(best.n + worst.n) sessions in the last 90 days",
+            strength: strength,
+            icon: best.label == "morning" ? "sunrise.fill"
+                : best.label == "evening" ? "moon.fill" : "sun.max.fill",
+            weight: 0.7 * Double(best.n + worst.n) + pct
+        )
+    }
+
+    // MARK: - Insight: Training frequency trend
+
+    /// Compare sessions per week in the last 28 days vs the prior 28 days.
+    /// Surfaces meaningful changes in training volume.
+    static func trainingFrequencyTrend(_ inputs: Inputs) -> Insight? {
+        let cal = Calendar.current
+        let now = Date.now
+        let recentStart  = cal.date(byAdding: .day, value: -28, to: now) ?? .distantPast
+        let priorStart   = cal.date(byAdding: .day, value: -56, to: now) ?? .distantPast
+
+        let recent = inputs.workouts.filter { $0.date >= recentStart && $0.endTime != nil }.count
+                   + inputs.cardioSessions.filter { $0.date >= recentStart }.count
+        let prior = inputs.workouts.filter { $0.date >= priorStart && $0.date < recentStart && $0.endTime != nil }.count
+                  + inputs.cardioSessions.filter { $0.date >= priorStart && $0.date < recentStart }.count
+
+        guard prior >= 4 else { return nil }   // Need a baseline
+        guard recent >= 4 else { return nil }   // Don't want to scold someone who took a break
+
+        let recentPerWeek = Double(recent) / 4.0
+        let priorPerWeek  = Double(prior) / 4.0
+        let pct = (recentPerWeek - priorPerWeek) / priorPerWeek * 100
+        guard abs(pct) >= 15 else { return nil }   // 15% threshold to avoid noise
+
+        let strength: Insight.Strength = abs(pct) >= 30 ? .moderate : .weak
+
+        let title = pct >= 0 ? "Training more lately" : "Training less lately"
+        let direction = pct >= 0 ? "up" : "down"
+
+        return Insight(
+            category: .consistency,
+            title: title,
+            message: String(
+                format: "You're averaging %.1f sessions/week — %@ %.0f%% from %.1f the previous month.",
+                recentPerWeek, direction, abs(pct), priorPerWeek
+            ),
+            detail: "\(recent) sessions in last 28 days vs \(prior) the month before",
+            strength: strength,
+            icon: pct >= 0 ? "arrow.up.right.circle.fill" : "arrow.down.right.circle.fill",
+            weight: 8 + abs(pct) / 5   // Sits below richer insights but above baseline frequency
         )
     }
 

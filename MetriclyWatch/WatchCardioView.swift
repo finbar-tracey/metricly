@@ -1,5 +1,6 @@
 import SwiftUI
 import HealthKit
+import WatchKit
 
 // MARK: - Activity picker
 
@@ -7,40 +8,54 @@ struct WatchCardioStartView: View {
     @EnvironmentObject private var sessionManager: WatchWorkoutSessionManager
     @EnvironmentObject private var connectivity:   WatchConnectivityManager
 
-    @State private var selectedType: WatchCardioType = .run
-
     var body: some View {
         if sessionManager.isRunning {
             WatchCardioActiveView()
         } else {
-            VStack(spacing: 10) {
-                Picker("Activity", selection: $selectedType) {
-                    ForEach(WatchCardioType.allCases) { type in
-                        Label(type.shortName, systemImage: type.icon).tag(type)
+            // List of activities — tap any row to start. Wheel picker felt
+            // dated and required two interactions (scroll + tap Start).
+            // One-tap start is faster on the gym floor.
+            List {
+                ForEach(WatchCardioType.allCases) { type in
+                    Button {
+                        WKInterfaceDevice.current().play(.start)
+                        startCardio(type: type)
+                    } label: {
+                        HStack(spacing: 12) {
+                            ZStack {
+                                Circle()
+                                    .fill(type.color.opacity(0.20))
+                                    .frame(width: 32, height: 32)
+                                Image(systemName: type.icon)
+                                    .font(.system(size: 14, weight: .bold))
+                                    .foregroundStyle(type.color)
+                            }
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text(type.shortName)
+                                    .font(.subheadline.weight(.semibold))
+                                Text(type.isIndoor ? "Indoor" : "Outdoor")
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer(minLength: 0)
+                            Image(systemName: "play.fill")
+                                .font(.caption2)
+                                .foregroundStyle(type.color)
+                        }
+                        .padding(.vertical, 4)
                     }
                 }
-                .pickerStyle(.wheel)
-
-                Button {
-                    startCardio()
-                } label: {
-                    Label("Start", systemImage: "play.fill")
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.borderedProminent)
-                .tint(selectedType.color)
             }
-            .padding()
             .navigationTitle("Cardio")
         }
     }
 
-    private func startCardio() {
+    private func startCardio(type: WatchCardioType) {
         Task {
             await sessionManager.requestAuthorization()
             try? await sessionManager.startSession(
-                activityType: selectedType.hkType,
-                isIndoor: selectedType.isIndoor
+                activityType: type.hkType,
+                isIndoor: type.isIndoor
             )
         }
     }

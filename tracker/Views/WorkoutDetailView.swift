@@ -249,6 +249,7 @@ struct WorkoutDetailView: View {
                 GymDockView(
                     exercise: active,
                     lastSet: lastWorkingSet(for: active),
+                    suggestion: suggestionForDock(active),
                     weightUnitLabel: weightUnit == .kg ? "km" : "mi",
                     onAddSet: { quickAddSet(for: active) }
                 )
@@ -615,11 +616,47 @@ struct WorkoutDetailView: View {
         exercise.sets.last(where: { !$0.isWarmUp }) ?? exercise.sets.last
     }
 
-    /// Replicate the most recent working set onto the active exercise.
-    /// If there are no prior sets, do nothing — the user can tap the dock's
-    /// name to open the exercise's full detail and add their first set there.
+    /// The next-set suggestion for the dock, derived from `SuggestedSetEngine`.
+    /// Returns nil for cardio exercises so the dock falls back to its
+    /// last-set summary (progression doesn't apply to cardio sets).
+    private func suggestionForDock(_ exercise: Exercise) -> SuggestedSet? {
+        if let last = lastWorkingSet(for: exercise), last.isCardio { return nil }
+        let history = allExercises.filter { $0.name == exercise.name }
+        return SuggestedSetEngine.suggestNextSet(for: exercise, history: history)
+    }
+
+    /// Apply the dock's "+1 Set" action. Uses `SuggestedSetEngine` to pick
+    /// values that respect progression (add weight/rep/deload) when there's
+    /// enough history; falls back to repeating the last in-session set
+    /// otherwise. Returns nothing — does nothing if no history exists.
     private func quickAddSet(for exercise: Exercise) {
-        guard let template = lastWorkingSet(for: exercise) else { return }
+        // Cardio exercises: progression doesn't apply meaningfully — keep the
+        // existing "copy the last set" behaviour.
+        if let last = lastWorkingSet(for: exercise), last.isCardio {
+            replicateSet(template: last, into: exercise)
+            return
+        }
+
+        let history = allExercises.filter { $0.name == exercise.name }
+        guard let suggestion = SuggestedSetEngine.suggestNextSet(for: exercise, history: history)
+        else { return }
+
+        let newSet = ExerciseSet(
+            reps: suggestion.reps,
+            weight: suggestion.weight,
+            isWarmUp: suggestion.isWarmUp,
+            exercise: exercise
+        )
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+            modelContext.insert(newSet)
+            exercise.sets.append(newSet)
+        }
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+    }
+
+    /// Pure-replication helper used for cardio sets, where progression isn't
+    /// applicable. Copies distance/duration as well as reps/weight.
+    private func replicateSet(template: ExerciseSet, into exercise: Exercise) {
         let newSet = ExerciseSet(
             reps: template.reps,
             weight: template.weight,

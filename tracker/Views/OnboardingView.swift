@@ -80,15 +80,16 @@ struct OnboardingView: View {
                         .foregroundStyle(.white)
                 }
 
-                VStack(spacing: 10) {
-                    Text("Welcome to Metricly")
+                VStack(spacing: 12) {
+                    Text("Train smarter\nevery day.")
                         .font(.largeTitle.bold())
                         .foregroundStyle(.white)
                         .multilineTextAlignment(.center)
-                    Text("Your simple, powerful gym companion.")
+                    Text("Metricly tells you what to train,\nhow hard to push, and why —\nbased on your recovery.")
                         .font(.title3)
-                        .foregroundStyle(.white.opacity(0.8))
+                        .foregroundStyle(.white.opacity(0.85))
                         .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
 
                 Spacer()
@@ -99,30 +100,52 @@ struct OnboardingView: View {
         }
     }
 
-    // MARK: - Page 2: Features
+    // MARK: - Page 2: How it works
 
     private var featuresPage: some View {
         ZStack {
             Color(.systemGroupedBackground).ignoresSafeArea()
 
-            VStack(spacing: 32) {
-                Spacer()
+            VStack(spacing: 24) {
+                Spacer().frame(height: 20)
 
                 VStack(spacing: 6) {
-                    Text("Everything You Need")
+                    Text("How it works")
                         .font(.title.bold())
-                    Text("Built for serious lifters and casual gym-goers alike.")
+                    Text("Four steps. Every day.")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
                 }
 
                 VStack(spacing: 12) {
-                    featureCard(icon: "plus.circle.fill", color: .accentColor, title: "Quick Logging", subtitle: "Add sets in seconds with smart defaults")
-                    featureCard(icon: "clock.arrow.circlepath", color: .blue, title: "Auto-Fill", subtitle: "Pre-fills from your last session automatically")
-                    featureCard(icon: "trophy.fill", color: .yellow, title: "PR Tracking", subtitle: "Celebrates every time you beat your best")
-                    featureCard(icon: "figure.run", color: .orange, title: "GPS Cardio", subtitle: "Track runs & walks with live pace, splits and maps")
-                    featureCard(icon: "heart.fill", color: .red, title: "Health Integration", subtitle: "Sync steps, sleep, and heart rate from Apple Health")
+                    howItWorksStep(
+                        number: 1,
+                        icon: "heart.text.square.fill",
+                        color: .red,
+                        title: "Connect Health",
+                        subtitle: "Sleep, HRV, resting heart rate — feeds your readiness score"
+                    )
+                    howItWorksStep(
+                        number: 2,
+                        icon: "gauge.with.needle.fill",
+                        color: .teal,
+                        title: "Get your readiness",
+                        subtitle: "A daily score showing how recovered each muscle group is"
+                    )
+                    howItWorksStep(
+                        number: 3,
+                        icon: "wand.and.stars",
+                        color: .blue,
+                        title: "Follow your adaptive plan",
+                        subtitle: "Today's workout, intensity, and adjustments — explained"
+                    )
+                    howItWorksStep(
+                        number: 4,
+                        icon: "chart.line.uptrend.xyaxis",
+                        color: .green,
+                        title: "Track progress automatically",
+                        subtitle: "PRs, patterns and trends surface as you train"
+                    )
                 }
                 .padding(.horizontal)
 
@@ -131,6 +154,45 @@ struct OnboardingView: View {
             }
             .padding(32)
         }
+    }
+
+    /// One row in the "How it works" sequence — circled step number, icon,
+    /// title and subtitle. Designed to be quickly scannable.
+    private func howItWorksStep(number: Int, icon: String, color: Color, title: String, subtitle: String) -> some View {
+        HStack(spacing: 14) {
+            ZStack {
+                Circle()
+                    .fill(color.opacity(0.16))
+                    .frame(width: 44, height: 44)
+                VStack(spacing: -2) {
+                    Image(systemName: icon)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(color)
+                }
+                // Step number badge in the top-right of the icon circle
+                Text("\(number)")
+                    .font(.system(size: 10, weight: .bold, design: .rounded))
+                    .foregroundStyle(.white)
+                    .frame(width: 18, height: 18)
+                    .background(color, in: Circle())
+                    .overlay(Circle().stroke(Color(.systemBackground), lineWidth: 2))
+                    .offset(x: 16, y: -14)
+            }
+            .frame(width: 48, height: 48)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.subheadline.weight(.bold))
+                Text(subtitle)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Spacer(minLength: 0)
+        }
+        .padding(14)
+        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 14))
     }
 
     // MARK: - Page 3: Profile Setup
@@ -350,13 +412,14 @@ struct OnboardingView: View {
                 }
 
                 VStack(spacing: 10) {
-                    Text("You're All Set!")
+                    Text("You're all set.")
                         .font(.largeTitle.bold())
                         .foregroundStyle(.white)
-                    Text("Start by creating your first workout.\nTap + to get going.")
+                    Text("Log your first workout —\nMetricly will start learning your\nrecovery patterns from day one.")
                         .font(.title3)
                         .foregroundStyle(.white.opacity(0.85))
                         .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
 
                 Spacer()

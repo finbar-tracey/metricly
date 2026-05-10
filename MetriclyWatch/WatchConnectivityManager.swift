@@ -17,12 +17,15 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
 
     static let shared = WatchConnectivityManager()
 
-    @Published var recentExercises:  [String] = []
-    @Published var todayPlanName:    String   = ""
-    @Published var isPhoneReachable: Bool     = false
-    @Published var useKg:            Bool     = true
-    @Published var currentStreak:    Int      = 0
-    @Published var restDuration:     Int      = 60   // seconds
+    @Published var recentExercises:    [String] = []
+    @Published var todayPlanName:      String   = ""
+    /// Names of the exercises the iPhone says belong to today's planned
+    /// workout. Used to pre-populate the gym session on Start.
+    @Published var todayPlannedExercises: [String] = []
+    @Published var isPhoneReachable:   Bool     = false
+    @Published var useKg:              Bool     = true
+    @Published var currentStreak:      Int      = 0
+    @Published var restDuration:       Int      = 60   // seconds
 
     private override init() {
         super.init()
@@ -76,36 +79,39 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
     // MARK: - Private
 
     private func handleExerciseDataReply(_ reply: [String: Any]) {
+        let defaults = UserDefaults(suiteName: WatchSharedKeys.suite)
         if let exercises = reply[WatchMessageKey.exerciseList] as? [String] {
             recentExercises = exercises
-            saveToSharedDefaults(exercises: exercises)
+            defaults?.set(exercises, forKey: WatchSharedKeys.recentExercises)
         }
         if let plan = reply[WatchMessageKey.todayPlan] as? String {
             todayPlanName = plan
+            defaults?.set(plan, forKey: WatchSharedKeys.todayPlanName)
+        }
+        if let planned = reply[WatchMessageKey.todayExercises] as? [String] {
+            todayPlannedExercises = planned
+            defaults?.set(planned, forKey: WatchSharedKeys.todayExercises)
         }
         if let kg = reply[WatchMessageKey.useKilograms] as? Bool {
             useKg = kg
-            UserDefaults(suiteName: WatchSharedKeys.suite)?.set(kg, forKey: WatchSharedKeys.useKilograms)
+            defaults?.set(kg, forKey: WatchSharedKeys.useKilograms)
         }
         if let streak = reply[WatchMessageKey.currentStreak] as? Int {
             currentStreak = streak
-            UserDefaults(suiteName: WatchSharedKeys.suite)?.set(streak, forKey: WatchSharedKeys.currentStreak)
+            defaults?.set(streak, forKey: WatchSharedKeys.currentStreak)
         }
     }
 
     private func loadCachedData() {
         guard let defaults = UserDefaults(suiteName: WatchSharedKeys.suite) else { return }
-        recentExercises = defaults.stringArray(forKey: WatchSharedKeys.recentExercises) ?? []
-        todayPlanName   = defaults.string(forKey: WatchSharedKeys.todayPlanName) ?? ""
-        useKg           = defaults.object(forKey: WatchSharedKeys.useKilograms) as? Bool ?? true
-        currentStreak   = defaults.integer(forKey: WatchSharedKeys.currentStreak)
-        restDuration    = defaults.integer(forKey: WatchSharedKeys.restDuration).nonZero ?? 60
+        recentExercises       = defaults.stringArray(forKey: WatchSharedKeys.recentExercises) ?? []
+        todayPlanName         = defaults.string(forKey: WatchSharedKeys.todayPlanName) ?? ""
+        todayPlannedExercises = defaults.stringArray(forKey: WatchSharedKeys.todayExercises) ?? []
+        useKg                 = defaults.object(forKey: WatchSharedKeys.useKilograms) as? Bool ?? true
+        currentStreak         = defaults.integer(forKey: WatchSharedKeys.currentStreak)
+        restDuration          = defaults.integer(forKey: WatchSharedKeys.restDuration).nonZero ?? 60
     }
 
-    private func saveToSharedDefaults(exercises: [String]) {
-        guard let defaults = UserDefaults(suiteName: WatchSharedKeys.suite) else { return }
-        defaults.set(exercises, forKey: WatchSharedKeys.recentExercises)
-    }
 }
 
 // MARK: - WCSessionDelegate

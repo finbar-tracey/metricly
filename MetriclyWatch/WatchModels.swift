@@ -7,6 +7,7 @@ enum WatchSharedKeys {
     static let suite            = "group.com.Finbar.FinApp"
     static let recentExercises  = "watch.recentExercises"   // [String]
     static let todayPlanName    = "watch.todayPlanName"      // String
+    static let todayExercises   = "watch.todayExercises"     // [String] — pre-fill list
     static let useKilograms     = "watch.useKilograms"       // Bool  (default true)
     static let currentStreak    = "watch.currentStreak"      // Int
     static let restDuration     = "watch.restDuration"       // Int seconds (default 60)

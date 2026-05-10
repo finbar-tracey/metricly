@@ -290,21 +290,29 @@ struct ExerciseDetailView: View {
                 restDuration = exercise.customRestDuration ?? settings.defaultRestDuration
                 hasLoadedSettings = true
             }
-            if !hasPreFilled, let lastSession = previousSession,
-               let firstSet = lastSession.sets.first {
-                if firstSet.isCardio {
-                    if let km = firstSet.distance {
-                        newDistance = weightUnit.distanceUnit.display(km)
+            if !hasPreFilled {
+                // Strength: prefer the smart suggestion. Falls back to the
+                // previous session's first set when there's no engine output.
+                if let suggestion = suggestedSet {
+                    newReps = suggestion.reps
+                    newWeight = weightUnit.display(suggestion.weight)
+                    hasPreFilled = true
+                } else if let lastSession = previousSession,
+                          let firstSet = lastSession.sets.first {
+                    if firstSet.isCardio {
+                        if let km = firstSet.distance {
+                            newDistance = weightUnit.distanceUnit.display(km)
+                        }
+                        if let secs = firstSet.durationSeconds {
+                            newDurationMinutes = secs / 60
+                            newDurationSeconds = secs % 60
+                        }
+                    } else {
+                        newReps = firstSet.reps
+                        newWeight = weightUnit.display(firstSet.weight)
                     }
-                    if let secs = firstSet.durationSeconds {
-                        newDurationMinutes = secs / 60
-                        newDurationSeconds = secs % 60
-                    }
-                } else {
-                    newReps = firstSet.reps
-                    newWeight = weightUnit.display(firstSet.weight)
+                    hasPreFilled = true
                 }
-                hasPreFilled = true
             }
         }
         .onDisappear {
@@ -681,6 +689,18 @@ struct ExerciseDetailView: View {
 
     private var newSetSection: some View {
         Section {
+            // Suggested-next-set pill — only for strength, only when we have
+            // enough data to recommend something concrete.
+            if !isCardioExercise, let s = suggestedSet {
+                SuggestedSetPill(suggestion: s) {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    newReps = s.reps
+                    newWeight = weightUnit.display(s.weight)
+                }
+                .listRowBackground(Color.clear)
+                .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 8, trailing: 16))
+            }
+
             if isCardioExercise {
                 cardioInputFields
             } else {
@@ -1108,6 +1128,15 @@ struct ExerciseDetailView: View {
         let rec = ProgressionAdvisor.recommend(sessions: sessions, muscleGroup: exercise.category)
         if case .insufficient = rec.action { return nil }
         return rec
+    }
+
+    /// Concrete next-set suggestion for the new-set composer. Used both to
+    /// pre-fill the inputs on first appear and to render the "Suggested" pill.
+    private var suggestedSet: SuggestedSet? {
+        // Cardio progression doesn't apply, and the input fields are different
+        guard !isCardioExercise else { return nil }
+        let history = allExercises.filter { $0.name == exercise.name }
+        return SuggestedSetEngine.suggestNextSet(for: exercise, history: history)
     }
 
     private var previousSession: Exercise? {

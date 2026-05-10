@@ -99,16 +99,32 @@ struct trackerApp: App {
         let cardio   = (try? ctx.fetch(FetchDescriptor<CardioSession>())) ?? []
         let streak   = Workout.currentStreak(from: workouts, cardioSessions: Array(cardio.prefix(60)))
 
+        // Today's planned exercises — pulled from the most recent finished
+        // workout whose name matches today's plan. Lets the Watch start a
+        // session with the right exercise list pre-populated instead of empty.
+        let plannedExercises: [String] = {
+            guard !todayPlan.isEmpty else { return [] }
+            let match = workouts
+                .filter { !$0.isTemplate && $0.endTime != nil
+                          && $0.name.localizedCaseInsensitiveCompare(todayPlan) == .orderedSame }
+                .max(by: { $0.date < $1.date })
+            return match?.exercises
+                .sorted { $0.order < $1.order }
+                .map(\.name) ?? []
+        }()
+
         // Write to App Group so Watch complications + UI can read without WCSession
         if let defaults = UserDefaults(suiteName: "group.com.Finbar.FinApp") {
-            defaults.set(useKg,       forKey: "watch.useKilograms")
-            defaults.set(streak,      forKey: "watch.currentStreak")
-            defaults.set(todayPlan,   forKey: "watch.todayPlanName")
+            defaults.set(useKg,             forKey: "watch.useKilograms")
+            defaults.set(streak,            forKey: "watch.currentStreak")
+            defaults.set(todayPlan,         forKey: "watch.todayPlanName")
+            defaults.set(plannedExercises,  forKey: "watch.todayExercises")
         }
 
         PhoneConnectivityManager.shared.pushExerciseLibrary(
             exercises: Array(unique.prefix(50)),
             todayPlanName: todayPlan,
+            todayPlannedExercises: plannedExercises,
             useKilograms: useKg,
             currentStreak: streak
         )
