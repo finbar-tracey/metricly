@@ -16,6 +16,8 @@ struct WatchGymView: View {
     @State private var showingNameEntry = false
     @State private var showingAddExercise = false
     @State private var showingFinish = false
+    @State private var showingDiscardConfirm = false
+    @State private var showingControls = false
     @State private var startDate: Date?
 
     var body: some View {
@@ -120,18 +122,50 @@ struct WatchGymView: View {
             }
         }
         .navigationTitle(workoutName)
-        // Finish lives in the top-right toolbar — much more discoverable than
-        // being buried at the bottom of a long exercise list.
+        // Toolbar pops a confirmationDialog with all the workout controls.
+        // `Menu` doesn't exist on watchOS, and a dialog gets us the same
+        // tap-to-reveal-actions UX without burying Finish behind nav.
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
-                    showingFinish = true
+                    showingControls = true
                 } label: {
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundStyle(.green)
+                    Image(systemName: sessionManager.isPaused
+                          ? "pause.circle.fill"
+                          : "ellipsis.circle.fill")
+                        .foregroundStyle(sessionManager.isPaused ? .yellow : .green)
                 }
-                .accessibilityLabel("Finish workout")
+                .accessibilityLabel("Workout controls")
             }
+        }
+        .confirmationDialog(
+            "Workout",
+            isPresented: $showingControls,
+            titleVisibility: .visible
+        ) {
+            Button("Finish Workout") { showingFinish = true }
+            Button(sessionManager.isPaused ? "Resume" : "Pause") {
+                if sessionManager.isPaused {
+                    sessionManager.resume()
+                } else {
+                    sessionManager.pause()
+                }
+            }
+            Button("Water Lock") { WKInterfaceDevice.current().enableWaterLock() }
+            Button("Discard Workout", role: .destructive) {
+                showingDiscardConfirm = true
+            }
+            Button("Cancel", role: .cancel) {}
+        }
+        .confirmationDialog(
+            "Discard workout?",
+            isPresented: $showingDiscardConfirm,
+            titleVisibility: .visible
+        ) {
+            Button("Discard", role: .destructive) { discardWorkout() }
+            Button("Keep Going", role: .cancel) {}
+        } message: {
+            Text("All sets from this workout will be lost.")
         }
         .sheet(isPresented: $showingAddExercise) {
             AddExerciseSheet(
@@ -262,6 +296,20 @@ struct WatchGymView: View {
         exercises   = []
         startDate   = nil
         showingFinish = false
+    }
+
+    /// Discards the current workout: ends the HealthKit session (we can't
+    /// leave it dangling) but skips the iPhone sync so SwiftData never sees
+    /// this session. Local state is cleared so the user lands back on the
+    /// pre-workout screen.
+    private func discardWorkout() {
+        Task {
+            _ = try? await sessionManager.endSession()
+        }
+        exercises = []
+        startDate = nil
+        showingFinish = false
+        WKInterfaceDevice.current().play(.failure)
     }
 
     private var hrColor: Color {
