@@ -58,6 +58,23 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
         WCSession.default.transferUserInfo(info)
     }
 
+    // MARK: - Request iPhone to finish its active workout
+
+    /// Sends a "finish your active workout" request to the paired iPhone.
+    /// Uses transferUserInfo so the request survives the phone being asleep
+    /// or out of reach — it'll deliver when the phone next runs.
+    ///
+    /// Clears local phone-active state optimistically so the banner
+    /// disappears immediately; the phone's eventual publish will confirm.
+    func sendFinishActiveWorkout() {
+        guard WCSession.default.activationState == .activated else { return }
+        WCSession.default.transferUserInfo([
+            WatchMessageKey.type: WatchMessageType.finishActiveWorkout.rawValue
+        ])
+        phoneActiveName = ""
+        phoneActiveStartedAt = nil
+    }
+
     // MARK: - Send completed cardio session to iPhone
 
     func sendCardio(_ payload: WatchCardioPayload) {

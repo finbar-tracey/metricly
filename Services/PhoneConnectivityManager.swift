@@ -107,11 +107,48 @@ final class PhoneConnectivityManager: NSObject, ObservableObject {
                let payload = try? JSONDecoder().decode(WatchCardioPayload.self, from: data) {
                 persistCardio(payload)
             }
+        case .finishActiveWorkout:
+            finishActiveWorkout()
         default:
             break
         }
 
         lastSyncDate = .now
+    }
+
+    /// Watch requested we finish the phone's in-progress workout. Mirrors
+    /// the local Finish path without the rating/notes prompt — those can be
+    /// added later by editing the workout. HealthKit save still runs when
+    /// the user has the sync toggled on.
+    private func finishActiveWorkout() {
+        guard let ctx = modelContext else { return }
+        let descriptor = FetchDescriptor<Workout>(
+            predicate: #Predicate { !$0.isTemplate && $0.endTime == nil },
+            sortBy: [SortDescriptor(\.date, order: .reverse)]
+        )
+        guard let workout = (try? ctx.fetch(descriptor))?.first else {
+            // No in-progress workout to finish — at least clear stale state
+            // so the watch banner / complication don't keep showing it.
+            publishActiveWorkout(name: nil, startedAt: nil)
+            return
+        }
+        workout.endTime = .now
+        try? ctx.save()
+
+        // End live activity + clear the shared state so the watch banner
+        // and complication update immediately.
+        let totalSets = workout.exercises.flatMap(\.sets).count
+        WorkoutActivityManager.shared.endActivity(
+            exerciseCount: workout.exercises.count,
+            setCount: totalSets
+        )
+        publishActiveWorkout(name: nil, startedAt: nil)
+
+        // Best-effort HealthKit save if the user opted in.
+        let settings = (try? ctx.fetch(FetchDescriptor<UserSettings>()))?.first
+        if settings?.healthKitEnabled == true {
+            Task { try? await HealthKitManager.shared.saveStrengthWorkout(workout) }
+        }
     }
 
     // MARK: - SwiftData persistence

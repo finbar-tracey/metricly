@@ -73,4 +73,8 @@ enum WatchMessageType: String {
     case syncCardio   = "syncCardio"
     case exerciseData = "exerciseData"
     case requestData  = "requestData"
+    /// Watch asking iPhone to end its currently-active workout. Used when
+    /// the user wants to "take over" mid-session — drop the phone, finish
+    /// from the wrist.
+    case finishActiveWorkout = "finishActiveWorkout"
 }

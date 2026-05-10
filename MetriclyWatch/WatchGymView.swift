@@ -18,6 +18,7 @@ struct WatchGymView: View {
     @State private var showingFinish = false
     @State private var showingDiscardConfirm = false
     @State private var showingControls = false
+    @State private var showingFinishPhoneConfirm = false
     @State private var startDate: Date?
 
     var body: some View {
@@ -36,9 +37,16 @@ struct WatchGymView: View {
                 // Phone-active banner — tells the user their session is
                 // currently running on iPhone, not on the watch. Prevents
                 // them from accidentally starting a second session here.
+                // Tapping prompts to finish the phone's workout remotely
+                // (the "drop the phone in the locker" case).
                 if let started = connectivity.phoneActiveStartedAt {
-                    phoneActiveBanner(name: connectivity.phoneActiveName,
-                                      startedAt: started)
+                    Button {
+                        showingFinishPhoneConfirm = true
+                    } label: {
+                        phoneActiveBanner(name: connectivity.phoneActiveName,
+                                          startedAt: started)
+                    }
+                    .buttonStyle(.plain)
                 }
 
                 // Today's plan card — shows the name + exercise preview if
@@ -65,10 +73,23 @@ struct WatchGymView: View {
             .padding()
         }
         .navigationTitle("Gym")
+        .confirmationDialog(
+            "Finish phone workout?",
+            isPresented: $showingFinishPhoneConfirm,
+            titleVisibility: .visible
+        ) {
+            Button("Finish Now") {
+                connectivity.sendFinishActiveWorkout()
+                WKInterfaceDevice.current().play(.success)
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Saves the workout on your iPhone with the current time.")
+        }
     }
 
     /// Compact "Workout on iPhone" pill shown when the paired iPhone has an
-    /// in-progress workout. Read-only — controls live on the phone.
+    /// in-progress workout. Tap to finish remotely.
     private func phoneActiveBanner(name: String, startedAt: Date) -> some View {
         let elapsed = Int(Date.now.timeIntervalSince(startedAt))
         return HStack(spacing: 8) {
