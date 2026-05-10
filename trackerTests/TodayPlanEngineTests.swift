@@ -59,6 +59,34 @@ final class TodayPlanEngineTests: XCTestCase {
         XCTAssertEqual(plan.intensity, .hard)
     }
 
+    // MARK: - Brand-new user
+
+    func testFreshUserShowsFirstWorkoutMessage() {
+        let plan = TodayPlanEngine.generate(
+            scheduledName: nil,
+            recovery: makeRecovery(score: 1.0),
+            health: HealthSignals(),
+            alreadyTrainedToday: false,
+            hasAnyHistory: false
+        )
+        XCTAssertEqual(plan.recommendedName, "Your first workout")
+        XCTAssertEqual(plan.confidence, .low)
+        XCTAssertTrue(plan.reasons.contains { $0.contains("first workout") })
+    }
+
+    func testFreshUserWithScheduledPlanUsesScheduledName() {
+        let plan = TodayPlanEngine.generate(
+            scheduledName: "Push Day",
+            recovery: makeRecovery(score: 1.0),
+            health: HealthSignals(),
+            alreadyTrainedToday: false,
+            hasAnyHistory: false
+        )
+        XCTAssertEqual(plan.recommendedName, "Push Day")
+        // Even with a scheduled plan, no history means no recovery-based reasoning
+        XCTAssertTrue(plan.reasons.contains { $0.contains("logged a few sessions") })
+    }
+
     // MARK: - Already-trained shortcut
 
     func testAlreadyTrainedShortCircuits() {
@@ -171,6 +199,91 @@ final class TodayPlanEngineTests: XCTestCase {
             alreadyTrainedToday: false
         )
         XCTAssertLessThanOrEqual(plan.reasons.count, 3)
+    }
+
+    // MARK: - goEasy / avoid / adjustments
+
+    func testFatiguedMusclesShowUpInGoEasyAndAdjustments() {
+        // A muscle freshness below 0.4 should surface in goEasyOnGroups and
+        // produce a "Go easy on …" adjustment string.
+        let recovery = RecoveryResult(
+            readinessScore: 0.7,
+            muscleResults: [
+                MuscleFatigueResult(group: .chest, freshness: 0.2,
+                                    lastTrained: nil, effectiveRecoveryHours: 48),
+                MuscleFatigueResult(group: .legs, freshness: 0.9,
+                                    lastTrained: nil, effectiveRecoveryHours: 48)
+            ],
+            suggestedWorkoutType: "Anything"
+        )
+        let plan = TodayPlanEngine.generate(
+            scheduledName: nil,
+            recovery: recovery,
+            health: HealthSignals(),
+            recentWorkouts: [],
+            alreadyTrainedToday: false
+        )
+        XCTAssertTrue(plan.goEasyOnGroups.contains(MuscleGroup.chest))
+        XCTAssertFalse(plan.goEasyOnGroups.contains(MuscleGroup.legs))
+        XCTAssertTrue(plan.adjustments.contains { $0.lowercased().contains("go easy") },
+                      "Expected a 'go easy' adjustment to be added")
+    }
+
+    func testRestIntensityAdjustmentMatchesIntensity() {
+        let plan = TodayPlanEngine.generate(
+            scheduledName: nil,
+            recovery: makeRecovery(score: 0.2),
+            health: HealthSignals(),
+            recentWorkouts: [],
+            alreadyTrainedToday: false
+        )
+        XCTAssertEqual(plan.intensity, .rest)
+        XCTAssertTrue(plan.adjustments.contains { $0.lowercased().contains("rest day") })
+    }
+
+    func testLightIntensityAddsTwoVolumeAdjustments() {
+        let plan = TodayPlanEngine.generate(
+            scheduledName: nil,
+            recovery: makeRecovery(score: 0.45),
+            health: HealthSignals(),
+            recentWorkouts: [],
+            alreadyTrainedToday: false
+        )
+        XCTAssertEqual(plan.intensity, .light)
+        XCTAssertTrue(plan.adjustments.contains { $0.lowercased().contains("reduce volume") })
+        XCTAssertTrue(plan.adjustments.contains { $0.lowercased().contains("short of failure") })
+    }
+
+    func testHardIntensityWithLowConfidenceSkipsTopSetSuggestion() {
+        // With no health signals confidence is .low — engine should be
+        // conservative and NOT suggest pushing for a top-end set.
+        let plan = TodayPlanEngine.generate(
+            scheduledName: nil,
+            recovery: makeRecovery(score: 0.9),
+            health: HealthSignals(),
+            recentWorkouts: [],
+            alreadyTrainedToday: false
+        )
+        XCTAssertEqual(plan.intensity, .hard)
+        XCTAssertEqual(plan.confidence, .low)
+        XCTAssertFalse(plan.adjustments.contains { $0.lowercased().contains("top-end set") },
+                       "Don't push a top-end set when confidence is low")
+    }
+
+    // MARK: - alreadyTrainedToday wins regardless of recovery
+
+    func testAlreadyTrainedShortCircuitsEvenWithHorribleRecovery() {
+        // Even with a 5% readiness score, having already trained should
+        // produce the same "nice work" plan — the user's already done.
+        let plan = TodayPlanEngine.generate(
+            scheduledName: "Push",
+            recovery: makeRecovery(score: 0.05),
+            health: HealthSignals(),
+            recentWorkouts: [],
+            alreadyTrainedToday: true
+        )
+        XCTAssertTrue(plan.alreadyTrainedToday)
+        XCTAssertNotEqual(plan.intensity, .rest, "Already-trained path shouldn't fall through to rest")
     }
 
     // MARK: - Helpers

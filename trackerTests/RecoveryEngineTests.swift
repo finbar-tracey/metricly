@@ -1,4 +1,5 @@
 import XCTest
+import HealthKit
 @testable import tracker
 
 final class RecoveryEngineTests: XCTestCase {
@@ -151,6 +152,137 @@ final class RecoveryEngineTests: XCTestCase {
         XCTAssertEqual(RecoveryEngine.freshnessLabel(0.6), "Almost")
         XCTAssertEqual(RecoveryEngine.freshnessLabel(0.3), "Recovering")
         XCTAssertEqual(RecoveryEngine.freshnessLabel(0.1), "Fatigued")
+    }
+
+    // MARK: - Time decay
+
+    func testRecentWorkoutFatiguesMoreThanOlderWorkout() {
+        // Same exact workout, two different recencies. The 1-day-ago version
+        // should leave less freshness than the 6-day-ago version.
+        let chest1d = makeChestWorkout(daysAgo: 1)
+        let chest6d = makeChestWorkout(daysAgo: 6)
+
+        let resultRecent = RecoveryEngine.evaluate(
+            workouts: [chest1d],
+            health: HealthSignals(),
+            externalWorkouts: [],
+            cardioSessions: []
+        )
+        let resultOlder = RecoveryEngine.evaluate(
+            workouts: [chest6d],
+            health: HealthSignals(),
+            externalWorkouts: [],
+            cardioSessions: []
+        )
+
+        let recentChest = resultRecent.muscleResults.first { $0.group == .chest }?.freshness ?? 0
+        let olderChest = resultOlder.muscleResults.first { $0.group == .chest }?.freshness ?? 0
+        XCTAssertLessThan(recentChest, olderChest,
+                          "A 1-day-ago workout should leave the muscle less fresh than a 6-day-ago one")
+    }
+
+    // MARK: - External workouts
+
+    func testExternalRunReducesLegsFreshness() {
+        // Sanity: a HealthKit-sourced run that wasn't logged in this app should
+        // still pull leg freshness down.
+        let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: .now)!
+        let run = ExternalWorkout(
+            id: UUID(),
+            workoutType: .running,
+            startDate: yesterday,
+            endDate: yesterday.addingTimeInterval(40 * 60),
+            duration: 40 * 60,
+            totalCalories: 350,
+            totalDistance: 7_000,
+            sourceName: "Apple Watch"
+        )
+        let baseline = RecoveryEngine.evaluate(workouts: [], health: HealthSignals())
+        let withRun = RecoveryEngine.evaluate(
+            workouts: [],
+            health: HealthSignals(),
+            externalWorkouts: [run]
+        )
+        let baseLegs = baseline.muscleResults.first { $0.group == .legs }?.freshness ?? 1.0
+        let runLegs = withRun.muscleResults.first { $0.group == .legs }?.freshness ?? 1.0
+        XCTAssertLessThan(runLegs, baseLegs, "External run should reduce leg freshness")
+    }
+
+    func testExternalAppSourcedWorkoutIsIgnored() {
+        // Workouts that came FROM this app shouldn't be double-counted as
+        // external — RecoveryEngine already sees them via the local store.
+        let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: .now)!
+        let selfReport = ExternalWorkout(
+            id: UUID(),
+            workoutType: .running,
+            startDate: yesterday,
+            endDate: yesterday.addingTimeInterval(30 * 60),
+            duration: 30 * 60,
+            totalCalories: 300,
+            totalDistance: 5_000,
+            sourceName: "Metricly"
+        )
+        let baseline = RecoveryEngine.evaluate(workouts: [], health: HealthSignals())
+        let withSelf = RecoveryEngine.evaluate(
+            workouts: [],
+            health: HealthSignals(),
+            externalWorkouts: [selfReport]
+        )
+        let baseLegs = baseline.muscleResults.first { $0.group == .legs }?.freshness ?? 1.0
+        let selfLegs = withSelf.muscleResults.first { $0.group == .legs }?.freshness ?? 1.0
+        XCTAssertEqual(baseLegs, selfLegs, accuracy: 0.001,
+                       "App-sourced external workouts should not be applied (avoid double-counting)")
+    }
+
+    // MARK: - Cardio sessions
+
+    func testCardioSessionReducesLegsFreshness() {
+        let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: .now)!
+        let run = CardioSession(date: yesterday,
+                                title: "5k easy",
+                                type: .outdoorRun,
+                                durationSeconds: 30 * 60,
+                                distanceMeters: 5_000)
+        let baseline = RecoveryEngine.evaluate(workouts: [], health: HealthSignals())
+        let withRun = RecoveryEngine.evaluate(
+            workouts: [],
+            health: HealthSignals(),
+            cardioSessions: [run]
+        )
+        let baseLegs = baseline.muscleResults.first { $0.group == .legs }?.freshness ?? 1.0
+        let runLegs = withRun.muscleResults.first { $0.group == .legs }?.freshness ?? 1.0
+        XCTAssertLessThan(runLegs, baseLegs)
+    }
+
+    // MARK: - Combined health signals
+
+    func testCombinedNegativeSignalsCompound() {
+        // Two bad signals at once should produce a lower score than either
+        // alone. Catches the case where the engine accidentally treats
+        // them as substitutes rather than additive.
+        let baseline = RecoveryEngine.evaluate(workouts: [], health: HealthSignals())
+
+        let shortSleepOnly = RecoveryEngine.evaluate(
+            workouts: [],
+            health: HealthSignals(sleepMinutes: 240)
+        )
+        let lowHRVOnly = RecoveryEngine.evaluate(
+            workouts: [],
+            health: HealthSignals(todayHRV: 20, averageHRV: 50)
+        )
+        let both = RecoveryEngine.evaluate(
+            workouts: [],
+            health: HealthSignals(
+                todayHRV: 20, averageHRV: 50,
+                sleepMinutes: 240
+            )
+        )
+
+        XCTAssertLessThan(shortSleepOnly.readinessScore, baseline.readinessScore)
+        XCTAssertLessThan(lowHRVOnly.readinessScore, baseline.readinessScore)
+        XCTAssertLessThanOrEqual(both.readinessScore,
+                                 min(shortSleepOnly.readinessScore, lowHRVOnly.readinessScore),
+                                 "Stacking two negative signals shouldn't be more lenient than either alone")
     }
 
     // MARK: - Helpers
