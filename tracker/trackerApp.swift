@@ -146,6 +146,16 @@ struct trackerApp: App {
             currentStreak: streak,
             perExerciseRest: perRest
         )
+
+        // Self-heal active-workout state on each foreground push. Covers
+        // the cold-launch path (state was stale from a prior session) and
+        // recovery cases like the user deleting an in-progress workout
+        // without finishing it.
+        let inProgress = workouts.first { !$0.isTemplate && $0.endTime == nil }
+        PhoneConnectivityManager.shared.publishActiveWorkout(
+            name: inProgress?.name,
+            startedAt: inProgress?.date
+        )
     }
 }
 

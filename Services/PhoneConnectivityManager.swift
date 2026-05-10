@@ -48,6 +48,47 @@ final class PhoneConnectivityManager: NSObject, ObservableObject {
         try? WCSession.default.updateApplicationContext(context)
     }
 
+    // MARK: - Active-workout state
+
+    /// Publishes (or clears) the phone-side active workout so the Watch
+    /// and its complications can show "In Progress · <name>" even though
+    /// the workout is being run from iOS.
+    ///
+    /// Pass `nil`/empty values to clear when the workout finishes.
+    /// Writes immediately to the shared App Group defaults (so the
+    /// complication's next refresh sees the new state) and also pushes
+    /// the change through `updateApplicationContext` for promptness.
+    func publishActiveWorkout(name: String?, startedAt: Date?) {
+        let defaults = UserDefaults(suiteName: "group.com.Finbar.FinApp")
+        // Don't stomp on watch-hosted sessions — those clear themselves
+        // via WatchWorkoutSessionManager when the wrist session ends.
+        let source = defaults?.string(forKey: "watch.activeSource") ?? ""
+        guard source != "watch" else { return }
+
+        if let startedAt {
+            defaults?.set(startedAt.timeIntervalSince1970, forKey: "watch.activeStartedAt")
+            defaults?.set("phone", forKey: "watch.activeSource")
+        } else {
+            defaults?.removeObject(forKey: "watch.activeStartedAt")
+            defaults?.removeObject(forKey: "watch.activeSource")
+        }
+        if let name, !name.isEmpty {
+            defaults?.set(name, forKey: "watch.activeName")
+        } else {
+            defaults?.removeObject(forKey: "watch.activeName")
+        }
+
+        guard WCSession.default.activationState == .activated else { return }
+        var context: [String: Any] = [:]
+        context[WatchMessageKey.activeStartedAt] = startedAt?.timeIntervalSince1970 ?? 0
+        context[WatchMessageKey.activeName]      = name ?? ""
+        // Merge with any existing context so we don't clobber the library
+        // push above on the next read.
+        var merged = WCSession.default.applicationContext
+        merged.merge(context) { _, new in new }
+        try? WCSession.default.updateApplicationContext(merged)
+    }
+
     // MARK: - Private: receive & persist
 
     private func handleIncoming(userInfo: [String: Any]) {

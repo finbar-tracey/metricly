@@ -33,6 +33,14 @@ struct WatchGymView: View {
     private var preWorkoutView: some View {
         ScrollView {
             VStack(spacing: 10) {
+                // Phone-active banner — tells the user their session is
+                // currently running on iPhone, not on the watch. Prevents
+                // them from accidentally starting a second session here.
+                if let started = connectivity.phoneActiveStartedAt {
+                    phoneActiveBanner(name: connectivity.phoneActiveName,
+                                      startedAt: started)
+                }
+
                 // Today's plan card — shows the name + exercise preview if
                 // the iPhone has pushed a planned workout for today.
                 if !connectivity.todayPlanName.isEmpty {
@@ -57,6 +65,37 @@ struct WatchGymView: View {
             .padding()
         }
         .navigationTitle("Gym")
+    }
+
+    /// Compact "Workout on iPhone" pill shown when the paired iPhone has an
+    /// in-progress workout. Read-only — controls live on the phone.
+    private func phoneActiveBanner(name: String, startedAt: Date) -> some View {
+        let elapsed = Int(Date.now.timeIntervalSince(startedAt))
+        return HStack(spacing: 8) {
+            Image(systemName: "iphone.gen3.radiowaves.left.and.right")
+                .font(.caption.bold())
+                .foregroundStyle(.green)
+            VStack(alignment: .leading, spacing: 1) {
+                Text("On iPhone")
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundStyle(.green)
+                    .textCase(.uppercase)
+                    .tracking(0.4)
+                Text(name.isEmpty ? "Workout" : name)
+                    .font(.caption.weight(.semibold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
+            Spacer(minLength: 0)
+            Text(formatDuration(elapsed))
+                .font(.caption2.monospacedDigit())
+                .foregroundStyle(.secondary)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(Color.green.opacity(0.18), in: RoundedRectangle(cornerRadius: 10))
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Workout running on iPhone, \(name), \(formatDuration(elapsed)) elapsed")
     }
 
     /// Shows the planned workout name + a short preview of the exercises that

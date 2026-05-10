@@ -1,5 +1,6 @@
 import Foundation
 import WatchConnectivity
+import WidgetKit
 
 private extension Int {
     /// Returns nil when the Int is zero (useful for UserDefaults "not set" detection).
@@ -29,6 +30,11 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
     /// Per-exercise overrides pushed from the iPhone. Looked up via
     /// `restDuration(for:)` — falls back to `restDuration` on miss.
     @Published var perExerciseRest:    [String: Int] = [:]
+    /// Phone-side active workout, if any. Set when the user starts a
+    /// workout on iPhone; cleared on finish. The Watch's start screen
+    /// surfaces it so the user knows where their session is running.
+    @Published var phoneActiveName:    String   = ""
+    @Published var phoneActiveStartedAt: Date?  = nil
 
     private override init() {
         super.init()
@@ -107,6 +113,43 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
             perExerciseRest = map
             defaults?.set(map, forKey: WatchSharedKeys.perExerciseRest)
         }
+        // Phone-side active workout. A `0` (or missing) timestamp means
+        // the phone has no active workout — clear local state.
+        if let ts = reply[WatchMessageKey.activeStartedAt] as? Double {
+            let started = ts > 0 ? Date(timeIntervalSince1970: ts) : nil
+            let name = reply[WatchMessageKey.activeName] as? String ?? ""
+            applyPhoneActiveState(name: name, startedAt: started)
+        }
+    }
+
+    /// Writes phone-side active state to publishable fields, mirrors it to
+    /// the App Group keys the complication reads, and kicks WidgetKit to
+    /// refresh so the watch face updates within seconds rather than waiting
+    /// for the next scheduled timeline reload.
+    ///
+    /// Skips overwriting the shared state when the Watch is hosting its own
+    /// session (source == "watch") — otherwise a phone push would clobber
+    /// the local workout's start time.
+    private func applyPhoneActiveState(name: String, startedAt: Date?) {
+        phoneActiveName = name
+        phoneActiveStartedAt = startedAt
+
+        let defaults = UserDefaults(suiteName: WatchSharedKeys.suite)
+        let source = defaults?.string(forKey: WatchSharedKeys.activeSource) ?? ""
+        let watchOwned = source == "watch"
+
+        if !watchOwned {
+            if let startedAt {
+                defaults?.set(startedAt.timeIntervalSince1970, forKey: WatchSharedKeys.activeStartedAt)
+                defaults?.set(name, forKey: WatchSharedKeys.activeName)
+                defaults?.set("phone", forKey: WatchSharedKeys.activeSource)
+            } else {
+                defaults?.removeObject(forKey: WatchSharedKeys.activeStartedAt)
+                defaults?.removeObject(forKey: WatchSharedKeys.activeName)
+                defaults?.removeObject(forKey: WatchSharedKeys.activeSource)
+            }
+            WidgetCenter.shared.reloadAllTimelines()
+        }
     }
 
     /// Looks up the rest duration for a specific exercise (case-insensitive),
@@ -133,6 +176,18 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
         currentStreak         = defaults.integer(forKey: WatchSharedKeys.currentStreak)
         restDuration          = defaults.integer(forKey: WatchSharedKeys.restDuration).nonZero ?? 60
         perExerciseRest       = defaults.dictionary(forKey: WatchSharedKeys.perExerciseRest) as? [String: Int] ?? [:]
+
+        // Cold-launch: if the phone wrote an active workout earlier and
+        // the watch app was killed in the interim, surface it on first
+        // render. Only restore when the cached source was "phone" — watch
+        // sessions don't survive a kill, so a "watch" source on cold launch
+        // is stale and should be ignored.
+        let ts = defaults.double(forKey: WatchSharedKeys.activeStartedAt)
+        let source = defaults.string(forKey: WatchSharedKeys.activeSource) ?? ""
+        if ts > 0 && source == "phone" {
+            phoneActiveStartedAt = Date(timeIntervalSince1970: ts)
+            phoneActiveName = defaults.string(forKey: WatchSharedKeys.activeName) ?? ""
+        }
     }
 
 }

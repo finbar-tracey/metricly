@@ -331,6 +331,10 @@ struct FinishWorkoutSheet: View {
             setCount: totalSets
         )
 
+        // Clear the Watch's "In Progress" state — paired with the publish
+        // call in AddWorkoutSheet.createWorkout when the session started.
+        PhoneConnectivityManager.shared.publishActiveWorkout(name: nil, startedAt: nil)
+
         if settingsArray.first?.healthKitEnabled == true {
             Task { try? await HealthKitManager.shared.saveStrengthWorkout(workout) }
         }

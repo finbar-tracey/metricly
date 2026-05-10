@@ -6,149 +6,46 @@ struct AddWorkoutSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Query(filter: #Predicate<Workout> { $0.isTemplate }, sort: \Workout.name)
     private var templates: [Workout]
-    @State private var name = defaultWorkoutName()
+    @Query private var settingsArray: [UserSettings]
+
+    @State private var name: String = ""
     @State private var date = Date.now
     @State private var selectedTemplate: Workout?
+    /// Backdate is rare — keep the date picker behind a disclosure.
+    @State private var showDateOverride = false
+
+    /// Today's planned workout name, from `UserSettings.weeklyPlan`. Empty when
+    /// nothing is scheduled.
+    private var todayPlanName: String {
+        let weekday = Calendar.current.component(.weekday, from: .now)
+        return settingsArray.first?.weeklyPlan[weekday] ?? ""
+    }
+
+    /// Template that matches today's plan name (case-insensitive).
+    private var planTemplate: Workout? {
+        guard !todayPlanName.isEmpty else { return nil }
+        return templates.first { $0.name.localizedCaseInsensitiveCompare(todayPlanName) == .orderedSame }
+    }
 
     var body: some View {
         NavigationStack {
             Form {
-                // Details section first for better flow
-                Section {
-                    HStack(spacing: 12) {
-                        ZStack {
-                            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                .fill(
-                                    LinearGradient(
-                                        colors: [Color.accentColor, Color.accentColor.opacity(0.72)],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    )
-                                )
-                                .frame(width: 32, height: 32)
-                                .shadow(color: Color.accentColor.opacity(0.40), radius: 4, y: 2)
-                            Image(systemName: "pencil")
-                                .font(.system(size: 14, weight: .bold))
-                                .foregroundStyle(.white)
-                        }
-                        TextField("Workout Name", text: $name)
-                    }
-                    HStack(spacing: 12) {
-                        ZStack {
-                            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                .fill(
-                                    LinearGradient(
-                                        colors: [Color.red, Color.red.opacity(0.72)],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    )
-                                )
-                                .frame(width: 32, height: 32)
-                                .shadow(color: Color.red.opacity(0.40), radius: 4, y: 2)
-                            Image(systemName: "calendar")
-                                .font(.system(size: 14, weight: .bold))
-                                .foregroundStyle(.white)
-                        }
-                        DatePicker("Date", selection: $date, displayedComponents: .date)
-                    }
-                } header: {
-                    Text("Details")
+                // Today's plan banner — only shows when something is scheduled
+                // and the user hasn't manually overridden the choice yet.
+                if !todayPlanName.isEmpty,
+                   selectedTemplate?.name.localizedCaseInsensitiveCompare(todayPlanName) != .orderedSame,
+                   name.localizedCaseInsensitiveCompare(todayPlanName) != .orderedSame {
+                    todaysPlanBanner
                 }
 
+                detailsSection
+
                 if !templates.isEmpty {
-                    Section {
-                        ForEach(templates) { template in
-                            let isSelected = selectedTemplate?.persistentModelID == template.persistentModelID
-                            Button {
-                                withAnimation(.spring(response: 0.3)) {
-                                    selectedTemplate = template
-                                    name = template.name
-                                }
-                            } label: {
-                                HStack(spacing: 12) {
-                                    ZStack {
-                                        RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                            .fill(
-                                                isSelected
-                                                    ? AnyShapeStyle(
-                                                        LinearGradient(
-                                                            colors: [Color.accentColor, Color.accentColor.opacity(0.72)],
-                                                            startPoint: .topLeading,
-                                                            endPoint: .bottomTrailing
-                                                        )
-                                                    )
-                                                    : AnyShapeStyle(Color(.tertiarySystemFill))
-                                            )
-                                            .frame(width: 40, height: 40)
-                                            .shadow(
-                                                color: isSelected ? Color.accentColor.opacity(0.40) : .clear,
-                                                radius: 6, y: 2
-                                            )
-                                        Image(systemName: isSelected ? "checkmark" : "doc.text")
-                                            .font(.system(size: 15, weight: .bold))
-                                            .foregroundStyle(isSelected ? .white : .secondary)
-                                    }
-                                    VStack(alignment: .leading, spacing: 3) {
-                                        Text(template.name)
-                                            .font(.system(size: 15, weight: .semibold, design: .rounded))
-                                            .foregroundStyle(.primary)
-                                        Text("\(template.exercises.count) exercises")
-                                            .font(.caption.weight(.semibold))
-                                            .foregroundStyle(.secondary)
-                                    }
-                                    Spacer()
-                                    if isSelected {
-                                        Image(systemName: "checkmark.circle.fill")
-                                            .font(.body)
-                                            .foregroundStyle(Color.accentColor)
-                                    }
-                                }
-                                .padding(.vertical, isSelected ? 2 : 0)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                        .stroke(Color.accentColor.opacity(isSelected ? 0.4 : 0), lineWidth: 1.5)
-                                        .padding(-6)
-                                )
-                            }
-                            .accessibilityLabel("\(template.name), \(template.exercises.count) exercises")
-                            .accessibilityAddTraits(isSelected ? .isSelected : [])
-                        }
-                    } header: {
-                        Text("From Template")
-                    }
+                    templatesSection
                 }
 
                 if let template = selectedTemplate, !template.exercises.isEmpty {
-                    Section {
-                        ForEach(template.exercises.sorted { $0.order < $1.order }) { exercise in
-                            HStack(spacing: 12) {
-                                ZStack {
-                                    Circle()
-                                        .fill(Color.accentColor.opacity(0.16))
-                                        .frame(width: 30, height: 30)
-                                    if let category = exercise.category {
-                                        MuscleIconView(group: category, color: Color.accentColor)
-                                            .frame(width: 14, height: 14)
-                                    } else {
-                                        Image(systemName: "dumbbell")
-                                            .font(.system(size: 12, weight: .bold))
-                                            .foregroundStyle(Color.accentColor)
-                                    }
-                                }
-                                Text(exercise.name)
-                                    .font(.system(size: 14, weight: .semibold, design: .rounded))
-                                Spacer()
-                                if let category = exercise.category {
-                                    Text(category.rawValue.uppercased())
-                                        .font(.system(size: 10, weight: .bold, design: .rounded))
-                                        .tracking(0.4)
-                                        .foregroundStyle(.tertiary)
-                                }
-                            }
-                        }
-                    } header: {
-                        Text("Exercises Preview")
-                    }
+                    exercisesPreviewSection(template)
                 }
             }
             .navigationTitle("New Workout")
@@ -168,6 +65,197 @@ struct AddWorkoutSheet: View {
                     .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
                 }
             }
+            .onAppear(perform: applyDefaults)
+        }
+    }
+
+    // MARK: - Sections
+
+    /// Single-tap banner offering to use today's planned workout. Pre-applies
+    /// the matching template if one exists.
+    private var todaysPlanBanner: some View {
+        Button {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            withAnimation(.spring(response: 0.3)) {
+                name = todayPlanName
+                if let plan = planTemplate {
+                    selectedTemplate = plan
+                }
+            }
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: "sparkles")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(Color.accentColor)
+                    .frame(width: 28, height: 28)
+                    .background(Color.accentColor.opacity(0.14), in: Circle())
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Today's plan")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(.tertiary)
+                        .textCase(.uppercase)
+                    Text(planTemplate != nil
+                         ? "\(todayPlanName) · template ready"
+                         : todayPlanName)
+                        .font(.subheadline.weight(.semibold))
+                }
+                Spacer()
+                Text("Use")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 10).padding(.vertical, 5)
+                    .background(Color.accentColor, in: Capsule())
+            }
+        }
+        .buttonStyle(.plain)
+        .listRowBackground(Color.accentColor.opacity(0.06))
+    }
+
+    private var detailsSection: some View {
+        Section {
+            TextField("Workout Name", text: $name)
+                .textInputAutocapitalization(.words)
+
+            // Date is hidden behind a disclosure — almost everyone is starting
+            // "now" and doesn't need to see the picker.
+            if showDateOverride {
+                DatePicker("Date", selection: $date, displayedComponents: .date)
+            } else {
+                Button {
+                    withAnimation { showDateOverride = true }
+                } label: {
+                    HStack {
+                        Text("Different date")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                        Image(systemName: "calendar")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                    }
+                }
+            }
+        }
+    }
+
+    private var templatesSection: some View {
+        Section("Template") {
+            // "Start blank" option as the first row — easy to start without
+            // a template, no need to scroll past everything.
+            Button {
+                withAnimation(.spring(response: 0.25)) {
+                    selectedTemplate = nil
+                }
+            } label: {
+                HStack(spacing: 12) {
+                    Image(systemName: "plus.circle")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                        .frame(width: 28, height: 28)
+                    Text("Start blank")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(.primary)
+                    Spacer()
+                    if selectedTemplate == nil {
+                        Image(systemName: "checkmark")
+                            .font(.subheadline.weight(.bold))
+                            .foregroundStyle(Color.accentColor)
+                    }
+                }
+            }
+            .buttonStyle(.plain)
+
+            ForEach(templates) { template in
+                templateRow(template)
+            }
+        }
+    }
+
+    private func templateRow(_ template: Workout) -> some View {
+        let isSelected = selectedTemplate?.persistentModelID == template.persistentModelID
+        let isToday = !todayPlanName.isEmpty
+            && template.name.localizedCaseInsensitiveCompare(todayPlanName) == .orderedSame
+        return Button {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            withAnimation(.spring(response: 0.25)) {
+                selectedTemplate = template
+                name = template.name
+            }
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: "doc.text")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(isSelected ? Color.accentColor : .secondary)
+                    .frame(width: 28, height: 28)
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 6) {
+                        Text(template.name)
+                            .font(.subheadline.weight(.medium))
+                            .foregroundStyle(.primary)
+                        if isToday {
+                            Text("TODAY")
+                                .font(.system(size: 9, weight: .bold))
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 5).padding(.vertical, 2)
+                                .background(Color.accentColor, in: Capsule())
+                        }
+                    }
+                    Text("\(template.exercises.count) exercise\(template.exercises.count == 1 ? "" : "s")")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+                if isSelected {
+                    Image(systemName: "checkmark")
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(Color.accentColor)
+                }
+            }
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("\(template.name), \(template.exercises.count) exercises\(isToday ? ", today's plan" : "")")
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+
+    private func exercisesPreviewSection(_ template: Workout) -> some View {
+        Section("Exercises") {
+            ForEach(template.exercises.sorted { $0.order < $1.order }) { exercise in
+                HStack(spacing: 10) {
+                    if let category = exercise.category {
+                        MuscleIconView(group: category, color: Color.accentColor)
+                            .frame(width: 14, height: 14)
+                    } else {
+                        Image(systemName: "dumbbell")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    Text(exercise.name)
+                        .font(.subheadline)
+                    Spacer()
+                    if let category = exercise.category {
+                        Text(category.rawValue)
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: - Setup
+
+    /// First-appear defaults: pre-fill name + select matching template.
+    /// Avoids re-running on every appearance (e.g. if the sheet is dismissed
+    /// and re-opened) since `name` won't be empty after the first run.
+    private func applyDefaults() {
+        guard name.isEmpty else { return }
+        if !todayPlanName.isEmpty {
+            name = todayPlanName
+            if let plan = planTemplate {
+                selectedTemplate = plan
+            }
+        } else {
+            name = Self.defaultWorkoutName()
         }
     }
 
@@ -177,6 +265,12 @@ struct AddWorkoutSheet: View {
         if let template = selectedTemplate {
             workout.copyExercises(from: template.exercises, into: modelContext)
         }
+        // Publish to the Watch so its complications + start screen show
+        // "In Progress · <name>" while this session is live on the phone.
+        PhoneConnectivityManager.shared.publishActiveWorkout(
+            name: workout.name,
+            startedAt: workout.date
+        )
     }
 
     private static func defaultWorkoutName() -> String {

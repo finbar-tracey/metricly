@@ -150,8 +150,10 @@ final class WatchWorkoutSessionManager: NSObject, ObservableObject {
         let defaults = UserDefaults(suiteName: WatchSharedKeys.suite)
         if let startedAt {
             defaults?.set(startedAt.timeIntervalSince1970, forKey: WatchSharedKeys.activeStartedAt)
+            defaults?.set("watch", forKey: WatchSharedKeys.activeSource)
         } else {
             defaults?.removeObject(forKey: WatchSharedKeys.activeStartedAt)
+            defaults?.removeObject(forKey: WatchSharedKeys.activeSource)
         }
         if let name, !name.isEmpty {
             defaults?.set(name, forKey: WatchSharedKeys.activeName)

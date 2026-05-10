@@ -61,6 +61,11 @@ enum WatchMessageKey {
     /// Map of exercise name → rest seconds. iPhone pushes the user's
     /// per-exercise rest overrides so the Watch's rest timer respects them.
     static let perExerciseRest = "perExerciseRest"
+    /// In-progress workout state. iPhone publishes these when a workout
+    /// starts/finishes on the phone so the Watch and its complications
+    /// can show "In Progress · <name>" without local participation.
+    static let activeStartedAt = "activeStartedAt"     // Double, seconds since 1970
+    static let activeName      = "activeName"          // String
 }
 
 enum WatchMessageType: String {

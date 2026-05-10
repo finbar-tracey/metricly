@@ -12,10 +12,13 @@ enum WatchSharedKeys {
     static let currentStreak    = "watch.currentStreak"      // Int
     static let restDuration     = "watch.restDuration"       // Int seconds (default 60)
 
-    // Live workout state — written by the Watch app, read by complications
-    // so a glance shows "In Progress · 24:18" instead of yesterday's streak.
+    // Live workout state — written by whoever is hosting the session
+    // (Watch app or paired iPhone) so a glance shows "In Progress · 24:18"
+    // instead of yesterday's streak. `activeSource` lets each side tell
+    // which device produced the state without coordinating timestamps.
     static let activeStartedAt  = "watch.activeStartedAt"    // Double (timeIntervalSince1970)
     static let activeName       = "watch.activeName"         // String
+    static let activeSource     = "watch.activeSource"       // "watch" | "phone"
 
     // Per-exercise rest overrides pushed from the iPhone. Maps exercise
     // name → seconds. Falls back to `restDuration` when missing.
