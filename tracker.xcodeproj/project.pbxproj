@@ -45,6 +45,7 @@
 		8724577E02FB4DC83ACD458D /* PhoneConnectivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5A29A21938233E7A93C4C95 /* PhoneConnectivityManager.swift */; };
 		93D922DE98A02C2ADF16FA4C /* WatchConnectivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A5301678701A47E0ABE3B26 /* WatchConnectivityManager.swift */; };
 		9D21304DDD863A01918674DE /* WatchRestTimerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5589E11C36A11B70766D53EB /* WatchRestTimerView.swift */; };
+		9D21304DDD863A01918674DF /* WatchActiveMetricsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5589E11C36A11B70766D53EC /* WatchActiveMetricsView.swift */; };
 		C191685841B1CD47F46D5C5D /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 39E4F1D6FA51D7480550839B /* Foundation.framework */; };
 		C65C4106D61E19FD82FEBD27 /* MetriclyWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = FDE4FFC6BE5D207CB3754ED7 /* MetriclyWatch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		D25382435926316D83D43CC7 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 39E4F1D6FA51D7480550839B /* Foundation.framework */; };
@@ -130,6 +131,7 @@
 		450504C0961911BD593E7516 /* WatchComplications.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchComplications.swift; sourceTree = "<group>"; };
 		4FFE27167BE30FCE70F74F0D /* WatchKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WatchKit.framework; path = System/Library/Frameworks/WatchKit.framework; sourceTree = SDKROOT; };
 		5589E11C36A11B70766D53EB /* WatchRestTimerView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchRestTimerView.swift; sourceTree = "<group>"; };
+		5589E11C36A11B70766D53EC /* WatchActiveMetricsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchActiveMetricsView.swift; sourceTree = "<group>"; };
 		5F25E98828C1435245FC19FC /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 		62964D20926F033C299E8669 /* HealthKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = HealthKit.framework; path = System/Library/Frameworks/HealthKit.framework; sourceTree = SDKROOT; };
 		663DD188085EEE0F6A1E3458 /* WatchRootView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchRootView.swift; sourceTree = "<group>"; };
@@ -279,6 +281,7 @@
 				9368BA8071E780160200AF2C /* Assets.xcassets */,
 				EBF0E4BA9016748E21F092B3 /* MetriclyWatch.entitlements */,
 				5589E11C36A11B70766D53EB /* WatchRestTimerView.swift */,
+				5589E11C36A11B70766D53EC /* WatchActiveMetricsView.swift */,
 			);
 			path = MetriclyWatch;
 			sourceTree = "<group>";
@@ -582,6 +585,7 @@
 				F5E1D7AFB6B9A3642F1A8CE2 /* WatchCardioView.swift in Sources */,
 				61E65B49C870A8DE919AF15E /* WatchSyncModels.swift in Sources */,
 				9D21304DDD863A01918674DE /* WatchRestTimerView.swift in Sources */,
+				9D21304DDD863A01918674DF /* WatchActiveMetricsView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

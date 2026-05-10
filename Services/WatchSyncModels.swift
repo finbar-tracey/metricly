@@ -58,6 +58,9 @@ enum WatchMessageKey {
     static let useKilograms   = "useKilograms"
     static let currentStreak  = "currentStreak"
     static let requestExercises = "requestExercises"
+    /// Map of exercise name → rest seconds. iPhone pushes the user's
+    /// per-exercise rest overrides so the Watch's rest timer respects them.
+    static let perExerciseRest = "perExerciseRest"
 }
 
 enum WatchMessageType: String {

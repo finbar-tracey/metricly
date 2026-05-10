@@ -11,6 +11,15 @@ enum WatchSharedKeys {
     static let useKilograms     = "watch.useKilograms"       // Bool  (default true)
     static let currentStreak    = "watch.currentStreak"      // Int
     static let restDuration     = "watch.restDuration"       // Int seconds (default 60)
+
+    // Live workout state — written by the Watch app, read by complications
+    // so a glance shows "In Progress · 24:18" instead of yesterday's streak.
+    static let activeStartedAt  = "watch.activeStartedAt"    // Double (timeIntervalSince1970)
+    static let activeName       = "watch.activeName"         // String
+
+    // Per-exercise rest overrides pushed from the iPhone. Maps exercise
+    // name → seconds. Falls back to `restDuration` when missing.
+    static let perExerciseRest  = "watch.perExerciseRest"    // [String: Int]
 }
 
 // MARK: - In-progress gym workout (Watch memory model)

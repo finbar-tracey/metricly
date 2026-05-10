@@ -25,7 +25,10 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
     @Published var isPhoneReachable:   Bool     = false
     @Published var useKg:              Bool     = true
     @Published var currentStreak:      Int      = 0
-    @Published var restDuration:       Int      = 60   // seconds
+    @Published var restDuration:       Int      = 60   // seconds, global fallback
+    /// Per-exercise overrides pushed from the iPhone. Looked up via
+    /// `restDuration(for:)` — falls back to `restDuration` on miss.
+    @Published var perExerciseRest:    [String: Int] = [:]
 
     private override init() {
         super.init()
@@ -100,6 +103,25 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
             currentStreak = streak
             defaults?.set(streak, forKey: WatchSharedKeys.currentStreak)
         }
+        if let map = reply[WatchMessageKey.perExerciseRest] as? [String: Int] {
+            perExerciseRest = map
+            defaults?.set(map, forKey: WatchSharedKeys.perExerciseRest)
+        }
+    }
+
+    /// Looks up the rest duration for a specific exercise (case-insensitive),
+    /// falling back to the global `restDuration` when no override exists.
+    /// Use this when starting the rest timer so power lifters' "3 min for
+    /// squats, 60 s for curls" rule actually works on the Watch.
+    func restDuration(for exerciseName: String) -> Int {
+        let key = exerciseName.lowercased()
+        if let exact = perExerciseRest[exerciseName] { return exact }
+        // Map keys may have been stored with original casing — check
+        // lower-cased copy without rebuilding the dict every call.
+        for (k, v) in perExerciseRest where k.lowercased() == key {
+            return v
+        }
+        return restDuration
     }
 
     private func loadCachedData() {
@@ -110,6 +132,7 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
         useKg                 = defaults.object(forKey: WatchSharedKeys.useKilograms) as? Bool ?? true
         currentStreak         = defaults.integer(forKey: WatchSharedKeys.currentStreak)
         restDuration          = defaults.integer(forKey: WatchSharedKeys.restDuration).nonZero ?? 60
+        perExerciseRest       = defaults.dictionary(forKey: WatchSharedKeys.perExerciseRest) as? [String: Int] ?? [:]
     }
 
 }

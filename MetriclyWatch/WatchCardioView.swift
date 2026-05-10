@@ -57,6 +57,10 @@ struct WatchCardioStartView: View {
                 activityType: type.hkType,
                 isIndoor: type.isIndoor
             )
+            sessionManager.publishActiveState(
+                startedAt: .now,
+                name: type.rawValue
+            )
         }
     }
 }

@@ -185,35 +185,73 @@ struct WatchGymView: View {
     }
 
     private var hrBanner: some View {
-        HStack(spacing: 6) {
-            Image(systemName: "heart.fill")
-                .font(.caption.bold())
-                .foregroundStyle(hrColor)
-                // Subtle pulse — visual confirmation HR is being read live.
-                .symbolEffect(.pulse.byLayer, options: .repeating, isActive: sessionManager.heartRate > 0)
-            Text(sessionManager.heartRate > 0 ? "\(Int(sessionManager.heartRate))" : "--")
-                .font(.system(size: 14, weight: .bold, design: .rounded))
-                .monospacedDigit()
-            // Zone pill — colour-coded so user sees what zone they're in
-            // without having to interpret the number.
-            if sessionManager.heartRate > 0 {
-                Text(sessionManager.heartRateZone.rawValue)
-                    .font(.system(size: 9, weight: .bold))
-                    .textCase(.uppercase)
+        // Tappable banner — pushes a dedicated metrics screen with HR,
+        // calories, elapsed time, working set count, and total volume.
+        // Single-row stays compact, the screen is for when the user wants
+        // a real glance.
+        NavigationLink {
+            WatchActiveMetricsView(
+                exercises: exercises,
+                useKg: connectivity.useKg
+            )
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: "heart.fill")
+                    .font(.caption.bold())
                     .foregroundStyle(hrColor)
-                    .padding(.horizontal, 5)
-                    .padding(.vertical, 1)
-                    .background(hrColor.opacity(0.18), in: Capsule())
+                    .symbolEffect(.pulse.byLayer, options: .repeating, isActive: sessionManager.heartRate > 0)
+                Text(sessionManager.heartRate > 0 ? "\(Int(sessionManager.heartRate))" : "--")
+                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                    .monospacedDigit()
+                if sessionManager.heartRate > 0 {
+                    Text(sessionManager.heartRateZone.rawValue)
+                        .font(.system(size: 9, weight: .bold))
+                        .textCase(.uppercase)
+                        .foregroundStyle(hrColor)
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 1)
+                        .background(hrColor.opacity(0.18), in: Capsule())
+                }
+                // Working set count chip — instant signal of progress
+                // without leaving the list page.
+                let setCount = workingSetCount
+                if setCount > 0 {
+                    Text("● \(setCount)")
+                        .font(.system(size: 11, weight: .bold))
+                        .monospacedDigit()
+                        .foregroundStyle(.green)
+                }
+                Spacer()
+                Text(formatDuration(sessionManager.elapsedSeconds))
+                    .font(.system(size: 13, weight: .medium, design: .rounded))
+                    .monospacedDigit()
+                    .foregroundStyle(.secondary)
             }
-            Spacer()
-            Text(formatDuration(sessionManager.elapsedSeconds))
-                .font(.system(size: 13, weight: .medium, design: .rounded))
-                .monospacedDigit()
-                .foregroundStyle(.secondary)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(.ultraThinMaterial)
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 6)
-        .background(.ultraThinMaterial)
+        .buttonStyle(.plain)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(bannerAccessibilityLabel)
+        .accessibilityHint("Opens live workout metrics")
+    }
+
+    private var workingSetCount: Int {
+        exercises.flatMap(\.sets).filter { !$0.isWarmUp }.count
+    }
+
+    private var bannerAccessibilityLabel: String {
+        var parts: [String] = []
+        if sessionManager.heartRate > 0 {
+            parts.append("Heart rate \(Int(sessionManager.heartRate)) BPM, \(sessionManager.heartRateZone.rawValue) zone")
+        } else {
+            parts.append("Heart rate pending")
+        }
+        let n = workingSetCount
+        if n > 0 { parts.append("\(n) \(n == 1 ? "set" : "sets") logged") }
+        parts.append("elapsed \(formatDuration(sessionManager.elapsedSeconds))")
+        return parts.joined(separator: ", ")
     }
 
     private func exerciseRow(_ exercise: WatchExerciseRecord) -> some View {
@@ -264,6 +302,12 @@ struct WatchGymView: View {
             try? await sessionManager.startSession(
                 activityType: .traditionalStrengthTraining,
                 isIndoor: true
+            )
+            // Republish with the resolved workout name so the complication
+            // shows "In Progress · <name>" instead of a bare timer.
+            sessionManager.publishActiveState(
+                startedAt: startDate,
+                name: workoutName
             )
         }
     }
@@ -415,7 +459,7 @@ struct WatchExerciseLogView: View {
             }
         }
         .sheet(isPresented: $showingRestTimer) {
-            WatchRestTimerView(duration: connectivity.restDuration)
+            WatchRestTimerView(duration: connectivity.restDuration(for: exercise.name))
         }
     }
 }

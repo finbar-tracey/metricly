@@ -1,6 +1,7 @@
 import Foundation
 import HealthKit
 import WatchKit
+import WidgetKit
 
 // MARK: - WatchWorkoutSessionManager
 //
@@ -89,6 +90,7 @@ final class WatchWorkoutSessionManager: NSObject, ObservableObject {
         isRunning = true
         isPaused  = false
         startElapsedTimer()
+        publishActiveState(startedAt: startDate, name: nil)
 
         WKInterfaceDevice.current().play(.start)
     }
@@ -137,6 +139,26 @@ final class WatchWorkoutSessionManager: NSObject, ObservableObject {
         startDate = nil
         isRunning = false
         isPaused  = false
+        publishActiveState(startedAt: nil, name: nil)
+    }
+
+    /// Writes the active workout's start time + name into the App Group
+    /// defaults so the complication can render an "In Progress" entry, then
+    /// asks WidgetKit to refresh the timeline. Pass `nil` for both args to
+    /// clear the state when the workout ends or is discarded.
+    func publishActiveState(startedAt: Date?, name: String?) {
+        let defaults = UserDefaults(suiteName: WatchSharedKeys.suite)
+        if let startedAt {
+            defaults?.set(startedAt.timeIntervalSince1970, forKey: WatchSharedKeys.activeStartedAt)
+        } else {
+            defaults?.removeObject(forKey: WatchSharedKeys.activeStartedAt)
+        }
+        if let name, !name.isEmpty {
+            defaults?.set(name, forKey: WatchSharedKeys.activeName)
+        } else {
+            defaults?.removeObject(forKey: WatchSharedKeys.activeName)
+        }
+        WidgetCenter.shared.reloadAllTimelines()
     }
 
     private func startElapsedTimer() {
