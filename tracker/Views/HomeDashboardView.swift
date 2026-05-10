@@ -3,6 +3,8 @@ import SwiftData
 
 struct HomeDashboardView: View {
     @Environment(\.modelContext) private var modelContext
+    @Query(filter: #Predicate<Workout> { $0.isTemplate }, sort: \Workout.name)
+    private var templates: [Workout]
     @Query(filter: #Predicate<Workout> { !$0.isTemplate && $0.endTime != nil }, sort: \Workout.date, order: .reverse)
     private var finishedWorkouts: [Workout]
     @Query(filter: #Predicate<Workout> { !$0.isTemplate }, sort: \Workout.date, order: .reverse)
@@ -30,6 +32,7 @@ struct HomeDashboardView: View {
     @State private var repeatConfirmation = false
     @State private var tappedDayWorkout: Workout?
     @State private var cachedProgressionSuggestions: [ProgressionSuggestion] = []
+    @State private var showingSyncDetail = false
 
     // MARK: - Caffeine Helpers
 
@@ -129,7 +132,8 @@ struct HomeDashboardView: View {
             health: liveHealthSignals,
             recentWorkouts: recent,
             alreadyTrainedToday: !todaysWorkouts.filter(\.isFinished).isEmpty
-                || cardioSessions.contains { Calendar.current.isDateInToday($0.date) }
+                || cardioSessions.contains { Calendar.current.isDateInToday($0.date) },
+            hasAnyHistory: !finishedWorkouts.isEmpty
         )
         self.recoveryResult = recovery
         self.todayPlan = plan
@@ -227,6 +231,16 @@ struct HomeDashboardView: View {
                     Button { showingAddWorkout = true } label: {
                         Label("Add Workout", systemImage: "plus")
                     }
+                    // Long-press to skip the sheet and start with smart
+                    // defaults — useful when you've already decided what
+                    // today's plan is and just want to begin.
+                    .simultaneousGesture(
+                        LongPressGesture(minimumDuration: 0.45).onEnded { _ in
+                            UIImpactFeedbackGenerator(style: .heavy).impactOccurred()
+                            quickStartWorkout()
+                        }
+                    )
+                    .accessibilityHint("Long press to start a workout with today's plan applied automatically.")
                 }
             }
         }
@@ -307,6 +321,9 @@ struct HomeDashboardView: View {
         AnyView(
             VStack(spacing: AppTheme.sectionSpacing) {
                 heroSection
+                if shouldShowSyncPill {
+                    syncStatusPill
+                }
                 if let cta = contextualCTA {
                     switch cta {
                     case .continueWorkout, .greatSession:
@@ -356,6 +373,73 @@ struct HomeDashboardView: View {
                 quickLinksCard
             }
         )
+    }
+
+    // MARK: - Sync status pill
+    //
+    // Shown when iCloud sync is failing or the account isn't usable. Sits
+    // between the hero and the first card so it's the second thing the
+    // user sees — visible without scrolling, but doesn't displace the
+    // hero. Tapping opens an in-app sheet with the error detail + a link
+    // to system iCloud settings.
+
+    private var shouldShowSyncPill: Bool {
+        let mgr = SyncStatusManager.shared
+        // Surface for explicit errors, or when the account state means
+        // backup isn't actually happening. Ignore the transient .unknown
+        // state to avoid a flash of warning during initial fetch.
+        if mgr.lastError != nil { return true }
+        switch mgr.accountStatus {
+        case .available, .unknown: return false
+        case .noAccount, .restricted, .temporarilyUnavailable: return true
+        }
+    }
+
+    private var syncStatusPill: some View {
+        let mgr = SyncStatusManager.shared
+        let isAccountIssue = !mgr.accountStatus.isHealthy && mgr.accountStatus != .unknown
+        let tint: Color = isAccountIssue ? .orange : .yellow
+        let title: String = isAccountIssue ? mgr.accountStatus.label : "iCloud sync paused"
+        let subtitle: String = isAccountIssue
+            ? "Your data isn't backing up. Tap for help."
+            : "Recent changes haven't synced. Tap for details."
+
+        return Button { showingSyncDetail = true } label: {
+            HStack(spacing: 10) {
+                Image(systemName: "exclamationmark.icloud.fill")
+                    .font(.subheadline.bold())
+                    .foregroundStyle(tint)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(title)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.primary)
+                    Text(subtitle)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer(minLength: 0)
+                Image(systemName: "chevron.right")
+                    .font(.caption2.bold())
+                    .foregroundStyle(.tertiary)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .background(tint.opacity(0.12), in: RoundedRectangle(cornerRadius: 12))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .strokeBorder(tint.opacity(0.25), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(title). \(subtitle)")
+        .accessibilityHint("Opens sync status details")
+        .sheet(isPresented: $showingSyncDetail) {
+            NavigationStack {
+                SyncStatusDetailSheet(manager: mgr)
+            }
+            .presentationDetents([.medium, .large])
+        }
     }
 
     private var heroSection: some View {
@@ -1556,6 +1640,36 @@ struct HomeDashboardView: View {
         }
         externalWorkouts = (try? await externalResult) ?? []
         healthDataLoaded = true
+    }
+
+    // MARK: - Quick start (long-press +)
+
+    /// Create a workout immediately using today's smart defaults, bypassing
+    /// the AddWorkoutSheet entirely. Used by long-press on the + button so
+    /// power users can start a session in one gesture.
+    /// - If today's plan name matches a saved template, copies its exercises.
+    /// - Otherwise creates an empty workout named after today's plan, or a
+    ///   default date-stamped name when nothing is scheduled.
+    private func quickStartWorkout() {
+        let weekday = Calendar.current.component(.weekday, from: .now)
+        let planName = settings.weeklyPlan[weekday] ?? ""
+        let name = planName.isEmpty
+            ? "Workout - \(Date.now.formatted(.dateTime.month(.abbreviated).day()))"
+            : planName
+
+        let workout = Workout(name: name, date: .now)
+        modelContext.insert(workout)
+
+        // Match by case-insensitive name; copy exercises if found
+        if !planName.isEmpty,
+           let template = templates.first(where: {
+               $0.name.localizedCaseInsensitiveCompare(planName) == .orderedSame
+           }) {
+            workout.copyExercises(from: template.exercises, into: modelContext)
+        }
+
+        modelContext.saveOrLog()
+        HapticsManager.workoutStarted()
     }
 
     // MARK: - Repeat Last Workout
