@@ -48,6 +48,29 @@ final class PhoneConnectivityManager: NSObject, ObservableObject {
         try? WCSession.default.updateApplicationContext(context)
     }
 
+    // MARK: - Per-exercise rest overrides
+
+    /// Push only the per-exercise rest map. Used when an override is edited
+    /// mid-session — we don't want to wait for the next foreground re-push
+    /// of the full exercise library before the Watch's rest timer respects
+    /// the new value.
+    ///
+    /// Merges into the existing application context rather than overwriting
+    /// it so the watch keeps the other state (exercise list, today's plan,
+    /// streak, useKg) unchanged.
+    ///
+    /// Also writes to the shared App Group defaults so a cold-launched watch
+    /// or complication reads the same overrides without WCSession.
+    func pushRestOverrides(_ map: [String: Int]) {
+        let defaults = UserDefaults(suiteName: "group.com.Finbar.FinApp")
+        defaults?.set(map, forKey: "watch.perExerciseRest")
+
+        guard WCSession.default.activationState == .activated else { return }
+        var merged = WCSession.default.applicationContext
+        merged[WatchMessageKey.perExerciseRest] = map
+        try? WCSession.default.updateApplicationContext(merged)
+    }
+
     // MARK: - Active-workout state
 
     /// Publishes (or clears) the phone-side active workout so the Watch

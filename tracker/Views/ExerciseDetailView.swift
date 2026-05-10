@@ -26,12 +26,13 @@ struct ExerciseDetailView: View {
     @State private var editingSet: ExerciseSet?
     @State private var editReps = 10
     @State private var editWeight = 20.0
+    /// Persistent ID of the set currently being inline-edited within the row.
+    /// Tap a set → enter inline edit mode. Long-press → full sheet (existing).
+    @State private var inlineEditingSetID: PersistentIdentifier?
     @State private var isEditingName = false
+    @State private var showingRestEditor = false
     @State private var editedName = ""
-    @State private var loggedPreviousIndices: Set<Int> = []
     @State private var hasPreFilled = false
-    @State private var showProgression = true
-    @State private var showQuickLog = true
     @State private var showPRBanner = false
     @State private var prScale = 1.0
     @State private var lastAddedSet: ExerciseSet?
@@ -57,9 +58,13 @@ struct ExerciseDetailView: View {
 
     var body: some View {
         List {
-            // MARK: - Stats Banner
+            // MARK: - Compact stats strip
+            // One thin row instead of: 3-col stats banner + lift goal section
+            // + standalone progression section. PR + goal progress live here.
+            // Per-set progression suggestions are handled by SuggestedSetPill
+            // inline in the new-set composer.
             Section {
-                exerciseStatsBanner
+                exerciseHeaderStrip
                     .listRowBackground(Color.clear)
                     .listRowInsets(.init(top: 4, leading: 16, bottom: 4, trailing: 16))
             }
@@ -70,73 +75,6 @@ struct ExerciseDetailView: View {
                     hint
                         .listRowBackground(Color.clear)
                         .listRowInsets(.init(top: 0, leading: 16, bottom: 4, trailing: 16))
-                }
-            }
-
-            // MARK: - Quick Log
-            if let lastSession = previousSession, !lastSession.sets.isEmpty {
-                Section(isExpanded: $showQuickLog) {
-                    ForEach(Array(lastSession.sets.enumerated()), id: \.offset) { index, prevSet in
-                        quickAddRow(index: index, prevSet: prevSet)
-                            .listRowBackground(Color(.secondarySystemGroupedBackground))
-                    }
-                } header: {
-                    HStack {
-                        Image(systemName: "clock.arrow.circlepath").foregroundStyle(.orange)
-                        Text("Quick Log")
-                        Spacer()
-                        Image(systemName: showQuickLog ? "chevron.up" : "chevron.down")
-                            .font(.caption2).foregroundStyle(.tertiary)
-                    }
-                    .font(.subheadline.weight(.semibold))
-                    .contentShape(Rectangle())
-                    .onTapGesture { withAnimation { showQuickLog.toggle() } }
-                }
-            }
-
-            // MARK: - Goal Progress
-            if let goal = liftGoals.first(where: {
-                $0.exerciseName.lowercased() == exercise.name.lowercased() && $0.achievedDate == nil
-            }) {
-                Section {
-                    let pr = historicalBestWeight
-                    let currentBest = max(pr, exercise.sets.filter { !$0.isWarmUp }.map(\.weight).max() ?? 0)
-                    let progress = goal.targetWeight > 0 ? min(1.0, currentBest / goal.targetWeight) : 0
-                    HStack(spacing: 12) {
-                        ZStack {
-                            Circle().fill(Color.accentColor.opacity(0.12)).frame(width: 38, height: 38)
-                            Image(systemName: "target").font(.system(size: 16)).foregroundStyle(Color.accentColor)
-                        }
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Goal: \(weightUnit.format(goal.targetWeight))")
-                                .font(.subheadline.weight(.semibold))
-                            Text("Current best: \(weightUnit.format(currentBest)) (\(Int(progress * 100))%)")
-                                .font(.caption).foregroundStyle(.secondary)
-                            GradientProgressBar(value: progress, color: .accentColor, height: 6)
-                        }
-                    }
-                    .padding(.vertical, 4)
-                    .listRowBackground(Color(.secondarySystemGroupedBackground))
-                } header: {
-                    SectionHeader(title: "Lift Goal", icon: "target", color: .accentColor)
-                }
-            }
-
-            // MARK: - Progression
-            if let rec = progressionRecommendation {
-                Section(isExpanded: $showProgression) {
-                    ProgressionBannerView(recommendation: rec)
-                        .listRowBackground(Color(.secondarySystemGroupedBackground))
-                } header: {
-                    HStack {
-                        Image(systemName: "chart.line.uptrend.xyaxis").foregroundStyle(.green)
-                        Text("Progression").font(.subheadline.weight(.semibold))
-                        Spacer()
-                        Image(systemName: showProgression ? "chevron.up" : "chevron.down")
-                            .font(.caption2).foregroundStyle(.tertiary)
-                    }
-                    .contentShape(Rectangle())
-                    .onTapGesture { withAnimation { showProgression.toggle() } }
                 }
             }
 
@@ -177,11 +115,7 @@ struct ExerciseDetailView: View {
                     }
                     .onDelete(perform: deleteSets)
                 } header: {
-                    SectionHeader(
-                        title: "Sets (\(exercise.sets.filter { !$0.isWarmUp }.count) working)",
-                        icon: "repeat",
-                        color: .accentColor
-                    )
+                    setsSectionHeader
                 }
             }
 
@@ -250,6 +184,11 @@ struct ExerciseDetailView: View {
                     } label: {
                         Label("Rename", systemImage: "pencil")
                     }
+                    Button {
+                        showingRestEditor = true
+                    } label: {
+                        Label(restMenuLabel, systemImage: "timer")
+                    }
                 } label: {
                     Image(systemName: "ellipsis.circle")
                 }
@@ -270,6 +209,15 @@ struct ExerciseDetailView: View {
         }
         .sheet(item: $editingSet) { exerciseSet in
             EditSetSheet(exerciseSet: exerciseSet, reps: editReps, weight: editWeight, distanceUnit: weightUnit.distanceUnit)
+        }
+        .sheet(isPresented: $showingRestEditor) {
+            ExerciseRestEditorSheet(exercise: exercise,
+                                    defaultGlobal: settingsArray.first?.defaultRestDuration ?? 90) {
+                // After save, also bring the in-view restDuration in sync so
+                // the active timer reflects the new value without a re-mount.
+                restDuration = exercise.customRestDuration ?? (settingsArray.first?.defaultRestDuration ?? 90)
+            }
+            .presentationDetents([.medium])
         }
         .navigationDestination(for: PlateCalcDestination.self) { _ in
             PlateCalculatorView()
@@ -344,75 +292,6 @@ struct ExerciseDetailView: View {
         }
     }
 
-    @ViewBuilder
-    private func quickAddRow(index: Int, prevSet: ExerciseSet) -> some View {
-        let isLogged = loggedPreviousIndices.contains(index)
-        let badgeColor: Color = isLogged ? .green : .accentColor
-        return Button {
-            if !isLogged {
-                UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                quickLog(from: prevSet)
-                loggedPreviousIndices.insert(index)
-            }
-        } label: {
-            HStack(spacing: 12) {
-                ZStack {
-                    Circle()
-                        .fill(
-                            LinearGradient(
-                                colors: [badgeColor.opacity(0.22), badgeColor.opacity(0.10)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .frame(width: 40, height: 40)
-                        .overlay(Circle().stroke(badgeColor.opacity(0.20), lineWidth: 0.5))
-                    Image(systemName: isLogged ? "checkmark" : "arrow.turn.down.right")
-                        .font(.system(size: 15, weight: .bold))
-                        .foregroundStyle(badgeColor)
-                }
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("Set \(index + 1)")
-                        .font(.system(size: 15, weight: .semibold, design: .rounded))
-                        .foregroundStyle(isLogged ? .secondary : .primary)
-                    if prevSet.isCardio {
-                        Text([prevSet.formattedDistance(unit: weightUnit.distanceUnit), prevSet.formattedDuration].compactMap { $0 }.joined(separator: " in "))
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    } else {
-                        Text("\(prevSet.reps) reps × \(weightUnit.format(prevSet.weight))")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-                Spacer()
-                if isLogged {
-                    Text("LOGGED")
-                        .font(.system(size: 10, weight: .bold, design: .rounded))
-                        .tracking(0.5)
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 9).padding(.vertical, 4)
-                        .background(
-                            LinearGradient(
-                                colors: [.green, Color(red: 0.05, green: 0.55, blue: 0.42)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            ),
-                            in: .capsule
-                        )
-                        .shadow(color: Color.green.opacity(0.40), radius: 4, y: 2)
-                } else {
-                    Image(systemName: "plus.circle.fill")
-                        .font(.title3)
-                        .foregroundStyle(Color.accentColor)
-                }
-            }
-        }
-        .disabled(isLogged)
-        .accessibilityLabel(isLogged ? "Set \(index + 1), logged, \(prevSet.reps) reps at \(weightUnit.format(prevSet.weight))" : "Quick log set \(index + 1), \(prevSet.reps) reps at \(weightUnit.format(prevSet.weight))")
-        .accessibilityHint(isLogged ? "" : "Double tap to log this set")
-    }
-
     private func isPR(_ exerciseSet: ExerciseSet) -> Bool {
         guard !exerciseSet.isWarmUp,
               historicalBestWeight > 0,
@@ -425,124 +304,58 @@ struct ExerciseDetailView: View {
         return false
     }
 
+    /// Section header for Sets — combines the count + last-session reference
+    /// on a single line. Gives the user "what to beat" without burning a
+    /// separate row.
     @ViewBuilder
-    private func setRow(index: Int, exerciseSet: ExerciseSet) -> some View {
-        let setNumber = index + 1 - warmUpCountBefore(index)
-        let badgeColor: Color = exerciseSet.isWarmUp ? .orange : .accentColor
-        return HStack(spacing: 12) {
-            // Set number badge
-            ZStack {
-                Circle()
-                    .fill(
-                        LinearGradient(
-                            colors: [badgeColor.opacity(0.22), badgeColor.opacity(0.10)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .frame(width: 40, height: 40)
-                    .overlay(Circle().stroke(badgeColor.opacity(0.20), lineWidth: 0.5))
-                if exerciseSet.isWarmUp {
-                    Image(systemName: "flame.fill")
-                        .font(.system(size: 15, weight: .bold))
-                        .foregroundStyle(.orange)
-                } else {
-                    Text("\(setNumber)")
-                        .font(.system(size: 16, weight: .black, design: .rounded))
-                        .foregroundStyle(Color.accentColor)
-                }
-            }
-
-            // Labels
-            VStack(alignment: .leading, spacing: 3) {
-                HStack(spacing: 6) {
-                    Text(exerciseSet.isWarmUp ? "Warm-up" : "Set \(setNumber)")
-                        .font(.system(size: 15, weight: .semibold, design: .rounded))
-                    if isPR(exerciseSet) {
-                        HStack(spacing: 3) {
-                            Image(systemName: "trophy.fill")
-                                .font(.system(size: 9, weight: .bold))
-                            Text("PR")
-                                .font(.system(size: 10, weight: .bold, design: .rounded))
-                                .tracking(0.4)
-                        }
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 7)
-                        .padding(.vertical, 3)
-                        .background(
-                            LinearGradient(
-                                colors: [
-                                    Color(red: 1.00, green: 0.85, blue: 0.20),
-                                    Color(red: 0.95, green: 0.62, blue: 0.10)
-                                ],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            ),
-                            in: .capsule
-                        )
-                        .shadow(color: Color.yellow.opacity(0.45), radius: 4, y: 1)
-                    }
-                }
-                Text("Tap to edit")
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
-            }
-
+    private var setsSectionHeader: some View {
+        let working = exercise.sets.filter { !$0.isWarmUp }
+        let summary = lastSessionSummaryText
+        HStack(spacing: 8) {
+            Image(systemName: "repeat")
+                .font(.caption.bold())
+                .foregroundStyle(Color.accentColor)
+            Text("\(working.count) Working")
+                .font(.caption.weight(.bold))
+                .foregroundStyle(.secondary)
+                .textCase(.uppercase)
             Spacer()
-
-            // Set data display
-            if exerciseSet.isCardio {
-                VStack(alignment: .trailing, spacing: 2) {
-                    if let dist = exerciseSet.formattedDistance(unit: weightUnit.distanceUnit) {
-                        Text(dist)
-                            .font(.system(size: 17, weight: .bold, design: .rounded))
-                    }
-                    if let dur = exerciseSet.formattedDuration {
-                        Text(dur)
-                            .font(.system(size: 13, weight: .semibold, design: .rounded))
-                            .foregroundStyle(.secondary)
-                    }
-                    if let rpe = exerciseSet.rpe {
-                        Text("@\(rpe)")
-                            .font(.system(size: 11, weight: .bold, design: .rounded))
-                            .foregroundStyle(.purple)
-                            .padding(.horizontal, 5)
-                            .padding(.vertical, 2)
-                            .background(.purple.opacity(0.12), in: .capsule)
-                    }
-                }
-            } else {
+            if let summary {
                 HStack(spacing: 4) {
-                    Text("\(exerciseSet.reps)")
-                        .font(.system(size: 20, weight: .bold, design: .rounded))
-                        .foregroundStyle(exerciseSet.isWarmUp ? .secondary : .primary)
-                    Text("×")
-                        .font(.caption)
-                        .foregroundStyle(.tertiary)
-                    Text(weightUnit.format(exerciseSet.weight))
-                        .font(.system(size: 15, weight: .semibold, design: .rounded))
-                        .foregroundStyle(.secondary)
-                    if let rpe = exerciseSet.rpe {
-                        Text("@\(rpe)")
-                            .font(.system(size: 11, weight: .bold, design: .rounded))
-                            .foregroundStyle(.purple)
-                            .padding(.horizontal, 5)
-                            .padding(.vertical, 2)
-                            .background(.purple.opacity(0.12), in: .capsule)
-                    }
+                    Image(systemName: "clock.arrow.circlepath")
+                        .font(.system(size: 10))
+                    Text(summary)
+                        .font(.caption2.weight(.medium))
                 }
+                .foregroundStyle(.tertiary)
             }
         }
-        .padding(.vertical, 6)
-        .contentShape(Rectangle())
-        .onTapGesture {
-            editingSet = exerciseSet
-            editReps = exerciseSet.reps
-            editWeight = weightUnit.display(exerciseSet.weight)
+        .textCase(nil)   // override List's auto-uppercasing
+    }
+
+    /// One-line summary of the user's last session for this exercise — e.g.
+    /// "Last: 4 × 8 @ 80 kg". Returns nil if there's no comparable history.
+    private var lastSessionSummaryText: String? {
+        guard let last = previousSession else { return nil }
+        let working = last.sets.filter { !$0.isWarmUp && $0.weight > 0 }
+        guard let top = working.max(by: { $0.weight < $1.weight }) else { return nil }
+        let count = working.count
+        return "Last: \(count) × \(top.reps) @ \(weightUnit.format(top.weight))"
+    }
+
+    /// Compact, scannable set row. Tap → inline edit (steppers swap in for
+    /// the static reps × weight display). Long-press → full sheet for
+    /// warm-up/RPE/duplicate. Cardio sets fall back to the sheet either way
+    /// since their inputs (distance/duration) don't fit inline.
+    private func setRow(index: Int, exerciseSet: ExerciseSet) -> some View {
+        let isEditing = inlineEditingSetID == exerciseSet.persistentModelID
+        return Group {
+            if isEditing && !exerciseSet.isCardio {
+                inlineEditRow(index: index, exerciseSet: exerciseSet)
+            } else {
+                displayRow(index: index, exerciseSet: exerciseSet)
+            }
         }
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(setAccessibilityLabel(index: index, exerciseSet: exerciseSet))
-        .accessibilityHint("Double tap to edit")
         .swipeActions(edge: .leading) {
             Button {
                 duplicateSet(exerciseSet)
@@ -560,6 +373,240 @@ struct ExerciseDetailView: View {
                       systemImage: exerciseSet.isWarmUp ? "flame.fill" : "flame")
             }
             .tint(.orange)
+        }
+    }
+
+    /// The default compact display row.
+    private func displayRow(index: Int, exerciseSet: ExerciseSet) -> some View {
+        let setNumber = index + 1 - warmUpCountBefore(index)
+        let badgeColor: Color = exerciseSet.isWarmUp ? .orange : .accentColor
+        let isPRSet = !exerciseSet.isWarmUp && isPR(exerciseSet)
+
+        return HStack(spacing: 12) {
+            indexBadge(badgeColor: badgeColor, setNumber: setNumber, isWarmUp: exerciseSet.isWarmUp)
+
+            if exerciseSet.isCardio {
+                cardioSetData(exerciseSet)
+            } else {
+                HStack(spacing: 5) {
+                    Text("\(exerciseSet.reps)")
+                        .font(.system(size: 19, weight: .bold, design: .rounded))
+                        .monospacedDigit()
+                        .foregroundStyle(exerciseSet.isWarmUp ? .secondary : .primary)
+                    Text("×")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                    Text(weightUnit.format(exerciseSet.weight))
+                        .font(.system(size: 14, weight: .semibold, design: .rounded))
+                        .monospacedDigit()
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            Spacer(minLength: 6)
+
+            if let rpe = exerciseSet.rpe {
+                Text("RPE \(rpe)")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(.purple)
+                    .padding(.horizontal, 6).padding(.vertical, 2)
+                    .background(.purple.opacity(0.14), in: .capsule)
+            }
+            if isPRSet {
+                Image(systemName: "trophy.fill")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(Color(red: 1.00, green: 0.78, blue: 0.20))
+                    .accessibilityLabel("Personal record")
+            }
+        }
+        .padding(.vertical, 3)
+        .opacity(exerciseSet.isWarmUp ? 0.78 : 1.0)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            // Cardio sets jump straight to the full sheet — distance/duration
+            // editing doesn't fit inline.
+            if exerciseSet.isCardio {
+                editingSet = exerciseSet
+                editReps = exerciseSet.reps
+                editWeight = weightUnit.display(exerciseSet.weight)
+            } else {
+                withAnimation(.snappy(duration: 0.20)) {
+                    inlineEditingSetID = exerciseSet.persistentModelID
+                }
+                HapticsManager.lightTap()
+            }
+        }
+        .onLongPressGesture(minimumDuration: 0.4) {
+            // Long-press always opens the full sheet for advanced edits.
+            editingSet = exerciseSet
+            editReps = exerciseSet.reps
+            editWeight = weightUnit.display(exerciseSet.weight)
+            HapticsManager.lightTap()
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(setAccessibilityLabel(index: index, exerciseSet: exerciseSet))
+        .accessibilityHint("Tap to edit reps and weight, long press for more")
+    }
+
+    /// Inline edit row — compact reps + weight steppers + Done check.
+    /// Mutations bind directly to the SwiftData ExerciseSet, so changes
+    /// persist immediately as the user taps + or −.
+    private func inlineEditRow(index: Int, exerciseSet: ExerciseSet) -> some View {
+        let setNumber = index + 1 - warmUpCountBefore(index)
+        let badgeColor: Color = exerciseSet.isWarmUp ? .orange : .accentColor
+        let displayWeight = weightUnit.display(exerciseSet.weight)
+
+        return VStack(spacing: 6) {
+            HStack(spacing: 8) {
+                indexBadge(badgeColor: badgeColor, setNumber: setNumber, isWarmUp: exerciseSet.isWarmUp)
+
+                HStack(spacing: 4) {
+                    inlineStepButton(systemName: "minus.circle.fill") {
+                        exerciseSet.reps = max(1, exerciseSet.reps - 1)
+                    }
+                    Text("\(exerciseSet.reps)")
+                        .font(.system(size: 16, weight: .bold, design: .rounded))
+                        .monospacedDigit()
+                        .frame(minWidth: 22)
+                    inlineStepButton(systemName: "plus.circle.fill") {
+                        exerciseSet.reps += 1
+                    }
+                }
+
+                Text("×").font(.caption2).foregroundStyle(.tertiary)
+
+                HStack(spacing: 4) {
+                    inlineStepButton(systemName: "minus.circle.fill") {
+                        let newDisplay = max(0, displayWeight - weightIncrement)
+                        exerciseSet.weight = weightUnit.toKg(newDisplay)
+                    }
+                    Text(weightUnit.format(exerciseSet.weight))
+                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+                        .monospacedDigit()
+                        .frame(minWidth: 64)
+                    inlineStepButton(systemName: "plus.circle.fill") {
+                        let newDisplay = displayWeight + weightIncrement
+                        exerciseSet.weight = weightUnit.toKg(newDisplay)
+                    }
+                }
+
+                Spacer(minLength: 4)
+
+                // Done — collapses back to the display row
+                Button {
+                    withAnimation(.snappy(duration: 0.20)) {
+                        inlineEditingSetID = nil
+                    }
+                    HapticsManager.lightTap()
+                } label: {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.title3)
+                        .foregroundStyle(.green)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Done editing")
+            }
+
+            // Quick RPE row — most common values for working sets, plus a
+            // clear-X. Avoids the long-press-then-sheet round trip.
+            if !exerciseSet.isWarmUp {
+                inlineRPERow(for: exerciseSet)
+            }
+        }
+        .padding(.vertical, 4)
+    }
+
+    /// Compact RPE picker shown inside the inline-edit row. Common working-
+    /// set values only (6–10) so the row stays readable; rarer values still
+    /// available via long-press → full sheet.
+    private func inlineRPERow(for exerciseSet: ExerciseSet) -> some View {
+        HStack(spacing: 6) {
+            Text("RPE")
+                .font(.system(size: 10, weight: .bold))
+                .foregroundStyle(.tertiary)
+                .textCase(.uppercase)
+            ForEach([6, 7, 8, 9, 10], id: \.self) { value in
+                Button {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    exerciseSet.rpe = (exerciseSet.rpe == value) ? nil : value
+                } label: {
+                    Text("\(value)")
+                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                        .monospacedDigit()
+                        .foregroundStyle(exerciseSet.rpe == value ? .white : .purple)
+                        .frame(width: 26, height: 26)
+                        .background(
+                            exerciseSet.rpe == value ? Color.purple : Color.purple.opacity(0.12),
+                            in: Circle()
+                        )
+                }
+                .buttonStyle(.plain)
+            }
+            Spacer(minLength: 0)
+            // Clear current RPE
+            if exerciseSet.rpe != nil {
+                Button {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    exerciseSet.rpe = nil
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 14))
+                        .foregroundStyle(.tertiary)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Clear RPE")
+            }
+        }
+        .padding(.leading, 36)   // align with the data column above (past the 28pt badge + spacing)
+    }
+
+    private func indexBadge(badgeColor: Color, setNumber: Int, isWarmUp: Bool) -> some View {
+        ZStack {
+            Circle()
+                .fill(badgeColor.opacity(0.18))
+                .frame(width: 28, height: 28)
+            if isWarmUp {
+                Image(systemName: "flame.fill")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(.orange)
+            } else {
+                Text("\(setNumber)")
+                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                    .foregroundStyle(badgeColor)
+            }
+        }
+    }
+
+    private func inlineStepButton(systemName: String, action: @escaping () -> Void) -> some View {
+        Button {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            action()
+        } label: {
+            Image(systemName: systemName)
+                .font(.title3)
+                .foregroundStyle(Color.accentColor)
+        }
+        .buttonStyle(.plain)
+        // Generous tap target so sweaty thumbs still hit it
+        .frame(minWidth: 28, minHeight: 28)
+        .contentShape(Rectangle())
+    }
+
+    /// Cardio variant of the set data block — distance + duration.
+    @ViewBuilder
+    private func cardioSetData(_ exerciseSet: ExerciseSet) -> some View {
+        HStack(spacing: 6) {
+            if let dist = exerciseSet.formattedDistance(unit: weightUnit.distanceUnit) {
+                Text(dist)
+                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .monospacedDigit()
+            }
+            if let dur = exerciseSet.formattedDuration {
+                Text(dur)
+                    .font(.system(size: 12, weight: .semibold, design: .rounded))
+                    .monospacedDigit()
+                    .foregroundStyle(.secondary)
+            }
         }
     }
 
@@ -619,78 +666,80 @@ struct ExerciseDetailView: View {
         return nil
     }
 
-    // MARK: - Stats Banner
+    // MARK: - Compact header strip
 
-    private var exerciseStatsBanner: some View {
-        HStack(spacing: 0) {
-            bannerStat(
-                label: "Best Weight",
-                value: historicalBestWeight > 0 ? weightUnit.formatShort(historicalBestWeight) : "–",
-                icon: "trophy.fill",
-                color: .yellow
-            )
-            Rectangle().fill(Color(.separator).opacity(0.5)).frame(width: 1, height: 40)
-            bannerStat(
-                label: "Today",
-                value: "\(exercise.sets.filter { !$0.isWarmUp }.count) sets",
-                icon: "repeat",
-                color: .accentColor
-            )
-            Rectangle().fill(Color(.separator).opacity(0.5)).frame(width: 1, height: 40)
-            VStack(spacing: 6) {
-                ZStack {
-                    Circle()
-                        .fill(Color.purple.opacity(0.16))
-                        .frame(width: 30, height: 30)
-                    MuscleIconView(group: exercise.category ?? .other, color: .purple)
-                        .frame(width: 16, height: 16)
-                }
-                Text(exercise.category?.rawValue ?? "–")
-                    .font(.system(size: 16, weight: .black, design: .rounded))
-                    .lineLimit(1).minimumScaleFactor(0.75)
-                Text("Category")
-                    .font(.system(size: 10, weight: .semibold, design: .rounded))
-                    .foregroundStyle(.secondary)
-                    .tracking(0.3)
-                    .textCase(.uppercase)
+    /// One-line header: PR pill + active lift-goal pill (if set). Replaces
+    /// the old 3-column stats banner + standalone Lift Goal section.
+    /// Progression recommendations live inline in `SuggestedSetPill` now.
+    @ViewBuilder
+    private var exerciseHeaderStrip: some View {
+        let prWeight = historicalBestWeight
+        let activeGoal = liftGoals.first(where: {
+            $0.exerciseName.lowercased() == exercise.name.lowercased() && $0.achievedDate == nil
+        })
+
+        HStack(spacing: 8) {
+            // PR pill
+            if prWeight > 0 {
+                statPill(
+                    icon: "trophy.fill",
+                    iconColor: Color(red: 1.00, green: 0.78, blue: 0.20),
+                    label: "PR",
+                    value: weightUnit.formatShort(prWeight)
+                )
             }
-            .frame(maxWidth: .infinity)
+
+            // Goal pill — shows current progress toward target
+            if let goal = activeGoal {
+                let currentBest = max(prWeight, exercise.sets.filter { !$0.isWarmUp }.map(\.weight).max() ?? 0)
+                let pct = goal.targetWeight > 0 ? min(1.0, currentBest / goal.targetWeight) : 0
+                statPill(
+                    icon: "target",
+                    iconColor: Color.accentColor,
+                    label: "Goal",
+                    value: "\(weightUnit.formatShort(goal.targetWeight)) · \(Int(pct * 100))%"
+                )
+            }
+
+            // Category pill — keep for context, smaller than the old banner
+            if let cat = exercise.category {
+                statPill(
+                    icon: cat.icon,
+                    iconColor: .purple,
+                    label: nil,
+                    value: cat.rawValue
+                )
+            }
+
+            Spacer(minLength: 0)
         }
-        .padding(.vertical, 14)
-        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: AppTheme.cardRadius, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: AppTheme.cardRadius, style: .continuous)
-                .stroke(Color.white.opacity(0.06), lineWidth: 0.5)
-        )
-        .shadow(color: .black.opacity(0.10), radius: 14, x: 0, y: 4)
+        .padding(.vertical, 2)
     }
 
-    private func bannerStat(label: String, value: String, icon: String, color: Color) -> some View {
-        VStack(spacing: 6) {
-            ZStack {
-                Circle()
-                    .fill(color.opacity(0.16))
-                    .frame(width: 30, height: 30)
-                Image(systemName: icon)
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundStyle(color)
+    private func statPill(icon: String, iconColor: Color, label: String?, value: String) -> some View {
+        HStack(spacing: 5) {
+            Image(systemName: icon)
+                .font(.system(size: 10, weight: .bold))
+                .foregroundStyle(iconColor)
+            if let label {
+                Text(label.uppercased())
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundStyle(.tertiary)
+                    .tracking(0.4)
             }
             Text(value)
-                .font(.system(size: 16, weight: .black, design: .rounded))
-                .lineLimit(1).minimumScaleFactor(0.75)
-            Text(label)
-                .font(.system(size: 10, weight: .semibold, design: .rounded))
-                .foregroundStyle(.secondary)
-                .tracking(0.3)
-                .textCase(.uppercase)
+                .font(.system(size: 12, weight: .semibold, design: .rounded))
+                .monospacedDigit()
+                .foregroundStyle(.primary)
         }
-        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 9)
+        .padding(.vertical, 5)
+        .background(Color(.tertiarySystemFill), in: Capsule())
     }
 
     private var newSetSection: some View {
         Section {
-            // Suggested-next-set pill — only for strength, only when we have
-            // enough data to recommend something concrete.
+            // Suggested-next-set hint — compact pill above the composer row.
             if !isCardioExercise, let s = suggestedSet {
                 SuggestedSetPill(suggestion: s) {
                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
@@ -698,52 +747,165 @@ struct ExerciseDetailView: View {
                     newWeight = weightUnit.display(s.weight)
                 }
                 .listRowBackground(Color.clear)
-                .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 8, trailing: 16))
+                .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 6, trailing: 16))
             }
 
             if isCardioExercise {
+                // Cardio keeps the form-style inputs (different fields).
                 cardioInputFields
-            } else {
-                strengthInputFields
-            }
-
-            // RPE picker (shared)
-            if !newIsWarmUp || isCardioExercise {
                 rpePicker
+                addEntryButton
+            } else {
+                // Strength: one compact row that visually matches the logged
+                // set rows above. Reps / weight steppers + Add inline.
+                nextSetRow
+                if !newIsWarmUp {
+                    rpePicker
+                }
+            }
+        } header: {
+            SectionHeader(
+                title: newIsWarmUp ? "New Warm-up" : "New Set",
+                icon: "plus.circle.fill",
+                color: newIsWarmUp ? .orange : .accentColor
+            )
+        }
+    }
+
+    /// "Next row" composer — the strength path. Mirrors the logged-set row
+    /// shape so the act of completing a set and starting the next is visually
+    /// continuous instead of mode-switching into a form.
+    private var nextSetRow: some View {
+        let badgeColor: Color = newIsWarmUp ? .orange : .accentColor
+        let nextNumber = exercise.sets.filter { !$0.isWarmUp }.count + 1
+        return VStack(spacing: 8) {
+            HStack(spacing: 8) {
+                // Index badge — same shape as logged rows, with a "+" hint when
+                // the slot is empty (helps the row read as "the next set").
+                ZStack {
+                    Circle()
+                        .strokeBorder(badgeColor.opacity(0.45),
+                                      style: StrokeStyle(lineWidth: 1.5, dash: [3, 2]))
+                        .background(Circle().fill(badgeColor.opacity(0.10)))
+                        .frame(width: 28, height: 28)
+                    if newIsWarmUp {
+                        Image(systemName: "flame.fill")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundStyle(.orange)
+                    } else {
+                        Text("\(nextNumber)")
+                            .font(.system(size: 13, weight: .bold, design: .rounded))
+                            .foregroundStyle(badgeColor)
+                    }
+                }
+
+                // Reps stepper
+                HStack(spacing: 4) {
+                    inlineStepButton(systemName: "minus.circle.fill") {
+                        newReps = max(1, newReps - 1)
+                    }
+                    Text("\(newReps)")
+                        .font(.system(size: 17, weight: .bold, design: .rounded))
+                        .monospacedDigit()
+                        .frame(minWidth: 24)
+                    inlineStepButton(systemName: "plus.circle.fill") {
+                        newReps = min(100, newReps + 1)
+                    }
+                }
+
+                Text("×").font(.caption2).foregroundStyle(.tertiary)
+
+                // Weight stepper
+                HStack(spacing: 4) {
+                    inlineStepButton(systemName: "minus.circle.fill") {
+                        newWeight = max(0, newWeight - weightIncrement)
+                    }
+                    Text(weightUnit.format(newWeight))
+                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+                        .monospacedDigit()
+                        .frame(minWidth: 64)
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            isWeightFieldFocused = true
+                        }
+                        .accessibilityLabel("Weight: \(weightUnit.format(newWeight))")
+                        .overlay {
+                            TextField("", value: $newWeight, format: .number)
+                                .keyboardType(.decimalPad)
+                                .multilineTextAlignment(.center)
+                                .focused($isWeightFieldFocused)
+                                .opacity(isWeightFieldFocused ? 1 : 0)
+                                .frame(width: 64)
+                                .onChange(of: newWeight) {
+                                    if newWeight < 0 { newWeight = 0 }
+                                }
+                        }
+                    inlineStepButton(systemName: "plus.circle.fill") {
+                        newWeight += weightIncrement
+                    }
+                }
+
+                Spacer(minLength: 4)
+
+                // Add button — small green check, lives in the row
+                Button {
+                    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                    addSet()
+                } label: {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.title2)
+                        .foregroundStyle(newIsWarmUp ? Color.orange : Color.green)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(newIsWarmUp ? "Add warm-up" : "Add set")
             }
 
-            // Add button
-            Button {
-                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                addSet()
-            } label: {
-                Label(
-                    isCardioExercise ? "Add Entry" : (newIsWarmUp ? "Add Warm-up" : "Add Set"),
-                    systemImage: "plus.circle.fill"
-                )
-                .font(.system(size: 16, weight: .bold, design: .rounded))
-                .tracking(0.4)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 16)
-                .background(
-                    newIsWarmUp
-                        ? AnyShapeStyle(LinearGradient(colors: [.orange, Color(red: 0.9, green: 0.5, blue: 0.1)], startPoint: .topLeading, endPoint: .bottomTrailing))
-                        : AnyShapeStyle(LinearGradient(colors: [Color.accentColor, Color.accentColor.opacity(0.78)], startPoint: .topLeading, endPoint: .bottomTrailing))
-                )
-                .foregroundStyle(.white)
-                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .stroke(Color.white.opacity(0.20), lineWidth: 0.5)
-                )
-                .shadow(color: (newIsWarmUp ? Color.orange : Color.accentColor).opacity(0.45), radius: 12, y: 5)
+            // Tiny footer with the warm-up toggle — easy to flip without
+            // dominating the row.
+            HStack(spacing: 6) {
+                Button {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    newIsWarmUp.toggle()
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: newIsWarmUp ? "flame.fill" : "flame")
+                            .font(.caption2.bold())
+                        Text(newIsWarmUp ? "Warm-up" : "Mark as warm-up")
+                            .font(.caption2)
+                    }
+                    .foregroundStyle(newIsWarmUp ? .orange : .secondary)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(
+                        (newIsWarmUp ? Color.orange : Color.secondary)
+                            .opacity(newIsWarmUp ? 0.16 : 0.08),
+                        in: Capsule()
+                    )
+                }
+                .buttonStyle(.plain)
+                Spacer()
             }
-            .buttonStyle(.pressableCard)
-            .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
-            .listRowBackground(Color.clear)
-        } header: {
-            SectionHeader(title: "New Set", icon: "plus.circle.fill", color: .accentColor)
         }
+        .padding(.vertical, 4)
+    }
+
+    /// The original full-width Add Entry button — still used for cardio
+    /// since the cardio composer can't be condensed into one row.
+    private var addEntryButton: some View {
+        Button {
+            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+            addSet()
+        } label: {
+            Label("Add Entry", systemImage: "plus.circle.fill")
+                .font(.subheadline.weight(.semibold))
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 11)
+                .background(Color.accentColor, in: Capsule())
+                .foregroundStyle(.white)
+        }
+        .buttonStyle(.pressableCard)
+        .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
+        .listRowBackground(Color.clear)
     }
 
     @ViewBuilder
@@ -818,183 +980,44 @@ struct ExerciseDetailView: View {
         }
     }
 
-    @ViewBuilder
-    private var strengthInputFields: some View {
-        // Reps row
-        HStack {
-            Label {
-                Text("Reps")
-                    .font(.system(size: 15, weight: .semibold, design: .rounded))
-            } icon: {
-                ZStack {
-                    Circle().fill(Color.accentColor.opacity(0.16)).frame(width: 28, height: 28)
-                    Image(systemName: "repeat")
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundStyle(Color.accentColor)
-                }
-            }
-            Spacer()
-            Stepper {
-                Text("\(newReps)")
-                    .font(.system(size: 17, weight: .black, design: .rounded))
-                    .monospacedDigit()
-                    .foregroundStyle(Color.accentColor)
-            } onIncrement: {
-                UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                newReps = min(100, newReps + 1)
-            } onDecrement: {
-                UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                newReps = max(1, newReps - 1)
-            }
-            .fixedSize()
-        }
-
-        // Weight row
-        HStack {
-            Label {
-                Text("Weight")
-                    .font(.system(size: 15, weight: .semibold, design: .rounded))
-            } icon: {
-                ZStack {
-                    Circle().fill(Color.accentColor.opacity(0.16)).frame(width: 28, height: 28)
-                    Image(systemName: "scalemass.fill")
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundStyle(Color.accentColor)
-                }
-            }
-            Spacer()
-            Button {
-                UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                newWeight = max(0, newWeight - weightIncrement)
-            } label: {
-                Image(systemName: "minus.circle.fill")
-                    .font(.title2)
-                    .foregroundStyle(Color.accentColor.opacity(0.8))
-            }
-            .buttonStyle(.pressableCard)
-            .accessibilityLabel("Decrease weight by \(weightUnit.formatShort(weightIncrement))")
-            Text(weightUnit.format(newWeight))
-                .font(.system(.body, design: .rounded, weight: .bold))
-                .monospacedDigit()
-                .frame(minWidth: 80)
-                .contentShape(Rectangle())
-                .onTapGesture {
-                    isWeightFieldFocused = true
-                }
-                .accessibilityLabel("Weight: \(weightUnit.format(newWeight))")
-                .accessibilityHint("Double tap to type a custom weight")
-                .overlay {
-                    TextField("", value: $newWeight, format: .number)
-                        .keyboardType(.decimalPad)
-                        .multilineTextAlignment(.center)
-                        .focused($isWeightFieldFocused)
-                        .opacity(isWeightFieldFocused ? 1 : 0)
-                        .frame(width: 80)
-                        .onChange(of: newWeight) {
-                            if newWeight < 0 { newWeight = 0 }
-                        }
-                }
-            Button {
-                UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                newWeight += weightIncrement
-            } label: {
-                Image(systemName: "plus.circle.fill")
-                    .font(.title2)
-                    .foregroundStyle(Color.accentColor)
-            }
-            .buttonStyle(.pressableCard)
-            .accessibilityLabel("Increase weight by \(weightUnit.formatShort(weightIncrement))")
-        }
-
-        // Warm-up toggle
-        Toggle(isOn: $newIsWarmUp) {
-            Label {
-                Text("Warm-up Set")
-                    .font(.system(size: 15, weight: .semibold, design: .rounded))
-            } icon: {
-                Image(systemName: "flame.fill")
-                    .foregroundStyle(.orange)
-            }
-        }
-    }
-
+    /// Compact RPE picker for the new-set composer. Always visible (no chevron
+    /// hiding it), common working-set range only (6–10), matching the inline
+    /// edit row's styling for visual consistency across both surfaces.
     private var rpePicker: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Button {
-                withAnimation(.easeInOut(duration: 0.2)) { showRPE.toggle() }
-            } label: {
-                HStack {
-                    Label {
-                        Text("RPE")
-                            .font(.subheadline)
-                            .foregroundStyle(.primary)
-                    } icon: {
-                        Image(systemName: "gauge.with.needle")
-                            .foregroundStyle(.purple)
-                    }
-                    Spacer()
-                    if let rpe = newRPE {
-                        Text("\(rpe)")
-                            .font(.caption.bold().monospacedDigit())
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 9)
-                            .padding(.vertical, 4)
-                            .background(
-                                LinearGradient(
-                                    colors: [.purple, Color(red: 0.55, green: 0.35, blue: 0.95)],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                ),
-                                in: .capsule
-                            )
-                            .shadow(color: .purple.opacity(0.40), radius: 4, y: 2)
-                        Button("Clear") { newRPE = nil }
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(.secondary)
-                            .buttonStyle(.plain)
-                    } else {
-                        Image(systemName: showRPE ? "chevron.up" : "chevron.down")
-                            .font(.caption2.weight(.semibold))
-                            .foregroundStyle(.tertiary)
-                    }
+        HStack(spacing: 6) {
+            Text("RPE")
+                .font(.system(size: 10, weight: .bold))
+                .foregroundStyle(.tertiary)
+                .textCase(.uppercase)
+            ForEach([6, 7, 8, 9, 10], id: \.self) { value in
+                Button {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    newRPE = (newRPE == value) ? nil : value
+                } label: {
+                    Text("\(value)")
+                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                        .monospacedDigit()
+                        .foregroundStyle(newRPE == value ? .white : .purple)
+                        .frame(width: 26, height: 26)
+                        .background(
+                            newRPE == value ? Color.purple : Color.purple.opacity(0.12),
+                            in: Circle()
+                        )
                 }
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
-
-            if showRPE {
-                HStack(spacing: 6) {
-                    ForEach(1...10, id: \.self) { value in
-                        Button {
-                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                            newRPE = value
-                            withAnimation(.spring(response: 0.42, dampingFraction: 0.78)) { showRPE = false }
-                        } label: {
-                            Text("\(value)")
-                                .font(.system(size: 14, weight: .bold, design: .rounded))
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 9)
-                                .background {
-                                    if newRPE == value {
-                                        RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                            .fill(
-                                                LinearGradient(
-                                                    colors: [.purple, Color(red: 0.55, green: 0.35, blue: 0.95)],
-                                                    startPoint: .topLeading,
-                                                    endPoint: .bottomTrailing
-                                                )
-                                            )
-                                            .shadow(color: .purple.opacity(0.40), radius: 6, y: 3)
-                                    } else {
-                                        RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                            .fill(Color(.tertiarySystemFill))
-                                    }
-                                }
-                                .foregroundStyle(newRPE == value ? .white : .primary)
-                        }
-                        .buttonStyle(.pressableCard)
-                    }
+            Spacer(minLength: 0)
+            if newRPE != nil {
+                Button {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    newRPE = nil
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 14))
+                        .foregroundStyle(.tertiary)
                 }
-                .transition(.opacity.combined(with: .move(edge: .top)))
+                .buttonStyle(.plain)
+                .accessibilityLabel("Clear RPE")
             }
         }
     }
@@ -1115,21 +1138,6 @@ struct ExerciseDetailView: View {
             .max() ?? 0
     }
 
-    private var progressionRecommendation: ProgressionRecommendation? {
-        let history = allExercises
-            .filter { other in
-                other.name == exercise.name
-                && !(other.workout?.isTemplate ?? true)
-                && !other.sets.isEmpty
-            }
-            .sorted { ($0.workout?.date ?? .distantPast) > ($1.workout?.date ?? .distantPast) }
-        let sessions = ProgressionAdvisor.buildSessions(from: history)
-        guard sessions.count >= 2 else { return nil }
-        let rec = ProgressionAdvisor.recommend(sessions: sessions, muscleGroup: exercise.category)
-        if case .insufficient = rec.action { return nil }
-        return rec
-    }
-
     /// Concrete next-set suggestion for the new-set composer. Used both to
     /// pre-fill the inputs on first appear and to render the "Suggested" pill.
     private var suggestedSet: SuggestedSet? {
@@ -1137,6 +1145,17 @@ struct ExerciseDetailView: View {
         guard !isCardioExercise else { return nil }
         let history = allExercises.filter { $0.name == exercise.name }
         return SuggestedSetEngine.suggestNextSet(for: exercise, history: history)
+    }
+
+    /// Menu label that surfaces the current rest setting at a glance. Shows
+    /// the per-exercise override if set, otherwise the global default — so
+    /// the user knows what they'll change before they tap.
+    private var restMenuLabel: String {
+        if let secs = exercise.customRestDuration {
+            return "Rest: \(secs)s (custom)"
+        }
+        let global = settingsArray.first?.defaultRestDuration ?? 90
+        return "Rest: \(global)s (default)"
     }
 
     private var previousSession: Exercise? {
@@ -1322,28 +1341,6 @@ struct ExerciseDetailView: View {
                 startTimer()
             }
         }
-    }
-
-    private func quickLog(from source: ExerciseSet) {
-        let newSet = ExerciseSet(
-            reps: source.reps,
-            weight: source.weight,
-            distance: source.distance,
-            durationSeconds: source.durationSeconds,
-            exercise: exercise
-        )
-        withAnimation(.spring(duration: 0.3)) {
-            modelContext.insert(newSet)
-            exercise.sets.append(newSet)
-        }
-        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-        if !source.isCardio {
-            checkForPR(weight: source.weight, isWarmUp: false)
-            if !source.isWarmUp && (settingsArray.first?.autoStartRestTimer ?? false) {
-                startTimer()
-            }
-        }
-        showUndoSnackbar(for: newSet)
     }
 
     private func duplicateSet(_ source: ExerciseSet) {
