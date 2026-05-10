@@ -32,15 +32,19 @@ final class PhoneConnectivityManager: NSObject, ObservableObject {
     /// Call this whenever the user's exercise library changes, or on app foreground.
     func pushExerciseLibrary(exercises: [String], todayPlanName: String = "",
                              todayPlannedExercises: [String] = [],
-                             useKilograms: Bool = true, currentStreak: Int = 0) {
+                             useKilograms: Bool = true, currentStreak: Int = 0,
+                             perExerciseRest: [String: Int] = [:]) {
         guard WCSession.default.activationState == .activated else { return }
-        let context: [String: Any] = [
+        var context: [String: Any] = [
             WatchMessageKey.exerciseList:    exercises,
             WatchMessageKey.todayPlan:       todayPlanName,
             WatchMessageKey.todayExercises:  todayPlannedExercises,
             WatchMessageKey.useKilograms:    useKilograms,
             WatchMessageKey.currentStreak:   currentStreak
         ]
+        if !perExerciseRest.isEmpty {
+            context[WatchMessageKey.perExerciseRest] = perExerciseRest
+        }
         try? WCSession.default.updateApplicationContext(context)
     }
 

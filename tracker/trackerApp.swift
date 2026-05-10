@@ -113,12 +113,29 @@ struct trackerApp: App {
                 .map(\.name) ?? []
         }()
 
+        // Build the per-exercise rest-override map. We collapse the entire
+        // library down to one (case-insensitive) entry per name, keeping
+        // the override from the most-recently-edited exercise so the user's
+        // latest preference wins. Names without an override are omitted.
+        let allExercises = (try? ctx.fetch(exerciseFetch)) ?? []
+        var perRest: [String: Int] = [:]
+        var seenKeys = Set<String>()
+        for ex in allExercises.reversed() where ex.customRestDuration != nil {
+            let key = ex.name.lowercased()
+            guard !seenKeys.contains(key) else { continue }
+            seenKeys.insert(key)
+            perRest[ex.name] = ex.customRestDuration
+        }
+
         // Write to App Group so Watch complications + UI can read without WCSession
         if let defaults = UserDefaults(suiteName: "group.com.Finbar.FinApp") {
             defaults.set(useKg,             forKey: "watch.useKilograms")
             defaults.set(streak,            forKey: "watch.currentStreak")
             defaults.set(todayPlan,         forKey: "watch.todayPlanName")
             defaults.set(plannedExercises,  forKey: "watch.todayExercises")
+            // Cold-launch path: Watch reads this before WCSession activates,
+            // so rest-timer overrides land even on first foreground.
+            defaults.set(perRest,           forKey: "watch.perExerciseRest")
         }
 
         PhoneConnectivityManager.shared.pushExerciseLibrary(
@@ -126,7 +143,8 @@ struct trackerApp: App {
             todayPlanName: todayPlan,
             todayPlannedExercises: plannedExercises,
             useKilograms: useKg,
-            currentStreak: streak
+            currentStreak: streak,
+            perExerciseRest: perRest
         )
     }
 }
