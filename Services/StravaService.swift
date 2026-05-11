@@ -39,9 +39,15 @@ final class StravaService: NSObject, ObservableObject {
     private static let clientSecret = "14711d5956683b4d0c586a4f43fbd3b34fde5fd9"
 
     /// Custom-scheme redirect URI. The scheme matches `callbackScheme`
-    /// below; `ASWebAuthenticationSession` will intercept any URL with
-    /// this scheme and surface it to the completion handler.
-    private static let redirectURI     = "metricly://strava-callback"
+    /// below; `ASWebAuthenticationSession` intercepts any URL with this
+    /// scheme and surfaces it to the completion handler.
+    ///
+    /// The host must match the Authorization Callback Domain registered
+    /// at strava.com/settings/api (we registered `localhost`). Strava
+    /// parses redirect_uri as scheme://host/path and rejects requests
+    /// whose host doesn't match the registered domain — hence `localhost`
+    /// in the host slot with `strava-callback` as the path.
+    private static let redirectURI     = "metricly://localhost/strava-callback"
     private static let callbackScheme  = "metricly"
 
     /// OAuth scopes:
