@@ -12,8 +12,111 @@ struct CardioSessionDetailView: View {
     @State private var showDeleteAlert = false
     @State private var shareImage: UIImage? = nil
     @State private var showShare = false
+    @State private var stravaUpload: StravaUploadState = .idle
+    @StateObject private var stravaService = StravaService.shared
 
     private var useKm: Bool { weightUnit.distanceUnit == .km }
+
+    /// Only show the status pill when there's something to communicate —
+    /// in-flight uploads, success, errors, or "already on Strava". A
+    /// connected user with a pristine, never-pushed session sees nothing
+    /// because the menu's "Push to Strava" action is the discovery path.
+    private var shouldShowStravaPill: Bool {
+        if !stravaService.isConnected { return false }
+        if session.stravaActivityID != nil { return true }
+        switch stravaUpload {
+        case .idle: return false
+        default:    return true
+        }
+    }
+
+    @ViewBuilder
+    private var stravaStatusPill: some View {
+        let tint: Color = {
+            switch stravaUpload {
+            case .failed:                                    return .red
+            case .success, .duplicate:                       return .green
+            case .uploading, .idle:
+                return session.stravaActivityID != nil ? .green : .orange
+            }
+        }()
+
+        let icon: String = {
+            switch stravaUpload {
+            case .uploading:              return "arrow.up.circle"
+            case .failed:                 return "exclamationmark.triangle.fill"
+            case .success, .duplicate:    return "checkmark.circle.fill"
+            case .idle:
+                return session.stravaActivityID != nil ? "checkmark.circle.fill" : "figure.run.circle"
+            }
+        }()
+
+        let title: String = {
+            switch stravaUpload {
+            case .uploading:        return "Pushing to Strava…"
+            case .success:          return "Pushed to Strava"
+            case .duplicate:        return "Already on Strava"
+            case .failed(let msg):  return "Strava push failed: \(msg)"
+            case .idle:
+                return session.stravaActivityID != nil ? "Pushed to Strava" : ""
+            }
+        }()
+
+        HStack(spacing: 10) {
+            if case .uploading = stravaUpload {
+                ProgressView().tint(tint)
+            } else {
+                Image(systemName: icon)
+                    .foregroundStyle(tint)
+            }
+            Text(title)
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(.primary)
+            Spacer(minLength: 0)
+            if case .failed = stravaUpload {
+                Button("Retry") { uploadToStrava() }
+                    .font(.caption.bold())
+                    .foregroundStyle(.orange)
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(tint.opacity(0.12), in: RoundedRectangle(cornerRadius: 12))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .strokeBorder(tint.opacity(0.25), lineWidth: 1)
+        )
+    }
+
+    private var stravaMenuLabel: String {
+        if session.stravaActivityID != nil { return "Already on Strava" }
+        switch stravaUpload {
+        case .uploading: return "Pushing to Strava…"
+        case .failed:    return "Retry push to Strava"
+        default:         return "Push to Strava"
+        }
+    }
+
+    private func uploadToStrava() {
+        guard !stravaUpload.isInFlight else { return }
+        stravaUpload = .uploading
+        Task {
+            do {
+                let activity = try await StravaService.shared.uploadActivity(session)
+                await MainActor.run {
+                    session.stravaActivityID = activity.id
+                    try? modelContext.save()
+                    stravaUpload = .success
+                }
+            } catch StravaError.duplicateActivity {
+                await MainActor.run { stravaUpload = .duplicate }
+            } catch {
+                await MainActor.run {
+                    stravaUpload = .failed(error.localizedDescription)
+                }
+            }
+        }
+    }
 
     var body: some View {
         ScrollView {
@@ -21,6 +124,9 @@ struct CardioSessionDetailView: View {
                 heroCard
                 if !session.routePoints.isEmpty { mapCard }
                 statsCard
+                if shouldShowStravaPill {
+                    stravaStatusPill
+                }
                 if !session.splits.isEmpty { splitsCard }
                 if !session.notes.isEmpty { notesCard }
             }
@@ -39,6 +145,14 @@ struct CardioSessionDetailView: View {
                         showShare = shareImage != nil
                     } label: {
                         Label("Share Run", systemImage: "square.and.arrow.up")
+                    }
+                    if stravaService.isConnected {
+                        Button {
+                            uploadToStrava()
+                        } label: {
+                            Label(stravaMenuLabel, systemImage: "figure.run.circle.fill")
+                        }
+                        .disabled(stravaUpload.isInFlight || session.stravaActivityID != nil)
                     }
                     Button(role: .destructive) { showDeleteAlert = true } label: {
                         Label("Delete Session", systemImage: "trash")
@@ -69,62 +183,44 @@ struct CardioSessionDetailView: View {
     private var heroCard: some View {
         ZStack(alignment: .topLeading) {
             LinearGradient(
-                colors: [
-                    session.type.color,
-                    session.type.color.opacity(0.78),
-                    session.type.color.opacity(0.55)
-                ],
+                colors: [session.type.color, session.type.color.opacity(0.65)],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
-            // Top sheen
-            LinearGradient(
-                colors: [.white.opacity(0.18), .clear],
-                startPoint: .top, endPoint: .center
-            )
-            .blendMode(.plusLighter)
-            Circle().fill(.white.opacity(0.10)).frame(width: 200).blur(radius: 12).offset(x: 160, y: -60)
-            Circle().fill(.white.opacity(0.06)).frame(width: 110).blur(radius: 10).offset(x: -30, y: 80)
 
-            VStack(alignment: .leading, spacing: 18) {
-                HStack(spacing: 14) {
+            VStack(alignment: .leading, spacing: 12) {
+                // Type icon + date
+                HStack(spacing: 10) {
                     ZStack {
                         Circle()
-                            .fill(.ultraThinMaterial.opacity(0.7))
-                            .frame(width: 56, height: 56)
-                            .overlay(Circle().stroke(.white.opacity(0.25), lineWidth: 0.5))
+                            .fill(.white.opacity(0.20))
+                            .frame(width: 40, height: 40)
                         Image(systemName: session.type.icon)
-                            .font(.system(size: 24, weight: .bold))
+                            .font(.system(size: 18, weight: .bold))
                             .foregroundStyle(.white)
                     }
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(session.type.rawValue)
-                            .font(.system(size: 12, weight: .bold, design: .rounded))
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(session.type.rawValue.uppercased())
+                            .font(.system(size: 10, weight: .bold))
                             .foregroundStyle(.white.opacity(0.82))
-                            .tracking(0.5)
-                            .textCase(.uppercase)
-                        Text(session.date, format: .dateTime.weekday(.wide).month(.abbreviated).day())
-                            .font(.system(size: 22, weight: .bold, design: .rounded))
+                            .tracking(0.4)
+                        Text(session.date, format: .dateTime.weekday(.abbreviated).month(.abbreviated).day())
+                            .font(.system(size: 17, weight: .bold, design: .rounded))
                             .foregroundStyle(.white)
                     }
                     Spacer()
                 }
 
+                // Stats — sit on the gradient directly
                 HStack(spacing: 0) {
                     HeroStatCol(value: session.formattedDistance(useKm: useKm), label: "Distance")
-                    Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 36)
+                    Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 28)
                     HeroStatCol(value: session.formattedDuration, label: "Duration")
-                    Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 36)
+                    Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 28)
                     HeroStatCol(value: session.formattedPace(useKm: useKm), label: "Avg Pace")
                 }
-                .padding(.vertical, 12)
-                .background(.ultraThinMaterial.opacity(0.55), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .stroke(.white.opacity(0.18), lineWidth: 0.5)
-                )
             }
-            .padding(20)
+            .padding(14)
         }
         .heroCard()
     }

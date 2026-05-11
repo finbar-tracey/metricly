@@ -336,6 +336,25 @@ enum StravaError: LocalizedError {
     }
 }
 
+// MARK: - Upload state (for callers' UI feedback)
+
+/// State machine for a single activity upload attempt. Owned by the
+/// caller (a view, typically) so multiple upload sites can each track
+/// their own attempt independently rather than coordinating through a
+/// shared service-level state.
+enum StravaUploadState: Equatable {
+    case idle
+    case uploading
+    case success
+    case duplicate                  // Strava said this activity already exists
+    case failed(String)             // user-facing error message
+
+    var isInFlight: Bool {
+        if case .uploading = self { return true }
+        return false
+    }
+}
+
 // MARK: - Activity upload
 
 /// Minimal Strava activity response payload. Strava returns far more

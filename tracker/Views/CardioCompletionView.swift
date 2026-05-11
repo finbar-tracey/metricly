@@ -69,9 +69,18 @@ struct CardioCompletionView: View {
     let useKm: Bool
     let onDone: () -> Void
 
+    @Environment(\.modelContext) private var modelContext
     @State private var appeared = false
     @State private var notes = ""
     @FocusState private var notesFocused: Bool
+
+    /// Auto-share preference from Settings. Read via @AppStorage so we
+    /// don't need a SwiftData fetch on the finish hot path.
+    @AppStorage("strava.autoShareCardio") private var autoShareCardio: Bool = true
+
+    /// Local upload state for THIS completion screen. Drives a small
+    /// status pill that fades in once an upload kicks off.
+    @State private var stravaUpload: StravaUploadState = .idle
 
     private var prs: [CardioPR] {
         cardioSessionPRs(session: session, allSessions: allSessions, useKm: useKm)
@@ -168,6 +177,16 @@ struct CardioCompletionView: View {
                     }
                     .opacity(appeared ? 1 : 0)
                     .animation(.easeOut(duration: 0.4).delay(0.4), value: appeared)
+
+                    // Strava status pill — only shown when an upload is in
+                    // flight or has completed. Idle state stays invisible
+                    // so users who don't have Strava connected see no
+                    // residue of the integration.
+                    if stravaUpload != .idle {
+                        stravaStatusPill
+                            .padding(.horizontal, 24)
+                            .transition(.opacity.combined(with: .move(edge: .top)))
+                    }
 
                     // PRs section
                     if !prs.isEmpty {
@@ -292,7 +311,10 @@ struct CardioCompletionView: View {
                 }
             }
         }
-        .onAppear { appeared = true }
+        .onAppear {
+            appeared = true
+            kickOffStravaUploadIfNeeded()
+        }
     }
 
     private func completionStat(label: String, value: String) -> some View {
@@ -327,6 +349,100 @@ struct CardioCompletionView: View {
         }
         .padding(.horizontal, 13).padding(.vertical, 9)
         .background(.ultraThinMaterial.opacity(0.55), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(.white.opacity(0.20), lineWidth: 0.5)
+        )
+    }
+
+    // MARK: - Strava
+
+    /// Kicks off the auto-share upload when:
+    /// 1. The user has enabled auto-share in Settings.
+    /// 2. They've connected their Strava account.
+    /// 3. This session hasn't already been pushed (no stravaActivityID).
+    ///
+    /// The Task is deliberately unowned by the view's lifecycle so the
+    /// upload completes even if the user dismisses the completion screen
+    /// before the API call returns. We write the resulting activity ID
+    /// straight to the persisted model so future visits to this session
+    /// see "Pushed to Strava" without re-asking the API.
+    private func kickOffStravaUploadIfNeeded() {
+        guard autoShareCardio,
+              StravaService.shared.isConnected,
+              session.stravaActivityID == nil
+        else { return }
+
+        withAnimation(.easeInOut(duration: 0.3)) {
+            stravaUpload = .uploading
+        }
+        Task {
+            do {
+                let activity = try await StravaService.shared.uploadActivity(session)
+                await MainActor.run {
+                    session.stravaActivityID = activity.id
+                    try? modelContext.save()
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        stravaUpload = .success
+                    }
+                }
+            } catch StravaError.duplicateActivity {
+                await MainActor.run {
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        stravaUpload = .duplicate
+                    }
+                }
+            } catch {
+                await MainActor.run {
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        stravaUpload = .failed(error.localizedDescription)
+                    }
+                }
+            }
+        }
+    }
+
+    /// Compact pill that lives between the stats strip and the PR list.
+    /// Glass-style background to match the celebration theme.
+    @ViewBuilder
+    private var stravaStatusPill: some View {
+        let (icon, title, useSpinner): (String, String, Bool) = {
+            switch stravaUpload {
+            case .uploading:
+                return ("arrow.up.circle", "Pushing to Strava…", true)
+            case .success:
+                return ("checkmark.circle.fill", "Pushed to Strava", false)
+            case .duplicate:
+                return ("checkmark.circle.fill", "Already on Strava", false)
+            case .failed:
+                return ("exclamationmark.triangle.fill",
+                        "Strava push failed — tap retry in Settings", false)
+            case .idle:
+                return ("", "", false)
+            }
+        }()
+
+        HStack(spacing: 10) {
+            if useSpinner {
+                ProgressView().tint(.white)
+            } else {
+                Image(systemName: icon)
+                    .font(.subheadline.bold())
+                    .foregroundStyle(.white)
+            }
+            Text(title)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.white)
+                .lineLimit(2)
+                .multilineTextAlignment(.leading)
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(
+            .ultraThinMaterial.opacity(0.55),
+            in: RoundedRectangle(cornerRadius: 12, style: .continuous)
+        )
         .overlay(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .stroke(.white.opacity(0.20), lineWidth: 0.5)

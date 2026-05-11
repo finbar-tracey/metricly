@@ -156,6 +156,12 @@ final class CardioSession {
     var routeData: Data?  = nil
     var splitsData: Data? = nil
 
+    /// Strava activity ID once this session has been pushed to Strava.
+    /// `nil` means "never pushed" (or pushed pre-1.7 before this field
+    /// existed). Adding an Optional is a safe SwiftData migration —
+    /// existing rows hydrate with nil.
+    var stravaActivityID: Int? = nil
+
     init(
         date: Date = .now,
         title: String = "",
