@@ -312,6 +312,7 @@ enum StravaError: LocalizedError {
     case couldNotStartAuth
     case noResponse
     case httpFailure(status: Int, body: String)
+    case duplicateActivity
 
     var errorDescription: String? {
         switch self {
@@ -329,6 +330,141 @@ enum StravaError: LocalizedError {
             return "No response from Strava — check your internet connection."
         case .httpFailure(let status, let body):
             return "Strava request failed (HTTP \(status)). \(body)"
+        case .duplicateActivity:
+            return "This activity is already on Strava."
         }
+    }
+}
+
+// MARK: - Activity upload
+
+/// Minimal Strava activity response payload. Strava returns far more
+/// fields than this; we only decode what the app uses (the ID, mostly,
+/// so we could later store it on the CardioSession for duplicate-push
+/// detection — a follow-up commit).
+struct StravaActivity: Decodable {
+    let id: Int
+    let name: String
+    let sport_type: String
+    let elapsed_time: Int
+    let distance: Double
+}
+
+extension StravaService {
+
+    /// Pushes a completed cardio session to Strava as a new activity.
+    /// Throws `.duplicateActivity` on HTTP 409 so the caller can mark
+    /// the session as "already shared" without surfacing a generic error.
+    ///
+    /// The Strava docs accept this endpoint with form-encoded params.
+    /// We don't upload a route file — that's a separate `/uploads`
+    /// endpoint and a much bigger feature (GPX/FIT generation).
+    /// Activity name, sport type, elapsed time, distance, and notes are
+    /// enough to make the activity visible on the user's Strava feed.
+    @discardableResult
+    func uploadActivity(_ session: CardioSession) async throws -> StravaActivity {
+        let token = try await accessToken()
+        let mapping = Self.stravaMapping(for: session)
+
+        // Strava requires a non-empty name. Sessions often have a title
+        // like "5k easy", but if blank we fall back to the sport label
+        // ("Run", "Walk", "Ride") so Strava doesn't reject the request.
+        let name: String = {
+            let trimmed = session.title.trimmingCharacters(in: .whitespaces)
+            return trimmed.isEmpty ? mapping.sportType : trimmed
+        }()
+
+        var body: [String: String] = [
+            "name":             name,
+            "sport_type":       mapping.sportType,
+            "start_date_local": Self.iso8601LocalString(from: session.date),
+            "elapsed_time":     String(Int(session.durationSeconds))
+        ]
+        if session.distanceMeters > 0.5 {
+            body["distance"] = String(format: "%.1f", session.distanceMeters)
+        }
+        let notes = session.notes.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !notes.isEmpty {
+            body["description"] = notes
+        }
+        if mapping.isTrainer {
+            body["trainer"] = "1"
+        }
+
+        do {
+            return try await authedPostForm(
+                url: "https://www.strava.com/api/v3/activities",
+                body: body,
+                token: token
+            )
+        } catch StravaError.httpFailure(let status, _) where status == 409 {
+            // 409 = duplicate. Strava returns this when an identical
+            // session was uploaded recently. Surface explicitly so the
+            // UI can show "Already on Strava" instead of a generic error.
+            throw StravaError.duplicateActivity
+        }
+    }
+
+    // MARK: - Mapping
+
+    private struct StravaMapping {
+        let sportType: String   // Strava sport_type value
+        let isTrainer: Bool     // true for indoor/trainer sessions
+    }
+
+    private static func stravaMapping(for session: CardioSession) -> StravaMapping {
+        let type = CardioType(rawValue: session.cardioType) ?? .outdoorRun
+        switch type {
+        case .outdoorRun:   return .init(sportType: "Run",  isTrainer: false)
+        case .indoorRun:    return .init(sportType: "Run",  isTrainer: true)
+        case .outdoorWalk:  return .init(sportType: "Walk", isTrainer: false)
+        case .indoorWalk:   return .init(sportType: "Walk", isTrainer: true)
+        case .outdoorCycle: return .init(sportType: "Ride", isTrainer: false)
+        }
+    }
+
+    // MARK: - Date
+
+    /// Strava's `start_date_local` accepts standard ISO 8601 with the
+    /// activity's local timezone offset. Default ISO 8601 formatter output
+    /// (e.g. "2026-05-11T13:45:00+0100") is what we want.
+    private static func iso8601LocalString(from date: Date) -> String {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime]
+        formatter.timeZone = TimeZone.current
+        return formatter.string(from: date)
+    }
+
+    // MARK: - Authorized POST
+
+    /// `postForm` with a Bearer Authorization header. Kept separate from
+    /// the unauthenticated `postForm` so the OAuth endpoints (which don't
+    /// take a Bearer token) don't accidentally pick up an Authorization
+    /// header that would confuse Strava's token grant flow.
+    private func authedPostForm<T: Decodable>(url: String,
+                                              body: [String: String],
+                                              token: String) async throws -> T {
+        guard let endpoint = URL(string: url) else { throw StravaError.invalidURL }
+        var request = URLRequest(url: endpoint)
+        request.httpMethod = "POST"
+        request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        let encoded = body
+            .map { key, value in
+                let v = value.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+                return "\(key)=\(v)"
+            }
+            .joined(separator: "&")
+        request.httpBody = encoded.data(using: .utf8)
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse else {
+            throw StravaError.noResponse
+        }
+        guard (200..<300).contains(http.statusCode) else {
+            let bodyText = String(data: data, encoding: .utf8) ?? "<no body>"
+            throw StravaError.httpFailure(status: http.statusCode, body: bodyText)
+        }
+        return try JSONDecoder().decode(T.self, from: data)
     }
 }
