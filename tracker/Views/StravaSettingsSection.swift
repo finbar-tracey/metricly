@@ -53,9 +53,20 @@ struct StravaSettingsSection: View {
                 Text("Strava")
             }
         } footer: {
-            Text(service.isConnected
-                 ? "Strength workouts stay on Metricly — only cardio sessions get pushed to Strava."
-                 : "Connect your Strava account to share completed cardio sessions automatically.")
+            if service.isConnected {
+                Text("Strength workouts stay on Metricly — only cardio sessions get pushed to Strava.")
+            } else {
+                // The two-step hint exists because Strava's mobile sign-in
+                // page doesn't honour the OAuth redirect_uri after a fresh
+                // login — it drops you on their home feed. Coming back to
+                // Connect a second time finds an existing session and goes
+                // straight to the Authorize step.
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Connect your Strava account to share completed cardio sessions automatically.")
+                    Text("First time? If Strava asks you to sign in, finish that step, then come back here and tap Connect again.")
+                        .foregroundStyle(.secondary)
+                }
+            }
         }
         .confirmationDialog(
             "Disconnect from Strava?",
