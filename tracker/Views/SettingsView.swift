@@ -1,7 +1,6 @@
 import SwiftUI
 import SwiftData
 import UniformTypeIdentifiers
-import UserNotifications
 import StoreKit
 
 struct SettingsView: View {
@@ -20,8 +19,6 @@ struct SettingsView: View {
     @State private var showImportResult = false
     @State private var showImportError = false
     @State private var importErrorMessage = ""
-    @State private var templateToDelete: Workout?
-    @State private var notificationStatus: UNAuthorizationStatus?
     // Cardio / PDF export
     @Query(sort: \CardioSession.date, order: .reverse) private var cardioSessions: [CardioSession]
     @State private var showingCardioExport = false
@@ -37,50 +34,33 @@ struct SettingsView: View {
     var body: some View {
         Form {
 
-            // MARK: - Profile Header
+            // MARK: - Profile (tap to edit)
             Section {
-                HStack(spacing: 16) {
-                    ZStack {
-                        Circle()
-                            .fill(
-                                LinearGradient(
-                                    colors: [Color.accentColor, Color.accentColor.opacity(0.65)],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
-                            .frame(width: 60, height: 60)
-                            .shadow(color: Color.accentColor.opacity(0.45), radius: 10, y: 5)
-                        Image(systemName: "person.fill")
-                            .font(.system(size: 26, weight: .bold))
-                            .foregroundStyle(.white)
+                NavigationLink(value: SettingsRoute.profile) {
+                    HStack(spacing: 14) {
+                        ZStack {
+                            Circle()
+                                .fill(Color.accentColor.opacity(0.18))
+                                .frame(width: 48, height: 48)
+                            Image(systemName: "person.fill")
+                                .font(.system(size: 20, weight: .semibold))
+                                .foregroundStyle(Color.accentColor)
+                        }
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(settings.userName.isEmpty ? "Your Name" : settings.userName)
+                                .font(.system(size: 17, weight: .semibold, design: .rounded))
+                                .foregroundStyle(settings.userName.isEmpty ? .secondary : .primary)
+                            Text(profileSubtitle)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
                     }
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(settings.userName.isEmpty ? "Your Name" : settings.userName)
-                            .font(.system(size: 20, weight: .bold, design: .rounded))
-                            .foregroundStyle(settings.userName.isEmpty ? .secondary : .primary)
-                        Text(settings.useKilograms ? "Kilograms · " : "Pounds · ")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        + Text(settings.biologicalSex == "male" ? "Male" : settings.biologicalSex == "female" ? "Female" : "Sex not set")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                    Spacer()
+                    .padding(.vertical, 4)
                 }
-                .padding(.vertical, 6)
             }
 
-            // MARK: ── WORKOUT ─────────────────────────────
-
+            // MARK: - Preferences (workout behaviour)
             Section {
-                HStack(spacing: 12) {
-                    settingsIcon("scalemass", color: .blue)
-                    Toggle("Use Kilograms", isOn: Binding(
-                        get: { settings.useKilograms },
-                        set: { settings.useKilograms = $0 }
-                    ))
-                }
                 HStack(spacing: 12) {
                     settingsIcon("timer", color: .orange)
                     Stepper(
@@ -107,13 +87,6 @@ struct SettingsView: View {
                         set: { settings.focusModeReminder = $0 }
                     ))
                 }
-            } header: {
-                Text("Workout")
-            } footer: {
-                Text("When Focus reminder is on, you'll be prompted to enable your Fitness Focus when starting a workout.")
-            }
-
-            Section {
                 HStack(spacing: 12) {
                     settingsIcon("target", color: .red)
                     Stepper(
@@ -126,110 +99,40 @@ struct SettingsView: View {
                     )
                 }
             } header: {
-                Text("Goals")
+                Text("Workout")
             } footer: {
-                Text("Set a weekly workout target. A progress ring will appear on the home screen. Set to Off to hide it.")
+                Text("Focus reminder prompts you to enable a Fitness Focus when starting a workout.")
             }
 
+            // MARK: - Reminders + Templates (deep links — keep parent shell shallow)
             Section {
-                let dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
-                ForEach(1...7, id: \.self) { day in
-                    Toggle(dayNames[day - 1], isOn: Binding(
-                        get: { settings.reminderDays.contains(day) },
-                        set: { enabled in
-                            if enabled {
-                                if !settings.reminderDays.contains(day) { settings.reminderDays.append(day) }
-                            } else {
-                                settings.reminderDays.removeAll { $0 == day }
-                            }
-                            updateReminders()
-                        }
-                    ))
-                }
-                DatePicker("Reminder Time", selection: Binding(
-                    get: {
-                        Calendar.current.date(from: DateComponents(
-                            hour: settings.reminderHour, minute: settings.reminderMinute
-                        )) ?? .now
-                    },
-                    set: { date in
-                        let components = Calendar.current.dateComponents([.hour, .minute], from: date)
-                        settings.reminderHour = components.hour ?? 9
-                        settings.reminderMinute = components.minute ?? 0
-                        updateReminders()
-                    }
-                ), displayedComponents: .hourAndMinute)
-                if notificationStatus == .denied {
-                    HStack(spacing: 10) {
-                        Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.yellow)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Notifications Disabled").font(.subheadline.weight(.semibold))
-                            Text("Enable in Settings to receive reminders.").font(.caption).foregroundStyle(.secondary)
-                        }
+                NavigationLink(value: SettingsRoute.reminders) {
+                    HStack(spacing: 12) {
+                        settingsIcon("bell.fill", color: .red)
+                        Text("Reminders")
                         Spacer()
-                        Button("Open Settings") {
-                            if let url = URL(string: UIApplication.openSettingsURLString) {
-                                UIApplication.shared.open(url)
-                            }
-                        }
-                        .font(.caption.bold())
+                        Text(remindersSummary)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
                     }
-                    .padding(.vertical, 4)
                 }
-            } header: {
-                Text("Reminders")
-            } footer: {
-                Text("Get notified on your training days.")
+                NavigationLink(value: SettingsRoute.templates) {
+                    HStack(spacing: 12) {
+                        settingsIcon("doc.on.doc.fill", color: .purple)
+                        Text("Templates")
+                        Spacer()
+                        Text(templatesSummary)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
             }
 
-            Section {
-                NavigationLink(value: "templateMarketplace") {
-                    HStack(spacing: 12) {
-                        settingsIcon("square.grid.2x2", color: .purple)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Browse Program Templates").font(.subheadline.weight(.semibold))
-                            Text("PPL, 5/3/1, Starting Strength & more").font(.caption).foregroundStyle(.secondary)
-                        }
-                    }
-                }
-                if templates.isEmpty {
-                    HStack(spacing: 12) {
-                        settingsIcon("doc.on.doc", color: .secondary)
-                        Text("No templates saved yet.").foregroundStyle(.secondary)
-                    }
-                } else {
-                    ForEach(templates) { template in
-                        NavigationLink(value: template) {
-                            HStack(spacing: 12) {
-                                ZStack {
-                                    RoundedRectangle(cornerRadius: 8)
-                                        .fill(Color.accentColor.opacity(0.12))
-                                        .frame(width: 36, height: 36)
-                                    Image(systemName: "doc.text")
-                                        .font(.system(size: 14, weight: .semibold))
-                                        .foregroundStyle(Color.accentColor)
-                                }
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(template.name).font(.subheadline.weight(.semibold))
-                                    Text("\(template.exercises.count) exercises").font(.caption).foregroundStyle(.secondary)
-                                }
-                            }
-                        }
-                    }
-                    .onDelete { offsets in
-                        if let index = offsets.first { templateToDelete = templates[index] }
-                    }
-                }
-            } header: {
-                Text("Templates")
-            }
-
-            // MARK: ── NUTRITION ────────────────────────────
-
+            // MARK: - Nutrition (caffeine + water + creatine combined)
             Section {
                 HStack(spacing: 12) {
                     settingsIcon("cup.and.saucer.fill", color: .brown)
-                    Picker("Sensitivity", selection: Binding(
+                    Picker("Caffeine sensitivity", selection: Binding(
                         get: { settings.caffeineSensitivityEnum },
                         set: { settings.caffeineSensitivityEnum = $0 }
                     )) {
@@ -241,7 +144,7 @@ struct SettingsView: View {
                 HStack(spacing: 12) {
                     settingsIcon("gauge.open.with.lines.needle.33percent.and.arrowtriangle", color: .orange)
                     Stepper(
-                        "Daily Limit: \(settings.dailyCaffeineLimit) mg",
+                        "Daily caffeine: \(settings.dailyCaffeineLimit) mg",
                         value: Binding(
                             get: { settings.dailyCaffeineLimit },
                             set: { settings.dailyCaffeineLimit = $0 }
@@ -249,17 +152,10 @@ struct SettingsView: View {
                         in: 100...800, step: 50
                     )
                 }
-            } header: {
-                Text("Caffeine")
-            } footer: {
-                Text("The FDA recommends ≤400 mg/day for most adults.")
-            }
-
-            Section {
                 HStack(spacing: 12) {
                     settingsIcon("drop.fill", color: .cyan)
                     Stepper(
-                        "Daily Goal: \(settings.dailyWaterGoalMl) ml",
+                        "Daily water: \(settings.dailyWaterGoalMl) ml",
                         value: Binding(
                             get: { settings.dailyWaterGoalMl },
                             set: { settings.dailyWaterGoalMl = $0 }
@@ -280,57 +176,18 @@ struct SettingsView: View {
                 }
                 HStack(spacing: 12) {
                     settingsIcon("bolt.fill", color: .yellow)
-                    Toggle("Creatine Loading Phase", isOn: Binding(
+                    Toggle("Creatine loading phase", isOn: Binding(
                         get: { settings.creatineLoadingPhase },
                         set: { settings.creatineLoadingPhase = $0 }
                     ))
                 }
             } header: {
-                Text("Water & Creatine")
+                Text("Nutrition")
             } footer: {
                 Text("Loading phase uses 20g/day for 5–7 days, then switches to maintenance dose.")
             }
 
-            // MARK: ── PROFILE & APPEARANCE ────────────────
-
-            Section {
-                HStack(spacing: 12) {
-                    settingsIcon("person.text.rectangle", color: .cyan)
-                    TextField("Your Name", text: Binding(
-                        get: { settings.userName },
-                        set: { settings.userName = $0 }
-                    ))
-                }
-                HStack(spacing: 12) {
-                    settingsIcon("person.fill", color: .cyan)
-                    Picker("Sex", selection: Binding(
-                        get: { settings.biologicalSex },
-                        set: { settings.biologicalSex = $0 }
-                    )) {
-                        Text("Not Set").tag("")
-                        Text("Male").tag("male")
-                        Text("Female").tag("female")
-                    }
-                }
-                HStack(spacing: 12) {
-                    settingsIcon("ruler", color: .mint)
-                    let isMetric = settings.useKilograms
-                    Stepper(
-                        "Height: \(formatHeight(settings.heightCm, metric: isMetric))",
-                        value: Binding(
-                            get: { settings.heightCm },
-                            set: { settings.heightCm = $0 }
-                        ),
-                        in: 100...250,
-                        step: isMetric ? 1 : 2.54
-                    )
-                }
-            } header: {
-                Text("Profile")
-            } footer: {
-                Text("Height and sex are used for body fat % estimation.")
-            }
-
+            // MARK: - Appearance
             Section {
                 VStack(alignment: .leading, spacing: 12) {
                     Label("Accent Color", systemImage: "paintpalette")
@@ -443,6 +300,9 @@ struct SettingsView: View {
                 Text("Your workout data syncs automatically across devices signed in to the same iCloud account.")
             }
 
+            // MARK: - Strava
+            StravaSettingsSection()
+
             Section {
                 Button {
                     sendFeedbackEmail()
@@ -494,15 +354,14 @@ struct SettingsView: View {
                 Text("We read every piece of feedback. Thank you for helping improve Metricly!")
             }
         }
-        .task {
-            notificationStatus = await ReminderManager.checkAuthorizationStatus()
-        }
-        .onChange(of: scenePhase) { _, phase in
-            if phase == .active {
-                Task { notificationStatus = await ReminderManager.checkAuthorizationStatus() }
+        .navigationTitle("Settings")
+        .navigationDestination(for: SettingsRoute.self) { route in
+            switch route {
+            case .profile:   ProfileSettingsView()
+            case .reminders: RemindersSettingsView()
+            case .templates: TemplatesSettingsView()
             }
         }
-        .navigationTitle("Settings")
         .navigationDestination(for: Workout.self) { template in
             TemplateEditView(template: template)
         }
@@ -562,22 +421,28 @@ struct SettingsView: View {
         } message: {
             Text(importErrorMessage)
         }
-        .alert("Delete Template?", isPresented: Binding(
-            get: { templateToDelete != nil },
-            set: { if !$0 { templateToDelete = nil } }
-        )) {
-            Button("Delete", role: .destructive) {
-                if let template = templateToDelete {
-                    modelContext.delete(template)
-                    templateToDelete = nil
-                }
-            }
-            Button("Cancel", role: .cancel) { templateToDelete = nil }
-        } message: {
-            if let template = templateToDelete {
-                Text("Are you sure you want to delete \"\(template.name)\"?")
-            }
-        }
+    }
+
+    // MARK: - Route + summary helpers
+
+    /// One-line summaries for the three NavigationLink rows in the parent
+    /// Settings shell.
+    private var profileSubtitle: String {
+        var parts: [String] = []
+        parts.append(settings.useKilograms ? "Kilograms" : "Pounds")
+        if settings.biologicalSex == "male"   { parts.append("Male") }
+        if settings.biologicalSex == "female" { parts.append("Female") }
+        return parts.joined(separator: " · ")
+    }
+
+    private var remindersSummary: String {
+        if settings.reminderDays.isEmpty { return "Off" }
+        let count = settings.reminderDays.count
+        return "\(count) day\(count == 1 ? "" : "s")"
+    }
+
+    private var templatesSummary: String {
+        templates.isEmpty ? "None saved" : "\(templates.count) saved"
     }
 
     private func settingsIcon(_ name: String, color: Color) -> some View {
@@ -598,17 +463,6 @@ struct SettingsView: View {
         }
     }
 
-    private func formatHeight(_ cm: Double, metric: Bool) -> String {
-        if cm <= 0 { return "Not Set" }
-        if metric {
-            return "\(Int(cm)) cm"
-        } else {
-            let totalInches = cm / 2.54
-            let feet = Int(totalInches) / 12
-            let inches = Int(totalInches) % 12
-            return "\(feet)'\(inches)\""
-        }
-    }
 
     private func exportCSV() {
         let csv = ExportHelper.generateCSV(workouts: workouts)
@@ -665,6 +519,13 @@ struct SettingsView: View {
             )
         }
     }
+}
 
-
+/// Routes for the parent Settings screen's NavigationLinks. Each maps to a
+/// dedicated sub-view (Profile / Reminders / Templates) so the parent shell
+/// stays scannable.
+enum SettingsRoute: Hashable {
+    case profile
+    case reminders
+    case templates
 }
