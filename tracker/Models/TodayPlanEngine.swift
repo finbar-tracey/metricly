@@ -95,7 +95,7 @@ enum TodayPlanEngine {
         let score = recovery.readinessScore
 
         // Confidence is determined by how many real-time health signals we have.
-        let confidence = computeConfidence(health)
+        let confidence = computeConfidence(health, workoutCount: recentWorkouts.count)
 
         // Already trained — short-circuit, no adjustments needed.
         if alreadyTrainedToday {
@@ -292,15 +292,38 @@ enum TodayPlanEngine {
         return daysByGroup.first { $0.value.count >= 3 }?.key
     }
 
-    private static func computeConfidence(_ health: HealthSignals) -> TodayPlan.Confidence {
-        var count = 0
-        if health.todayHRV != nil { count += 1 }
-        if health.todayRestingHR != nil { count += 1 }
-        if let s = health.sleepMinutes, s > 0 { count += 1 }
-        switch count {
-        case 0:  return .low
-        case 1:  return .medium
-        default: return .high
-        }
+    /// Confidence has two axes:
+    /// - **Health signals** (HRV, resting HR, sleep) — drive the recovery
+    ///   model that the recommendation rides on.
+    /// - **Workout history depth** — drives whether the engine has seen
+    ///   enough of the user's training to make personalised calls.
+    ///
+    /// A user with perfect HealthKit data but zero logged workouts should
+    /// NOT get "high confidence" strength recommendations — the engine
+    /// has no idea what their normal looks like yet.
+    ///
+    /// Mapping (3 final buckets so the UI doesn't need new cases):
+    /// - `.low`    — no health AND no workouts
+    /// - `.high`   — 2+ health signals AND 7+ recent workouts
+    /// - `.medium` — everything in between
+    private static func computeConfidence(
+        _ health: HealthSignals,
+        workoutCount: Int
+    ) -> TodayPlan.Confidence {
+        var healthCount = 0
+        if health.todayHRV != nil { healthCount += 1 }
+        if health.todayRestingHR != nil { healthCount += 1 }
+        if let s = health.sleepMinutes, s > 0 { healthCount += 1 }
+
+        // Nothing on either axis → low.
+        if healthCount == 0 && workoutCount == 0 { return .low }
+
+        // Both axes well-populated → high.
+        // 7 workouts = roughly one week's worth of training, enough for
+        // the recovery engine to see real per-muscle decay patterns.
+        if healthCount >= 2 && workoutCount >= 7 { return .high }
+
+        return .medium
     }
+
 }

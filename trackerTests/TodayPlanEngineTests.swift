@@ -124,6 +124,11 @@ final class TodayPlanEngineTests: XCTestCase {
     }
 
     func testConfidenceHighWithMultipleSignals() {
+        // .high now requires BOTH 2+ health signals AND 7+ recent workouts
+        // — a user with perfect HRV/sleep but no logged training should not
+        // get high-confidence recommendations, the engine has no idea what
+        // their normal looks like yet.
+        let workouts = (1...8).map { makeWorkout(daysAgo: $0, chestExerciseCount: 1) }
         let plan = TodayPlanEngine.generate(
             scheduledName: nil,
             recovery: makeRecovery(score: 0.75),
@@ -134,9 +139,45 @@ final class TodayPlanEngineTests: XCTestCase {
                 averageRestingHR: 60,
                 sleepMinutes: 480
             ),
+            recentWorkouts: workouts,
             alreadyTrainedToday: false
         )
         XCTAssertEqual(plan.confidence, .high)
+    }
+
+    func testConfidenceCappedAtMediumWhenHealthHighButNoWorkouts() {
+        // Perfect HealthKit data, zero logged workouts → .medium, not .high.
+        // Recovery engine can recommend rest/light based on health alone,
+        // but it can't claim high confidence in a strength recommendation
+        // when it's never seen the user lift.
+        let plan = TodayPlanEngine.generate(
+            scheduledName: nil,
+            recovery: makeRecovery(score: 0.75),
+            health: HealthSignals(
+                todayHRV: 55,
+                averageHRV: 55,
+                todayRestingHR: 60,
+                averageRestingHR: 60,
+                sleepMinutes: 480
+            ),
+            recentWorkouts: [],
+            alreadyTrainedToday: false
+        )
+        XCTAssertEqual(plan.confidence, .medium)
+    }
+
+    func testConfidenceCappedAtMediumWhenWorkoutsHighButNoHealth() {
+        // Symmetric: lots of workout history, no health signals → .medium.
+        // Engine can pattern-match training trends but can't see recovery.
+        let workouts = (1...10).map { makeWorkout(daysAgo: $0, chestExerciseCount: 1) }
+        let plan = TodayPlanEngine.generate(
+            scheduledName: nil,
+            recovery: makeRecovery(score: 0.75),
+            health: HealthSignals(),
+            recentWorkouts: workouts,
+            alreadyTrainedToday: false
+        )
+        XCTAssertEqual(plan.confidence, .medium)
     }
 
     // MARK: - Recommended name fallback
