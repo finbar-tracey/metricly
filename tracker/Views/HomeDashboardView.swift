@@ -833,7 +833,18 @@ struct HomeDashboardView: View {
     }
 
     private var todayPlanMiniCard: some View {
-        let planned = settings.weeklyPlan[todayWeekday]
+        // Prefer the adaptive recommendation here so the mini card stays
+        // in sync with the full Adaptive Plan section and the Start
+        // flow. The engine may swap a stale schedule (e.g. Legs on a
+        // day the user already smashed legs twice) for something
+        // smarter, and the mini card should reflect that.
+        let adaptive: String? = {
+            guard todayPlan.intensity != .rest,
+                  !todayPlan.recommendedName.isEmpty,
+                  todayPlan.recommendedName != "—" else { return nil }
+            return todayPlan.recommendedName
+        }()
+        let planned = adaptive ?? settings.weeklyPlan[todayWeekday]
         let doneCount = todaysWorkouts.filter(\.isFinished).count
         let totalCount = max(1, todaysWorkouts.count)
         let progress = Double(doneCount) / Double(totalCount)
@@ -1651,8 +1662,19 @@ struct HomeDashboardView: View {
     /// - Otherwise creates an empty workout named after today's plan, or a
     ///   default date-stamped name when nothing is scheduled.
     private func quickStartWorkout() {
+        // Prefer the adaptive recommendation. Falls back to the static
+        // weekly schedule when no plan has been computed yet (cold cache)
+        // or the engine returned "Rest day" — in which case the user
+        // long-pressed past the rest suggestion and we honour their
+        // schedule rather than naming the workout "Rest day".
+        let adaptive: String? = {
+            guard todayPlan.intensity != .rest,
+                  !todayPlan.recommendedName.isEmpty,
+                  todayPlan.recommendedName != "—" else { return nil }
+            return todayPlan.recommendedName
+        }()
         let weekday = Calendar.current.component(.weekday, from: .now)
-        let planName = settings.weeklyPlan[weekday] ?? ""
+        let planName = adaptive ?? settings.weeklyPlan[weekday] ?? ""
         let name = planName.isEmpty
             ? "Workout - \(Date.now.formatted(.dateTime.month(.abbreviated).day()))"
             : planName

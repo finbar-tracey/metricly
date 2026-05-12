@@ -14,11 +14,38 @@ struct AddWorkoutSheet: View {
     /// Backdate is rare — keep the date picker behind a disclosure.
     @State private var showDateOverride = false
 
-    /// Today's planned workout name, from `UserSettings.weeklyPlan`. Empty when
-    /// nothing is scheduled.
+    /// Today's planned workout name. Prefers the adaptive recommendation
+    /// from `TodayPlanEngine` (cached in `TodayPlanStore`) — which can
+    /// substitute the static schedule with something the engine thinks
+    /// fits today's recovery better — and falls back to the static
+    /// `UserSettings.weeklyPlan` entry when no plan is cached. Rest-day
+    /// recommendations fall back to the scheduled name so the user can
+    /// still override-and-train if they want to.
     private var todayPlanName: String {
+        if let plan = TodayPlanStore.load() {
+            if plan.intensity != .rest, !plan.recommendedName.isEmpty, plan.recommendedName != "—" {
+                return plan.recommendedName
+            }
+            if let scheduled = plan.scheduledName, !scheduled.isEmpty {
+                return scheduled
+            }
+        }
         let weekday = Calendar.current.component(.weekday, from: .now)
         return settingsArray.first?.weeklyPlan[weekday] ?? ""
+    }
+
+    /// Short "why" line for today's recommendation — surfaced under the
+    /// banner so the user sees what's driving the adaptive choice.
+    /// Returns `nil` when no plan is available or there's nothing useful
+    /// to say.
+    private var todayPlanHint: String? {
+        guard let plan = TodayPlanStore.load() else { return nil }
+        switch plan.intensity {
+        case .rest:     return "Recovery is low — rest is recommended"
+        case .light:    return "Go light today — partial recovery"
+        case .hard:     return "Well-recovered — good day to push"
+        case .moderate: return plan.reasons.first
+        }
     }
 
     /// Template that matches today's plan name (case-insensitive).
@@ -95,9 +122,14 @@ struct AddWorkoutSheet: View {
                         .foregroundStyle(.tertiary)
                         .textCase(.uppercase)
                     Text(planTemplate != nil
-                         ? "\(todayPlanName) · template ready"
+                         ? "\(todayPlanName) - template ready"
                          : todayPlanName)
                         .font(.subheadline.weight(.semibold))
+                    if let hint = todayPlanHint {
+                        Text(hint)
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
                 }
                 Spacer()
                 Text("Use")
