@@ -53,13 +53,7 @@ struct WorkoutDetailView: View {
                 Section {
                     workoutHeroCard
                         .listRowBackground(Color.clear)
-                        .listRowInsets(.init(top: 8, leading: 16, bottom: 0, trailing: 16))
-
-                    if !workout.isFinished {
-                        finishButton
-                            .listRowBackground(Color.clear)
-                            .listRowInsets(.init(top: 8, leading: 16, bottom: 8, trailing: 16))
-                    }
+                        .listRowInsets(.init(top: 8, leading: 16, bottom: 8, trailing: 16))
                 }
 
                 // MARK: - Today's Plan adjustments
@@ -257,6 +251,20 @@ struct WorkoutDetailView: View {
         }
         .toolbar {
             ToolbarItemGroup(placement: .topBarTrailing) {
+                // Finish — only while a non-template workout is in progress.
+                // Was a giant gradient button under the hero; toolbar position
+                // keeps it always reachable without burning vertical space.
+                if !workout.isTemplate && !workout.isFinished {
+                    Button {
+                        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                        showingFinishSheet = true
+                    } label: {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundStyle(.green)
+                    }
+                    .accessibilityLabel("Finish workout")
+                }
+
                 Button {
                     showWorkoutTimer = true
                 } label: {
@@ -361,23 +369,27 @@ struct WorkoutDetailView: View {
         }
         .alert("Enable Focus Mode?", isPresented: $showFocusPrompt) {
             Button("Open Settings") {
-                if let url = URL(string: "App-prefs:FOCUS") {
+                if let url = URL(string: UIApplication.openSettingsURLString) {
                     UIApplication.shared.open(url)
                 }
             }
             Button("Not Now", role: .cancel) {}
         } message: {
-            Text("Enable your Fitness Focus to silence notifications during your workout.")
+            // Settings → Focus → Fitness can't be deep-linked from a
+            // third-party app — Apple deprecated the `App-prefs:` scheme
+            // (also a private API that risks App Review). Opening our own
+            // settings page is the closest public entry point.
+            Text("Enable your Fitness Focus to silence notifications during your workout. Open Settings, then tap Focus.")
         }
         .alert("Workout Complete!", isPresented: $showFocusEndReminder) {
             Button("Open Settings") {
-                if let url = URL(string: "App-prefs:FOCUS") {
+                if let url = URL(string: UIApplication.openSettingsURLString) {
                     UIApplication.shared.open(url)
                 }
             }
             Button("OK", role: .cancel) {}
         } message: {
-            Text("Don't forget to turn off your Fitness Focus mode now that your workout is done.")
+            Text("Don't forget to turn off your Fitness Focus mode. Open Settings, then tap Focus.")
         }
         .sheet(item: $linkingSupersetFor) { sourceExercise in
             supersetPickerSheet(for: sourceExercise)
@@ -410,6 +422,10 @@ struct WorkoutDetailView: View {
 
     // MARK: - Hero Card
 
+    /// Slimmed workout hero. Was 215pt of stacked gradients, sheens, blurred
+    /// circles, and a 14pt-padded ultra-thin material panel inside another
+    /// gradient. Now ~140pt with a single clean gradient + the stats strip
+    /// + progress bar — the workout list dominates the screen.
     private var workoutHeroCard: some View {
         ZStack(alignment: .topLeading) {
             LinearGradient(
@@ -419,69 +435,71 @@ struct WorkoutDetailView: View {
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
-            // Top sheen for depth
-            LinearGradient(
-                colors: [.white.opacity(0.18), .clear],
-                startPoint: .top, endPoint: .center
-            )
-            .blendMode(.plusLighter)
-            Circle().fill(.white.opacity(0.10)).frame(width: 200).blur(radius: 12).offset(x: 160, y: -50)
-            Circle().fill(.white.opacity(0.06)).frame(width: 110).blur(radius: 10).offset(x: -30, y: 80)
 
-            VStack(alignment: .leading, spacing: 14) {
-                HStack {
+            VStack(alignment: .leading, spacing: 10) {
+                // Top row: status + relative date + rating (if finished)
+                HStack(spacing: 8) {
                     Label(
                         workout.isFinished ? "Completed" : "In Progress",
                         systemImage: workout.isFinished ? "checkmark.circle.fill" : "timer"
                     )
                     .font(.caption.weight(.bold))
                     .foregroundStyle(.white)
-                    .padding(.horizontal, 11).padding(.vertical, 5)
-                    .background(.ultraThinMaterial.opacity(0.65), in: Capsule())
-                    .overlay(Capsule().stroke(.white.opacity(0.22), lineWidth: 0.5))
+                    .padding(.horizontal, 9).padding(.vertical, 3)
+                    .background(.white.opacity(0.18), in: Capsule())
+
+                    Text(workout.date, format: .dateTime.month(.abbreviated).day())
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(.white.opacity(0.80))
 
                     Spacer()
 
                     if workout.isFinished, let rating = workout.rating, rating > 0 {
-                        HStack(spacing: 3) {
+                        HStack(spacing: 2) {
                             ForEach(1...5, id: \.self) { i in
                                 Image(systemName: i <= rating ? "star.fill" : "star")
-                                    .font(.system(size: 12))
-                                    .foregroundStyle(i <= rating ? .yellow : .white.opacity(0.35))
+                                    .font(.system(size: 10))
+                                    .foregroundStyle(i <= rating ? .yellow : .white.opacity(0.30))
                             }
                         }
                     }
                 }
 
-                Text(workout.date, format: .dateTime.weekday(.wide).month(.abbreviated).day().hour().minute())
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(.white.opacity(0.85))
-
+                // Stats strip — same 4 stats, smaller, no panel-within-panel
                 HStack(spacing: 0) {
-                    HeroStatCol(value: "\(workout.exercises.count)",
-                                label: "Exercises",
+                    HeroStatCol(value: progressFraction,
+                                label: "Done",
                                 icon: "figure.strengthtraining.functional")
-                    Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 36)
-                    HeroStatCol(value: "\(workout.exercises.flatMap(\.sets).filter { !$0.isWarmUp }.count)",
+                    Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 28)
+                    HeroStatCol(value: "\(totalWorkingSets)",
                                 label: "Sets",
                                 icon: "repeat")
-                    Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 36)
+                    Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 28)
                     HeroStatCol(value: workout.isFinished ? (workout.formattedDuration ?? "–") : elapsedTime,
                                 label: "Duration",
                                 icon: "clock")
+                    Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 28)
+                    HeroStatCol(value: weightUnit.formatShort(workout.totalVolumeKg()),
+                                label: "Volume",
+                                icon: "scalemass")
                 }
-                .padding(.vertical, 12)
-                .background(.ultraThinMaterial.opacity(0.55), in: RoundedRectangle(cornerRadius: 14))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 14)
-                        .stroke(.white.opacity(0.18), lineWidth: 0.5)
-                )
+
+                // Progress bar — fills as exercises log their first working set
+                GeometryReader { geo in
+                    ZStack(alignment: .leading) {
+                        Capsule().fill(.white.opacity(0.20))
+                        Capsule()
+                            .fill(.white.opacity(0.90))
+                            .frame(width: max(2, geo.size.width * progressRatio))
+                    }
+                }
+                .frame(height: 3)
+                .accessibilityLabel("Progress: \(progressFraction)")
             }
-            .padding(20)
+            .padding(14)
         }
-        .frame(minHeight: 195)
+        .frame(minHeight: 140)
         .clipShape(RoundedRectangle(cornerRadius: AppTheme.heroRadius))
-        .shadow(color: .black.opacity(0.18), radius: 20, x: 0, y: 8)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(workout.isFinished
             ? "Workout completed, duration \(workout.formattedDuration ?? "")"
@@ -593,8 +611,87 @@ struct WorkoutDetailView: View {
                 }
             }
             Spacer()
+
+            // Per-exercise comparison vs last session — shown when we have
+            // logged sets to compare and a meaningful delta.
+            if let badge = progressBadgeText(for: exercise) {
+                Text(badge.text)
+                    .font(.caption2.weight(.bold))
+                    .foregroundStyle(badge.color)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 3)
+                    .background(badge.color.opacity(0.14), in: .capsule)
+            }
         }
         .padding(.vertical, 4)
+    }
+
+    // MARK: - Workout-level progress
+
+    /// Number of exercises that have at least one working (non-warm-up) set.
+    private var completedExercises: Int {
+        workout.exercises.reduce(0) { total, ex in
+            total + (ex.sets.contains { !$0.isWarmUp && $0.weight > 0 } ? 1 : 0)
+        }
+    }
+
+    private var totalWorkingSets: Int {
+        workout.exercises.flatMap(\.sets).filter { !$0.isWarmUp }.count
+    }
+
+    /// Display string for the hero's "Done" stat: "2/7" when there are
+    /// exercises, "0/0" when the workout is empty.
+    private var progressFraction: String {
+        "\(completedExercises)/\(workout.exercises.count)"
+    }
+
+    /// 0...1 fraction for the under-stats progress bar.
+    private var progressRatio: Double {
+        guard !workout.exercises.isEmpty else { return 0 }
+        return Double(completedExercises) / Double(workout.exercises.count)
+    }
+
+    /// Top working-set weight from the user's most recent prior session
+    /// of the same exercise — used for the per-row comparison delta.
+    private func lastSessionTopSet(for exercise: Exercise) -> ExerciseSet? {
+        let prior = allExercises
+            .filter { other in
+                other.persistentModelID != exercise.persistentModelID
+                && other.name.lowercased() == exercise.name.lowercased()
+                && !other.sets.isEmpty
+                && (other.workout?.endTime != nil)
+            }
+            .sorted { ($0.workout?.date ?? .distantPast) > ($1.workout?.date ?? .distantPast) }
+        guard let last = prior.first else { return nil }
+        let working = last.sets.filter { !$0.isWarmUp && $0.weight > 0 }
+        return working.max(by: { $0.weight < $1.weight })
+    }
+
+    /// Human-readable comparison vs last session for the row badge.
+    /// Returns nil if no comparison is available, the current set is empty,
+    /// or the change is negligible.
+    private func progressBadgeText(for exercise: Exercise) -> (text: String, color: Color)? {
+        let working = exercise.sets.filter { !$0.isWarmUp && $0.weight > 0 }
+        guard let currentTop = working.max(by: { $0.weight < $1.weight }) else { return nil }
+        guard let lastTop = lastSessionTopSet(for: exercise) else {
+            return ("New", .blue)
+        }
+
+        // Weight first — biggest signal
+        let weightDelta = currentTop.weight - lastTop.weight
+        if weightDelta >= 0.1 {
+            return ("↑ \(weightUnit.formatShort(weightDelta))", .green)
+        }
+        if weightDelta <= -0.1 {
+            return ("↓ \(weightUnit.formatShort(abs(weightDelta)))", .orange)
+        }
+        // Same weight — compare reps at that weight
+        let currentRepsAtTop = working.filter { abs($0.weight - currentTop.weight) < 0.01 }.map(\.reps).max() ?? 0
+        let lastRepsAtTop    = lastTop.reps
+        if currentRepsAtTop > lastRepsAtTop {
+            return ("↑ +\(currentRepsAtTop - lastRepsAtTop) rep\(currentRepsAtTop - lastRepsAtTop == 1 ? "" : "s")", .green)
+        }
+        return nil
     }
 
     // MARK: - Gym Dock helpers
