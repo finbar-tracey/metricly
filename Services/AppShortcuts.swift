@@ -132,28 +132,56 @@ struct GetTodayWorkoutIntent: AppIntent {
         let container = try MetriclySchema.makeSharedContainer()
         let context = container.mainContext
 
-        // Check weekly plan in UserSettings
-        let settingsDesc = FetchDescriptor<UserSettings>()
-        let settingsArr = try context.fetch(settingsDesc)
-        if let settings = settingsArr.first {
-            let weekday = Calendar.current.component(.weekday, from: Date())
-            if let name = settings.weeklyPlan[weekday], !name.isEmpty {
-                return .result(dialog: "Today's workout is \(name). Time to get after it!")
-            }
-        }
+        let settings = try context.fetch(FetchDescriptor<UserSettings>()).first
+        let weekday = Calendar.current.component(.weekday, from: .now)
+        let scheduledName = settings?.weeklyPlan[weekday] ?? ""
 
-        // Check if already logged today
+        let workouts = (try? context.fetch(FetchDescriptor<Workout>())) ?? []
+        let cardio = (try? context.fetch(FetchDescriptor<CardioSession>())) ?? []
+
+        // Short-circuit: already trained today.
         let startOfDay = Calendar.current.startOfDay(for: .now)
-        let workoutDesc = FetchDescriptor<Workout>(
-            predicate: #Predicate { !$0.isTemplate && $0.date >= startOfDay },
-            sortBy: [SortDescriptor(\.date, order: .reverse)]
-        )
-        let todayWorkouts = try context.fetch(workoutDesc)
-        if let w = todayWorkouts.first {
-            return .result(dialog: "You've already trained today — \(w.name). Great work!")
+        if let w = workouts.first(where: { !$0.isTemplate && $0.date >= startOfDay }) {
+            return .result(dialog: "You've already trained today — \(w.name). Great work.")
         }
 
-        return .result(dialog: "No workout scheduled for today in Metricly. Rest day or freestyle?")
+        // Build the adaptive plan via the same engines the home dashboard
+        // uses. Siri intents can't reach HealthKit during execution, so we
+        // pass empty HealthSignals — the engine's confidence model now
+        // takes that into account and won't claim high-confidence anything.
+        let twoWeeksAgo = Calendar.current.date(byAdding: .day, value: -14, to: .now) ?? .distantPast
+        let recentWorkouts = workouts.filter { !$0.isTemplate && $0.endTime != nil && $0.date >= twoWeeksAgo }
+        let recovery = RecoveryEngine.evaluate(
+            workouts: workouts.filter { !$0.isTemplate && $0.endTime != nil },
+            health: HealthSignals(),
+            cardioSessions: cardio
+        )
+        let hasAnyHistory = workouts.contains { !$0.isTemplate && $0.endTime != nil }
+
+        let plan = TodayPlanEngine.generate(
+            scheduledName: scheduledName.isEmpty ? nil : scheduledName,
+            recovery: recovery,
+            health: HealthSignals(),
+            recentWorkouts: recentWorkouts,
+            alreadyTrainedToday: false,
+            hasAnyHistory: hasAnyHistory
+        )
+
+        // First-time users (no logged history) get a friendly nudge rather
+        // than a robotic recommendation the engine can't back up.
+        if !hasAnyHistory {
+            return .result(dialog: "Log your first workout in Metricly and I'll start recommending what to train.")
+        }
+
+        let intensity: String = {
+            switch plan.intensity {
+            case .rest:     return "today is a rest day"
+            case .light:    return "go light today"
+            case .moderate: return "moderate intensity"
+            case .hard:     return "push hard today"
+            }
+        }()
+        return .result(dialog: "Metricly recommends \(plan.recommendedName) — \(intensity).")
     }
 }
 
