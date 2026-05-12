@@ -83,7 +83,11 @@ enum TodayPlanEngine {
         recovery: RecoveryResult,
         health: HealthSignals,
         recentWorkouts: [Workout] = [],
-        alreadyTrainedToday: Bool
+        alreadyTrainedToday: Bool,
+        /// True when the user has at least one finished workout ever (not just
+        /// in the recent window). Used to decide whether to show a friendly
+        /// "first workout" plan instead of robotic empty-state output.
+        hasAnyHistory: Bool = true
     ) -> TodayPlan {
 
         let cleanScheduled = scheduledName?.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -103,6 +107,26 @@ enum TodayPlanEngine {
                 adjustments: [],
                 confidence: confidence,
                 alreadyTrainedToday: true,
+                goEasyOnGroups: [],
+                avoidGroups: [],
+                generatedAt: .now
+            )
+        }
+
+        // First-workout / no-history short-circuit. Brand-new users (no
+        // workouts logged ever) would otherwise see "Anything · Moderate ·
+        // low confidence", which feels robotic. Welcome them in instead.
+        if !hasAnyHistory {
+            return TodayPlan(
+                scheduledName: scheduled,
+                recommendedName: scheduled ?? "Your first workout",
+                intensity: .moderate,
+                reasons: scheduled == nil
+                    ? ["Log your first workout to start getting personal recommendations."]
+                    : ["Once you've logged a few sessions, today's plan will adapt to your recovery."],
+                adjustments: [],
+                confidence: .low,
+                alreadyTrainedToday: false,
                 goEasyOnGroups: [],
                 avoidGroups: [],
                 generatedAt: .now
@@ -247,18 +271,25 @@ enum TodayPlanEngine {
 
     /// A muscle group the user has trained 3+ times in the last 5 days.
     /// Returns the most-trained one, if any.
+    /// "Overworked" = a muscle group trained on 3+ distinct days in the
+    /// last 5 days. Previously this counted *exercises*, so a single
+    /// workout with chest + incline + fly registered as chest hit three
+    /// times — the resulting "you've hit chest several times this week"
+    /// copy was misleading. Counting distinct days matches the language.
     private static func overworkedGroup(in workouts: [Workout]) -> MuscleGroup? {
         let cutoff = Calendar.current.date(byAdding: .day, value: -5, to: .now) ?? .distantPast
-        let recentExercises = workouts
-            .filter { $0.date >= cutoff }
-            .flatMap(\.exercises)
-
-        var counts: [MuscleGroup: Int] = [:]
-        for ex in recentExercises {
-            guard let cat = ex.category, cat != .cardio, cat != .other else { continue }
-            counts[cat, default: 0] += 1
+        let calendar = Calendar.current
+        var daysByGroup: [MuscleGroup: Set<Date>] = [:]
+        for workout in workouts where workout.date >= cutoff {
+            let day = calendar.startOfDay(for: workout.date)
+            // Dedupe groups within one workout so chest + incline + fly
+            // on the same day counts as one chest day, not three.
+            let groups = Set(workout.exercises.compactMap(\.category))
+            for group in groups where group != .cardio && group != .other {
+                daysByGroup[group, default: []].insert(day)
+            }
         }
-        return counts.first { $0.value >= 3 }?.key
+        return daysByGroup.first { $0.value.count >= 3 }?.key
     }
 
     private static func computeConfidence(_ health: HealthSignals) -> TodayPlan.Confidence {

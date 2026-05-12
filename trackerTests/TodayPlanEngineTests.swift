@@ -286,6 +286,52 @@ final class TodayPlanEngineTests: XCTestCase {
         XCTAssertNotEqual(plan.intensity, .rest, "Already-trained path shouldn't fall through to rest")
     }
 
+    // MARK: - overworkedGroup counts days, not exercises
+
+    func testSingleChestWorkoutDoesNotFlagAsOverworked() {
+        // One push session with bench + incline + fly should NOT trigger
+        // the "you've hit chest several times this week" adjustment —
+        // before this fix, it counted as 3 chest entries.
+        let workout = makeWorkout(daysAgo: 1, chestExerciseCount: 3)
+        let plan = TodayPlanEngine.generate(
+            scheduledName: nil,
+            recovery: makeRecovery(score: 0.7),
+            health: HealthSignals(),
+            recentWorkouts: [workout],
+            alreadyTrainedToday: false
+        )
+        XCTAssertFalse(plan.avoidGroups.contains(.chest),
+                       "A single chest workout shouldn't be flagged as overworked")
+        XCTAssertFalse(plan.adjustments.contains { $0.lowercased().contains("hit chest") },
+                       "No 'hit chest several times' adjustment from one session")
+    }
+
+    func testThreeChestDaysInFiveFlagsAsOverworked() {
+        // Three distinct days that each include chest in the last 5 days
+        // should trigger the overworked flag.
+        let workouts = (1...3).map { makeWorkout(daysAgo: $0, chestExerciseCount: 1) }
+        let plan = TodayPlanEngine.generate(
+            scheduledName: nil,
+            recovery: makeRecovery(score: 0.7),
+            health: HealthSignals(),
+            recentWorkouts: workouts,
+            alreadyTrainedToday: false
+        )
+        XCTAssertTrue(plan.avoidGroups.contains(.chest))
+    }
+
+    private func makeWorkout(daysAgo: Int, chestExerciseCount: Int) -> Workout {
+        let date = Calendar.current.date(byAdding: .day, value: -daysAgo, to: .now)!
+        let workout = Workout(name: "Push", date: date)
+        workout.endTime = date.addingTimeInterval(3600)
+        for i in 0..<chestExerciseCount {
+            let ex = Exercise(name: "Bench \(i)", workout: workout, category: .chest)
+            ex.sets.append(ExerciseSet(reps: 8, weight: 80, exercise: ex))
+            workout.exercises.append(ex)
+        }
+        return workout
+    }
+
     // MARK: - Helpers
 
     private func makeRecovery(score: Double, suggestedType: String = "Anything") -> RecoveryResult {
