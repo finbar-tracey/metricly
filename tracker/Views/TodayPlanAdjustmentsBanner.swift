@@ -6,6 +6,13 @@ import SwiftUI
 struct TodayPlanAdjustmentsBanner: View {
     let plan: TodayPlan
     let onDismiss: () -> Void
+    /// Optional preview + apply hook. When supplied, an "Apply" button
+    /// appears alongside Dismiss and a confirmation alert is shown
+    /// before any mutation. Caller performs the actual edit.
+    var applyPreview: TodayPlanApply.Preview? = nil
+    var onApply: (() -> Void)? = nil
+
+    @State private var showingApplyConfirm = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -43,6 +50,41 @@ struct TodayPlanAdjustmentsBanner: View {
                             .foregroundStyle(.primary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
+                }
+            }
+
+            // Apply CTA — only renders when caller supplied an apply
+            // hook AND there's something concrete to do (preview is
+            // non-empty). Avoids a "tap, nothing happens" footgun.
+            if let preview = applyPreview, !preview.isEmpty, onApply != nil {
+                Button {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    showingApplyConfirm = true
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "wand.and.stars")
+                            .font(.system(size: 11, weight: .semibold))
+                        Text("Apply to this workout")
+                            .font(.caption.weight(.bold))
+                    }
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 12).padding(.vertical, 7)
+                    .background(intensityColor, in: Capsule())
+                }
+                .buttonStyle(.plain)
+                .padding(.top, 2)
+                .confirmationDialog(
+                    "Apply today's adjustments?",
+                    isPresented: $showingApplyConfirm,
+                    titleVisibility: .visible
+                ) {
+                    Button("Apply") {
+                        UINotificationFeedbackGenerator().notificationOccurred(.success)
+                        onApply?()
+                    }
+                    Button("Cancel", role: .cancel) {}
+                } message: {
+                    Text(preview.summary + " Logged sets won't be touched.")
                 }
             }
         }

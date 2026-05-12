@@ -61,10 +61,17 @@ struct WorkoutDetailView: View {
                    !plan.adjustments.isEmpty,
                    !planAdjustmentsDismissed,
                    !workout.isFinished {
+                    // Preview is computed every render — cheap, and it
+                    // updates automatically as the user logs sets so the
+                    // Apply button vanishes once it's no longer useful.
+                    let preview = TodayPlanApply.preview(plan: plan, on: workout)
                     Section {
-                        TodayPlanAdjustmentsBanner(plan: plan) {
-                            withAnimation { planAdjustmentsDismissed = true }
-                        }
+                        TodayPlanAdjustmentsBanner(
+                            plan: plan,
+                            onDismiss: { withAnimation { planAdjustmentsDismissed = true } },
+                            applyPreview: preview,
+                            onApply: { applyPlanAdjustments(plan) }
+                        )
                         .listRowBackground(Color.clear)
                         .listRowInsets(.init(top: 0, leading: 16, bottom: 8, trailing: 16))
                     }
@@ -876,6 +883,17 @@ struct WorkoutDetailView: View {
         modelContext.insert(newWorkout)
         newWorkout.copyExercises(from: workout.exercises, into: modelContext)
         HapticsManager.success()
+    }
+
+    /// "Apply" tapped on the Today's-Plan banner. Performs the same
+    /// edits previewed in the confirmation dialog (delete overworked-
+    /// group exercises that have no logged sets, drop one trailing
+    /// blank working set per remaining exercise when intensity is
+    /// light) then auto-dismisses the banner.
+    private func applyPlanAdjustments(_ plan: TodayPlan) {
+        _ = TodayPlanApply.apply(plan: plan, to: workout, in: modelContext)
+        modelContext.saveOrLog()
+        withAnimation { planAdjustmentsDismissed = true }
     }
 
     // MARK: - Live Activity
