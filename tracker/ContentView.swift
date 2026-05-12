@@ -9,6 +9,10 @@ struct ContentView: View {
     @Query private var settingsArray: [UserSettings]
     @State private var workoutToDelete: Workout?
     @State private var showingOnboarding = false
+    /// Workout currently being resumed in the cross-tab pill's sheet. Driven
+    /// by the safeAreaInset pill so users can jump back to an open workout
+    /// from anywhere in the app.
+    @State private var resumingWorkout: Workout?
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.scenePhase) private var scenePhase
 
@@ -111,6 +115,12 @@ struct ContentView: View {
         }
     }
 
+    /// The most recently created workout that hasn't been finished. Used to
+    /// drive the cross-tab "in progress" indicator and the resume action.
+    private var inProgressWorkout: Workout? {
+        workouts.first(where: { !$0.isFinished && !$0.isTemplate })
+    }
+
     var body: some View {
         Group {
             if horizontalSizeClass == .regular {
@@ -118,6 +128,27 @@ struct ContentView: View {
             } else {
                 iPhoneLayout
             }
+        }
+        // Thin "Workout in progress" pill at the top — visible on every tab
+        // so the user never loses the trail back to an open session. Tap
+        // resumes the workout in a sheet (no nav gymnastics across tabs).
+        .safeAreaInset(edge: .top) {
+            if let active = inProgressWorkout, resumingWorkout?.persistentModelID != active.persistentModelID {
+                ActiveWorkoutPill(workout: active) {
+                    resumingWorkout = active
+                }
+            }
+        }
+        .sheet(item: $resumingWorkout) { workout in
+            NavigationStack {
+                WorkoutDetailView(workout: workout)
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("Done") { resumingWorkout = nil }
+                        }
+                    }
+            }
+            .environment(\.weightUnit, weightUnit)
         }
         .tint(accentColor)
         .environment(\.weightUnit, weightUnit)
@@ -173,11 +204,14 @@ struct ContentView: View {
             withAnimation { selectedTab = .training }
         }
         .onReceive(NotificationCenter.default.publisher(for: .openInsightsTab)) { _ in
-            // iPad picks up via the sidebar; iPhone routes Insights under the
-            // More tab, so we send users there.
+            // iPad sidebar drills straight into Insights via the selection.
+            // iPhone Insights lives under TrainingHubView, NOT MoreHubView —
+            // routing to .more would land the user on a screen with no
+            // Insights entry point. Send them to .training so the
+            // TrainingHubView's Insights NavigationLink is one tap away.
             withAnimation {
                 selectedSidebarItem = .insights
-                selectedTab = .more
+                selectedTab = .training
             }
         }
         .alert("Delete Workout?", isPresented: Binding(
