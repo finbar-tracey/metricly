@@ -1,186 +1,138 @@
 # Metricly
 
-A clean, focused gym tracker for iOS built with SwiftUI and SwiftData.
+An adaptive iOS strength & cardio tracker that reads your recovery and adjusts what you train today.
 
-![Swift](https://img.shields.io/badge/Swift-6.0-orange)
-![Platform](https://img.shields.io/badge/Platform-iOS_18+-blue)
+![Swift](https://img.shields.io/badge/Swift-5.0-orange)
+![Platform](https://img.shields.io/badge/Platform-iOS_26-blue)
+![watchOS](https://img.shields.io/badge/watchOS-11.6+-blue)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-## Screenshots
+## What makes it different
 
-<p align="center">
-  <img src="screenshots/home.png" width="200" />
-  <img src="screenshots/workout.png" width="200" />
-  <img src="screenshots/exercise.png" width="200" />
-  <img src="screenshots/calendar.png" width="200" />
-</p>
+Most gym trackers are spreadsheets in disguise — you type, they store. Metricly closes the loop:
+
+- **Adaptive plan engine.** `TodayPlanEngine` reads recovery, sleep, HRV, resting HR, recent volume, and per-muscle-group fatigue, then surfaces a recommendation for today (rest / light / moderate / hard) with a confidence rating that's only "high" when both health signals *and* training history are populated.
+- **Apply Adjustments.** When the plan suggests trimming volume or skipping an overworked group, one tap edits the actual workout — safely. Logged sets are never touched.
+- **Honest first-run UX.** With no history and no health data, the engine refuses to fake a high-confidence recommendation. You get a "log your first workout" nudge instead of a robotic call.
+- **Watch is a peer, not a remote.** The watch app runs its own `HKWorkoutSession`, computes a true session-average heart rate via `HKLiveWorkoutBuilder.statistics`, and pushes its own context — the iPhone observes and merges.
+- **Built for years of data.** A corrupted SwiftData store gets quarantined (renamed with a timestamp) on launch, never silently deleted.
 
 ## Features
 
-**Workout Logging**
-- Create workouts with exercises, sets, reps, and weight
-- Quick-log from your last session with one tap
-- Weight auto-fills and increment buttons for fast entry
-- Warm-up sets, supersets, and exercise reordering
-- Save workouts as reusable templates
-- Workout notes and post-workout rating
-
-**Training Programs**
-- Multi-week structured training programs
-- Scheduled workout days with auto-progression
-- Quick-start today's programmed workout
-
-**Progress Tracking**
+**Strength**
+- Workouts with exercises, sets, reps, weight, RPE, warm-ups, supersets, reordering
+- Reusable templates and a weekly training schedule
+- Quick-log from last session; weight auto-fills with increment buttons
 - Personal record detection with celebration banner
-- Per-exercise progression charts (max weight over time)
-- Volume trends with weekly/monthly breakdowns
-- Workout streak counter and streak calendar
-- Training calendar with monthly view
-- Workout comparison (side-by-side sessions)
-- Weekly and monthly recap reports
+- Rest timer with background notifications and audio alert
+- Per-exercise progression charts and 1RM tracking
 
-**Recovery & Smart Suggestions**
-- Recovery readiness score based on volume, RPE, HRV, sleep, and resting HR
+**Cardio**
+- Live HR-tracked cardio sessions (run, bike, row, hike, walk, etc.)
+- Auto-detected personal bests across distance/pace/duration buckets
+- Cardio goals, history, and shareable session cards
+- Strava push: per-session retroactive upload + auto-share toggle
+
+**Recovery & Coaching**
+- Readiness score combining training load, RPE, HRV, resting HR, and sleep
 - Per-muscle-group fatigue tracking with multi-session accumulation
-- Smart workout suggestions based on recovery state
-- Progression advisor with load/rep recommendations
+- Today's adaptive plan with reasons, adjustments, and confidence
+- Progression advisor (load/rep recommendations grounded in recent sessions)
+- Per-exercise "go easy on this group" hints inside the live workout
 
-**Health Integration**
-- HealthKit sync for HRV, resting heart rate, steps, and sleep
-- Health dashboard with daily metrics overview
-- Steps, sleep, and heart rate detail views
+**Apple Watch**
+- Standalone watch app (gym + cardio) with live HR, set logging, and rest timer
+- True session-averaged heart rate (not just the latest sample)
+- Complications surfacing streak + active workout
+- Two-way sync via `WCSession` — single source of truth for the watch context
 
-**Body Tracking**
-- Daily weigh-ins with trend line chart and 30-day change stats
-- Body measurements (arms, chest, waist, etc.)
-- Body fat estimation
-- Progress photos with date tagging
+**Widgets & Siri**
+- Lock-screen and home-screen widgets (streak, today's plan, recovery)
+- Live Activity during a workout
+- Siri shortcuts: start workout, today's plan, streak, stats, log weight, log water — the today-plan intent speaks the adaptive recommendation, not the static schedule
 
-**Tools**
-- Configurable rest timer with background notifications and audible alert
-- Plate calculator for barbell loading
-- One-rep max calculator
-- Exercise library with muscle group categories
-- Exercise guide with form tips and substitutions
-- Lift goals with progress tracking
+**Health**
+- HealthKit sync for HRV, resting HR, steps, sleep
+- Body weight, body measurements, body-fat estimate, progress photos
+- Water, caffeine, and creatine logging with daily targets
 
-**Achievements**
-- Milestone-based achievement system
-- Streak, volume, and PR achievements
+**Reports & Analytics**
+- Workout streak calendar, monthly training calendar
+- Weekly and monthly recap reports
+- Volume trends, muscle-group balance, personal insights engine
+- Workout comparison (side-by-side sessions)
+- Achievements (streak, volume, PR milestones)
 
-**Data & Export**
-- CSV export and import of workout data
+**Data**
+- CSV export and import
+- iCloud sync via CloudKit (automatic, no account)
+- Corrupted-store quarantine on launch (no silent data loss)
 - Workout share cards (image export)
-- iCloud sync ready via CloudKit
-- Siri shortcuts for common actions
-- Workout reminders
-- No account required
 
-## Tech Stack
-
-- **SwiftUI** — declarative UI
-- **SwiftData** — persistence with `@Model`, `@Query`, `@Relationship`
-- **Swift Charts** — volume, progression, body weight, and health charts
-- **HealthKit** — HRV, resting HR, steps, and sleep data
-- **UserNotifications** — background rest timer alerts and reminders
-- **AudioToolbox** — in-app timer completion sound
-- **App Intents** — Siri shortcuts
-
-## Architecture
+## Project layout
 
 ```
-tracker/
-├── Models/
-│   ├── Workout.swift              # Core workout model with duration & rating
-│   ├── Exercise.swift             # Exercise with muscle group categories
-│   ├── ExerciseSet.swift          # Set with warm-up & RPE support
-│   ├── BodyWeightEntry.swift      # Daily weigh-in entries
-│   ├── BodyMeasurement.swift      # Body measurements (arms, chest, etc.)
-│   ├── ProgressPhoto.swift        # Progress photo entries
-│   ├── TrainingProgram.swift      # Multi-week training programs
-│   ├── LiftGoal.swift             # Lift goal targets
-│   ├── ExerciseGuide.swift        # Exercise form guides & tips
-│   ├── WorkoutActivity.swift      # Live Activity support
-│   ├── RecoveryEngine.swift       # Recovery scoring (volume, RPE, HRV, HR, sleep)
-│   ├── ProgressionAdvisor.swift   # Load/rep progression suggestions
-│   ├── HealthFormatters.swift     # Shared formatting for steps, sleep, etc.
-│   ├── UserSettings.swift         # Preferences (units, rest timer, onboarding)
-│   └── WeightUnit.swift           # kg/lbs with environment key
-├── Views/
-│   ├── HomeDashboardView.swift        # Home dashboard with recovery, health, recents
-│   ├── ContentView.swift              # Tab root with streak stats & navigation
-│   ├── WorkoutDetailView.swift        # Exercise list, supersets, duration
-│   ├── ExerciseDetailView.swift       # Set logging, quick-log, rest timer, PR detection
-│   ├── ExerciseHistoryView.swift      # History & progression chart
-│   ├── ExerciseLibraryView.swift      # Browsable exercise database
-│   ├── ExerciseGuideView.swift        # Exercise form guide & tips
-│   ├── ExerciseSubstitutionsView.swift# Alternative exercise suggestions
-│   ├── FullWorkoutListView.swift      # Complete workout history list
-│   ├── VolumeTrendsView.swift         # Weekly/monthly volume charts
-│   ├── MuscleRecoveryView.swift       # Per-muscle recovery status
-│   ├── MuscleGroupSummaryView.swift   # Muscle group volume breakdown
-│   ├── SmartSuggestionsView.swift     # AI-driven workout suggestions
-│   ├── InsightsView.swift             # Training insights & analytics
-│   ├── HealthDashboardView.swift      # HealthKit metrics overview
-│   ├── HeartRateDetailView.swift      # Heart rate trends
-│   ├── StepsDetailView.swift          # Daily steps detail
-│   ├── SleepDetailView.swift          # Sleep tracking detail
-│   ├── BodyWeightView.swift           # Weight logging & trend chart
-│   ├── BodyMeasurementsView.swift     # Body measurement tracking
-│   ├── BodyFatEstimateView.swift      # Body fat estimation tool
-│   ├── ProgressPhotosView.swift       # Progress photo gallery
-│   ├── PersonalRecordsView.swift      # PR history & records board
-│   ├── WorkoutCalendarView.swift      # Monthly training calendar
-│   ├── StreakCalendarView.swift       # Workout streak visualization
-│   ├── WorkoutComparisonView.swift    # Side-by-side workout comparison
-│   ├── WeeklyRecapView.swift          # Weekly training summary
-│   ├── WeeklyMonthlyReportView.swift  # Detailed periodic reports
-│   ├── TrainingProgramsView.swift     # Training program management
-│   ├── LiftGoalsView.swift            # Lift goal tracking
-│   ├── OneRepMaxView.swift            # 1RM calculator
-│   ├── PlateCalculatorView.swift      # Barbell plate calculator
-│   ├── AchievementsView.swift         # Achievement badges & milestones
-│   ├── WorkoutTimerView.swift         # Rest timer interface
-│   ├── WorkoutNotesView.swift         # Workout notes editor
-│   ├── TemplateEditView.swift         # Workout template editor
-│   ├── TemplateMarketplaceView.swift  # Browse shared templates
-│   ├── SettingsView.swift             # Preferences, templates, CSV export
-│   ├── OnboardingView.swift           # First-launch welcome flow
-│   ├── FinishWorkoutSheet.swift       # Rating & notes on completion
-│   ├── AddWorkoutSheet.swift          # New workout with template picker
-│   ├── EditWorkoutSheet.swift         # Edit name, date, notes
-│   └── EditSetSheet.swift             # Edit reps & weight
-├── Services/
-│   ├── HealthKitManager.swift     # HealthKit data fetching & permissions
-│   ├── HapticsManager.swift       # Haptic feedback
-│   ├── WorkoutActivityManager.swift # Live Activity management
-│   ├── ReminderManager.swift      # Workout reminder scheduling
-│   └── AppShortcuts.swift         # Siri shortcut definitions
-├── Helpers/
-│   ├── ExportHelper.swift         # CSV generation
-│   ├── ImportHelper.swift         # CSV import parsing
-│   └── QuickStartHelper.swift    # Quick-start workout logic
-├── Components/
-│   ├── WorkoutCardView.swift      # Shared workout list card
-│   ├── WorkoutShareCardView.swift # Shareable workout image card
-│   ├── QuickStartCard.swift       # Quick-start UI card
-│   ├── FlowLayout.swift           # Wrapping tag layout
-│   └── ShareSheet.swift           # UIActivityViewController wrapper
-└── trackerApp.swift               # App entry point with model container
+tracker/                 # iPhone app target
+├── Models/              # @Model types + analytics engines
+│   ├── RecoveryEngine        # readiness score + per-muscle fatigue
+│   ├── TodayPlanEngine       # adaptive intensity / recommendation
+│   ├── TodayPlanApply        # "Apply Adjustments" preview + commit
+│   ├── ProgressionAdvisor    # load/rep recommendations
+│   ├── SuggestedSetEngine    # next-set hints inside the workout
+│   └── PersonalInsightsEngine
+├── Views/               # SwiftUI screens (home, gym, cardio, health, settings…)
+├── Components/          # Reusable view atoms (cards, share sheet, layout)
+└── Helpers/             # CSV import/export, quick-start, etc.
+
+Services/                # Cross-target services (shared with watch/widgets)
+├── MetriclySchema       # Single source of truth for the SwiftData schema
+├── PhoneConnectivityManager  # WCSession bridge + collectWatchContext()
+├── HealthKitManager
+├── StravaService / StravaTokenStore
+├── WidgetDataWriter     # App Group bridge for widgets
+├── CardioTracker
+├── AppShortcuts         # App Intents (Siri)
+└── ReminderManager
+
+MetriclyWatch/           # watchOS app target
+MetriclyWatchComplications/
+MetriclyWidgets/         # WidgetKit extension + Live Activity
+trackerTests/            # XCTest suite (engines + apply logic)
 ```
+
+## Tech stack
+
+- **SwiftUI** — declarative UI across iPhone + Watch
+- **SwiftData** + CloudKit — `@Model`, `@Query`, `@Relationship`; container hardened against store corruption
+- **HealthKit** — HRV, resting HR, sleep, live workout HR via `HKLiveWorkoutBuilder`
+- **WatchConnectivity** — phone↔watch context sharing
+- **App Intents** — Siri shortcuts (adaptive today's plan, streak, stats, water, weight)
+- **WidgetKit** + ActivityKit — home/lock widgets and Live Activities
+- **Swift Charts** — volume, progression, body weight, health charts
+- **UserNotifications** — rest timer alerts, workout reminders
 
 ## Requirements
 
-- iOS 18.0+
-- Xcode 16.0+
-- Swift 6.0
+- iOS 26.2+
+- watchOS 11.6+
+- Xcode 16+
+- Swift 5
 
-## Getting Started
+## Getting started
 
 1. Clone the repo
 2. Open `tracker.xcodeproj` in Xcode
-3. Select your development team in Signing & Capabilities
-4. Build and run on a device or simulator
+3. Select your development team in Signing & Capabilities for each target
+4. (Optional) For Strava upload, register an app at developers.strava.com and replace the placeholder credentials in `Services/StravaService.swift`. Callback URL must be `metricly://localhost/strava-callback`.
+5. Build and run on a device or simulator
+
+## Tests
+
+```sh
+xcodebuild -scheme tracker -destination 'platform=iOS Simulator,name=iPhone 17' test
+```
+
+The suite covers the recovery engine, today-plan engine, today-plan apply logic, progression advisor, streak math, widget data writer, CSV round-trip, and unit/formatting helpers.
 
 ## License
 
