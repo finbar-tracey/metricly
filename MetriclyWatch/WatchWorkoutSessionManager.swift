@@ -13,7 +13,7 @@ final class WatchWorkoutSessionManager: NSObject, ObservableObject {
 
     // MARK: - Published live metrics
 
-    @Published var heartRate        : Double  = 0
+    @Published var heartRate        : Double  = 0   // most recent sample
     @Published var heartRateZone    : HRZone  = .resting
     @Published var activeCalories   : Double  = 0
     @Published var distanceMeters   : Double  = 0
@@ -24,6 +24,14 @@ final class WatchWorkoutSessionManager: NSObject, ObservableObject {
 
     // Peak HR recorded during session
     @Published var maxHeartRate     : Double  = 0
+
+    /// True session-wide average heart rate. Sourced from
+    /// `HKLiveWorkoutBuilder.statistics(for:).averageQuantity()` which
+    /// HealthKit maintains correctly across the whole session. Used in
+    /// the completion payload shipped to the phone — previously the
+    /// payload sent `heartRate` (latest sample) into the avgHeartRate
+    /// field, which was wrong.
+    @Published var averageHeartRate : Double  = 0
 
     // MARK: - Private
 
@@ -123,12 +131,13 @@ final class WatchWorkoutSessionManager: NSObject, ObservableObject {
     // MARK: - Private helpers
 
     private func reset() {
-        heartRate       = 0
-        heartRateZone   = .resting
-        activeCalories  = 0
-        distanceMeters  = 0
-        elapsedSeconds  = 0
-        maxHeartRate    = 0
+        heartRate         = 0
+        heartRateZone     = .resting
+        activeCalories    = 0
+        distanceMeters    = 0
+        elapsedSeconds    = 0
+        maxHeartRate      = 0
+        averageHeartRate  = 0
     }
 
     private func cleanup() {
@@ -213,6 +222,7 @@ extension WatchWorkoutSessionManager: HKLiveWorkoutBuilderDelegate {
         let hrUnit = HKUnit.count().unitDivided(by: .minute())
 
         var newHR       = 0.0
+        var newAvgHR    = 0.0
         var newCal      = 0.0
         var newDist     = 0.0
         var updatedHR   = false
@@ -223,7 +233,12 @@ extension WatchWorkoutSessionManager: HKLiveWorkoutBuilderDelegate {
 
             switch quantityType {
             case HKQuantityType(.heartRate):
+                // Both readings come from the same HKStatistics object;
+                // `mostRecentQuantity` is the live sample for the UI badge
+                // and `averageQuantity` is the session-wide running mean
+                // we ship in the completion payload.
                 newHR     = stats.mostRecentQuantity()?.doubleValue(for: hrUnit) ?? 0
+                newAvgHR  = stats.averageQuantity()?.doubleValue(for: hrUnit) ?? 0
                 updatedHR = true
             case HKQuantityType(.activeEnergyBurned):
                 newCal    = stats.sumQuantity()?.doubleValue(for: .kilocalorie()) ?? 0
@@ -239,6 +254,9 @@ extension WatchWorkoutSessionManager: HKLiveWorkoutBuilderDelegate {
                 self.heartRate     = newHR
                 self.heartRateZone = HRZone.zone(for: newHR)
                 if newHR > self.maxHeartRate { self.maxHeartRate = newHR }
+            }
+            if updatedHR && newAvgHR > 0 {
+                self.averageHeartRate = newAvgHR
             }
             if newCal  > 0 { self.activeCalories  = newCal  }
             if newDist > 0 { self.distanceMeters   = newDist }

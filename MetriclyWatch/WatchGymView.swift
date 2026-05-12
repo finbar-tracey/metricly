@@ -380,7 +380,11 @@ struct WatchGymView: View {
             startDate:    startDate ?? end,
             endDate:      end,
             totalCalories: sessionManager.activeCalories > 0 ? sessionManager.activeCalories : nil,
-            avgHeartRate: sessionManager.heartRate > 0 ? sessionManager.heartRate : nil,
+            // Use the session-wide average from HKLiveWorkoutBuilder rather
+            // than the latest sample (which is what `heartRate` holds).
+            // Fall back to the live value if the builder hasn't produced
+            // an average yet — rare for a session long enough to finish.
+            avgHeartRate: avgHeartRateForPayload,
             maxHeartRate: sessionManager.maxHeartRate > 0 ? sessionManager.maxHeartRate : nil,
             exercises:    exercises.map { ex in
                 WatchExercisePayload(
@@ -414,6 +418,17 @@ struct WatchGymView: View {
         startDate = nil
         showingFinish = false
         WKInterfaceDevice.current().play(.failure)
+    }
+
+    /// Pick the best HR value for the completion payload's avgHeartRate.
+    /// `averageHeartRate` is the true session-wide mean from
+    /// HKLiveWorkoutBuilder; if it hasn't been populated yet (very short
+    /// sessions, sample collection lagging) we fall back to the most
+    /// recent live sample so the payload isn't empty.
+    private var avgHeartRateForPayload: Double? {
+        if sessionManager.averageHeartRate > 0 { return sessionManager.averageHeartRate }
+        if sessionManager.heartRate > 0        { return sessionManager.heartRate }
+        return nil
     }
 
     private var hrColor: Color {

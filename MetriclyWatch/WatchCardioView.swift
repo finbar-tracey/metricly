@@ -264,7 +264,14 @@ struct WatchCardioActiveView: View {
             activityTypeRaw: cardioType.payloadRaw,
             durationSeconds: Double(sessionManager.elapsedSeconds),
             distanceMeters:  sessionManager.distanceMeters,
-            avgHeartRate:    sessionManager.heartRate > 0 ? sessionManager.heartRate : nil,
+            // True session average from HKLiveWorkoutBuilder; falls back to
+            // the latest sample only if the builder hasn't produced a mean
+            // yet (very short sessions). See WatchWorkoutSessionManager.
+            avgHeartRate: {
+                if sessionManager.averageHeartRate > 0 { return sessionManager.averageHeartRate }
+                if sessionManager.heartRate > 0        { return sessionManager.heartRate }
+                return nil
+            }(),
             maxHeartRate:    sessionManager.maxHeartRate > 0 ? sessionManager.maxHeartRate : nil,
             calories:        sessionManager.activeCalories > 0 ? sessionManager.activeCalories : nil,
             elevationGain:   0
