@@ -15,11 +15,7 @@ struct StartWorkoutIntent: AppIntent {
     @MainActor
     func perform() async throws -> some IntentResult & ProvidesDialog {
         let name = workoutName ?? defaultName()
-        let container = try ModelContainer(for: Schema([
-            Workout.self, Exercise.self, ExerciseSet.self,
-            UserSettings.self, BodyWeightEntry.self, TrainingProgram.self,
-            ProgramDay.self, ProgramExercise.self
-        ]))
+        let container = try MetriclySchema.makeSharedContainer()
         let context = container.mainContext
         let workout = Workout(name: name, date: .now)
         context.insert(workout)
@@ -42,11 +38,7 @@ struct GetStreakIntent: AppIntent {
 
     @MainActor
     func perform() async throws -> some IntentResult & ProvidesDialog {
-        let container = try ModelContainer(for: Schema([
-            Workout.self, Exercise.self, ExerciseSet.self,
-            UserSettings.self, BodyWeightEntry.self, TrainingProgram.self,
-            ProgramDay.self, ProgramExercise.self, CardioSession.self
-        ]))
+        let container = try MetriclySchema.makeSharedContainer()
         let context = container.mainContext
         let descriptor = FetchDescriptor<Workout>(
             predicate: #Predicate { !$0.isTemplate },
@@ -73,11 +65,7 @@ struct GetWorkoutStatsIntent: AppIntent {
 
     @MainActor
     func perform() async throws -> some IntentResult & ProvidesDialog {
-        let container = try ModelContainer(for: Schema([
-            Workout.self, Exercise.self, ExerciseSet.self,
-            UserSettings.self, BodyWeightEntry.self, TrainingProgram.self,
-            ProgramDay.self, ProgramExercise.self, CardioSession.self
-        ]))
+        let container = try MetriclySchema.makeSharedContainer()
         let context = container.mainContext
         let descriptor = FetchDescriptor<Workout>(
             predicate: #Predicate { !$0.isTemplate },
@@ -104,11 +92,7 @@ struct LogBodyWeightIntent: AppIntent {
 
     @MainActor
     func perform() async throws -> some IntentResult & ProvidesDialog {
-        let container = try ModelContainer(for: Schema([
-            Workout.self, Exercise.self, ExerciseSet.self,
-            UserSettings.self, BodyWeightEntry.self, TrainingProgram.self,
-            ProgramDay.self, ProgramExercise.self
-        ]))
+        let container = try MetriclySchema.makeSharedContainer()
         let context = container.mainContext
         context.insert(BodyWeightEntry(date: .now, weight: weight))
         try context.save()
@@ -127,11 +111,7 @@ struct LogWaterIntent: AppIntent {
 
     @MainActor
     func perform() async throws -> some IntentResult & ProvidesDialog {
-        let container = try ModelContainer(for: Schema([
-            Workout.self, Exercise.self, ExerciseSet.self,
-            UserSettings.self, BodyWeightEntry.self, TrainingProgram.self,
-            ProgramDay.self, ProgramExercise.self, WaterEntry.self
-        ]))
+        let container = try MetriclySchema.makeSharedContainer()
         let context = container.mainContext
         context.insert(WaterEntry(date: .now, milliliters: Double(milliliters)))
         try context.save()
@@ -149,11 +129,7 @@ struct GetTodayWorkoutIntent: AppIntent {
 
     @MainActor
     func perform() async throws -> some IntentResult & ProvidesDialog {
-        let container = try ModelContainer(for: Schema([
-            Workout.self, Exercise.self, ExerciseSet.self,
-            UserSettings.self, BodyWeightEntry.self, TrainingProgram.self,
-            ProgramDay.self, ProgramExercise.self
-        ]))
+        let container = try MetriclySchema.makeSharedContainer()
         let context = container.mainContext
 
         // Check weekly plan in UserSettings

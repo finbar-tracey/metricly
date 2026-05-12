@@ -26,21 +26,18 @@ struct trackerApp: App {
         //   2. Create a container named "iCloud.com.yourname.tracker" (or use the default)
         //   3. Uncomment the CloudKit config below and comment out the plain ModelContainer line.
         //
-        let allModels: [any PersistentModel.Type] = [
-            Workout.self, Exercise.self, ExerciseSet.self, UserSettings.self,
-            BodyWeightEntry.self, TrainingProgram.self, ProgramDay.self, ProgramExercise.self,
-            BodyMeasurement.self, LiftGoal.self, ProgressPhoto.self, CaffeineEntry.self,
-            WaterEntry.self, CreatineEntry.self, ManualActivity.self, CardioSession.self
-        ]
+        // Schema lives in MetriclySchema so every container builder in
+        // the project — main app + App Intents — uses the same model
+        // list. Adding a new @Model? Update MetriclySchema.allModels.
 
         let container: ModelContainer
         do {
             let cloudConfig = ModelConfiguration(cloudKitDatabase: .automatic)
-            container = try ModelContainer(for: Schema(allModels), configurations: cloudConfig)
+            container = try ModelContainer(for: MetriclySchema.schema, configurations: cloudConfig)
         } catch {
             print("⚠️ CloudKit container failed: \(error). Trying local store.")
             do {
-                container = try ModelContainer(for: Schema(allModels))
+                container = try ModelContainer(for: MetriclySchema.schema)
             } catch {
                 // Local store can't open. Previously this path silently
                 // deleted default.store / -shm / -wal — catastrophic for
@@ -51,7 +48,7 @@ struct trackerApp: App {
                 print("⚠️ Local store corrupted, quarantining: \(error)")
                 Self.quarantineCorruptedStore()
                 do {
-                    container = try ModelContainer(for: Schema(allModels))
+                    container = try ModelContainer(for: MetriclySchema.schema)
                 } catch {
                     fatalError("Cannot create any SwiftData container: \(error)")
                 }
