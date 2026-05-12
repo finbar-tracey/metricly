@@ -42,18 +42,14 @@ struct trackerApp: App {
             do {
                 container = try ModelContainer(for: Schema(allModels))
             } catch {
-                // Local store is corrupted — delete it and start fresh
-                print("⚠️ Local store corrupted, rebuilding: \(error)")
-                let fm = FileManager.default
-                // The store lives in the App Group container when CloudKit is configured
-                let groupURL = fm.containerURL(forSecurityApplicationGroupIdentifier: WidgetDataWriter.suiteName)?
-                    .appending(path: "Library/Application Support")
-                let appSupportURL = fm.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
-                for dir in [groupURL, appSupportURL].compactMap({ $0 }) {
-                    try? fm.removeItem(at: dir.appending(path: "default.store"))
-                    try? fm.removeItem(at: dir.appending(path: "default.store-shm"))
-                    try? fm.removeItem(at: dir.appending(path: "default.store-wal"))
-                }
+                // Local store can't open. Previously this path silently
+                // deleted default.store / -shm / -wal — catastrophic for
+                // a fitness app where users have years of training data.
+                // Instead: quarantine the broken files (rename with a
+                // timestamp) so the data is recoverable manually, then
+                // start fresh on top.
+                print("⚠️ Local store corrupted, quarantining: \(error)")
+                Self.quarantineCorruptedStore()
                 do {
                     container = try ModelContainer(for: Schema(allModels))
                 } catch {
@@ -72,6 +68,42 @@ struct trackerApp: App {
         // Boot Watch connectivity — must happen after the container is ready
         let phoneManager = PhoneConnectivityManager.shared
         phoneManager.modelContext = context
+    }
+
+    /// Rename the broken SQLite store files (and their WAL/SHM siblings)
+    /// to a timestamped `.corrupt-YYYY-MM-DD-HHmm` suffix so users keep a
+    /// recoverable artefact. Apple Support / our own export tooling can
+    /// later pull data from these files; deleting them was unrecoverable.
+    private static func quarantineCorruptedStore() {
+        let fm = FileManager.default
+        let stamp: String = {
+            let f = DateFormatter()
+            f.dateFormat = "yyyy-MM-dd-HHmm"
+            return f.string(from: .now)
+        }()
+
+        let groupURL = fm.containerURL(forSecurityApplicationGroupIdentifier: WidgetDataWriter.suiteName)?
+            .appending(path: "Library/Application Support")
+        let appSupportURL = fm.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
+        let storeNames = ["default.store", "default.store-shm", "default.store-wal"]
+
+        for dir in [groupURL, appSupportURL].compactMap({ $0 }) {
+            for name in storeNames {
+                let source = dir.appending(path: name)
+                guard fm.fileExists(atPath: source.path) else { continue }
+                let dest = dir.appending(path: "\(name).corrupt-\(stamp)")
+                do {
+                    try fm.moveItem(at: source, to: dest)
+                    print("📦 Quarantined \(name) → \(dest.lastPathComponent)")
+                } catch {
+                    // If even the rename fails, fall back to delete so we
+                    // can still launch the app. Data is gone in that case,
+                    // but the alternative is fatalError on every launch.
+                    try? fm.removeItem(at: source)
+                    print("⚠️ Quarantine rename failed for \(name); deleted instead: \(error)")
+                }
+            }
+        }
     }
 
     var body: some Scene {
