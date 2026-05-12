@@ -27,24 +27,109 @@ final class PhoneConnectivityManager: NSObject, ObservableObject {
         }
     }
 
-    // MARK: - Push exercise library to Watch
+    // MARK: - Watch context (single source of truth)
+    //
+    // The Watch has two ways to receive context: an `updateApplicationContext`
+    // push from the phone (on foreground / data change) and a reply to its
+    // own `requestData` message. Previously these built different payloads
+    // — the push sent the full set, the reply only sent `exerciseList` —
+    // so a Watch app that came up before the phone had pushed would get
+    // a stale view (no plan name, no streak, no rest overrides).
+    //
+    // `collectWatchContext()` builds the canonical dict from SwiftData;
+    // `pushWatchContext()` and the `didReceiveMessage` reply both call it.
 
-    /// Call this whenever the user's exercise library changes, or on app foreground.
-    func pushExerciseLibrary(exercises: [String], todayPlanName: String = "",
-                             todayPlannedExercises: [String] = [],
-                             useKilograms: Bool = true, currentStreak: Int = 0,
-                             perExerciseRest: [String: Int] = [:]) {
-        guard WCSession.default.activationState == .activated else { return }
-        var context: [String: Any] = [
-            WatchMessageKey.exerciseList:    exercises,
-            WatchMessageKey.todayPlan:       todayPlanName,
-            WatchMessageKey.todayExercises:  todayPlannedExercises,
-            WatchMessageKey.useKilograms:    useKilograms,
-            WatchMessageKey.currentStreak:   currentStreak
-        ]
-        if !perExerciseRest.isEmpty {
-            context[WatchMessageKey.perExerciseRest] = perExerciseRest
+    /// Build the full Watch payload from current SwiftData state. Pure
+    /// — does not send anything. Callers decide whether to push, reply,
+    /// or both.
+    @MainActor
+    func collectWatchContext() -> [String: Any] {
+        guard let ctx = modelContext else { return [:] }
+
+        let settings = (try? ctx.fetch(FetchDescriptor<UserSettings>()))?.first
+        let weekday  = Calendar.current.component(.weekday, from: .now)
+        let todayPlanName = settings?.weeklyPlan[weekday] ?? ""
+        let useKg = settings?.useKilograms ?? true
+
+        let allExercises = (try? ctx.fetch(FetchDescriptor<Exercise>(
+            sortBy: [SortDescriptor(\.name)]
+        ))) ?? []
+        let uniqueNames = Array(Set(allExercises.map(\.name))).sorted().prefix(50)
+
+        let workouts = (try? ctx.fetch(FetchDescriptor<Workout>())) ?? []
+        let cardio   = (try? ctx.fetch(FetchDescriptor<CardioSession>())) ?? []
+        let streak   = Workout.currentStreak(from: workouts, cardioSessions: Array(cardio.prefix(60)))
+
+        // Today's planned exercises = the most recent finished workout
+        // whose name matches today's plan.
+        let plannedExercises: [String] = {
+            guard !todayPlanName.isEmpty else { return [] }
+            let match = workouts
+                .filter { !$0.isTemplate && $0.endTime != nil
+                          && $0.name.localizedCaseInsensitiveCompare(todayPlanName) == .orderedSame }
+                .max(by: { $0.date < $1.date })
+            return match?.exercises.sorted { $0.order < $1.order }.map(\.name) ?? []
+        }()
+
+        // Per-exercise rest map: walk the library, collapse by lowercased
+        // name, keep the most-recently-edited override.
+        var perRest: [String: Int] = [:]
+        var seenKeys = Set<String>()
+        for ex in allExercises.reversed() where ex.customRestDuration != nil {
+            let key = ex.name.lowercased()
+            guard !seenKeys.contains(key) else { continue }
+            seenKeys.insert(key)
+            perRest[ex.name] = ex.customRestDuration
         }
+
+        // Active-workout state — read from shared defaults rather than
+        // recomputing here, so we don't stomp on a watch-hosted session
+        // that owns the state right now.
+        let defaults = UserDefaults(suiteName: "group.com.Finbar.FinApp")
+        let activeStartedAt = defaults?.double(forKey: "watch.activeStartedAt") ?? 0
+        let activeName = defaults?.string(forKey: "watch.activeName") ?? ""
+
+        var context: [String: Any] = [
+            WatchMessageKey.exerciseList:    Array(uniqueNames),
+            WatchMessageKey.todayPlan:       todayPlanName,
+            WatchMessageKey.todayExercises:  plannedExercises,
+            WatchMessageKey.useKilograms:    useKg,
+            WatchMessageKey.currentStreak:   streak,
+            WatchMessageKey.activeStartedAt: activeStartedAt,
+            WatchMessageKey.activeName:      activeName
+        ]
+        if !perRest.isEmpty {
+            context[WatchMessageKey.perExerciseRest] = perRest
+        }
+        return context
+    }
+
+    /// Push the full context via WCSession application context. Also writes
+    /// to the App Group defaults so cold-launched watch reads (before
+    /// WCSession activates) see the same state.
+    @MainActor
+    func pushWatchContext() {
+        let context = collectWatchContext()
+        // Mirror to shared defaults for cold-launch reads on the Watch.
+        if let defaults = UserDefaults(suiteName: "group.com.Finbar.FinApp") {
+            if let useKg    = context[WatchMessageKey.useKilograms] as? Bool {
+                defaults.set(useKg,    forKey: "watch.useKilograms")
+            }
+            if let streak   = context[WatchMessageKey.currentStreak] as? Int {
+                defaults.set(streak,   forKey: "watch.currentStreak")
+            }
+            if let planName = context[WatchMessageKey.todayPlan] as? String {
+                defaults.set(planName, forKey: "watch.todayPlanName")
+            }
+            if let planned  = context[WatchMessageKey.todayExercises] as? [String] {
+                defaults.set(planned,  forKey: "watch.todayExercises")
+            }
+            if let perRest  = context[WatchMessageKey.perExerciseRest] as? [String: Int] {
+                defaults.set(perRest,  forKey: "watch.perExerciseRest")
+            }
+        }
+
+        guard WCSession.default.activationState == .activated else { return }
         try? WCSession.default.updateApplicationContext(context)
     }
 
@@ -249,21 +334,17 @@ extension PhoneConnectivityManager: WCSessionDelegate {
 
     nonisolated func session(_ session: WCSession, didReceiveMessage message: [String: Any],
                              replyHandler: @escaping ([String: Any]) -> Void) {
-        // Watch is requesting the exercise library
+        // Watch requesting full data sync. Reply with the same canonical
+        // context the foreground push uses — previously this only sent
+        // `exerciseList`, leaving the Watch with stale (or empty) plan
+        // name, streak, rest overrides, and active workout state until
+        // the next iPhone foreground.
         guard let typeRaw = message[WatchMessageKey.type] as? String,
               WatchMessageType(rawValue: typeRaw) == .requestData
         else { replyHandler([:]); return }
 
         Task { @MainActor in
-            guard let ctx = self.modelContext else { replyHandler([:]); return }
-            let descriptor = FetchDescriptor<Exercise>(
-                sortBy: [SortDescriptor(\.name)]
-            )
-            let exercises = (try? ctx.fetch(descriptor))?.map(\.name) ?? []
-            let unique    = Array(Set(exercises)).sorted()
-            replyHandler([
-                WatchMessageKey.exerciseList: Array(unique.prefix(50))
-            ])
+            replyHandler(self.collectWatchContext())
         }
     }
 }

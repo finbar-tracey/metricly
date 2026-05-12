@@ -111,80 +111,25 @@ struct trackerApp: App {
         .modelContainer(modelContainer)
     }
 
-    /// Push latest exercise list + today's plan to Watch via application context.
+    /// Refresh the Watch's view of the world on foreground. Two things
+    /// happen, in order:
+    /// 1. Walk the workout table to self-heal active-workout state. If
+    ///    the user deleted an in-progress workout (or the cached state is
+    ///    stale from a kill+relaunch), this brings the shared defaults in
+    ///    line with reality before the push.
+    /// 2. Build + push the canonical Watch context via the shared
+    ///    `PhoneConnectivityManager.pushWatchContext()` — the same code
+    ///    path the WCSession reply handler uses, so push and reply can't
+    ///    drift apart.
+    @MainActor
     private func pushWatchContext() {
-        let ctx      = modelContainer.mainContext
-        let settings = (try? ctx.fetch(FetchDescriptor<UserSettings>()))?.first
-        let weekday  = Calendar.current.component(.weekday, from: .now)
-        let todayPlan = settings?.weeklyPlan[weekday] ?? ""
-        let useKg     = settings?.useKilograms ?? true
-
-        let exerciseFetch = FetchDescriptor<Exercise>(sortBy: [SortDescriptor(\.name)])
-        let names  = (try? ctx.fetch(exerciseFetch))?.map(\.name) ?? []
-        let unique = Array(Set(names)).sorted()
-
-        // Compute current streak (workouts + cardio)
-        let workouts = (try? ctx.fetch(FetchDescriptor<Workout>())) ?? []
-        let cardio   = (try? ctx.fetch(FetchDescriptor<CardioSession>())) ?? []
-        let streak   = Workout.currentStreak(from: workouts, cardioSessions: Array(cardio.prefix(60)))
-
-        // Today's planned exercises — pulled from the most recent finished
-        // workout whose name matches today's plan. Lets the Watch start a
-        // session with the right exercise list pre-populated instead of empty.
-        let plannedExercises: [String] = {
-            guard !todayPlan.isEmpty else { return [] }
-            let match = workouts
-                .filter { !$0.isTemplate && $0.endTime != nil
-                          && $0.name.localizedCaseInsensitiveCompare(todayPlan) == .orderedSame }
-                .max(by: { $0.date < $1.date })
-            return match?.exercises
-                .sorted { $0.order < $1.order }
-                .map(\.name) ?? []
-        }()
-
-        // Build the per-exercise rest-override map. We collapse the entire
-        // library down to one (case-insensitive) entry per name, keeping
-        // the override from the most-recently-edited exercise so the user's
-        // latest preference wins. Names without an override are omitted.
-        let allExercises = (try? ctx.fetch(exerciseFetch)) ?? []
-        var perRest: [String: Int] = [:]
-        var seenKeys = Set<String>()
-        for ex in allExercises.reversed() where ex.customRestDuration != nil {
-            let key = ex.name.lowercased()
-            guard !seenKeys.contains(key) else { continue }
-            seenKeys.insert(key)
-            perRest[ex.name] = ex.customRestDuration
-        }
-
-        // Write to App Group so Watch complications + UI can read without WCSession
-        if let defaults = UserDefaults(suiteName: "group.com.Finbar.FinApp") {
-            defaults.set(useKg,             forKey: "watch.useKilograms")
-            defaults.set(streak,            forKey: "watch.currentStreak")
-            defaults.set(todayPlan,         forKey: "watch.todayPlanName")
-            defaults.set(plannedExercises,  forKey: "watch.todayExercises")
-            // Cold-launch path: Watch reads this before WCSession activates,
-            // so rest-timer overrides land even on first foreground.
-            defaults.set(perRest,           forKey: "watch.perExerciseRest")
-        }
-
-        PhoneConnectivityManager.shared.pushExerciseLibrary(
-            exercises: Array(unique.prefix(50)),
-            todayPlanName: todayPlan,
-            todayPlannedExercises: plannedExercises,
-            useKilograms: useKg,
-            currentStreak: streak,
-            perExerciseRest: perRest
-        )
-
-        // Self-heal active-workout state on each foreground push. Covers
-        // the cold-launch path (state was stale from a prior session) and
-        // recovery cases like the user deleting an in-progress workout
-        // without finishing it.
+        let workouts = (try? modelContainer.mainContext.fetch(FetchDescriptor<Workout>())) ?? []
         let inProgress = workouts.first { !$0.isTemplate && $0.endTime == nil }
         PhoneConnectivityManager.shared.publishActiveWorkout(
             name: inProgress?.name,
             startedAt: inProgress?.date
         )
+        PhoneConnectivityManager.shared.pushWatchContext()
     }
 }
 
