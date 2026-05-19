@@ -51,21 +51,7 @@ struct TrainingProgramsView: View {
     // MARK: - Active Program Hero
 
     private func activeProgramHeroCard(_ program: TrainingProgram) -> some View {
-        ZStack(alignment: .topLeading) {
-            LinearGradient(
-                colors: AppTheme.Gradients.calm,
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            // Top sheen
-            LinearGradient(
-                colors: [.white.opacity(0.18), .clear],
-                startPoint: .top, endPoint: .center
-            )
-            .blendMode(.plusLighter)
-            Circle().fill(.white.opacity(0.10)).frame(width: 200).blur(radius: 12).offset(x: 160, y: -60)
-            Circle().fill(.white.opacity(0.06)).frame(width: 110).blur(radius: 10).offset(x: -30, y: 80)
-
+        HeroCard(palette: AppTheme.Gradients.calm) {
             VStack(alignment: .leading, spacing: 16) {
                 HStack(spacing: 14) {
                     ZStack {
@@ -121,7 +107,7 @@ struct TrainingProgramsView: View {
                 } label: {
                     Text("Advance to Week \(program.currentWeek + 1)")
                         .font(.subheadline.bold())
-                        .foregroundStyle(Color(red: 0.30, green: 0.55, blue: 0.95))
+                        .foregroundStyle(AppTheme.Signal.calm)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 12)
                         .background(.white, in: Capsule())
@@ -133,7 +119,6 @@ struct TrainingProgramsView: View {
             }
             .padding(20)
         }
-        .heroCard()
     }
 
     // MARK: - All Programs Card

@@ -31,8 +31,8 @@ enum ProgressionAdvisor {
     /// Weight increment in kg based on muscle group.
     static func increment(for group: MuscleGroup?) -> Double {
         switch group {
-        case .legs: return 5.0
-        default: return 2.5
+        case .legs: return EngineConstants.Progression.legsIncrementKg
+        default: return EngineConstants.Progression.defaultIncrementKg
         }
     }
 
@@ -55,7 +55,7 @@ enum ProgressionAdvisor {
 
             let best1RM = working.map { set in
                 let r = max(1, set.reps)
-                return r == 1 ? set.weight : set.weight * (1.0 + Double(r) / 30.0)
+                return r == 1 ? set.weight : set.weight * (1.0 + Double(r) / EngineConstants.Progression.epleyDivisor)
             }.max() ?? topWeight
 
             return SessionSummary(
@@ -90,27 +90,28 @@ enum ProgressionAdvisor {
         // RPE-based path: need RPE data on both of the last 2 sessions
         if let rpe0 = latest.avgRPE, let rpe1 = previous.avgRPE {
             let avg = (rpe0 + rpe1) / 2.0
+            let C = EngineConstants.Progression.self
 
-            if avg <= 7.5 {
+            if avg <= C.rpeIncreaseThreshold {
                 return ProgressionRecommendation(
                     action: .increase(suggestedWeight: suggested),
                     headline: "Ready to increase",
                     detail: "RPE averaging \(String(format: "%.1f", avg)) — room to grow.",
                     confidence: min(1.0, (8.0 - avg) / 3.0)
                 )
-            } else if avg < 9.0 {
+            } else if avg < C.rpeDeloadThreshold {
                 return ProgressionRecommendation(
                     action: .hold(reason: "productive"),
                     headline: "Hold steady",
                     detail: "RPE averaging \(String(format: "%.1f", avg)) — challenging but productive.",
-                    confidence: 0.4
+                    confidence: C.confidenceHold
                 )
             } else {
                 return ProgressionRecommendation(
                     action: .deload(reason: "high RPE"),
                     headline: "Consider a deload",
                     detail: "RPE averaging \(String(format: "%.1f", avg)) — reduce weight to recover.",
-                    confidence: 0.7
+                    confidence: C.confidenceDeload
                 )
             }
         }
@@ -122,6 +123,8 @@ enum ProgressionAdvisor {
         let repsDown = latest.topReps < previous.topReps && latest.topWeight <= previous.topWeight
         let same = latest.topWeight == previous.topWeight && latest.topReps == previous.topReps
 
+        let C = EngineConstants.Progression.self
+
         if weightUp || repsUp {
             return ProgressionRecommendation(
                 action: .increase(suggestedWeight: suggested),
@@ -129,7 +132,7 @@ enum ProgressionAdvisor {
                 detail: weightUp
                     ? "Weight went up last session — keep pushing."
                     : "More reps at the same weight — time to add load.",
-                confidence: weightUp ? 0.8 : 0.65
+                confidence: weightUp ? C.confidenceWeightUp : C.confidenceRepsUp
             )
         }
 
@@ -138,13 +141,13 @@ enum ProgressionAdvisor {
                 action: .hold(reason: "plateau"),
                 headline: "Hold steady",
                 detail: "Same weight and reps — try adding a rep next time.",
-                confidence: 0.4
+                confidence: C.confidenceHold
             )
         }
 
         if weightDown || repsDown {
             // Check for sustained decline across 3+ sessions
-            if sessions.count >= 3 {
+            if sessions.count >= C.sustainedDeclineSessions {
                 let older = sessions[2]
                 let sustainedDecline = latest.topWeight < previous.topWeight
                     && previous.topWeight < older.topWeight
@@ -153,8 +156,8 @@ enum ProgressionAdvisor {
                     return ProgressionRecommendation(
                         action: .deload(reason: "declining trend"),
                         headline: "Consider a deload",
-                        detail: "Weight has declined over 3 sessions — drop to \(Int(deloadWeight)) kg and rebuild.",
-                        confidence: 0.7
+                        detail: "Weight has declined over \(C.sustainedDeclineSessions) sessions — drop to \(Int(deloadWeight)) kg and rebuild.",
+                        confidence: C.confidenceDeload
                     )
                 }
             }
@@ -163,7 +166,7 @@ enum ProgressionAdvisor {
                 action: .hold(reason: "minor dip"),
                 headline: "Hold steady",
                 detail: "Small dip last session — maintain and aim to match your best.",
-                confidence: 0.35
+                confidence: C.confidenceMinorDipHold
             )
         }
 
@@ -172,7 +175,7 @@ enum ProgressionAdvisor {
             action: .hold(reason: "mixed signals"),
             headline: "Hold steady",
             detail: "Mixed trends — keep training consistently.",
-            confidence: 0.3
+            confidence: C.confidenceMixedSignals
         )
     }
 }

@@ -95,25 +95,11 @@ struct AchievementsView: View {
         let unlocked = all.filter(\.isUnlocked).count
         let total = all.count
 
-        return ZStack(alignment: .topLeading) {
-            LinearGradient(
-                colors: [
-                    Color(red: 0.95, green: 0.62, blue: 0.10),
-                    Color(red: 0.85, green: 0.42, blue: 0.10),
-                    Color(red: 0.65, green: 0.28, blue: 0.30)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            // Top sheen
-            LinearGradient(
-                colors: [.white.opacity(0.18), .clear],
-                startPoint: .top, endPoint: .center
-            )
-            .blendMode(.plusLighter)
-            Circle().fill(.white.opacity(0.10)).frame(width: 200).blur(radius: 12).offset(x: 160, y: -60)
-            Circle().fill(.white.opacity(0.06)).frame(width: 110).blur(radius: 10).offset(x: -30, y: 80)
-
+        return HeroCard(palette: [
+            AppTheme.Signal.amber,
+            Color(red: 0.85, green: 0.42, blue: 0.10),
+            Color(red: 0.65, green: 0.28, blue: 0.30)
+        ]) {
             VStack(alignment: .leading, spacing: 18) {
                 HStack(alignment: .center, spacing: 14) {
                     ZStack {
@@ -179,7 +165,6 @@ struct AchievementsView: View {
             }
             .padding(20)
         }
-        .heroCard()
     }
 
     // MARK: - Category Picker Card
@@ -596,7 +581,7 @@ struct AchievementsView: View {
     private func loadHealthData() async {
         isLoading = true
         defer { isLoading = false }
-        let hk = HealthKitManager.shared
+        let hk = HealthDataCache.shared
         async let steps = hk.fetchDailySteps(days: 90)
         async let sleep = hk.fetchDailySleep(days: 90)
         async let external = hk.fetchExternalWorkouts(days: 365)

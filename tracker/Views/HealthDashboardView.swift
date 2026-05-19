@@ -317,7 +317,7 @@ struct HealthDashboardView: View {
     private func loadHealthData() async {
         isLoading = true
         defer { isLoading = false }
-        let hk = HealthKitManager.shared
+        let hk = HealthDataCache.shared
         let today = Date.now
 
         async let stepsResult = hk.fetchSteps(for: today)

@@ -584,7 +584,13 @@ struct CardioActiveView: View {
 
         // Save to HealthKit with full distance, calories and HR
         if settingsArray.first?.healthKitEnabled == true {
-            Task { try? await HealthKitManager.shared.saveCardioSession(session) }
+            Task {
+                do {
+                    try await HealthKitManager.shared.saveCardioSession(session)
+                } catch {
+                    AppErrorBus.shared.report(message: "Couldn't save cardio to Apple Health.", kind: .warning)
+                }
+            }
         }
 
         tracker.reset()

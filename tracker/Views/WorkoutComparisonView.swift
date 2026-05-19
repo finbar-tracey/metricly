@@ -43,7 +43,7 @@ struct WorkoutComparisonView: View {
                         RoundedRectangle(cornerRadius: 10, style: .continuous)
                             .fill(
                                 LinearGradient(
-                                    colors: [.blue, Color(red: 0.30, green: 0.55, blue: 0.95)],
+                                    colors: [.blue, AppTheme.Signal.calm],
                                     startPoint: .topLeading,
                                     endPoint: .bottomTrailing
                                 )
@@ -69,7 +69,7 @@ struct WorkoutComparisonView: View {
                         RoundedRectangle(cornerRadius: 10, style: .continuous)
                             .fill(
                                 LinearGradient(
-                                    colors: [.orange, Color(red: 0.95, green: 0.45, blue: 0.20)],
+                                    colors: [.orange, AppTheme.Signal.actionOrange],
                                     startPoint: .topLeading,
                                     endPoint: .bottomTrailing
                                 )
@@ -106,21 +106,7 @@ struct WorkoutComparisonView: View {
         let volDiff = leftVol > 0 ? ((rightVol - leftVol) / leftVol) * 100 : 0
         let bIsAhead = rightVol > leftVol
 
-        return ZStack(alignment: .topLeading) {
-            LinearGradient(
-                colors: bIsAhead ? AppTheme.Gradients.caution : AppTheme.Gradients.calm,
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            // Top sheen
-            LinearGradient(
-                colors: [.white.opacity(0.18), .clear],
-                startPoint: .top, endPoint: .center
-            )
-            .blendMode(.plusLighter)
-            Circle().fill(.white.opacity(0.10)).frame(width: 200).blur(radius: 12).offset(x: 160, y: -60)
-            Circle().fill(.white.opacity(0.06)).frame(width: 110).blur(radius: 10).offset(x: -30, y: 80)
-
+        return HeroCard(palette: bIsAhead ? AppTheme.Gradients.caution : AppTheme.Gradients.calm) {
             VStack(alignment: .leading, spacing: 18) {
                 HStack(alignment: .center, spacing: 14) {
                     ZStack {
@@ -165,7 +151,6 @@ struct WorkoutComparisonView: View {
             }
             .padding(20)
         }
-        .heroCard()
     }
 
     private func heroSideCol(label: String, date: Date, value: String, color: Color, tag: String) -> some View {
@@ -202,7 +187,7 @@ struct WorkoutComparisonView: View {
                         .padding(.horizontal, 8).padding(.vertical, 4)
                         .background(
                             LinearGradient(
-                                colors: [.blue, Color(red: 0.30, green: 0.55, blue: 0.95)],
+                                colors: [.blue, AppTheme.Signal.calm],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             ),
@@ -218,7 +203,7 @@ struct WorkoutComparisonView: View {
                         .padding(.horizontal, 8).padding(.vertical, 4)
                         .background(
                             LinearGradient(
-                                colors: [.orange, Color(red: 0.95, green: 0.45, blue: 0.20)],
+                                colors: [.orange, AppTheme.Signal.actionOrange],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             ),
@@ -343,7 +328,7 @@ struct WorkoutComparisonView: View {
                     .padding(.horizontal, 9).padding(.vertical, 5)
                     .background(
                         LinearGradient(
-                            colors: diff > 0 ? [.green, Color(red: 0.05, green: 0.55, blue: 0.42)]
+                            colors: diff > 0 ? [.green, AppTheme.Signal.recoveryShade]
                                               : [.red, Color(red: 0.78, green: 0.20, blue: 0.20)],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing

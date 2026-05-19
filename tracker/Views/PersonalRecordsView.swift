@@ -88,25 +88,11 @@ struct PersonalRecordsView: View {
     // MARK: - Hero Card
 
     private var heroCard: some View {
-        ZStack(alignment: .topLeading) {
-            LinearGradient(
-                colors: [
-                    Color(red: 0.95, green: 0.62, blue: 0.10),
-                    Color(red: 0.85, green: 0.42, blue: 0.10),
-                    Color(red: 0.65, green: 0.28, blue: 0.30)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            // Top sheen
-            LinearGradient(
-                colors: [.white.opacity(0.18), .clear],
-                startPoint: .top, endPoint: .center
-            )
-            .blendMode(.plusLighter)
-            Circle().fill(.white.opacity(0.10)).frame(width: 200).blur(radius: 12).offset(x: 160, y: -60)
-            Circle().fill(.white.opacity(0.06)).frame(width: 110).blur(radius: 10).offset(x: -30, y: 80)
-
+        HeroCard(palette: [
+            AppTheme.Signal.amber,
+            Color(red: 0.85, green: 0.42, blue: 0.10),
+            Color(red: 0.65, green: 0.28, blue: 0.30)
+        ]) {
             VStack(alignment: .leading, spacing: 20) {
                 HStack(alignment: .center, spacing: 16) {
                     ZStack {
@@ -151,7 +137,6 @@ struct PersonalRecordsView: View {
             }
             .padding(20)
         }
-        .heroCard()
     }
 
 

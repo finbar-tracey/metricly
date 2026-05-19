@@ -290,21 +290,7 @@ struct FullWorkoutListView: View {
     // MARK: - Hero Card
 
     private var workoutHeroCard: some View {
-        ZStack(alignment: .topLeading) {
-            LinearGradient(
-                colors: AppTheme.Gradients.calm,
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            // Top sheen
-            LinearGradient(
-                colors: [.white.opacity(0.18), .clear],
-                startPoint: .top, endPoint: .center
-            )
-            .blendMode(.plusLighter)
-            Circle().fill(.white.opacity(0.10)).frame(width: 180).blur(radius: 11).offset(x: 110, y: -30)
-            Circle().fill(.white.opacity(0.06)).frame(width: 90).blur(radius: 8).offset(x: -20, y: 70)
-
+        HeroCard(palette: AppTheme.Gradients.calm) {
             VStack(alignment: .leading, spacing: 14) {
                 HStack(spacing: 6) {
                     Image(systemName: "dumbbell.fill")
@@ -334,8 +320,6 @@ struct FullWorkoutListView: View {
             .padding(20)
         }
         .frame(minHeight: 145)
-        .clipShape(RoundedRectangle(cornerRadius: AppTheme.heroRadius, style: .continuous))
-        .shadow(color: .black.opacity(0.20), radius: 20, y: 8)
     }
 
     // MARK: - Filter Chip Label

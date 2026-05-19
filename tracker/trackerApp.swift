@@ -130,6 +130,14 @@ struct trackerApp: App {
             startedAt: inProgress?.date
         )
         PhoneConnectivityManager.shared.pushWatchContext()
+        // Reconcile any orphaned Live Activities left over from a previous
+        // force-quit. If there's a real in-progress workout, re-attach the
+        // manager to its existing activity so updates resume; otherwise
+        // end every dangling activity on the lock screen.
+        WorkoutActivityManager.shared.reconcileOnLaunch(
+            activeWorkoutName: inProgress?.name,
+            activeWorkoutStartedAt: inProgress?.date
+        )
     }
 }
 

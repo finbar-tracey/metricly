@@ -687,7 +687,7 @@ struct SleepDetailView: View {
     private func loadData() async {
         isLoading = true
         defer { isLoading = false }
-        let hk = HealthKitManager.shared
+        let hk = HealthDataCache.shared
         let fetchDays = max(dayCount, 14)
         async let sleepData = hk.fetchDailySleep(days: fetchDays)
         async let todayData = hk.fetchSleep(for: .now)

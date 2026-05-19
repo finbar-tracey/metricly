@@ -137,15 +137,17 @@ enum TodayPlanEngine {
         var reasons: [String] = []
         var adjustments: [String] = []
 
+        let C = EngineConstants.TodayPlan.self
+
         // Intensity decision driven primarily by readiness score.
         let intensity: TodayPlan.Intensity
-        if score < 0.30 {
+        if score < C.restThreshold {
             intensity = .rest
             reasons.append("Recovery is low (\(Int(score * 100))%)")
-        } else if score < 0.55 {
+        } else if score < C.lightThreshold {
             intensity = .light
             reasons.append("Partial recovery — a lighter session today will help you bounce back")
-        } else if score >= 0.85 {
+        } else if score >= C.hardThreshold {
             intensity = .hard
             reasons.append("Well recovered (\(Int(score * 100))%) — good day to push")
         } else {
@@ -155,9 +157,9 @@ enum TodayPlanEngine {
         // Sleep callout
         if let sleep = health.sleepMinutes, sleep > 0 {
             let hours = sleep / 60
-            if hours < 6 {
+            if hours < C.sleepShortHours {
                 reasons.append(String(format: "Sleep was short (%.1fh)", hours))
-            } else if hours >= 7.5 {
+            } else if hours >= C.sleepGoodHours {
                 reasons.append(String(format: "Slept well (%.1fh)", hours))
             }
         }
@@ -165,22 +167,22 @@ enum TodayPlanEngine {
         // HRV vs baseline
         if let hrv = health.todayHRV, let avg = health.averageHRV, avg > 0 {
             let pct = (hrv - avg) / avg
-            if pct <= -0.10 {
+            if pct <= -C.hrvCalloutPct {
                 reasons.append("HRV is \(Int(abs(pct) * 100))% below your baseline")
-            } else if pct >= 0.10 {
+            } else if pct >= C.hrvCalloutPct {
                 reasons.append("HRV is up \(Int(pct * 100))% from baseline")
             }
         }
 
         // Resting HR vs baseline
         if let rhr = health.todayRestingHR, let avg = health.averageRestingHR, avg > 0 {
-            if rhr > avg + 5 {
+            if rhr > avg + C.rhrCalloutDeltaBpm {
                 reasons.append("Resting HR is elevated")
             }
         }
 
         // Fatigued-muscle callout
-        let fatigued = recovery.muscleResults.filter { $0.freshness < 0.4 }
+        let fatigued = recovery.muscleResults.filter { $0.freshness < C.fatiguedFreshnessThreshold }
         let goEasyOnGroups = fatigued.map(\.group)
         if !fatigued.isEmpty && intensity != .rest {
             let names = fatigued.prefix(2).map { $0.group.rawValue }.joined(separator: ", ")
@@ -192,9 +194,9 @@ enum TodayPlanEngine {
         if intensity != .rest, let suggestion = neglected.first {
             // Only mention if the user has been training (not their first week)
             let recentSessionCount = recentWorkouts
-                .filter { $0.date >= Calendar.current.date(byAdding: .day, value: -7, to: .now) ?? .distantPast }
+                .filter { $0.date >= Calendar.current.date(byAdding: .day, value: -C.neglectedLookbackDays, to: .now) ?? .distantPast }
                 .count
-            if recentSessionCount >= 2 {
+            if recentSessionCount >= C.neglectedMinRecentSessions {
                 reasons.append("Haven't trained \(suggestion.rawValue.lowercased()) in over a week")
             }
         }
@@ -232,8 +234,8 @@ enum TodayPlanEngine {
             recommendedName = recovery.suggestedWorkoutType
         }
 
-        // Trim to top 3 reasons to keep the card scannable
-        let topReasons = Array(reasons.prefix(3))
+        // Trim to top reasons to keep the card scannable
+        let topReasons = Array(reasons.prefix(C.maxReasonsShown))
 
         return TodayPlan(
             scheduledName: scheduled,
@@ -255,7 +257,7 @@ enum TodayPlanEngine {
     /// long ago they last worked them (longest first). Excludes Cardio & Other.
     private static func neglectedGroups(in workouts: [Workout]) -> [MuscleGroup] {
         guard !workouts.isEmpty else { return [] }
-        let cutoff = Calendar.current.date(byAdding: .day, value: -7, to: .now) ?? .distantPast
+        let cutoff = Calendar.current.date(byAdding: .day, value: -EngineConstants.TodayPlan.neglectedLookbackDays, to: .now) ?? .distantPast
         let recentExercises = workouts
             .filter { $0.date >= cutoff }
             .flatMap(\.exercises)
@@ -277,7 +279,8 @@ enum TodayPlanEngine {
     /// times — the resulting "you've hit chest several times this week"
     /// copy was misleading. Counting distinct days matches the language.
     private static func overworkedGroup(in workouts: [Workout]) -> MuscleGroup? {
-        let cutoff = Calendar.current.date(byAdding: .day, value: -5, to: .now) ?? .distantPast
+        let C = EngineConstants.TodayPlan.self
+        let cutoff = Calendar.current.date(byAdding: .day, value: -C.overworkedLookbackDays, to: .now) ?? .distantPast
         let calendar = Calendar.current
         var daysByGroup: [MuscleGroup: Set<Date>] = [:]
         for workout in workouts where workout.date >= cutoff {
@@ -289,7 +292,7 @@ enum TodayPlanEngine {
                 daysByGroup[group, default: []].insert(day)
             }
         }
-        return daysByGroup.first { $0.value.count >= 3 }?.key
+        return daysByGroup.first { $0.value.count >= C.overworkedDayThreshold }?.key
     }
 
     /// Confidence has two axes:
@@ -319,9 +322,12 @@ enum TodayPlanEngine {
         if healthCount == 0 && workoutCount == 0 { return .low }
 
         // Both axes well-populated → high.
-        // 7 workouts = roughly one week's worth of training, enough for
-        // the recovery engine to see real per-muscle decay patterns.
-        if healthCount >= 2 && workoutCount >= 7 { return .high }
+        // ~1 week of training, enough for the recovery engine to see
+        // real per-muscle decay patterns.
+        if healthCount >= EngineConstants.TodayPlan.confidenceHealthSignalsForHigh
+            && workoutCount >= EngineConstants.TodayPlan.confidenceWorkoutsForHigh {
+            return .high
+        }
 
         return .medium
     }

@@ -69,6 +69,47 @@ struct AnimatedNumber: View {
     }
 }
 
+// MARK: - HeroCard
+// The boilerplate that used to live in ~17 detail views: a diagonal
+// gradient, a top sheen, two soft white blurred circles, and a rounded
+// drop shadow. Identical structure across every site — only the palette
+// and the content inside varied. Now: callers wrap their content with
+// `HeroCard(palette:) { ... }` instead of pasting 10 lines of decoration.
+//
+// SAFE: pure static gradients + circles. No timers, animations, or
+// recursion in the decoration itself; the inner content is whatever
+// the caller provides.
+
+struct HeroCard<Content: View>: View {
+    let palette: [Color]
+    @ViewBuilder var content: () -> Content
+
+    var body: some View {
+        ZStack(alignment: .topLeading) {
+            LinearGradient(
+                colors: palette,
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            // Top sheen
+            LinearGradient(
+                colors: [.white.opacity(0.18), .clear],
+                startPoint: .top, endPoint: .center
+            )
+            .blendMode(.plusLighter)
+            Circle().fill(.white.opacity(0.10))
+                .frame(width: 220).blur(radius: 12)
+                .offset(x: 160, y: -70)
+            Circle().fill(.white.opacity(0.06))
+                .frame(width: 110).blur(radius: 10)
+                .offset(x: -30, y: 80)
+
+            content()
+        }
+        .heroCard()
+    }
+}
+
 // MARK: - TabBackground
 // Soft top-fading gradient that gives each tab its own color identity.
 // Layered above the system grouped background.

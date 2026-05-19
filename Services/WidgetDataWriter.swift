@@ -25,6 +25,22 @@ struct WidgetDataWriter {
         // Extended fields for new widgets
         var weeklyCardioGoalKm: Double = 0
         var todayScheduledName: String = ""
+        /// When this snapshot was last written. Optional so payloads
+        /// encoded before this field existed continue to decode cleanly.
+        /// Widgets can render a small staleness indicator when this is
+        /// older than `Self.staleThreshold` (default 12h).
+        var lastUpdatedAt: Date? = nil
+
+        /// True if the snapshot is older than 12 hours. Use to render a
+        /// "•" or "Updated Xh ago" hint so users know the data may be
+        /// behind reality (e.g. the main app hasn't foregrounded in a
+        /// while). Returns false if the snapshot has no timestamp.
+        var isStale: Bool {
+            guard let updatedAt = lastUpdatedAt else { return false }
+            return Date.now.timeIntervalSince(updatedAt) > Self.staleThreshold
+        }
+
+        static let staleThreshold: TimeInterval = 12 * 3600
     }
 
     /// Merge-update the widget snapshot. Pass `nil` (or omit) any field the caller
@@ -51,6 +67,7 @@ struct WidgetDataWriter {
         if let v = workoutsThisWeek   { snapshot.workoutsThisWeek = v }
         if let v = weeklyCardioGoalKm { snapshot.weeklyCardioGoalKm = v }
         if let v = todayScheduledName { snapshot.todayScheduledName = v }
+        snapshot.lastUpdatedAt = .now
         write(snapshot, forKey: "widgetData")
         WidgetCenter.shared.reloadAllTimelines()
     }
@@ -73,6 +90,12 @@ struct WidgetDataWriter {
         var entries: [Entry] = []          // last 12 h of logs
         var halfLifeHours: Double = 5.0
         var dailyLimitMg: Double  = 400
+        var lastUpdatedAt: Date? = nil
+
+        var isStale: Bool {
+            guard let updatedAt = lastUpdatedAt else { return false }
+            return Date.now.timeIntervalSince(updatedAt) > WidgetSnapshot.staleThreshold
+        }
 
         /// Remaining caffeine (mg) at the given moment.
         func remainingMg(at time: Date = .now) -> Double {
@@ -104,7 +127,8 @@ struct WidgetDataWriter {
         let data = CaffeineWidgetData(
             entries: recent,
             halfLifeHours: halfLifeHours,
-            dailyLimitMg: dailyLimitMg
+            dailyLimitMg: dailyLimitMg,
+            lastUpdatedAt: .now
         )
         write(data, forKey: "caffeineWidgetData")
         WidgetCenter.shared.reloadTimelines(ofKind: "CaffeineWidget")
@@ -115,9 +139,15 @@ struct WidgetDataWriter {
     struct WaterWidgetData: Codable {
         var todayMl: Double = 0
         var goalMl: Double  = 2500
+        var lastUpdatedAt: Date? = nil
 
         var progress: Double { goalMl > 0 ? min(1, todayMl / goalMl) : 0 }
         var isComplete: Bool { todayMl >= goalMl }
+
+        var isStale: Bool {
+            guard let updatedAt = lastUpdatedAt else { return false }
+            return Date.now.timeIntervalSince(updatedAt) > WidgetSnapshot.staleThreshold
+        }
 
         var formattedToday: String {
             todayMl >= 1000
@@ -132,7 +162,7 @@ struct WidgetDataWriter {
     }
 
     static func updateWater(todayMl: Double, goalMl: Double) {
-        let data = WaterWidgetData(todayMl: todayMl, goalMl: goalMl)
+        let data = WaterWidgetData(todayMl: todayMl, goalMl: goalMl, lastUpdatedAt: .now)
         write(data, forKey: "waterWidgetData")
         WidgetCenter.shared.reloadTimelines(ofKind: "WaterWidget")
         WidgetCenter.shared.reloadTimelines(ofKind: "WeeklyRingsWidget")

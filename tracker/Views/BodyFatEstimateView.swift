@@ -122,21 +122,7 @@ struct BodyFatEstimateView: View {
     private var heroCard: some View {
         if let bf = bodyFatPercentage {
             let catColor = category.color
-            ZStack(alignment: .topLeading) {
-                LinearGradient(
-                    colors: [catColor, catColor.opacity(0.78), catColor.opacity(0.55)],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-                // Top sheen
-                LinearGradient(
-                    colors: [.white.opacity(0.18), .clear],
-                    startPoint: .top, endPoint: .center
-                )
-                .blendMode(.plusLighter)
-                Circle().fill(.white.opacity(0.10)).frame(width: 200).blur(radius: 12).offset(x: 160, y: -60)
-                Circle().fill(.white.opacity(0.06)).frame(width: 110).blur(radius: 10).offset(x: -30, y: 80)
-
+            HeroCard(palette: [catColor, catColor.opacity(0.78), catColor.opacity(0.55)]) {
                 VStack(alignment: .leading, spacing: 20) {
                     HStack(alignment: .center, spacing: 20) {
                         ZStack {
@@ -182,7 +168,6 @@ struct BodyFatEstimateView: View {
                 }
                 .padding(20)
             }
-            .heroCard()
         }
     }
 
@@ -206,7 +191,7 @@ struct BodyFatEstimateView: View {
                         RoundedRectangle(cornerRadius: 7, style: .continuous)
                             .fill(
                                 LinearGradient(
-                                    colors: [Color.blue, Color(red: 0.30, green: 0.55, blue: 0.95)],
+                                    colors: [Color.blue, AppTheme.Signal.calm],
                                     startPoint: .leading,
                                     endPoint: .trailing
                                 )
@@ -216,7 +201,7 @@ struct BodyFatEstimateView: View {
                         RoundedRectangle(cornerRadius: 7, style: .continuous)
                             .fill(
                                 LinearGradient(
-                                    colors: [Color.orange, Color(red: 0.95, green: 0.45, blue: 0.20)],
+                                    colors: [Color.orange, AppTheme.Signal.actionOrange],
                                     startPoint: .leading,
                                     endPoint: .trailing
                                 )

@@ -1,6 +1,7 @@
 import Foundation
 import AuthenticationServices
 import Combine
+import Security
 import UIKit
 
 /// Strava OAuth client + API surface for Metricly.
@@ -33,10 +34,27 @@ final class StravaService: NSObject, ObservableObject {
 
     // MARK: - Configuration
 
-    /// Strava-issued API credentials. Replace if you regenerate them at
-    /// strava.com/settings/api.
-    private static let clientID     = "243791"
-    private static let clientSecret = "14711d5956683b4d0c586a4f43fbd3b34fde5fd9"
+    /// Strava-issued API credentials read from `Info.plist`, which gets
+    /// them via build-setting substitution from `Config/Secrets.xcconfig`
+    /// (gitignored). See `Config/Secrets.xcconfig.example` for setup.
+    ///
+    /// `nil` means the xcconfig wasn't wired into the project — the value
+    /// in Info.plist is the literal `$(STRAVA_CLIENT_ID)` placeholder.
+    /// `connect()` checks this and surfaces a usable error instead of
+    /// attempting an OAuth flow that would fail in confusing ways.
+    private static var clientID: String? {
+        guard let raw = Bundle.main.object(forInfoDictionaryKey: "STRAVA_CLIENT_ID") as? String,
+              !raw.isEmpty,
+              !raw.contains("$(") else { return nil }
+        return raw
+    }
+
+    private static var clientSecret: String? {
+        guard let raw = Bundle.main.object(forInfoDictionaryKey: "STRAVA_CLIENT_SECRET") as? String,
+              !raw.isEmpty,
+              !raw.contains("$(") else { return nil }
+        return raw
+    }
 
     /// Custom-scheme redirect URI. The scheme matches `callbackScheme`
     /// below; `ASWebAuthenticationSession` intercepts any URL with this
@@ -90,12 +108,16 @@ final class StravaService: NSObject, ObservableObject {
     /// tokens, persists them. Cancellation by the user is silent.
     func connect() async {
         guard !isAuthorizing else { return }
+        guard let clientID = Self.clientID, Self.clientSecret != nil else {
+            lastError = StravaError.notConfigured.errorDescription
+            return
+        }
         isAuthorizing = true
         defer { isAuthorizing = false }
         lastError = nil
 
         do {
-            let code = try await runAuthSession()
+            let code = try await runAuthSession(clientID: clientID)
             let issued = try await exchangeCodeForTokens(code: code)
             StravaTokenStore.save(issued)
             tokens = issued
@@ -145,14 +167,21 @@ final class StravaService: NSObject, ObservableObject {
 
     // MARK: - Private: OAuth session
 
-    private func runAuthSession() async throws -> String {
+    private func runAuthSession(clientID: String) async throws -> String {
+        // Random opaque value Strava echoes back unchanged in the redirect.
+        // Verifying it on the callback rules out a class of CSRF attacks
+        // where a malicious app registered for the same URL scheme feeds
+        // us a forged authorization code from a different OAuth session.
+        let expectedState = Self.makeRandomState()
+
         var components = URLComponents(string: "https://www.strava.com/oauth/mobile/authorize")!
         components.queryItems = [
-            URLQueryItem(name: "client_id",       value: Self.clientID),
+            URLQueryItem(name: "client_id",       value: clientID),
             URLQueryItem(name: "response_type",   value: "code"),
             URLQueryItem(name: "redirect_uri",    value: Self.redirectURI),
             URLQueryItem(name: "approval_prompt", value: "auto"),
-            URLQueryItem(name: "scope",           value: Self.scopes)
+            URLQueryItem(name: "scope",           value: Self.scopes),
+            URLQueryItem(name: "state",           value: expectedState)
         ]
         guard let authURL = components.url else {
             throw StravaError.invalidURL
@@ -173,6 +202,17 @@ final class StravaService: NSObject, ObservableObject {
                 }
                 let comps = URLComponents(url: callbackURL, resolvingAgainstBaseURL: false)
                 let items = comps?.queryItems ?? []
+
+                // Verify state echo before honouring the code. A mismatch
+                // means either Strava failed to echo it (a server-side bug
+                // we shouldn't paper over) or a third party intercepted
+                // the redirect with a forged URL.
+                let returnedState = items.first(where: { $0.name == "state" })?.value
+                guard returnedState == expectedState else {
+                    continuation.resume(throwing: StravaError.stateMismatch)
+                    return
+                }
+
                 if let code = items.first(where: { $0.name == "code" })?.value {
                     continuation.resume(returning: code)
                 } else if let reason = items.first(where: { $0.name == "error" })?.value {
@@ -182,11 +222,28 @@ final class StravaService: NSObject, ObservableObject {
                 }
             }
             session.presentationContextProvider = self
-            session.prefersEphemeralWebBrowserSession = false
+            // Ephemeral session means cookies + storage from the OAuth
+            // web view are discarded when the sheet closes. Without this,
+            // a previous Strava login on the device carries over and the
+            // user may end up authorizing the wrong account.
+            session.prefersEphemeralWebBrowserSession = true
             if !session.start() {
                 continuation.resume(throwing: StravaError.couldNotStartAuth)
             }
         }
+    }
+
+    /// 32 bytes of URL-safe randomness, base64-encoded. Long enough that
+    /// brute-forcing a matching state value is infeasible during the
+    /// seconds-long window the OAuth sheet is open.
+    private static func makeRandomState() -> String {
+        var bytes = [UInt8](repeating: 0, count: 32)
+        _ = SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes)
+        return Data(bytes)
+            .base64EncodedString()
+            .replacingOccurrences(of: "+", with: "-")
+            .replacingOccurrences(of: "/", with: "_")
+            .replacingOccurrences(of: "=", with: "")
     }
 
     // MARK: - Private: token endpoints
@@ -205,11 +262,14 @@ final class StravaService: NSObject, ObservableObject {
     }
 
     private func exchangeCodeForTokens(code: String) async throws -> StravaTokenStore.Tokens {
+        guard let clientID = Self.clientID, let clientSecret = Self.clientSecret else {
+            throw StravaError.notConfigured
+        }
         let response: TokenResponse = try await postForm(
             url: "https://www.strava.com/api/v3/oauth/token",
             body: [
-                "client_id":     Self.clientID,
-                "client_secret": Self.clientSecret,
+                "client_id":     clientID,
+                "client_secret": clientSecret,
                 "code":          code,
                 "grant_type":    "authorization_code"
             ]
@@ -225,11 +285,14 @@ final class StravaService: NSObject, ObservableObject {
     }
 
     private func refresh(refreshToken: String) async throws -> StravaTokenStore.Tokens {
+        guard let clientID = Self.clientID, let clientSecret = Self.clientSecret else {
+            throw StravaError.notConfigured
+        }
         let response: TokenResponse = try await postForm(
             url: "https://www.strava.com/api/v3/oauth/token",
             body: [
-                "client_id":     Self.clientID,
-                "client_secret": Self.clientSecret,
+                "client_id":     clientID,
+                "client_secret": clientSecret,
                 "refresh_token": refreshToken,
                 "grant_type":    "refresh_token"
             ]
@@ -306,8 +369,10 @@ extension StravaService: ASWebAuthenticationPresentationContextProviding {
 
 enum StravaError: LocalizedError {
     case notConnected
+    case notConfigured
     case invalidURL
     case invalidCallback
+    case stateMismatch
     case authorizationDenied(String)
     case couldNotStartAuth
     case noResponse
@@ -318,10 +383,14 @@ enum StravaError: LocalizedError {
         switch self {
         case .notConnected:
             return "You're not connected to Strava."
+        case .notConfigured:
+            return "Strava integration isn't set up in this build. See Config/Secrets.xcconfig.example."
         case .invalidURL:
             return "Internal: malformed Strava URL."
         case .invalidCallback:
             return "Strava sent an unexpected response. Try connecting again."
+        case .stateMismatch:
+            return "Strava sign-in didn't return safely. Try connecting again."
         case .authorizationDenied(let reason):
             return "Strava authorization failed: \(reason)"
         case .couldNotStartAuth:

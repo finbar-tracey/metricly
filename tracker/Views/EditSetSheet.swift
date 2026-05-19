@@ -77,7 +77,7 @@ struct EditSetSheet: View {
                                                 RoundedRectangle(cornerRadius: 10, style: .continuous)
                                                     .fill(
                                                         LinearGradient(
-                                                            colors: [.purple, Color(red: 0.55, green: 0.35, blue: 0.95)],
+                                                            colors: [.purple, AppTheme.Signal.focus],
                                                             startPoint: .topLeading,
                                                             endPoint: .bottomTrailing
                                                         )

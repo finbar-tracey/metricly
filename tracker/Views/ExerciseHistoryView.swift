@@ -161,7 +161,7 @@ struct ExerciseHistoryView: View {
         ZStack(alignment: .leading) {
             LinearGradient(
                 colors: [
-                    Color(red: 0.95, green: 0.62, blue: 0.10),
+                    AppTheme.Signal.amber,
                     Color(red: 0.85, green: 0.42, blue: 0.10),
                     Color(red: 0.65, green: 0.28, blue: 0.30)
                 ],

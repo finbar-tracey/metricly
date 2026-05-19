@@ -1,0 +1,223 @@
+import Foundation
+
+/// Centralized tuning knobs for the recovery / today-plan / progression
+/// engines. Every value here is a behavioural threshold that controls
+/// what the user sees — not a structural constant. The point of having
+/// them in one place is that when you tune one (say, "users on 6h sleep
+/// shouldn't take a 20% readiness hit"), you don't grep across five
+/// files to find every occurrence.
+///
+/// Each constant carries a comment on what it does and, where possible,
+/// why the chosen value. Treat that as the spec; the engine code is the
+/// implementation.
+///
+/// Not yet migrated: PersonalInsightsEngine has its own ~30 thresholds
+/// (sample-size minimums, effect-size cutoffs, sleep/caffeine windows).
+/// Centralising those is tracked separately to keep this diff bounded.
+enum EngineConstants {
+
+    // MARK: - Recovery engine
+
+    enum Recovery {
+
+        /// Base recovery hours per muscle group. Adjusted at runtime by
+        /// volume, RPE, and health multipliers. Legs are slowest because
+        /// they accumulate the most systemic damage; biceps/triceps are
+        /// the fastest because they're small and recover quickly.
+        static let baseRecoveryHours: [MuscleGroup: Double] = [
+            .chest: 48, .back: 48, .shoulders: 48,
+            .biceps: 36, .triceps: 36, .legs: 72,
+            .core: 24, .cardio: 24, .other: 48
+        ]
+
+        /// How far back, relative to a muscle's base recovery, to look
+        /// for sessions that still contribute to current fatigue. 2× the
+        /// base means a 48h-recovery muscle considers anything in the
+        /// last 96h — past that, residual fatigue is negligible.
+        static let sessionLookbackMultiplier: Double = 2.0
+
+        /// Trailing-average volume window (days). Used to normalize each
+        /// session's volume against the user's recent baseline.
+        static let trailingVolumeDays: Int = 28
+
+        /// Minimum number of volume samples required to trust the
+        /// trailing average. Below this, the engine falls back to a
+        /// neutral 1.0× volume multiplier.
+        static let trailingVolumeMinSamples: Int = 2
+
+        // Volume multiplier formula: volumeFloor + volumeRange * min(ratio, volumeRatioCap)
+        // Yields 0.7× recovery for a low-volume day, 1.9× for a 2×-baseline day.
+        static let volumeFloor: Double = 0.7
+        static let volumeRange: Double = 0.6
+        static let volumeRatioCap: Double = 2.0
+
+        // RPE multiplier formula: rpeFloor + rpeStep * avgRPE
+        // RPE 6 → 1.00×, RPE 10 → 1.30× recovery.
+        static let rpeFloor: Double = 0.55
+        static let rpeStep: Double = 0.075
+
+        /// Per-session compound-fatigue coefficient. Each prior session
+        /// in the lookback window reduces composite freshness by
+        /// (1 - residual * compoundCoefficient). 0.6 chosen empirically:
+        /// strong enough that 3 back-to-back hard sessions visibly
+        /// stack, gentle enough that one moderate session doesn't crush
+        /// the score.
+        static let compoundFatigueCoefficient: Double = 0.6
+
+        // Health multipliers applied to recovery hours (>1 = slower, <1 = faster).
+        // Symmetric thresholds: 15% below/above baseline triggers a step.
+        static let hrvLowRatio: Double = 0.85
+        static let hrvHighRatio: Double = 1.15
+        static let hrvLowMultiplier: Double = 1.20
+        static let hrvHighMultiplier: Double = 0.85
+
+        static let sleepPoorHours: Double = 6.0
+        static let sleepPoorMultiplier: Double = 1.15
+
+        static let rhrModerateRatio: Double = 1.05
+        static let rhrHighRatio: Double = 1.10
+        static let rhrModerateMultiplier: Double = 1.07
+        static let rhrHighMultiplier: Double = 1.15
+
+        // Aggregate readiness score modifiers.
+        /// HRV's contribution to aggregate score is bounded at ±20%.
+        static let hrvAggregateWeight: Double = 0.20
+        static let rhrAggregateModerateMultiplier: Double = 0.95
+        static let rhrAggregateHighMultiplier: Double = 0.90
+        static let sleepAggregatePoorMultiplier: Double = 0.80
+        static let sleepGoodHours: Double = 7.5
+        static let sleepAggregateGoodMultiplier: Double = 1.10
+
+        // External (HealthKit) workout fatigue.
+        /// Look-back window for non-app workouts that still count.
+        static let externalLookbackHours: Double = 48
+        /// Scale factor: ExternalWorkout.estimatedFatigueScore × this.
+        static let externalFatigueScale: Double = 0.15
+        /// Cap on freshness reduction from all external workouts combined.
+        static let externalFatigueCap: Double = 0.30
+
+        // Cardio session fatigue.
+        /// Long runs can linger 3 days in the legs; we look back that far.
+        static let cardioLookbackHours: Double = 72
+        static let cardioDurationFullScoreSeconds: Double = 90 * 60   // 90 min
+        static let cardioDistanceFullScoreMeters: Double = 20_000     // 20 km
+        /// Systemic impact (non-leg muscles) is 45% of leg impact.
+        static let cardioSystemicShare: Double = 0.45
+        static let cardioImpactScale: Double = 0.18
+        static let cardioLegImpactCap: Double = 0.60
+        static let cardioSystemicImpactCap: Double = 0.30
+
+        // Per-cardio-type intensity multipliers. Run = 1.0 baseline;
+        // cycle = 0.65 (lower-impact, sustained); walk = 0.25 (minimal
+        // mechanical stress).
+        static let cardioRunIntensity: Double = 1.00
+        static let cardioCycleIntensity: Double = 0.65
+        static let cardioWalkIntensity: Double = 0.25
+
+        // Pace-zone multipliers for runs. Higher zone → faster pace →
+        // more fatigue.
+        static let cardioPaceSpeed: Double = 1.40
+        static let cardioPaceThreshold: Double = 1.25
+        static let cardioPaceTempo: Double = 1.12
+        static let cardioPaceAerobic: Double = 1.00
+        static let cardioPaceEasy: Double = 0.85
+        static let cardioPaceRecovery: Double = 0.70
+
+        // Magnitude scaling: composite (type × work × pace) × this = final.
+        static let cardioMagnitudeScale: Double = 2.0
+
+        // Display thresholds (color/label cutoffs on freshness 0–1).
+        static let freshnessReadyThreshold: Double = 0.8
+        static let freshnessAlmostThreshold: Double = 0.5
+        static let freshnessRecoveringThreshold: Double = 0.25
+
+        /// Freshness threshold above which a muscle is "ready to train"
+        /// in `suggestWorkoutType`. Tighter than the display threshold
+        /// because we want only well-recovered groups driving the
+        /// recommendation.
+        static let suggestReadyThreshold: Double = 0.7
+        /// Minimum ready muscle count to recommend a Full Body session
+        /// when the push/pull/legs combos aren't satisfied.
+        static let suggestFullBodyMinReady: Int = 3
+    }
+
+    // MARK: - Today plan engine
+
+    enum TodayPlan {
+
+        // Intensity decision thresholds on readiness score (0–1).
+        // < restThreshold → rest day. >= hardThreshold → hard. Between
+        // light and hard → light or moderate, see below.
+        static let restThreshold: Double = 0.30
+        static let lightThreshold: Double = 0.55
+        static let hardThreshold: Double = 0.85
+
+        // Sleep callout thresholds (hours).
+        static let sleepShortHours: Double = 6.0
+        static let sleepGoodHours: Double = 7.5
+
+        /// HRV / RHR baseline deviation needed to call out (±10% / +5 bpm).
+        static let hrvCalloutPct: Double = 0.10
+        static let rhrCalloutDeltaBpm: Double = 5.0
+
+        /// Freshness below this flags a muscle as fatigued in `goEasyOn`.
+        static let fatiguedFreshnessThreshold: Double = 0.4
+
+        // "Neglected groups" heuristic.
+        static let neglectedLookbackDays: Int = 7
+        /// Don't surface "you haven't trained X" until the user has
+        /// logged a couple of recent sessions — otherwise it fires on
+        /// their first day and feels nagging.
+        static let neglectedMinRecentSessions: Int = 2
+
+        // "Overworked group" heuristic.
+        static let overworkedLookbackDays: Int = 5
+        /// Trained on this many distinct days within the lookback →
+        /// flagged as overworked. Three days out of five is "every other
+        /// session" — high enough to warrant a suggestion to mix it up.
+        static let overworkedDayThreshold: Int = 3
+
+        // Confidence thresholds.
+        /// At least this many populated health signals (HRV / RHR /
+        /// sleep) to reach high confidence on the recovery axis.
+        static let confidenceHealthSignalsForHigh: Int = 2
+        /// At least this many recent workouts to reach high confidence
+        /// on the training-depth axis. ~1 week of training.
+        static let confidenceWorkoutsForHigh: Int = 7
+
+        /// Cap on reasons shown on the plan card to keep it scannable.
+        static let maxReasonsShown: Int = 3
+    }
+
+    // MARK: - Progression advisor
+
+    enum Progression {
+
+        // Per-muscle-group default weight increments (kg).
+        static let legsIncrementKg: Double = 5.0
+        static let defaultIncrementKg: Double = 2.5
+
+        // RPE-based recommendation thresholds (averaged across last 2 sessions).
+        /// ≤ this → "ready to increase" (still has headroom).
+        static let rpeIncreaseThreshold: Double = 7.5
+        /// Between increase and deload → "hold steady".
+        static let rpeDeloadThreshold: Double = 9.0
+
+        // Sustained-decline detection.
+        /// Number of consecutive declining sessions before we recommend
+        /// a deload from weight/rep trend alone (without RPE).
+        static let sustainedDeclineSessions: Int = 3
+
+        // Confidence floor for various recommendation paths.
+        static let confidenceHold: Double = 0.4
+        static let confidenceMinorDipHold: Double = 0.35
+        static let confidenceMixedSignals: Double = 0.3
+        static let confidenceWeightUp: Double = 0.8
+        static let confidenceRepsUp: Double = 0.65
+        static let confidenceDeload: Double = 0.7
+
+        /// Epley 1RM divisor: estimated 1RM = w × (1 + r / divisor).
+        /// 30 is the standard Epley formula.
+        static let epleyDivisor: Double = 30.0
+    }
+}

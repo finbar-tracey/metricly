@@ -6,21 +6,7 @@ struct QuickStartCard: View {
     let onStart: () -> Void
 
     var body: some View {
-        ZStack(alignment: .topLeading) {
-            LinearGradient(
-                colors: AppTheme.Gradients.calm,
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            // Top sheen
-            LinearGradient(
-                colors: [.white.opacity(0.18), .clear],
-                startPoint: .top, endPoint: .center
-            )
-            .blendMode(.plusLighter)
-            Circle().fill(.white.opacity(0.10)).frame(width: 160).blur(radius: 11).offset(x: 180, y: -50)
-            Circle().fill(.white.opacity(0.06)).frame(width: 90).blur(radius: 8).offset(x: -20, y: 80)
-
+        HeroCard(palette: AppTheme.Gradients.calm) {
             VStack(alignment: .leading, spacing: 16) {
                 HStack(spacing: 12) {
                     ZStack {
@@ -67,7 +53,7 @@ struct QuickStartCard: View {
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 13)
                     .background(.white)
-                    .foregroundStyle(Color(red: 0.30, green: 0.55, blue: 0.95))
+                    .foregroundStyle(AppTheme.Signal.calm)
                     .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                     .shadow(color: .black.opacity(0.18), radius: 8, y: 4)
                 }
@@ -75,6 +61,5 @@ struct QuickStartCard: View {
             }
             .padding(20)
         }
-        .heroCard()
     }
 }

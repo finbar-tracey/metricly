@@ -132,11 +132,15 @@ struct ContentView: View {
         // Thin "Workout in progress" pill at the top — visible on every tab
         // so the user never loses the trail back to an open session. Tap
         // resumes the workout in a sheet (no nav gymnastics across tabs).
+        // Below it: the global error banner from AppErrorBus.
         .safeAreaInset(edge: .top) {
-            if let active = inProgressWorkout, resumingWorkout?.persistentModelID != active.persistentModelID {
-                ActiveWorkoutPill(workout: active) {
-                    resumingWorkout = active
+            VStack(spacing: 0) {
+                if let active = inProgressWorkout, resumingWorkout?.persistentModelID != active.persistentModelID {
+                    ActiveWorkoutPill(workout: active) {
+                        resumingWorkout = active
+                    }
                 }
+                ErrorBanner()
             }
         }
         .sheet(item: $resumingWorkout) { workout in
@@ -194,6 +198,11 @@ struct ContentView: View {
         }
         .onChange(of: scenePhase) { _, newPhase in
             guard newPhase == .active else { return }
+            // Drop the HealthKit cache so the next read is fresh — user
+            // may have completed a workout on the Watch while we were
+            // backgrounded, and we don't want to render yesterday's
+            // resting HR for the next 5 minutes.
+            HealthDataCache.shared.invalidateAll()
             let lastWorkout = workouts.first?.date
             let lastCardio  = cardioSessions.first?.date
             if let lastActive = [lastWorkout, lastCardio].compactMap({ $0 }).max() {
@@ -286,6 +295,7 @@ struct ContentView: View {
                     Button { showingSearch = true } label: {
                         Image(systemName: "magnifyingglass")
                     }
+                    .accessibilityLabel("Search")
                 }
             }
             .sheet(isPresented: $showingSearch) { GlobalSearchView() }
@@ -350,6 +360,7 @@ struct ContentView: View {
                                 } label: {
                                     Image(systemName: "gearshape")
                                 }
+                                .accessibilityLabel("Settings")
                             }
                             ToolbarItem(placement: .topBarTrailing) {
                                 Button {
@@ -357,6 +368,7 @@ struct ContentView: View {
                                 } label: {
                                     Image(systemName: "magnifyingglass")
                                 }
+                                .accessibilityLabel("Search")
                             }
                         }
                         .sheet(isPresented: $showingSearch) {

@@ -277,25 +277,11 @@ struct CaffeineTrackerView: View {
     // MARK: - Hero Card
 
     private func heroCard(remaining: Double, readiness: (label: String, color: Color, icon: String), now: Date) -> some View {
-        ZStack(alignment: .topLeading) {
-            LinearGradient(
-                colors: [
-                    Color(red: 0.55, green: 0.32, blue: 0.18),
-                    Color(red: 0.78, green: 0.45, blue: 0.18),
-                    Color(red: 0.95, green: 0.55, blue: 0.20)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            // Top sheen
-            LinearGradient(
-                colors: [.white.opacity(0.18), .clear],
-                startPoint: .top, endPoint: .center
-            )
-            .blendMode(.plusLighter)
-            Circle().fill(.white.opacity(0.10)).frame(width: 200).blur(radius: 12).offset(x: 160, y: -60)
-            Circle().fill(.white.opacity(0.06)).frame(width: 110).blur(radius: 10).offset(x: -30, y: 80)
-
+        HeroCard(palette: [
+            Color(red: 0.55, green: 0.32, blue: 0.18),
+            Color(red: 0.78, green: 0.45, blue: 0.18),
+            Color(red: 0.95, green: 0.55, blue: 0.20)
+        ]) {
             VStack(alignment: .leading, spacing: 18) {
                 HStack(alignment: .center, spacing: 20) {
                     ZStack {
@@ -369,7 +355,6 @@ struct CaffeineTrackerView: View {
             }
             .padding(20)
         }
-        .heroCard()
     }
 
     // MARK: - Quick Log Card
@@ -820,7 +805,7 @@ struct CaffeineTrackerView: View {
     private func loadSleepData() async {
         guard settings.healthKitEnabled else { return }
         do {
-            sleepData = try await HealthKitManager.shared.fetchDailySleep(days: 30)
+            sleepData = try await HealthDataCache.shared.fetchDailySleep(days: 30)
         } catch {
             sleepData = []
         }

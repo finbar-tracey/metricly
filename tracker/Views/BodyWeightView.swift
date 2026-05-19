@@ -131,7 +131,7 @@ struct BodyWeightView: View {
                                     Color(.systemFill)
                                 } else {
                                     LinearGradient(
-                                        colors: [Color.orange, Color(red: 0.95, green: 0.45, blue: 0.20)],
+                                        colors: [Color.orange, AppTheme.Signal.actionOrange],
                                         startPoint: .topLeading,
                                         endPoint: .bottomTrailing
                                     )
@@ -228,7 +228,7 @@ struct BodyWeightView: View {
                 .lineStyle(StrokeStyle(lineWidth: 2.5, lineCap: .round, lineJoin: .round))
                 .foregroundStyle(
                     LinearGradient(
-                        colors: [Color.orange, Color(red: 0.95, green: 0.45, blue: 0.20)],
+                        colors: [Color.orange, AppTheme.Signal.actionOrange],
                         startPoint: .leading,
                         endPoint: .trailing
                     )
@@ -347,7 +347,13 @@ struct BodyWeightView: View {
         let entry = BodyWeightEntry(date: selectedDate, weight: weightKg)
         modelContext.insert(entry)
         if settingsArray.first?.healthKitEnabled == true {
-            Task { try? await HealthKitManager.shared.saveBodyWeight(weightKg, date: selectedDate) }
+            Task {
+                do {
+                    try await HealthKitManager.shared.saveBodyWeight(weightKg, date: selectedDate)
+                } catch {
+                    AppErrorBus.shared.report(message: "Couldn't save weight to Apple Health.", kind: .warning)
+                }
+            }
         }
         newWeight = ""; selectedDate = .now; isWeightFocused = false
     }

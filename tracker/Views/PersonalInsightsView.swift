@@ -127,7 +127,7 @@ struct PersonalInsightsView: View {
         )
 
         if healthKitEnabled {
-            let hk = HealthKitManager.shared
+            let hk = HealthDataCache.shared
             async let sleep = hk.fetchDailySleep(days: 90)
             async let hrv   = hk.fetchDailyHRV(days: 90)
             async let rhr   = hk.fetchDailyRestingHeartRate(days: 90)

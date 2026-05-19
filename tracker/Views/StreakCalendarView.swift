@@ -104,21 +104,7 @@ struct StreakCalendarView: View {
     // MARK: - Hero Card
 
     private var heroCard: some View {
-        ZStack(alignment: .topLeading) {
-            LinearGradient(
-                colors: AppTheme.Gradients.caution,
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            // Top sheen
-            LinearGradient(
-                colors: [.white.opacity(0.18), .clear],
-                startPoint: .top, endPoint: .center
-            )
-            .blendMode(.plusLighter)
-            Circle().fill(.white.opacity(0.10)).frame(width: 200).blur(radius: 12).offset(x: 160, y: -60)
-            Circle().fill(.white.opacity(0.06)).frame(width: 110).blur(radius: 10).offset(x: -30, y: 80)
-
+        HeroCard(palette: AppTheme.Gradients.caution) {
             VStack(alignment: .leading, spacing: 18) {
                 HStack(alignment: .center, spacing: 14) {
                     ZStack {
@@ -188,7 +174,6 @@ struct StreakCalendarView: View {
             }
             .padding(20)
         }
-        .heroCard()
     }
 
 

@@ -20,6 +20,7 @@
 		61E65B49C870A8DE919AF15E /* WatchSyncModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = ADABA831A2528A54D046938D /* WatchSyncModels.swift */; };
 		63D4CA14C514390DDE603321 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5F25E98828C1435245FC19FC /* SwiftUI.framework */; settings = {ATTRIBUTES = (); }; };
 		7234F76A6DB6A51D5BC9115B /* WatchModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2BE5CDBF4BEBD2DAD8351B6F /* WatchModels.swift */; };
+		8297692D2FC6441200590CAA /* Secrets.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = 8297692C2FC6441200590CAA /* Secrets.xcconfig */; };
 		82CCBB3A2F81354000BD46EA /* AppShortcuts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82CCBB032F81354000BD46EA /* AppShortcuts.swift */; };
 		82CCBB422F81354000BD46EA /* ExportHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82CCBB0B2F81354000BD46EA /* ExportHelper.swift */; };
 		82CCBB442F81354000BD46EA /* HapticsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82CCBB0D2F81354000BD46EA /* HapticsManager.swift */; };
@@ -46,6 +47,9 @@
 		8724577E02FB4DC83ACD45A1 /* StravaService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5A29A21938233E7A93C4D1 /* StravaService.swift */; };
 		8724577E02FB4DC83ACD45A2 /* StravaTokenStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5A29A21938233E7A93C4D2 /* StravaTokenStore.swift */; };
 		8724577E02FB4DC83ACD45A3 /* MetriclySchema.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5A29A21938233E7A93C4D3 /* MetriclySchema.swift */; };
+		8987CD55846DEC390F04017A /* ErrorBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 025DC0477A0DE102764A5E3B /* ErrorBanner.swift */; };
+		8DC996E2A0D7FD9E9693900C /* HealthDataCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E48B48972259787CEA4E374 /* HealthDataCache.swift */; };
+		9391243271CB6E909B85E048 /* EmptyStateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BFF364D2C5FEBC8065E83970 /* EmptyStateView.swift */; };
 		93D922DE98A02C2ADF16FA4C /* WatchConnectivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A5301678701A47E0ABE3B26 /* WatchConnectivityManager.swift */; };
 		9D21304DDD863A01918674DE /* WatchRestTimerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5589E11C36A11B70766D53EB /* WatchRestTimerView.swift */; };
 		9D21304DDD863A01918674DF /* WatchActiveMetricsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5589E11C36A11B70766D53EC /* WatchActiveMetricsView.swift */; };
@@ -124,6 +128,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		025DC0477A0DE102764A5E3B /* ErrorBanner.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ErrorBanner.swift; sourceTree = "<group>"; };
 		1D6493B1AA93126B3C5A3986 /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		2BA4CCAFFA20F72B2C77AE63 /* MetriclyWatchApp.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MetriclyWatchApp.swift; sourceTree = "<group>"; };
 		2BE5CDBF4BEBD2DAD8351B6F /* WatchModels.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchModels.swift; sourceTree = "<group>"; };
@@ -141,6 +146,8 @@
 		6A5301678701A47E0ABE3B26 /* WatchConnectivityManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchConnectivityManager.swift; sourceTree = "<group>"; };
 		6C7565ACAA622AD970A48063 /* WatchWorkoutSessionManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchWorkoutSessionManager.swift; sourceTree = "<group>"; };
 		6D730FE107BD884EB1ED495E /* MetriclyWatchComplications.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = MetriclyWatchComplications.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		6E48B48972259787CEA4E374 /* HealthDataCache.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = HealthDataCache.swift; sourceTree = "<group>"; };
+		8297692C2FC6441200590CAA /* Secrets.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secrets.xcconfig; sourceTree = "<group>"; };
 		82A0C4CE2F58E8E200BD421B /* tracker.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = tracker.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		82CCBB032F81354000BD46EA /* AppShortcuts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppShortcuts.swift; sourceTree = "<group>"; };
 		82CCBB0B2F81354000BD46EA /* ExportHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportHelper.swift; sourceTree = "<group>"; };
@@ -168,6 +175,7 @@
 		8542A36BEB6EAFCC197C9226 /* WatchGymView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchGymView.swift; sourceTree = "<group>"; };
 		9368BA8071E780160200AF2C /* Assets.xcassets */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		ADABA831A2528A54D046938D /* WatchSyncModels.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchSyncModels.swift; sourceTree = "<group>"; };
+		BFF364D2C5FEBC8065E83970 /* EmptyStateView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EmptyStateView.swift; sourceTree = "<group>"; };
 		D5A29A21938233E7A93C4C95 /* PhoneConnectivityManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PhoneConnectivityManager.swift; sourceTree = "<group>"; };
 		D5A29A21938233E7A93C4D1 /* StravaService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = StravaService.swift; sourceTree = "<group>"; };
 		D5A29A21938233E7A93C4D2 /* StravaTokenStore.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = StravaTokenStore.swift; sourceTree = "<group>"; };
@@ -205,6 +213,8 @@
 		};
 		82ED21672FAE534200D1DEFF /* trackerTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
 			path = trackerTests;
 			sourceTree = "<group>";
 		};
@@ -316,6 +326,7 @@
 				82CCBB902F8BF6A300BD46EA /* Components */,
 				6ED0973E21277FB2753A848A /* MetriclyWatch */,
 				7FA17C6917C523B86CA1468A /* MetriclyWatchComplications */,
+				8297692C2FC6441200590CAA /* Secrets.xcconfig */,
 			);
 			sourceTree = "<group>";
 		};
@@ -346,6 +357,7 @@
 				D5A29A21938233E7A93C4D2 /* StravaTokenStore.swift */,
 				D5A29A21938233E7A93C4D3 /* MetriclySchema.swift */,
 				ADABA831A2528A54D046938D /* WatchSyncModels.swift */,
+				6E48B48972259787CEA4E374 /* HealthDataCache.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -371,6 +383,8 @@
 				82CCBB932F8BF6CB00BD46EA /* MuscleIconView.swift */,
 				82CCBB952F8BF6CA00BD46EA /* UndoBar.swift */,
 				82CCBB962F8BF6CA00BD46EA /* HubRow.swift */,
+				BFF364D2C5FEBC8065E83970 /* EmptyStateView.swift */,
+				025DC0477A0DE102764A5E3B /* ErrorBanner.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -453,8 +467,6 @@
 				82ED21672FAE534200D1DEFF /* trackerTests */,
 			);
 			name = trackerTests;
-			packageProductDependencies = (
-			);
 			productName = trackerTests;
 			productReference = 82ED21662FAE534200D1DEFF /* trackerTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
@@ -568,6 +580,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				8297692D2FC6441200590CAA /* Secrets.xcconfig in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -633,6 +646,9 @@
 				8724577E02FB4DC83ACD45A2 /* StravaTokenStore.swift in Sources */,
 				8724577E02FB4DC83ACD45A3 /* MetriclySchema.swift in Sources */,
 				4861DF7CD2C7BFDBFD1E4B60 /* WatchSyncModels.swift in Sources */,
+				8DC996E2A0D7FD9E9693900C /* HealthDataCache.swift in Sources */,
+				9391243271CB6E909B85E048 /* EmptyStateView.swift in Sources */,
+				8987CD55846DEC390F04017A /* ErrorBanner.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -825,6 +841,7 @@
 		};
 		82A0C4DA2F58E8E200BD421B /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 8297692C2FC6441200590CAA /* Secrets.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -869,6 +886,7 @@
 		};
 		82A0C4DB2F58E8E200BD421B /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 8297692C2FC6441200590CAA /* Secrets.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;

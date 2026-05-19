@@ -15,11 +15,15 @@ struct StartWorkoutIntent: AppIntent {
     @MainActor
     func perform() async throws -> some IntentResult & ProvidesDialog {
         let name = workoutName ?? defaultName()
-        let container = try MetriclySchema.makeSharedContainer()
-        let context = container.mainContext
-        let workout = Workout(name: name, date: .now)
-        context.insert(workout)
-        try context.save()
+        do {
+            let container = try MetriclySchema.makeSharedContainer()
+            let context = container.mainContext
+            let workout = Workout(name: name, date: .now)
+            context.insert(workout)
+            try context.save()
+        } catch {
+            return .result(dialog: "I couldn't start that workout right now — try opening Metricly directly.")
+        }
         return .result(dialog: "Started \"\(name)\". Open Metricly to add exercises.")
     }
 
@@ -92,10 +96,21 @@ struct LogBodyWeightIntent: AppIntent {
 
     @MainActor
     func perform() async throws -> some IntentResult & ProvidesDialog {
-        let container = try MetriclySchema.makeSharedContainer()
-        let context = container.mainContext
-        context.insert(BodyWeightEntry(date: .now, weight: weight))
-        try context.save()
+        // Reject implausible inputs before they corrupt every weight chart
+        // and goal in the app. Range covers the full plausible adult human
+        // range; anything outside is almost certainly a parsing or unit
+        // mistake by Siri.
+        guard weight >= 20, weight <= 500 else {
+            return .result(dialog: "That doesn't look right — \(String(format: "%.1f", weight)) kg is outside the range I can log. Try a value between 20 and 500 kg.")
+        }
+        do {
+            let container = try MetriclySchema.makeSharedContainer()
+            let context = container.mainContext
+            context.insert(BodyWeightEntry(date: .now, weight: weight))
+            try context.save()
+        } catch {
+            return .result(dialog: "I couldn't save that weight just now — please try again from the app.")
+        }
         return .result(dialog: "Logged \(String(format: "%.1f", weight)) kg. Keep it up!")
     }
 }
@@ -111,10 +126,19 @@ struct LogWaterIntent: AppIntent {
 
     @MainActor
     func perform() async throws -> some IntentResult & ProvidesDialog {
-        let container = try MetriclySchema.makeSharedContainer()
-        let context = container.mainContext
-        context.insert(WaterEntry(date: .now, milliliters: Double(milliliters)))
-        try context.save()
+        // 5000 ml in one entry is already a stretch; anything bigger is a
+        // mis-parse. Negative or zero is a non-event we don't want stored.
+        guard milliliters >= 1, milliliters <= 5000 else {
+            return .result(dialog: "I can only log between 1 and 5000 ml at a time — \(milliliters) ml is outside that range.")
+        }
+        do {
+            let container = try MetriclySchema.makeSharedContainer()
+            let context = container.mainContext
+            context.insert(WaterEntry(date: .now, milliliters: Double(milliliters)))
+            try context.save()
+        } catch {
+            return .result(dialog: "I couldn't save that water entry just now — please try again from the app.")
+        }
         let cups = Double(milliliters) / 250
         return .result(dialog: "Logged \(milliliters) ml of water — that's \(String(format: "%.1f", cups)) cups. Stay hydrated!")
     }

@@ -336,7 +336,13 @@ struct FinishWorkoutSheet: View {
         PhoneConnectivityManager.shared.publishActiveWorkout(name: nil, startedAt: nil)
 
         if settingsArray.first?.healthKitEnabled == true {
-            Task { try? await HealthKitManager.shared.saveStrengthWorkout(workout) }
+            Task {
+                do {
+                    try await HealthKitManager.shared.saveStrengthWorkout(workout)
+                } catch {
+                    AppErrorBus.shared.report(message: "Couldn't save workout to Apple Health.", kind: .warning)
+                }
+            }
         }
 
         UIImpactFeedbackGenerator(style: .heavy).impactOccurred()

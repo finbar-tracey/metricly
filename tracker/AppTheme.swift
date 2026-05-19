@@ -19,12 +19,27 @@ enum AppTheme {
     enum Signal {
         static let recovery     = Color(red: 0.20, green: 0.78, blue: 0.45)
         static let recoveryDeep = Color(red: 0.00, green: 0.52, blue: 0.42)
+        /// Slightly darker than `recoveryDeep`; used in stat-strip gradients
+        /// where the deepest stop needs to read against white text.
+        static let recoveryShade = Color(red: 0.05, green: 0.55, blue: 0.42)
         static let strain       = Color(red: 0.95, green: 0.30, blue: 0.30)
         static let strainDeep   = Color(red: 0.78, green: 0.20, blue: 0.20)
         static let caution      = Color.orange
         static let cautionDeep  = Color(red: 0.85, green: 0.50, blue: 0.10)
         static let focus        = Color(red: 0.55, green: 0.35, blue: 0.95)
         static let calm         = Color(red: 0.30, green: 0.55, blue: 0.95)
+        /// Button accent for "Continue Workout" / progress CTAs — warmer
+        /// than `cautionDeep`, brighter than `caution`.
+        static let actionOrange = Color(red: 0.95, green: 0.45, blue: 0.20)
+        /// Button accent for "Start Workout" / success CTAs — the deeper
+        /// stop of the green gradient used across action buttons.
+        static let actionGreen  = Color(red: 0.10, green: 0.72, blue: 0.40)
+        /// Strong amber used in "this week" stat gradients.
+        static let amber        = Color(red: 0.95, green: 0.62, blue: 0.10)
+        /// Bright orange for runs / cardio accents (shared with widget).
+        static let runOrange    = Color(red: 1.0, green: 0.52, blue: 0.15)
+        /// Strong red used in heart-rate / strain gradients (shared with widget).
+        static let alarmRed     = Color(red: 0.88, green: 0.22, blue: 0.10)
     }
 
     // Gradient palette — multi-stop palettes for hero surfaces.

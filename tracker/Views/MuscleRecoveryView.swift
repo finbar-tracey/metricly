@@ -54,7 +54,7 @@ struct MuscleRecoveryView: View {
         .navigationTitle("Recovery")
         .task {
             guard settingsArray.first?.healthKitEnabled == true else { return }
-            let hk = HealthKitManager.shared
+            let hk = HealthDataCache.shared
             async let hrvResult = hk.fetchHRV(for: .now)
             async let hrvHistoryResult = hk.fetchDailyHRV(days: 7)
             async let sleepResult = hk.fetchSleep(for: .now)
@@ -86,21 +86,7 @@ struct MuscleRecoveryView: View {
             ? AppTheme.Gradients.recovery
             : (score >= 0.45 ? AppTheme.Gradients.caution : AppTheme.Gradients.strain)
 
-        return ZStack(alignment: .topLeading) {
-            LinearGradient(
-                colors: palette,
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            // Top sheen
-            LinearGradient(
-                colors: [.white.opacity(0.18), .clear],
-                startPoint: .top, endPoint: .center
-            )
-            .blendMode(.plusLighter)
-            Circle().fill(.white.opacity(0.10)).frame(width: 200).blur(radius: 12).offset(x: 160, y: -60)
-            Circle().fill(.white.opacity(0.06)).frame(width: 110).blur(radius: 10).offset(x: -30, y: 80)
-
+        return HeroCard(palette: palette) {
             VStack(alignment: .leading, spacing: 20) {
                 HStack(alignment: .center, spacing: 20) {
                     ZStack {
@@ -150,7 +136,6 @@ struct MuscleRecoveryView: View {
             }
             .padding(20)
         }
-        .heroCard()
         .accessibilityHint(readinessColor.description)
     }
 
@@ -253,7 +238,7 @@ struct MuscleRecoveryView: View {
                             RoundedRectangle(cornerRadius: 11, style: .continuous)
                                 .fill(
                                     LinearGradient(
-                                        colors: [.orange, Color(red: 0.95, green: 0.45, blue: 0.20)],
+                                        colors: [.orange, AppTheme.Signal.actionOrange],
                                         startPoint: .topLeading,
                                         endPoint: .bottomTrailing
                                     )
@@ -385,7 +370,7 @@ struct MuscleRecoveryView: View {
                         RoundedRectangle(cornerRadius: 11, style: .continuous)
                             .fill(
                                 LinearGradient(
-                                    colors: [.orange, Color(red: 0.95, green: 0.45, blue: 0.20)],
+                                    colors: [.orange, AppTheme.Signal.actionOrange],
                                     startPoint: .topLeading,
                                     endPoint: .bottomTrailing
                                 )

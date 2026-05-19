@@ -84,6 +84,45 @@ final class WorkoutActivityManager {
         currentActivity != nil
     }
 
+    // MARK: - Cold-launch reconciliation
+
+    /// Reconcile any system-level Live Activities we don't currently track.
+    ///
+    /// Why this exists: if the app is force-quit (or crashes) mid-workout,
+    /// `endActivity` never runs. The Live Activity persists in iOS for up
+    /// to 12 hours, sitting on the user's lock screen with frozen data.
+    /// On the next launch our singleton's `currentActivity` is nil, so we
+    /// can't update or end it without first re-attaching.
+    ///
+    /// Policy:
+    /// - Any activity older than 6 hours → end immediately. No workout
+    ///   plausibly runs that long; it's an orphan.
+    /// - Activity matching the in-progress workout (same name + start
+    ///   date within a few seconds) → re-attach so future updates flow.
+    /// - Anything else → end. The user deleted/finished the workout while
+    ///   the app was killed; the activity is stale.
+    func reconcileOnLaunch(activeWorkoutName: String?, activeWorkoutStartedAt: Date?) {
+        let activities = Activity<WorkoutActivityAttributes>.activities
+        for activity in activities {
+            let age = Date.now.timeIntervalSince(activity.attributes.startDate)
+            if age > 6 * 3600 {
+                Task { await activity.end(nil, dismissalPolicy: .immediate) }
+                continue
+            }
+            if let name = activeWorkoutName,
+               let startedAt = activeWorkoutStartedAt,
+               activity.attributes.workoutName == name,
+               abs(activity.attributes.startDate.timeIntervalSince(startedAt)) < 5 {
+                if currentActivity == nil {
+                    currentActivity = activity
+                    startUpdateTimer()
+                }
+            } else {
+                Task { await activity.end(nil, dismissalPolicy: .immediate) }
+            }
+        }
+    }
+
     // MARK: - Timer for elapsed time updates
 
     private func startUpdateTimer() {

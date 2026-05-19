@@ -73,21 +73,7 @@ struct StepsDetailView: View {
     // MARK: - Hero Card
 
     private var heroCard: some View {
-        ZStack(alignment: .topLeading) {
-            LinearGradient(
-                colors: AppTheme.Gradients.recovery,
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            // Top sheen
-            LinearGradient(
-                colors: [.white.opacity(0.18), .clear],
-                startPoint: .top, endPoint: .center
-            )
-            .blendMode(.plusLighter)
-            Circle().fill(.white.opacity(0.10)).frame(width: 220).blur(radius: 12).offset(x: 160, y: -70)
-            Circle().fill(.white.opacity(0.06)).frame(width: 110).blur(radius: 10).offset(x: -30, y: 80)
-
+        HeroCard(palette: AppTheme.Gradients.recovery) {
             VStack(alignment: .leading, spacing: 20) {
                 // Top: ring + step count
                 HStack(alignment: .center, spacing: 20) {
@@ -162,7 +148,6 @@ struct StepsDetailView: View {
             }
             .padding(20)
         }
-        .heroCard()
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(HealthFormatters.formatSteps(todaySteps)) steps of \(HealthFormatters.formatSteps(stepGoal)) goal")
     }
@@ -183,7 +168,7 @@ struct StepsDetailView: View {
                         .foregroundStyle(
                             LinearGradient(
                                 colors: point.steps >= stepGoal
-                                    ? [Color.green, Color(red: 0.05, green: 0.55, blue: 0.42)]
+                                    ? [Color.green, AppTheme.Signal.recoveryShade]
                                     : [Color.green.opacity(0.55), Color.green.opacity(0.30)],
                                 startPoint: .top,
                                 endPoint: .bottom
@@ -248,7 +233,7 @@ struct StepsDetailView: View {
                 )
                 .foregroundStyle(
                     LinearGradient(
-                        colors: [Color.green, Color(red: 0.05, green: 0.55, blue: 0.42)],
+                        colors: [Color.green, AppTheme.Signal.recoveryShade],
                         startPoint: .top,
                         endPoint: .bottom
                     )
@@ -561,7 +546,7 @@ struct StepsDetailView: View {
     private func loadData() async {
         isLoading = true
         defer { isLoading = false }
-        let hk = HealthKitManager.shared
+        let hk = HealthDataCache.shared
         let fetchDays = max(dayCount, 14)
         async let stepsData = hk.fetchDailySteps(days: fetchDays)
         async let distData = hk.fetchDailyDistance(days: fetchDays)

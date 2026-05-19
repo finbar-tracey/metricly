@@ -137,7 +137,7 @@ struct TemplateEditView: View {
                         RoundedRectangle(cornerRadius: 10, style: .continuous)
                             .fill(
                                 LinearGradient(
-                                    colors: [.green, Color(red: 0.10, green: 0.72, blue: 0.40)],
+                                    colors: [.green, AppTheme.Signal.actionGreen],
                                     startPoint: .topLeading,
                                     endPoint: .bottomTrailing
                                 )

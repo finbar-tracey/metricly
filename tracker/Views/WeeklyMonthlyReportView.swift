@@ -273,21 +273,7 @@ struct WeeklyMonthlyReportView: View {
     // MARK: - Hero Card
 
     private var heroCard: some View {
-        ZStack(alignment: .topLeading) {
-            LinearGradient(
-                colors: AppTheme.Gradients.calm,
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            // Top sheen
-            LinearGradient(
-                colors: [.white.opacity(0.18), .clear],
-                startPoint: .top, endPoint: .center
-            )
-            .blendMode(.plusLighter)
-            Circle().fill(.white.opacity(0.10)).frame(width: 200).blur(radius: 12).offset(x: 160, y: -60)
-            Circle().fill(.white.opacity(0.06)).frame(width: 110).blur(radius: 10).offset(x: -30, y: 80)
-
+        HeroCard(palette: AppTheme.Gradients.calm) {
             VStack(alignment: .leading, spacing: 18) {
                 HStack(alignment: .center, spacing: 14) {
                     Text(vibeEmoji)
@@ -341,7 +327,6 @@ struct WeeklyMonthlyReportView: View {
             }
             .padding(20)
         }
-        .heroCard()
     }
 
 
@@ -428,7 +413,7 @@ struct WeeklyMonthlyReportView: View {
                                     LinearGradient(
                                         colors: [
                                             Color(red: 1.00, green: 0.85, blue: 0.20),
-                                            Color(red: 0.95, green: 0.62, blue: 0.10)
+                                            AppTheme.Signal.amber
                                         ],
                                         startPoint: .topLeading,
                                         endPoint: .bottomTrailing
@@ -451,7 +436,7 @@ struct WeeklyMonthlyReportView: View {
                                 LinearGradient(
                                     colors: [
                                         Color(red: 1.00, green: 0.85, blue: 0.20),
-                                        Color(red: 0.95, green: 0.62, blue: 0.10)
+                                        AppTheme.Signal.amber
                                     ],
                                     startPoint: .topLeading,
                                     endPoint: .bottomTrailing
@@ -562,7 +547,7 @@ struct WeeklyMonthlyReportView: View {
                                 .background(
                                     LinearGradient(
                                         colors: change > 0 ? [.red, Color(red: 0.78, green: 0.20, blue: 0.20)]
-                                                            : [.green, Color(red: 0.05, green: 0.55, blue: 0.42)],
+                                                            : [.green, AppTheme.Signal.recoveryShade],
                                         startPoint: .topLeading,
                                         endPoint: .bottomTrailing
                                     ),
@@ -745,7 +730,7 @@ struct WeeklyMonthlyReportView: View {
 
     private func loadHealthData() async {
         isLoadingHealth = true; defer { isLoadingHealth = false }
-        let hk = HealthKitManager.shared; let days: Int = selectedPeriod == .week ? 14 : 60
+        let hk = HealthDataCache.shared; let days: Int = selectedPeriod == .week ? 14 : 60
         let range = currentPeriodRange; let prevRange = previousPeriodRange
 
         async let stepsResult = hk.fetchDailySteps(days: days)

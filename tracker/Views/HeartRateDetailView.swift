@@ -71,21 +71,7 @@ struct HeartRateDetailView: View {
     // MARK: - Hero Card
 
     private var heroCard: some View {
-        ZStack(alignment: .topLeading) {
-            LinearGradient(
-                colors: AppTheme.Gradients.strain,
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            // Top sheen
-            LinearGradient(
-                colors: [.white.opacity(0.18), .clear],
-                startPoint: .top, endPoint: .center
-            )
-            .blendMode(.plusLighter)
-            Circle().fill(.white.opacity(0.10)).frame(width: 220).blur(radius: 12).offset(x: 160, y: -70)
-            Circle().fill(.white.opacity(0.06)).frame(width: 110).blur(radius: 10).offset(x: -30, y: 80)
-
+        HeroCard(palette: AppTheme.Gradients.strain) {
             VStack(alignment: .leading, spacing: 20) {
                 // Top: icon + primary BPM
                 HStack(alignment: .center, spacing: 16) {
@@ -168,7 +154,6 @@ struct HeartRateDetailView: View {
             }
             .padding(20)
         }
-        .heroCard()
     }
 
     // MARK: - Zones Card
@@ -437,7 +422,7 @@ struct HeartRateDetailView: View {
                 .lineStyle(StrokeStyle(lineWidth: 2.5, lineCap: .round, lineJoin: .round))
                 .foregroundStyle(
                     LinearGradient(
-                        colors: [.purple, Color(red: 0.55, green: 0.35, blue: 0.95)],
+                        colors: [.purple, AppTheme.Signal.focus],
                         startPoint: .leading,
                         endPoint: .trailing
                     )
@@ -476,7 +461,7 @@ struct HeartRateDetailView: View {
                     RoundedRectangle(cornerRadius: 11, style: .continuous)
                         .fill(
                             LinearGradient(
-                                colors: [.purple, Color(red: 0.55, green: 0.35, blue: 0.95)],
+                                colors: [.purple, AppTheme.Signal.focus],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             )
@@ -531,8 +516,8 @@ struct HeartRateDetailView: View {
                         .padding(8)
                         .background(
                             LinearGradient(
-                                colors: delta <= 0 ? [.green, Color(red: 0.05, green: 0.55, blue: 0.42)]
-                                                   : [.orange, Color(red: 0.95, green: 0.45, blue: 0.20)],
+                                colors: delta <= 0 ? [.green, AppTheme.Signal.recoveryShade]
+                                                   : [.orange, AppTheme.Signal.actionOrange],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             ),
@@ -707,7 +692,7 @@ struct HeartRateDetailView: View {
     private func loadData() async {
         isLoading = true
         defer { isLoading = false }
-        let hk = HealthKitManager.shared
+        let hk = HealthDataCache.shared
         let fetchDays = max(dayCount, 14)
         async let hrData = hk.fetchDailyRestingHeartRate(days: fetchDays)
         async let rangeData = hk.fetchDailyHeartRateRange(days: min(dayCount, 30))

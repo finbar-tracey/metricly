@@ -28,3 +28,8 @@ add_watch_target.rb
 generate_icon.swift
 icon_1024.png
 icon_1024_dark.png
+
+# Secrets — real values live locally, never in git. See
+# Config/Secrets.xcconfig.example for setup.
+Secrets.xcconfig
+**/Secrets.xcconfig

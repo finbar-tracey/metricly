@@ -35,23 +35,11 @@ struct VolumeTrendsView: View {
     // MARK: - Hero Card
 
     private var heroCard: some View {
-        ZStack(alignment: .topLeading) {
-            LinearGradient(
-                colors: [
-                    Color.blue,
-                    Color.blue.opacity(0.78),
-                    Color(red: 0.10, green: 0.40, blue: 0.85)
-                ],
-                startPoint: .topLeading, endPoint: .bottomTrailing
-            )
-            LinearGradient(
-                colors: [.white.opacity(0.18), .clear],
-                startPoint: .top, endPoint: .center
-            )
-            .blendMode(.plusLighter)
-            Circle().fill(.white.opacity(0.10)).frame(width: 200).blur(radius: 12).offset(x: 160, y: -50)
-            Circle().fill(.white.opacity(0.06)).frame(width: 110).blur(radius: 10).offset(x: -30, y: 80)
-
+        HeroCard(palette: [
+            Color.blue,
+            Color.blue.opacity(0.78),
+            Color(red: 0.10, green: 0.40, blue: 0.85)
+        ]) {
             VStack(alignment: .leading, spacing: 18) {
                 HStack(alignment: .center, spacing: 14) {
                     ZStack {
@@ -103,7 +91,6 @@ struct VolumeTrendsView: View {
             }
             .padding(20)
         }
-        .heroCard()
     }
 
 
@@ -126,7 +113,7 @@ struct VolumeTrendsView: View {
                                 if timeRange == range {
                                     Capsule().fill(
                                         LinearGradient(
-                                            colors: [.blue, Color(red: 0.30, green: 0.55, blue: 0.95)],
+                                            colors: [.blue, AppTheme.Signal.calm],
                                             startPoint: .topLeading, endPoint: .bottomTrailing
                                         )
                                     )
@@ -155,7 +142,7 @@ struct VolumeTrendsView: View {
                     .foregroundStyle(
                         LinearGradient(
                             colors: [
-                                Color(red: 0.30, green: 0.55, blue: 0.95),
+                                AppTheme.Signal.calm,
                                 Color(red: 0.45, green: 0.30, blue: 0.95)
                             ],
                             startPoint: .top,

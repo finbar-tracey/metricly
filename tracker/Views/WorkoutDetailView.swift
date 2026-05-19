@@ -51,7 +51,14 @@ struct WorkoutDetailView: View {
             // MARK: - Hero (non-template)
             if !workout.isTemplate {
                 Section {
-                    workoutHeroCard
+                    WorkoutHeroCard(
+                        workout: workout,
+                        weightUnit: weightUnit,
+                        progressFraction: progressFraction,
+                        progressRatio: progressRatio,
+                        totalWorkingSets: totalWorkingSets,
+                        elapsedTime: elapsedTime
+                    )
                         .listRowBackground(Color.clear)
                         .listRowInsets(.init(top: 8, leading: 16, bottom: 8, trailing: 16))
                 }
@@ -136,7 +143,12 @@ struct WorkoutDetailView: View {
                 Section {
                     ForEach(sortedExercises) { exercise in
                         NavigationLink(value: exercise) {
-                            exerciseRow(exercise)
+                            WorkoutExerciseRow(
+                                exercise: exercise,
+                                weightUnit: weightUnit,
+                                averageRPE: averageRPE(for: exercise),
+                                badge: progressBadge(for: exercise)
+                            )
                         }
                         .listRowBackground(Color(.secondarySystemGroupedBackground))
                         .swipeActions(edge: .leading) {
@@ -296,7 +308,7 @@ struct WorkoutDetailView: View {
                         Label("Duplicate Workout", systemImage: "plus.square.on.square")
                     }
                     Button {
-                        shareItems = [formatWorkoutSummary()]
+                        shareItems = [WorkoutSummaryFormatter.plainText(for: workout, weightUnit: weightUnit)]
                         showingShare = true
                     } label: {
                         Label("Share as Text", systemImage: "text.quote")
@@ -321,6 +333,7 @@ struct WorkoutDetailView: View {
                 } label: {
                     Image(systemName: "ellipsis.circle")
                 }
+                .accessibilityLabel("More")
             }
         }
         .sheet(isPresented: $showingEditWorkout) {
@@ -399,7 +412,15 @@ struct WorkoutDetailView: View {
             Text("Don't forget to turn off your Fitness Focus mode. Open Settings, then tap Focus.")
         }
         .sheet(item: $linkingSupersetFor) { sourceExercise in
-            supersetPickerSheet(for: sourceExercise)
+            SupersetPickerSheet(
+                source: sourceExercise,
+                candidates: sortedExercises.filter { $0.persistentModelID != sourceExercise.persistentModelID },
+                onPick: { partner in
+                    linkSuperset(sourceExercise, with: partner)
+                    linkingSupersetFor = nil
+                },
+                onCancel: { linkingSupersetFor = nil }
+            )
         }
         .onAppear {
             updateElapsedTime()
@@ -425,212 +446,6 @@ struct WorkoutDetailView: View {
                 }
             }
         }
-    }
-
-    // MARK: - Hero Card
-
-    /// Slimmed workout hero. Was 215pt of stacked gradients, sheens, blurred
-    /// circles, and a 14pt-padded ultra-thin material panel inside another
-    /// gradient. Now ~140pt with a single clean gradient + the stats strip
-    /// + progress bar — the workout list dominates the screen.
-    private var workoutHeroCard: some View {
-        ZStack(alignment: .topLeading) {
-            LinearGradient(
-                colors: workout.isFinished
-                    ? AppTheme.Gradients.recovery
-                    : AppTheme.Gradients.calm,
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-
-            VStack(alignment: .leading, spacing: 10) {
-                // Top row: status + relative date + rating (if finished)
-                HStack(spacing: 8) {
-                    Label(
-                        workout.isFinished ? "Completed" : "In Progress",
-                        systemImage: workout.isFinished ? "checkmark.circle.fill" : "timer"
-                    )
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 9).padding(.vertical, 3)
-                    .background(.white.opacity(0.18), in: Capsule())
-
-                    Text(workout.date, format: .dateTime.month(.abbreviated).day())
-                        .font(.caption.weight(.medium))
-                        .foregroundStyle(.white.opacity(0.80))
-
-                    Spacer()
-
-                    if workout.isFinished, let rating = workout.rating, rating > 0 {
-                        HStack(spacing: 2) {
-                            ForEach(1...5, id: \.self) { i in
-                                Image(systemName: i <= rating ? "star.fill" : "star")
-                                    .font(.system(size: 10))
-                                    .foregroundStyle(i <= rating ? .yellow : .white.opacity(0.30))
-                            }
-                        }
-                    }
-                }
-
-                // Stats strip — same 4 stats, smaller, no panel-within-panel
-                HStack(spacing: 0) {
-                    HeroStatCol(value: progressFraction,
-                                label: "Done",
-                                icon: "figure.strengthtraining.functional")
-                    Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 28)
-                    HeroStatCol(value: "\(totalWorkingSets)",
-                                label: "Sets",
-                                icon: "repeat")
-                    Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 28)
-                    HeroStatCol(value: workout.isFinished ? (workout.formattedDuration ?? "–") : elapsedTime,
-                                label: "Duration",
-                                icon: "clock")
-                    Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 28)
-                    HeroStatCol(value: weightUnit.formatShort(workout.totalVolumeKg()),
-                                label: "Volume",
-                                icon: "scalemass")
-                }
-
-                // Progress bar — fills as exercises log their first working set
-                GeometryReader { geo in
-                    ZStack(alignment: .leading) {
-                        Capsule().fill(.white.opacity(0.20))
-                        Capsule()
-                            .fill(.white.opacity(0.90))
-                            .frame(width: max(2, geo.size.width * progressRatio))
-                    }
-                }
-                .frame(height: 3)
-                .accessibilityLabel("Progress: \(progressFraction)")
-            }
-            .padding(14)
-        }
-        .frame(minHeight: 140)
-        .clipShape(RoundedRectangle(cornerRadius: AppTheme.heroRadius))
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(workout.isFinished
-            ? "Workout completed, duration \(workout.formattedDuration ?? "")"
-            : "Workout in progress, elapsed \(elapsedTime)")
-    }
-
-    private var finishButton: some View {
-        Button {
-            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-            showingFinishSheet = true
-        } label: {
-            HStack(spacing: 10) {
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 17, weight: .bold))
-                Text("Finish Workout")
-                    .font(.system(size: 16, weight: .bold, design: .rounded))
-                    .tracking(0.4)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 16)
-            .background(
-                LinearGradient(
-                    colors: [Color.green, Color(red: 0.1, green: 0.72, blue: 0.35)],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            )
-            .foregroundStyle(.white)
-            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .stroke(Color.white.opacity(0.20), lineWidth: 0.5)
-            )
-            .shadow(color: .green.opacity(0.45), radius: 14, y: 6)
-        }
-        .buttonStyle(.pressableCard)
-    }
-
-    // MARK: - Exercise Row
-
-    private func exerciseRow(_ exercise: Exercise) -> some View {
-        HStack(spacing: 12) {
-            if exercise.supersetGroup != nil {
-                supersetIndicator(for: exercise)
-            }
-            ZStack {
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            colors: [Color.accentColor.opacity(0.22), Color.accentColor.opacity(0.10)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .frame(width: 44, height: 44)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .stroke(Color.accentColor.opacity(0.20), lineWidth: 0.5)
-                    )
-                MuscleIconView(group: exercise.category ?? .other, color: Color.accentColor)
-                    .frame(width: 22, height: 22)
-            }
-            VStack(alignment: .leading, spacing: 4) {
-                HStack(spacing: 6) {
-                    Text(exercise.name)
-                        .font(.system(size: 16, weight: .semibold, design: .rounded))
-                    if exercise.supersetGroup != nil {
-                        Text("SS")
-                            .font(.system(size: 9, weight: .bold))
-                            .foregroundStyle(Color.accentColor)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(Color.accentColor.opacity(0.14), in: .capsule)
-                    }
-                }
-                HStack(spacing: 8) {
-                    if !exercise.sets.isEmpty {
-                        let working = exercise.sets.filter { !$0.isWarmUp }
-                        let warmUps = exercise.sets.filter(\.isWarmUp)
-                        Text("\(working.count) sets")
-                            .font(.caption).foregroundStyle(.secondary)
-                        if !warmUps.isEmpty {
-                            Text("+ \(warmUps.count)W")
-                                .font(.caption).foregroundStyle(.orange)
-                        }
-                        if let best = working.map(\.weight).max(), best > 0 {
-                            Text("· \(weightUnit.formatShort(best))")
-                                .font(.caption).foregroundStyle(.secondary)
-                        }
-                        if let avgRPE = averageRPE(for: exercise) {
-                            Text("RPE \(String(format: "%.0f", avgRPE))")
-                                .font(.caption2.weight(.semibold))
-                                .foregroundStyle(.purple)
-                                .padding(.horizontal, 5).padding(.vertical, 2)
-                                .background(.purple.opacity(0.12), in: .capsule)
-                        }
-                    } else {
-                        Text("No sets yet")
-                            .font(.caption).foregroundStyle(.tertiary)
-                    }
-                    if let cat = exercise.category {
-                        Text(cat.rawValue)
-                            .font(.caption2).foregroundStyle(.tertiary)
-                    }
-                }
-                if !exercise.notes.isEmpty {
-                    Text(exercise.notes)
-                        .font(.caption).foregroundStyle(.tertiary).lineLimit(1)
-                }
-            }
-            Spacer()
-
-            // Per-exercise comparison vs last session — shown when we have
-            // logged sets to compare and a meaningful delta.
-            if let badge = progressBadgeText(for: exercise) {
-                Text(badge.text)
-                    .font(.caption2.weight(.bold))
-                    .foregroundStyle(badge.color)
-                    .padding(.horizontal, 7)
-                    .padding(.vertical, 3)
-                    .background(badge.color.opacity(0.14), in: .capsule)
-            }
-        }
-        .padding(.vertical, 4)
     }
 
     // MARK: - Workout-level progress
@@ -677,26 +492,29 @@ struct WorkoutDetailView: View {
     /// Human-readable comparison vs last session for the row badge.
     /// Returns nil if no comparison is available, the current set is empty,
     /// or the change is negligible.
-    private func progressBadgeText(for exercise: Exercise) -> (text: String, color: Color)? {
+    private func progressBadge(for exercise: Exercise) -> WorkoutExerciseRow.Badge? {
         let working = exercise.sets.filter { !$0.isWarmUp && $0.weight > 0 }
         guard let currentTop = working.max(by: { $0.weight < $1.weight }) else { return nil }
         guard let lastTop = lastSessionTopSet(for: exercise) else {
-            return ("New", .blue)
+            return .init(text: "New", color: .blue)
         }
 
         // Weight first — biggest signal
         let weightDelta = currentTop.weight - lastTop.weight
         if weightDelta >= 0.1 {
-            return ("↑ \(weightUnit.formatShort(weightDelta))", .green)
+            return .init(text: "↑ \(weightUnit.formatShort(weightDelta))", color: .green)
         }
         if weightDelta <= -0.1 {
-            return ("↓ \(weightUnit.formatShort(abs(weightDelta)))", .orange)
+            return .init(text: "↓ \(weightUnit.formatShort(abs(weightDelta)))", color: .orange)
         }
         // Same weight — compare reps at that weight
         let currentRepsAtTop = working.filter { abs($0.weight - currentTop.weight) < 0.01 }.map(\.reps).max() ?? 0
         let lastRepsAtTop    = lastTop.reps
         if currentRepsAtTop > lastRepsAtTop {
-            return ("↑ +\(currentRepsAtTop - lastRepsAtTop) rep\(currentRepsAtTop - lastRepsAtTop == 1 ? "" : "s")", .green)
+            return .init(
+                text: "↑ +\(currentRepsAtTop - lastRepsAtTop) rep\(currentRepsAtTop - lastRepsAtTop == 1 ? "" : "s")",
+                color: .green
+            )
         }
         return nil
     }
@@ -825,52 +643,6 @@ struct WorkoutDetailView: View {
         }
     }
 
-    private func formatWorkoutSummary() -> String {
-        var lines: [String] = []
-        lines.append("💪 \(workout.name)")
-        lines.append(workout.date.formatted(date: .long, time: .omitted))
-
-        if let duration = workout.formattedDuration {
-            lines.append("Duration: \(duration)")
-        }
-        if let rating = workout.rating, rating > 0 {
-            lines.append("Rating: \(String(repeating: "⭐", count: rating))")
-        }
-        lines.append("")
-
-        let sorted = workout.exercises.sorted { $0.order < $1.order }
-        for exercise in sorted {
-            let workingSets = exercise.sets.filter { !$0.isWarmUp }
-            let warmUps = exercise.sets.filter(\.isWarmUp)
-
-            var header = exercise.name
-            if let cat = exercise.category { header += " (\(cat.rawValue))" }
-            lines.append(header)
-
-            if !warmUps.isEmpty {
-                let warmUpStr = warmUps.map { "\($0.reps)×\(weightUnit.formatShort($0.weight))" }.joined(separator: ", ")
-                lines.append("  Warm-up: \(warmUpStr)")
-            }
-            for (i, s) in workingSets.enumerated() {
-                if s.isCardio {
-                    let detail = [s.formattedDistance(unit: weightUnit.distanceUnit), s.formattedDuration].compactMap { $0 }.joined(separator: " in ")
-                    lines.append("  Entry \(i + 1): \(detail)")
-                } else {
-                    lines.append("  Set \(i + 1): \(s.reps) reps × \(weightUnit.format(s.weight))")
-                }
-            }
-            lines.append("")
-        }
-
-        if !workout.notes.isEmpty {
-            lines.append("Notes: \(workout.notes)")
-            lines.append("")
-        }
-
-        lines.append("Logged with Metricly")
-        return lines.joined(separator: "\n")
-    }
-
     private func saveAsTemplate() {
         let template = Workout(name: workout.name, isTemplate: true)
         modelContext.insert(template)
@@ -945,27 +717,6 @@ struct WorkoutDetailView: View {
         return (existing.max() ?? 0) + 1
     }
 
-    private func supersetIndicator(for exercise: Exercise) -> some View {
-        let color = supersetColor(for: exercise.supersetGroup ?? 0)
-        return RoundedRectangle(cornerRadius: 3, style: .continuous)
-            .fill(
-                LinearGradient(
-                    colors: [color, color.opacity(0.6)],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-            )
-            .frame(width: 5)
-            .shadow(color: color.opacity(0.45), radius: 4, x: 0, y: 0)
-            .padding(.trailing, 10)
-            .padding(.vertical, -4)
-    }
-
-    private func supersetColor(for group: Int) -> Color {
-        let colors: [Color] = [.purple, .blue, .cyan, .indigo, .pink]
-        return colors[(group - 1) % colors.count]
-    }
-
     private func unlinkSuperset(_ exercise: Exercise) {
         exercise.supersetGroup = nil
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
@@ -988,46 +739,4 @@ struct WorkoutDetailView: View {
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
     }
 
-    private func supersetPickerSheet(for sourceExercise: Exercise) -> some View {
-        NavigationStack {
-            List {
-                Section {
-                    Text("Choose an exercise to superset with \"\(sourceExercise.name)\".")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
-                Section {
-                    ForEach(sortedExercises.filter { $0.persistentModelID != sourceExercise.persistentModelID }) { partner in
-                        Button {
-                            linkSuperset(sourceExercise, with: partner)
-                            linkingSupersetFor = nil
-                        } label: {
-                            HStack {
-                                MuscleIconView(group: partner.category ?? .other, color: Color.accentColor)
-                                    .frame(width: 18, height: 18)
-                                Text(partner.name)
-                                if partner.supersetGroup != nil {
-                                    Spacer()
-                                    Text("SS")
-                                        .font(.caption2.bold())
-                                        .padding(.horizontal, 5)
-                                        .padding(.vertical, 2)
-                                        .background(.tint.opacity(0.2), in: .capsule)
-                                }
-                            }
-                        }
-                    }
-                } header: {
-                    Text("Exercises")
-                }
-            }
-            .navigationTitle("Link Superset")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { linkingSupersetFor = nil }
-                }
-            }
-        }
-    }
 }

@@ -103,10 +103,18 @@ struct TrainingHubView: View {
             }
 
             // ── Progress ─────────────────────────────────────────────────
+            // Canonical: this section's contents must match the iPad
+            // sidebar's "Progress" section in ContentView. The two have
+            // drifted before (Achievements was in MoreHub on iPhone for
+            // a while). If you add a row here, mirror it there.
             Section("Progress") {
                 NavigationLink { PersonalRecordsView() } label: {
                     hubRow(icon: "trophy", color: .orange,
                            title: "Personal Records", subtitle: "Your heaviest lifts")
+                }
+                NavigationLink { AchievementsView() } label: {
+                    hubRow(icon: "medal", color: .yellow,
+                           title: "Achievements", subtitle: "Badges and milestones")
                 }
                 NavigationLink { StreakCalendarView() } label: {
                     hubRow(icon: "flame", color: .red,

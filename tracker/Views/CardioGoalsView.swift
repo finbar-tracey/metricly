@@ -72,7 +72,7 @@ struct CardioGoalsView: View {
                         RoundedRectangle(cornerRadius: 12, style: .continuous)
                             .fill(
                                 LinearGradient(
-                                    colors: [.orange, Color(red: 0.95, green: 0.45, blue: 0.20)],
+                                    colors: [.orange, AppTheme.Signal.actionOrange],
                                     startPoint: .topLeading,
                                     endPoint: .bottomTrailing
                                 )
@@ -192,7 +192,7 @@ struct CardioGoalsView: View {
                             RoundedRectangle(cornerRadius: 10, style: .continuous)
                                 .fill(
                                     LinearGradient(
-                                        colors: [.orange, Color(red: 0.95, green: 0.45, blue: 0.20)],
+                                        colors: [.orange, AppTheme.Signal.actionOrange],
                                         startPoint: .topLeading,
                                         endPoint: .bottomTrailing
                                     )
@@ -231,7 +231,7 @@ struct CardioGoalsView: View {
                             RoundedRectangle(cornerRadius: 10, style: .continuous)
                                 .fill(
                                     LinearGradient(
-                                        colors: [.blue, Color(red: 0.30, green: 0.55, blue: 0.95)],
+                                        colors: [.blue, AppTheme.Signal.calm],
                                         startPoint: .topLeading,
                                         endPoint: .bottomTrailing
                                     )
