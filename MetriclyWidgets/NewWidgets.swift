@@ -3,10 +3,14 @@ import SwiftUI
 import AppIntents
 
 // ─────────────────────────────────────────────────────────────────────────────
-// MARK: - Shared data helpers (mirrors WidgetDataWriter structs)
+// MARK: - Shared data helpers
+//
+// CaffeineWidgetData / WaterWidgetData live in Services/WidgetModels.swift
+// (compiled into both this widget extension and the main app target).
+// The app-group suite is the single shared `WidgetAppGroup.suiteName`.
 // ─────────────────────────────────────────────────────────────────────────────
 
-private let suite = "group.com.finbartracey.tracker"
+private let suite = WidgetAppGroup.suiteName
 
 private func loadCaffeineData() -> CaffeineWidgetData {
     guard let defaults = UserDefaults(suiteName: suite),
@@ -22,50 +26,6 @@ private func loadWaterData() -> WaterWidgetData {
           let data = try? JSONDecoder().decode(WaterWidgetData.self, from: raw)
     else { return WaterWidgetData() }
     return data
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// MARK: - Caffeine data model
-// ─────────────────────────────────────────────────────────────────────────────
-
-struct CaffeineWidgetData: Codable {
-    struct Entry: Codable { var date: Date; var milligrams: Double }
-    var entries: [Entry]         = []
-    var halfLifeHours: Double    = 5.0
-    var dailyLimitMg: Double     = 400
-
-    func remainingMg(at time: Date = .now) -> Double {
-        entries.reduce(0.0) { sum, e in
-            let elapsed = max(0, time.timeIntervalSince(e.date))
-            return sum + e.milligrams * pow(0.5, elapsed / (halfLifeHours * 3600))
-        }
-    }
-
-    var clearDate: Date? {
-        let total = remainingMg()
-        guard total > 10 else { return nil }
-        let t = halfLifeHours * 3600 * log2(total / 10)
-        return Date().addingTimeInterval(t)
-    }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// MARK: - Water data model
-// ─────────────────────────────────────────────────────────────────────────────
-
-struct WaterWidgetData: Codable {
-    var todayMl: Double = 0
-    var goalMl: Double  = 2500
-
-    var progress: Double { goalMl > 0 ? min(1, todayMl / goalMl) : 0 }
-    var isComplete: Bool { todayMl >= goalMl }
-
-    var formattedToday: String {
-        todayMl >= 1000 ? String(format: "%.1fL", todayMl / 1000) : String(format: "%.0f ml", todayMl)
-    }
-    var formattedGoal: String {
-        goalMl >= 1000 ? String(format: "%.1fL", goalMl / 1000) : String(format: "%.0f ml", goalMl)
-    }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -194,6 +154,7 @@ struct CaffeineWidgetView: View {
                 .foregroundStyle(.white.opacity(0.45))
                 .padding(10)
         }
+        .staleOverlay(entry.data.isStale)
     }
 }
 
@@ -295,6 +256,7 @@ struct WaterRingWidgetView: View {
                 .foregroundStyle(.white.opacity(0.45))
                 .padding(10)
         }
+        .staleOverlay(data.isStale)
         .overlay(alignment: .bottomTrailing) {
             Button(intent: LogWaterFromWidgetIntent()) {
                 Label("+250", systemImage: "plus")
@@ -412,6 +374,7 @@ struct TodaysPlanWidgetView: View {
                            startPoint: .topLeading,
                            endPoint: .bottomTrailing)
         }
+        .staleOverlay(entry.snapshot.isStale)
     }
 }
 
@@ -524,10 +487,21 @@ struct WeeklyRingsWidgetView: View {
             Color(.systemBackground)
         }
         .overlay(alignment: .topTrailing) {
-            Text("This Week")
-                .font(.system(size: 10, weight: .bold))
-                .foregroundStyle(.secondary)
-                .padding(14)
+            // "This Week" label sits in the same corner the staleness
+            // dot uses elsewhere — when stale, we hide this label
+            // entirely so the indicator is unambiguous.
+            if entry.snapshot.isStale {
+                Circle()
+                    .fill(Color.orange)
+                    .frame(width: 6, height: 6)
+                    .padding(14)
+                    .accessibilityLabel("Data may be stale")
+            } else {
+                Text("This Week")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(.secondary)
+                    .padding(14)
+            }
         }
     }
 

@@ -19,6 +19,10 @@ struct FinishWorkoutSheet: View {
     @State private var shareImage: UIImage?
     @State private var showingShare = false
     @State private var showingReminderPrompt = false
+    /// Per-muscle-group soreness level the user picks. Only groups
+    /// trained in this workout appear in the UI. 0 = none (not stored).
+    @State private var sorenessLevels: [MuscleGroup: Int] = [:]
+    @Environment(\.modelContext) private var modelContext
 
     init(workout: Workout) {
         self.workout = workout
@@ -45,6 +49,7 @@ struct FinishWorkoutSheet: View {
                     celebrationCard
                     statsCard
                     if !sessionPRs.isEmpty { prCard }
+                    if !trainedGroupsForSoreness.isEmpty { sorenessCard }
                     notesCard
                 }
                 .padding(.horizontal)
@@ -215,6 +220,89 @@ struct FinishWorkoutSheet: View {
         .frame(maxWidth: .infinity)
     }
 
+    // MARK: - Soreness card
+    //
+    // Optional user-reported soreness for groups this workout trained.
+    // Defaults to "None" — only non-zero entries are persisted. Feeds
+    // RecoveryEngine as a third intensity signal alongside volume and
+    // RPE; the user's own input wins when it conflicts with the model.
+
+    /// Trainable muscle groups this workout actually targeted (with at
+    /// least one working set). Filters out cardio/other so the section
+    /// only surfaces actionable choices.
+    private var trainedGroupsForSoreness: [MuscleGroup] {
+        let groups = workout.exercises.compactMap { exercise -> MuscleGroup? in
+            guard let cat = exercise.category, cat != .cardio, cat != .other else { return nil }
+            let hasWorkingSet = exercise.sets.contains { !$0.isWarmUp }
+            return hasWorkingSet ? cat : nil
+        }
+        return Array(Set(groups)).sorted { $0.rawValue < $1.rawValue }
+    }
+
+    private var sorenessCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            SectionHeader(title: "How sore are you?", icon: "figure.cooldown", color: .purple)
+                .accessibilityAddTraits(.isHeader)
+
+            Text("Optional — tells the recovery engine where you actually feel it.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            VStack(spacing: 8) {
+                ForEach(trainedGroupsForSoreness, id: \.self) { group in
+                    HStack(spacing: 10) {
+                        Text(group.rawValue)
+                            .font(.subheadline.weight(.medium))
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        sorenessPicker(for: group)
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 10))
+                }
+            }
+        }
+        .appCard()
+    }
+
+    private func sorenessPicker(for group: MuscleGroup) -> some View {
+        let level = sorenessLevels[group] ?? 0
+        return HStack(spacing: 4) {
+            ForEach(0...4, id: \.self) { value in
+                Button {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    sorenessLevels[group] = value
+                } label: {
+                    let isSelected = value == level
+                    Circle()
+                        .fill(isSelected ? severityColor(value) : Color(.tertiarySystemGroupedBackground))
+                        .frame(width: 22, height: 22)
+                        .overlay(
+                            Circle().stroke(isSelected ? severityColor(value) : Color.secondary.opacity(0.3), lineWidth: 1)
+                        )
+                        .overlay(
+                            Text("\(value)")
+                                .font(.caption2.weight(.bold))
+                                .foregroundStyle(isSelected ? .white : .secondary)
+                        )
+                        .accessibilityLabel("\(SorenessEntry.Level(rawValue: value)?.label ?? "level \(value)") soreness for \(group.rawValue)")
+                        .accessibilityAddTraits(isSelected ? .isSelected : [])
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
+    private func severityColor(_ level: Int) -> Color {
+        switch level {
+        case 0: return .green
+        case 1: return Color(red: 0.85, green: 0.80, blue: 0.20)
+        case 2: return .orange
+        case 3: return Color(red: 0.95, green: 0.40, blue: 0.20)
+        default: return .red
+        }
+    }
+
     // MARK: - Notes card
 
     private var notesCard: some View {
@@ -324,6 +412,15 @@ struct FinishWorkoutSheet: View {
         workout.endTime = .now
         workout.notes = notes
         if rating > 0 { workout.rating = rating }
+
+        // Persist any non-zero soreness reports. Level 0 is "none" and
+        // doesn't need a row — absence implies that. The engine reads
+        // these via @Query in HomeDashboardView and stacks them with
+        // the model's volume/RPE estimate.
+        for (group, level) in sorenessLevels where level > 0 {
+            let entry = SorenessEntry(date: .now, group: group, level: level)
+            modelContext.insert(entry)
+        }
 
         let totalSets = workout.exercises.flatMap(\.sets).count
         WorkoutActivityManager.shared.endActivity(

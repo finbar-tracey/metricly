@@ -52,9 +52,11 @@ struct CardioHubView: View {
                     Button { showBests = true } label: {
                         Image(systemName: "trophy")
                     }
+                    .accessibilityLabel("Personal Bests")
                     Button { showGoals = true } label: {
                         Image(systemName: "target")
                     }
+                    .accessibilityLabel("Cardio Goals")
                 }
             }
         }

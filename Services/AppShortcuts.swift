@@ -85,6 +85,41 @@ struct GetWorkoutStatsIntent: AppIntent {
     }
 }
 
+// MARK: - Intent validators
+//
+// Extracted from `LogBodyWeightIntent.perform()` etc. so the bounds + the
+// rejection-message wording have a single source of truth that's testable
+// without instantiating the AppIntents framework. Each intent's perform()
+// just consults these.
+
+enum IntentValidators {
+    enum Result: Equatable {
+        case ok
+        case invalid(message: String)
+    }
+
+    /// Body-weight bounds: 20–500 kg. Covers the plausible adult range;
+    /// anything outside is almost certainly a parse or unit mistake.
+    static let bodyWeightRangeKg: ClosedRange<Double> = 20...500
+
+    static func bodyWeight(_ kg: Double) -> Result {
+        guard bodyWeightRangeKg.contains(kg) else {
+            return .invalid(message: "That doesn't look right — \(String(format: "%.1f", kg)) kg is outside the range I can log. Try a value between \(Int(bodyWeightRangeKg.lowerBound)) and \(Int(bodyWeightRangeKg.upperBound)) kg.")
+        }
+        return .ok
+    }
+
+    /// Water bounds: 1–5000 ml per entry.
+    static let waterRangeMl: ClosedRange<Int> = 1...5000
+
+    static func water(_ ml: Int) -> Result {
+        guard waterRangeMl.contains(ml) else {
+            return .invalid(message: "I can only log between \(waterRangeMl.lowerBound) and \(waterRangeMl.upperBound) ml at a time — \(ml) ml is outside that range.")
+        }
+        return .ok
+    }
+}
+
 // MARK: - Log Body Weight Intent
 
 struct LogBodyWeightIntent: AppIntent {
@@ -97,11 +132,10 @@ struct LogBodyWeightIntent: AppIntent {
     @MainActor
     func perform() async throws -> some IntentResult & ProvidesDialog {
         // Reject implausible inputs before they corrupt every weight chart
-        // and goal in the app. Range covers the full plausible adult human
-        // range; anything outside is almost certainly a parsing or unit
-        // mistake by Siri.
-        guard weight >= 20, weight <= 500 else {
-            return .result(dialog: "That doesn't look right — \(String(format: "%.1f", weight)) kg is outside the range I can log. Try a value between 20 and 500 kg.")
+        // and goal in the app — bounds + wording live in IntentValidators
+        // so the rejection message is testable without AppIntents wiring.
+        if case .invalid(let message) = IntentValidators.bodyWeight(weight) {
+            return .result(dialog: IntentDialog(stringLiteral: message))
         }
         do {
             let container = try MetriclySchema.makeSharedContainer()
@@ -126,10 +160,8 @@ struct LogWaterIntent: AppIntent {
 
     @MainActor
     func perform() async throws -> some IntentResult & ProvidesDialog {
-        // 5000 ml in one entry is already a stretch; anything bigger is a
-        // mis-parse. Negative or zero is a non-event we don't want stored.
-        guard milliliters >= 1, milliliters <= 5000 else {
-            return .result(dialog: "I can only log between 1 and 5000 ml at a time — \(milliliters) ml is outside that range.")
+        if case .invalid(let message) = IntentValidators.water(milliliters) {
+            return .result(dialog: IntentDialog(stringLiteral: message))
         }
         do {
             let container = try MetriclySchema.makeSharedContainer()

@@ -1,0 +1,29 @@
+{
+  "configurations" : [
+    {
+      "id" : "9E1F8B3A-A1B2-4C5D-6E7F-8A9B0C1D2E3F",
+      "name" : "Default",
+      "options" : {
+
+      }
+    }
+  ],
+  "defaultOptions" : {
+    "codeCoverage" : false,
+    "targetForVariableExpansion" : {
+      "containerPath" : "container:tracker.xcodeproj",
+      "identifier" : "82A0C4CD2F58E8E200BD421B",
+      "name" : "tracker"
+    }
+  },
+  "testTargets" : [
+    {
+      "target" : {
+        "containerPath" : "container:tracker.xcodeproj",
+        "identifier" : "82ED21652FAE534200D1DEFF",
+        "name" : "trackerTests"
+      }
+    }
+  ],
+  "version" : 1
+}

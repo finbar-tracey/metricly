@@ -117,6 +117,44 @@ final class CSVRoundTripTests: XCTestCase {
         XCTAssertEqual(rows.last?.first, original)
     }
 
+    // MARK: - Decimal parsing (locale tolerance)
+
+    func testParseDecimalAcceptsPeriod() {
+        XCTAssertEqual(ImportHelper.parseDecimal("80.5"), 80.5)
+        XCTAssertEqual(ImportHelper.parseDecimal("0.25"), 0.25)
+        XCTAssertEqual(ImportHelper.parseDecimal("100"), 100)
+    }
+
+    func testParseDecimalAcceptsCommaDecimal() {
+        // The "German Excel exports a re-imported CSV" case
+        XCTAssertEqual(ImportHelper.parseDecimal("80,5"), 80.5)
+        XCTAssertEqual(ImportHelper.parseDecimal("0,25"), 0.25)
+    }
+
+    func testParseDecimalTrimsWhitespace() {
+        XCTAssertEqual(ImportHelper.parseDecimal(" 80.5 "), 80.5)
+    }
+
+    func testParseDecimalRejectsEmptyAndNil() {
+        XCTAssertNil(ImportHelper.parseDecimal(nil))
+        XCTAssertNil(ImportHelper.parseDecimal(""))
+        XCTAssertNil(ImportHelper.parseDecimal("   "))
+    }
+
+    func testParseDecimalRejectsAmbiguousThousandSeparators() {
+        // "1,234.5" and "1.234,5" could each plausibly mean 1234.5 OR 1.234 —
+        // we'd rather drop the row than misread it.
+        XCTAssertNil(ImportHelper.parseDecimal("1,234.5"))
+        XCTAssertNil(ImportHelper.parseDecimal("1.234,5"))
+    }
+
+    func testParseDecimalRejectsGarbage() {
+        XCTAssertNil(ImportHelper.parseDecimal("abc"))
+        XCTAssertNil(ImportHelper.parseDecimal("80,5,5"))
+    }
+
+    // MARK: - Round-trip (continued)
+
     func testRoundTripMultipleRowsAndFields() {
         // Full multi-row, multi-field round trip mixing escaped and plain values
         let values: [[String]] = [

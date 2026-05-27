@@ -1,0 +1,2825 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "" : {
+
+    },
+    "--" : {
+
+    },
+    "—" : {
+
+    },
+    "·" : {
+
+    },
+    "· %@" : {
+
+    },
+    "· %@ %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "· %1$@ %2$@"
+          }
+        }
+      }
+    },
+    "· %lld cal" : {
+
+    },
+    "· %lld exercises" : {
+
+    },
+    "· Caffeine still active" : {
+
+    },
+    "\"%@\" has been saved as a template. You can use it when creating new workouts." : {
+
+    },
+    "(%@%@)" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "(%1$@%2$@)"
+          }
+        }
+      }
+    },
+    "(scheduled: %@)" : {
+
+    },
+    "/ %@" : {
+
+    },
+    "/ %lld" : {
+
+    },
+    "%" : {
+
+    },
+    "%@ — %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ — %2$@"
+          }
+        }
+      }
+    },
+    "%@ — %lld bpm vs start of period" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ — %2$lld bpm vs start of period"
+          }
+        }
+      }
+    },
+    "%@ for %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ for %2$@"
+          }
+        }
+      }
+    },
+    "%@ measurement trend, %lld entries" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ measurement trend, %2$lld entries"
+          }
+        }
+      }
+    },
+    "%@ per side" : {
+
+    },
+    "%@ progression, %lld sessions" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ progression, %2$lld sessions"
+          }
+        }
+      }
+    },
+    "%@ soreness for %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ soreness for %2$@"
+          }
+        }
+      }
+    },
+    "%@ steps of %@ goal" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ steps of %2$@ goal"
+          }
+        }
+      }
+    },
+    "%@ to go" : {
+
+    },
+    "%@, %lld exercises%@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@, %2$lld exercises%3$@"
+          }
+        }
+      }
+    },
+    "%@, %lld sessions" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@, %2$lld sessions"
+          }
+        }
+      }
+    },
+    "%@: %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@: %2$@"
+          }
+        }
+      }
+    },
+    "%@: %@, %lld sets" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@: %2$@, %3$lld sets"
+          }
+        }
+      }
+    },
+    "%@. %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@. %2$@"
+          }
+        }
+      }
+    },
+    "%@g creatine" : {
+
+    },
+    "%@g daily dose" : {
+
+    },
+    "%lld" : {
+
+    },
+    "%lld / %lld mg" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld / %2$lld mg"
+          }
+        }
+      }
+    },
+    "%lld × %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld × %2$@"
+          }
+        }
+      }
+    },
+    "%lld bpm" : {
+
+    },
+    "%lld caffeine-free day%@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld caffeine-free day%2$@"
+          }
+        }
+      }
+    },
+    "%lld cal" : {
+
+    },
+    "%lld day streak" : {
+
+    },
+    "%lld days/wk" : {
+
+    },
+    "%lld done" : {
+
+    },
+    "%lld dose%@ left" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld dose%2$@ left"
+          }
+        }
+      }
+    },
+    "%lld exercise%@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld exercise%2$@"
+          }
+        }
+      }
+    },
+    "%lld exercises" : {
+
+    },
+    "%lld logged" : {
+
+    },
+    "%lld mg" : {
+
+    },
+    "%lld mg left" : {
+
+    },
+    "%lld min" : {
+
+    },
+    "%lld minutes" : {
+      "comment" : "A stepper that lets the user select a number of minutes.",
+      "isCommentAutoGenerated" : true
+    },
+    "%lld ml" : {
+
+    },
+    "%lld ml / day" : {
+
+    },
+    "%lld ml remaining" : {
+
+    },
+    "%lld ms" : {
+
+    },
+    "%lld PR%@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld PR%2$@"
+          }
+        }
+      }
+    },
+    "%lld primary" : {
+
+    },
+    "%lld reps @ %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld reps @ %2$@"
+          }
+        }
+      }
+    },
+    "%lld seconds" : {
+
+    },
+    "%lld session%@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld session%2$@"
+          }
+        }
+      }
+    },
+    "%lld sessions" : {
+
+    },
+    "%lld set%@ logged · %@ volume" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld set%2$@ logged · %3$@ volume"
+          }
+        }
+      }
+    },
+    "%lld sets" : {
+
+    },
+    "%lld sets · %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld sets · %2$@"
+          }
+        }
+      }
+    },
+    "%lld sets × %@ reps" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld sets × %2$@ reps"
+          }
+        }
+      }
+    },
+    "%lld star%@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld star%2$@"
+          }
+        }
+      }
+    },
+    "%lld tips" : {
+
+    },
+    "%lld total workouts, %lld this week, %lld-day streak." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld total workouts, %2$lld this week, %3$lld-day streak."
+          }
+        }
+      }
+    },
+    "%lld week%@ in a row" : {
+      "comment" : "A title and body text that describes the user's cardio streak. The body text depends on whether the streak is 0 or greater.",
+      "isCommentAutoGenerated" : true,
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld week%2$@ in a row"
+          }
+        }
+      }
+    },
+    "%lld weeks" : {
+
+    },
+    "%lld weeks · %lld days/week" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld weeks · %2$lld days/week"
+          }
+        }
+      }
+    },
+    "%lld Working" : {
+
+    },
+    "%lld workout%@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld workout%2$@"
+          }
+        }
+      }
+    },
+    "%lld workout%@ today" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld workout%2$@ today"
+          }
+        }
+      }
+    },
+    "%lld workouts / week" : {
+
+    },
+    "%lld-day hydration streak!" : {
+
+    },
+    "%lld-day streak — recovery helps muscles grow." : {
+
+    },
+    "%lld, %lld workout%@%@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld, %2$lld workout%3$@%4$@"
+          }
+        }
+      }
+    },
+    "%lld:%@ /%@ faster since your first session" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld:%2$@ /%3$@ faster since your first session"
+          }
+        }
+      }
+    },
+    "%lld:%@ /%@ slower than your first session" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld:%2$@ /%3$@ slower than your first session"
+          }
+        }
+      }
+    },
+    "%lld/%lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld/%2$lld"
+          }
+        }
+      }
+    },
+    "%lld/%lld completed" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld/%2$lld completed"
+          }
+        }
+      }
+    },
+    "%lld/%lld days this week" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld/%2$lld days this week"
+          }
+        }
+      }
+    },
+    "%lld/%lld workouts this week" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld/%2$lld workouts this week"
+          }
+        }
+      }
+    },
+    "%lld%%" : {
+
+    },
+    "%lld%% of sleep" : {
+
+    },
+    "%lld× %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld× %2$@"
+          }
+        }
+      }
+    },
+    "%lldbpm" : {
+
+    },
+    "%lldm" : {
+
+    },
+    "%lldmg" : {
+
+    },
+    "%lldms" : {
+
+    },
+    "%llds" : {
+
+    },
+    "•" : {
+
+    },
+    "→" : {
+
+    },
+    "+ %lld more PRs" : {
+
+    },
+    "+ %lld more workouts" : {
+
+    },
+    "+ %lldW" : {
+
+    },
+    "+%lld" : {
+
+    },
+    "+%lld more" : {
+      "comment" : "A label that shows the number of additional exercises that are not shown in the workout summary.",
+      "isCommentAutoGenerated" : true
+    },
+    "+%lld more exercises" : {
+
+    },
+    "+15s" : {
+
+    },
+    "×" : {
+
+    },
+    "× %lld" : {
+
+    },
+    "−15s" : {
+
+    },
+    "0" : {
+
+    },
+    "1RM Calculator" : {
+
+    },
+    "8h target" : {
+
+    },
+    "A" : {
+
+    },
+    "About" : {
+
+    },
+    "Accent Color" : {
+
+    },
+    "accumulated over 7 days" : {
+
+    },
+    "Achievements" : {
+
+    },
+    "active" : {
+
+    },
+    "Active" : {
+
+    },
+    "ACTIVE" : {
+
+    },
+    "Active Program" : {
+
+    },
+    "Activity" : {
+
+    },
+    "Activity Log" : {
+
+    },
+    "Activity Type" : {
+
+    },
+    "Add" : {
+
+    },
+    "Add 15 seconds" : {
+
+    },
+    "Add a note" : {
+
+    },
+    "Add a note..." : {
+
+    },
+    "Add a set below to start tracking." : {
+
+    },
+    "Add an exercise below to get started." : {
+
+    },
+    "Add Day" : {
+
+    },
+    "Add Entry" : {
+
+    },
+    "Add exercise" : {
+
+    },
+    "Add Exercise" : {
+      "comment" : "A button that adds a new exercise to the training day.",
+      "isCommentAutoGenerated" : true
+    },
+    "Add exercises to this training day." : {
+
+    },
+    "Add First Photo" : {
+
+    },
+    "Add Goal" : {
+
+    },
+    "Add Notes" : {
+
+    },
+    "Add notes about this photo…" : {
+
+    },
+    "Add notes about this workout — techniques, feelings, PRs, or anything worth remembering." : {
+
+    },
+    "Add notes…" : {
+
+    },
+    "Add set" : {
+
+    },
+    "Add Training Day" : {
+
+    },
+    "Add warm-up" : {
+
+    },
+    "Add Workout" : {
+
+    },
+    "Add Your First Goal" : {
+
+    },
+    "Adds a water entry to Metricly." : {
+
+    },
+    "Adjustments" : {
+
+    },
+    "Advance to Week %lld" : {
+
+    },
+    "Aim for a top-end set on a key lift" : {
+      "comment" : "Adjustment shown on a hard day"
+    },
+    "All" : {
+
+    },
+    "All Cardio" : {
+
+    },
+    "All doses taken!" : {
+
+    },
+    "All muscles are still recovering. Consider a rest day or light cardio." : {
+
+    },
+    "All Sessions" : {
+
+    },
+    "All templates from this program have already been imported." : {
+
+    },
+    "All Workouts" : {
+
+    },
+    "Already Imported" : {
+
+    },
+    "Amount" : {
+
+    },
+    "Amount in ml" : {
+
+    },
+    "Analyze" : {
+
+    },
+    "Any" : {
+
+    },
+    "Appearance" : {
+
+    },
+    "Apple Health Not Connected" : {
+
+    },
+    "Apply" : {
+
+    },
+    "Apply to this workout" : {
+
+    },
+    "Apply today's adjustments?" : {
+
+    },
+    "Are you sure you want to delete \"%@\" and all its sets?" : {
+
+    },
+    "Are you sure you want to delete \"%@\"? This cannot be undone." : {
+
+    },
+    "Auto-Paused" : {
+
+    },
+    "Auto-share completed cardio sessions." : {
+
+    },
+    "Auto-share new cardio" : {
+
+    },
+    "Auto-start Rest Timer" : {
+
+    },
+    "Average %lld ms" : {
+
+    },
+    "Average Today" : {
+
+    },
+    "avg / day" : {
+
+    },
+    "avg rating this week" : {
+
+    },
+    "B" : {
+
+    },
+    "Bar weight" : {
+
+    },
+    "Based on an 8-hour target. Each night short of the target adds to your debt." : {
+
+    },
+    "Based on recent workouts and training volume" : {
+
+    },
+    "Based on the American Council on Exercise (ACE) body fat categories." : {
+
+    },
+    "Based on workouts, sleep, heart rate & HRV" : {
+
+    },
+    "Based on your recovery and training history" : {
+
+    },
+    "Bed" : {
+
+    },
+    "Bedtime" : {
+
+    },
+    "BEST" : {
+
+    },
+    "Best: %@" : {
+
+    },
+    "BF%" : {
+
+    },
+    "Biological sex" : {
+
+    },
+    "Body" : {
+
+    },
+    "Body Fat" : {
+
+    },
+    "Body Fat %" : {
+
+    },
+    "Body Weight" : {
+
+    },
+    "Body weight trend, %lld entries" : {
+
+    },
+    "bpm" : {
+
+    },
+    "BPM" : {
+
+    },
+    "bpm avg" : {
+
+    },
+    "Browse Template Marketplace" : {
+
+    },
+    "Brzycki: weight × 36/(37 − reps). Most accurate for lower rep sets." : {
+
+    },
+    "Caffeine" : {
+
+    },
+    "Caffeine sensitivity" : {
+
+    },
+    "Calculators" : {
+
+    },
+    "Calendar" : {
+
+    },
+    "Calories (optional)" : {
+
+    },
+    "Cancel" : {
+
+    },
+    "Cardio" : {
+
+    },
+    "Cardio (%lld)" : {
+      "comment" : "A section for cardio sessions in the search results.",
+      "isCommentAutoGenerated" : true
+    },
+    "Cardio & Activity" : {
+
+    },
+    "Cardio Goals" : {
+
+    },
+    "Category" : {
+
+    },
+    "CHANGE" : {
+
+    },
+    "Change Category" : {
+
+    },
+    "Choose an exercise to superset with \"%@\"." : {
+
+    },
+    "Clear" : {
+
+    },
+    "Clear (rest day)" : {
+
+    },
+    "Clear by" : {
+
+    },
+    "Clear by " : {
+
+    },
+    "Clear Filters" : {
+
+    },
+    "Clear RPE" : {
+
+    },
+    "Closest loadable weight" : {
+
+    },
+    "Compare" : {
+
+    },
+    "Compare Workouts" : {
+
+    },
+    "Complete a cardio session this week to start your streak." : {
+
+    },
+    "Complete a session to start tracking your personal bests." : {
+
+    },
+    "Complete some workouts to calculate your estimated 1RM." : {
+
+    },
+    "Complete some workouts to see estimated 1RM data." : {
+
+    },
+    "Complete workouts with tracked weights to see your personal records here." : {
+
+    },
+    "Completed" : {
+
+    },
+    "Completed workouts and body weight entries will be saved to Apple Health." : {
+
+    },
+    "Connect Apple Health" : {
+
+    },
+    "Connect to Strava" : {
+
+    },
+    "Connect your Strava account to share completed cardio sessions automatically." : {
+
+    },
+    "Connected" : {
+
+    },
+    "consecutive days at %@+ steps" : {
+
+    },
+    "Consider a rest day" : {
+
+    },
+    "Consistent — great work!" : {
+
+    },
+    "Continue" : {
+
+    },
+    "Could not create the CSV file. Please try again." : {
+
+    },
+    "Create" : {
+
+    },
+    "Create a training program to structure your workouts across multiple weeks." : {
+
+    },
+    "Create New Template" : {
+
+    },
+    "Create Workout from Suggestions" : {
+
+    },
+    "Creates a new workout in Metricly and opens the app." : {
+
+    },
+    "Creatine" : {
+
+    },
+    "Creatine loading phase" : {
+
+    },
+    "Creatine: %@g / day" : {
+
+    },
+    "Current Streak" : {
+
+    },
+    "Current Week: %lld" : {
+
+    },
+    "Current Weight" : {
+
+    },
+    "Custom amount" : {
+
+    },
+    "Custom rest for this exercise" : {
+
+    },
+    "Daily Average" : {
+
+    },
+    "Daily caffeine: %lld mg" : {
+
+    },
+    "Daily Water Goal" : {
+
+    },
+    "Daily water: %lld ml" : {
+
+    },
+    "Dark" : {
+
+    },
+    "Date" : {
+
+    },
+    "day" : {
+
+    },
+    "Day" : {
+
+    },
+    "Day Streak" : {
+
+    },
+    "days" : {
+
+    },
+    "Days" : {
+
+    },
+    "Default Rest: %llds" : {
+
+    },
+    "Delete" : {
+
+    },
+    "Delete \"%@\"" : {
+
+    },
+    "Delete Entry?" : {
+
+    },
+    "Delete Exercise?" : {
+
+    },
+    "Delete Goal?" : {
+
+    },
+    "Delete Photo" : {
+
+    },
+    "Delete Photo?" : {
+
+    },
+    "Delete Session" : {
+
+    },
+    "Delete Session?" : {
+
+    },
+    "Delete the goal for \"%@\"?" : {
+
+    },
+    "Delete Workout" : {
+
+    },
+    "Delete Workout?" : {
+
+    },
+    "Details" : {
+
+    },
+    "Different date" : {
+
+    },
+    "Disconnect" : {
+
+    },
+    "Disconnect from Strava" : {
+
+    },
+    "Disconnect from Strava?" : {
+
+    },
+    "Dismiss" : {
+
+    },
+    "Distance" : {
+
+    },
+    "Distance progression, %lld sessions" : {
+
+    },
+    "Don't forget to turn off your Fitness Focus mode. Open Settings, then tap Focus." : {
+
+    },
+    "Done" : {
+
+    },
+    "DONE" : {
+
+    },
+    "Done editing" : {
+
+    },
+    "doses" : {
+
+    },
+    "Duplicate" : {
+
+    },
+    "Duplicate Workout" : {
+
+    },
+    "Duration" : {
+
+    },
+    "Duration: %lld weeks" : {
+
+    },
+    "e.g. 8-12" : {
+
+    },
+    "E1RM" : {
+
+    },
+    "Edit" : {
+
+    },
+    "Edit %@ — %lld mg" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Edit %1$@ — %2$lld mg"
+          }
+        }
+      }
+    },
+    "Edit Entry" : {
+
+    },
+    "Edit Exercise" : {
+
+    },
+    "Edit Set" : {
+
+    },
+    "Edit Template" : {
+
+    },
+    "Edit Workout" : {
+
+    },
+    "Elapsed: %@" : {
+
+    },
+    "Enable \"Sync with Apple Health\" in Settings to see your steps, heart rate, sleep, and other health data." : {
+
+    },
+    "Enable Focus Mode?" : {
+
+    },
+    "Enable your Fitness Focus to silence notifications during your workout. Open Settings, then tap Focus." : {
+
+    },
+    "End" : {
+
+    },
+    "Entry %lld: %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Entry %1$lld: %2$@"
+          }
+        }
+      }
+    },
+    "Epley: weight × (1 + reps/30). Best for 1–10 rep ranges." : {
+
+    },
+    "Error: %@. Tap to dismiss." : {
+
+    },
+    "Est. 1RM: %@" : {
+
+    },
+    "Estimated 1RM" : {
+
+    },
+    "Estimated using the U.S. Navy method" : {
+
+    },
+    "Exercise" : {
+
+    },
+    "Exercise Library" : {
+
+    },
+    "Exercise name" : {
+
+    },
+    "Exercises" : {
+
+    },
+    "Exercises (%lld)" : {
+
+    },
+    "Export Cardio as CSV" : {
+
+    },
+    "Export Failed" : {
+
+    },
+    "Export Workouts as CSV" : {
+
+    },
+    "Export Workouts as PDF" : {
+
+    },
+    "FAT" : {
+
+    },
+    "Female" : {
+
+    },
+    "Find Alternatives" : {
+
+    },
+    "Finish" : {
+
+    },
+    "Finish workout" : {
+
+    },
+    "First" : {
+
+    },
+    "First time? If Strava asks you to sign in, finish that step, then come back here and tap Connect again." : {
+
+    },
+    "Focus Mode Reminder" : {
+
+    },
+    "Focus reminder prompts you to enable a Fitness Focus when starting a workout." : {
+
+    },
+    "Form guidance isn't available for \"%@\" yet. Guides cover the most common exercises." : {
+
+    },
+    "Form Guide" : {
+
+    },
+    "Four steps. Every day." : {
+
+    },
+    "g" : {
+
+    },
+    "GET READY" : {
+
+    },
+    "Get Workout Stats" : {
+
+    },
+    "Get Workout Streak" : {
+
+    },
+    "Go easy on %@ — still fatigued" : {
+      "comment" : "Adjustment suggestion. Argument is a comma-joined muscle-group name list."
+    },
+    "Go!" : {
+
+    },
+    "Goal" : {
+
+    },
+    "Goal achieved!" : {
+
+    },
+    "Goal met %lld of %lld days" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Goal met %1$lld of %2$lld days"
+          }
+        }
+      }
+    },
+    "Goal met today!" : {
+
+    },
+    "Goal Reached!" : {
+
+    },
+    "Goal Streak" : {
+
+    },
+    "GPS tracking, splits, pace & route" : {
+      "comment" : "A description of the features of the Run & Cardio feature.",
+      "isCommentAutoGenerated" : true
+    },
+    "grams" : {
+
+    },
+    "Great work!" : {
+      "comment" : "A title of a congratulatory message.",
+      "isCommentAutoGenerated" : true
+    },
+    "Group" : {
+
+    },
+    "Haven't trained %@ in over a week" : {
+      "comment" : "Neglected-group reason. Argument is a lowercased muscle-group name."
+    },
+    "Health" : {
+
+    },
+    "Health & Data" : {
+
+    },
+    "Health access requested" : {
+
+    },
+    "Health Dashboard" : {
+
+    },
+    "Heart Rate" : {
+
+    },
+    "Height" : {
+
+    },
+    "Help us with a quick review" : {
+
+    },
+    "High" : {
+
+    },
+    "History" : {
+
+    },
+    "Home" : {
+
+    },
+    "Hour" : {
+
+    },
+    "hours" : {
+
+    },
+    "Hours" : {
+
+    },
+    "How did it feel?" : {
+
+    },
+    "How did it feel? Any notes..." : {
+
+    },
+    "How it works" : {
+
+    },
+    "How many cardio sessions per week" : {
+
+    },
+    "How was it?" : {
+
+    },
+    "How we handle your data" : {
+
+    },
+    "HR" : {
+
+    },
+    "hrs" : {
+
+    },
+    "HRV" : {
+
+    },
+    "I couldn't save that water entry just now — please try again from the app." : {
+
+    },
+    "I couldn't save that weight just now — please try again from the app." : {
+
+    },
+    "I couldn't start that workout right now — try opening Metricly directly." : {
+
+    },
+    "iCloud Sync" : {
+
+    },
+    "Import" : {
+
+    },
+    "Import \"%@\" as workout templates? This will create %lld templates." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Import \"%1$@\" as workout templates? This will create %2$lld templates."
+          }
+        }
+      }
+    },
+    "Import Failed" : {
+
+    },
+    "Import Program" : {
+
+    },
+    "Import Successful" : {
+
+    },
+    "Import Templates" : {
+
+    },
+    "Import Workouts from CSV" : {
+
+    },
+    "Imported!" : {
+
+    },
+    "Imports your recent Strava activities as cardio sessions." : {
+
+    },
+    "In progress" : {
+
+    },
+    "In Progress" : {
+
+    },
+    "Insights" : {
+
+    },
+    "Just the bar!" : {
+
+    },
+    "Keep going — don't break the chain!" : {
+
+    },
+    "Keep hitting your daily goal" : {
+
+    },
+    "Keep it going!" : {
+
+    },
+    "Keep logging workouts and connecting Health data — we'll surface patterns as soon as we have enough to compare." : {
+
+    },
+    "Key Metrics" : {
+
+    },
+    "kg" : {
+
+    },
+    "Kilograms" : {
+
+    },
+    "LAP" : {
+
+    },
+    "Last caffeine-free day" : {
+
+    },
+    "Last Night" : {
+
+    },
+    "Last Run" : {
+
+    },
+    "Last Week" : {
+
+    },
+    "LAST WEEK" : {
+
+    },
+    "LATEST" : {
+
+    },
+    "lbs" : {
+
+    },
+    "LEAN" : {
+
+    },
+    "Leave blank to mark this as a rest day." : {
+
+    },
+    "Less" : {
+
+    },
+    "Library" : {
+
+    },
+    "Lift Goals" : {
+
+    },
+    "Light" : {
+
+    },
+    "Limit" : {
+
+    },
+    "Link Superset" : {
+
+    },
+    "Loading health data…" : {
+
+    },
+    "Loading Phase — %@g / %@g" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Loading Phase — %1$@g / %2$@g"
+          }
+        }
+      }
+    },
+    "Loading Phase Active" : {
+
+    },
+    "Loading phase uses 20g/day for 5–7 days, then switches to maintenance dose." : {
+
+    },
+    "Log %@g Creatine" : {
+
+    },
+    "Log %lld mg %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Log %1$lld mg %2$@"
+          }
+        }
+      }
+    },
+    "Log Activity" : {
+
+    },
+    "Log Body Weight" : {
+
+    },
+    "Log Measurement" : {
+
+    },
+    "Log measurements in the Measurements tab." : {
+
+    },
+    "Log walks, rides, stretching, and other activities. Workouts synced from Apple Health will also appear." : {
+
+    },
+    "Log Water" : {
+
+    },
+    "Log Weight" : {
+
+    },
+    "Log your first workout —\nMetricly will start learning your\nrecovery patterns from day one." : {
+
+    },
+    "Log your first workout in Metricly and I'll start recommending what to train." : {
+
+    },
+    "Log your first workout to start getting personal recommendations." : {
+      "comment" : "First-time user reason when no schedule"
+    },
+    "Logged %@ kg. Keep it up!" : {
+
+    },
+    "Logged %lld ml of water — that's %@ cups. Stay hydrated!" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Logged %1$lld ml of water — that's %2$@ cups. Stay hydrated!"
+          }
+        }
+      }
+    },
+    "Long press to start a workout with today's plan applied automatically." : {
+
+    },
+    "Looking for patterns…" : {
+
+    },
+    "Low" : {
+
+    },
+    "Lower pace = faster. Each point is one session." : {
+
+    },
+    "Male" : {
+
+    },
+    "Mark as warm-up" : {
+
+    },
+    "Max" : {
+
+    },
+    "MAX" : {
+
+    },
+    "Maybe Later" : {
+
+    },
+    "Measurements" : {
+
+    },
+    "Metabolized" : {
+
+    },
+    "Metricly" : {
+
+    },
+    "METRICLY" : {
+
+    },
+    "Metricly recommends %@ — %@." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Metricly recommends %1$@ — %2$@."
+          }
+        }
+      }
+    },
+    "Metricly tells you what to train,\nhow hard to push, and why —\nbased on your recovery." : {
+
+    },
+    "mg" : {
+
+    },
+    "min" : {
+
+    },
+    "Min" : {
+
+    },
+    "MIN" : {
+
+    },
+    "ml" : {
+
+    },
+    "Moderate days have been drifting heavy lately — keep a lid on volume today." : {
+      "comment" : "Trust-cal reason for moderate intensity"
+    },
+    "Monthly Report" : {
+
+    },
+    "More" : {
+
+    },
+    "ms" : {
+
+    },
+    "Muscle Group" : {
+
+    },
+    "Muscle Groups" : {
+
+    },
+    "My Streak" : {
+
+    },
+    "Name" : {
+
+    },
+    "New best: %@" : {
+
+    },
+    "New cardio sessions will stop pushing to Strava. Your existing Strava data is unaffected." : {
+
+    },
+    "New personal record achieved" : {
+
+    },
+    "New Personal Record!" : {
+
+    },
+    "NEW PR" : {
+
+    },
+    "New Program" : {
+
+    },
+    "New Record!" : {
+
+    },
+    "New Workout" : {
+
+    },
+    "Next month" : {
+
+    },
+    "Nice work today!" : {
+
+    },
+    "No %@ Sessions" : {
+
+    },
+    "No %@ yet" : {
+
+    },
+    "No active streak yet — log a workout today to start one!" : {
+
+    },
+    "No Activities Yet" : {
+
+    },
+    "No cardio sessions yet" : {
+
+    },
+    "No Data" : {
+
+    },
+    "No data for this exercise yet." : {
+
+    },
+    "No entries for %@ yet." : {
+
+    },
+    "No entries yet." : {
+
+    },
+    "No Exercises" : {
+
+    },
+    "No exercises yet" : {
+
+    },
+    "No Exercises Yet" : {
+
+    },
+    "No goals set" : {
+
+    },
+    "No Guide Available" : {
+
+    },
+    "No history yet" : {
+
+    },
+    "No history yet for this exercise." : {
+
+    },
+    "No Lift Goals" : {
+
+    },
+    "No Matches" : {
+
+    },
+    "No matching exercises found between these workouts." : {
+
+    },
+    "No Notes Yet" : {
+
+    },
+    "No Photos Yet" : {
+
+    },
+    "No Programs" : {
+
+    },
+    "No Records Yet" : {
+
+    },
+    "No resting heart rate data available." : {
+
+    },
+    "No results for \"%@\"" : {
+
+    },
+    "No Sessions" : {
+
+    },
+    "No sessions yet" : {
+
+    },
+    "No Sets Logged" : {
+
+    },
+    "No sets yet" : {
+
+    },
+    "No Sleep Data" : {
+
+    },
+    "No sleep data available." : {
+
+    },
+    "No sleep data recorded for last night." : {
+
+    },
+    "No step data available." : {
+
+    },
+    "No streak yet" : {
+
+    },
+    "No Substitutions Found" : {
+
+    },
+    "No templates yet. Create one or grab a starter from the marketplace." : {
+
+    },
+    "No Workout Data" : {
+
+    },
+    "No workout data for %@." : {
+
+    },
+    "No workout scheduled" : {
+
+    },
+    "No workouts logged %@ yet." : {
+
+    },
+    "No workouts match your current filters." : {
+
+    },
+    "No workouts on this day." : {
+
+    },
+    "No Workouts Yet" : {
+
+    },
+    "Normal" : {
+
+    },
+    "Not enough data yet" : {
+
+    },
+    "Not enough data yet." : {
+
+    },
+    "Not logged" : {
+
+    },
+    "Not Now" : {
+
+    },
+    "Not set" : {
+
+    },
+    "Not taken yet" : {
+
+    },
+    "Not trained recently" : {
+
+    },
+    "Notes" : {
+
+    },
+    "Now" : {
+
+    },
+    "Nutrition" : {
+
+    },
+    "of %@ goal" : {
+
+    },
+    "of %lld ml goal" : {
+
+    },
+    "Off" : {
+
+    },
+    "OK" : {
+
+    },
+    "Once you've logged a few sessions, today's plan will adapt to your recovery." : {
+      "comment" : "First-time user reason when a schedule exists"
+    },
+    "Only in one" : {
+
+    },
+    "Open Settings" : {
+
+    },
+    "Opens sync status details" : {
+
+    },
+    "Optional — tells the recovery engine where you actually feel it." : {
+
+    },
+    "Optional notes" : {
+
+    },
+    "Over daily limit by %lld mg" : {
+
+    },
+    "Overall Progress" : {
+
+    },
+    "Overall Readiness" : {
+
+    },
+    "Overrides your default for %@ only. The Watch's rest timer respects this value too." : {
+
+    },
+    "pace" : {
+
+    },
+    "Pace" : {
+
+    },
+    "PACE" : {
+
+    },
+    "Partial recovery — a lighter session today will help you bounce back" : {
+      "comment" : "Partial-recovery reason"
+    },
+    "Pattern spotted" : {
+
+    },
+    "Patterns improve as you log more data. Most insights need 90+ days and 8+ matching sessions before they appear." : {
+
+    },
+    "PEAK" : {
+
+    },
+    "Peak ~%lldmg at " : {
+
+    },
+    "Peak: %@ steps at %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Peak: %1$@ steps at %2$@"
+          }
+        }
+      }
+    },
+    "Period" : {
+
+    },
+    "Personal Best" : {
+
+    },
+    "Personal Bests" : {
+
+    },
+    "Personal patterns" : {
+
+    },
+    "Personal record" : {
+
+    },
+    "Personal Records" : {
+
+    },
+    "Personalize your experience. You can change these anytime in Settings." : {
+
+    },
+    "Photo Detail" : {
+
+    },
+    "photos" : {
+
+    },
+    "Pick the days you want a workout nudge." : {
+
+    },
+    "Pick Two Workouts" : {
+
+    },
+    "Plate Calculator" : {
+
+    },
+    "Pounds" : {
+
+    },
+    "PR: %@" : {
+
+    },
+    "Preview" : {
+
+    },
+    "Previous month" : {
+
+    },
+    "Primary" : {
+
+    },
+    "Privacy Policy" : {
+
+    },
+    "Profile" : {
+
+    },
+    "Profile Setup Required" : {
+
+    },
+    "Program Info" : {
+
+    },
+    "Program Name" : {
+
+    },
+    "Program Templates" : {
+
+    },
+    "Programs" : {
+
+    },
+    "Progress" : {
+
+    },
+    "Progress Photos" : {
+
+    },
+    "Progress: %@" : {
+
+    },
+    "Progression" : {
+
+    },
+    "Pushes each completed run, ride, or walk to Strava." : {
+
+    },
+    "Quick pick from templates" : {
+
+    },
+    "Rate of Perceived Exertion (optional)" : {
+
+    },
+    "Rate on App Store" : {
+
+    },
+    "READINESS" : {
+
+    },
+    "Recent hard days have been undertrained — there's room to push if you're up for it." : {
+      "comment" : "Trust-cal reason for hard intensity"
+    },
+    "Recent light-day suggestions got pushed harder — try respecting it this time." : {
+      "comment" : "Trust-cal reason for light intensity"
+    },
+    "Recent Sessions" : {
+
+    },
+    "Records your body weight in Metricly." : {
+
+    },
+    "Recovery" : {
+
+    },
+    "Recovery is low (%lld%%)" : {
+      "comment" : "Low-recovery reason. Argument is a 0-100 percent."
+    },
+    "Recovery Readiness" : {
+
+    },
+    "Reduce volume by ~1 set per exercise" : {
+      "comment" : "Adjustment shown on a light day"
+    },
+    "Remaining: %@" : {
+
+    },
+    "Reminder time" : {
+
+    },
+    "Reminders" : {
+
+    },
+    "Remove this caffeine entry?" : {
+
+    },
+    "Rename" : {
+
+    },
+    "Rename Template" : {
+
+    },
+    "Repeat \"%@\"" : {
+
+    },
+    "Repeat Last" : {
+
+    },
+    "Repeat your last workout?" : {
+
+    },
+    "Report" : {
+
+    },
+    "Report bugs or suggest features" : {
+
+    },
+    "Reps" : {
+
+    },
+    "REST" : {
+
+    },
+    "Rest day" : {
+      "comment" : "Recommended-plan name on a rest day"
+    },
+    "Rest Timer" : {
+
+    },
+    "Rest timer: %@" : {
+
+    },
+    "Rest timer: %lld seconds remaining" : {
+
+    },
+    "Resting Heart Rate" : {
+
+    },
+    "Resting HR is elevated" : {
+      "comment" : "Reason shown when RHR exceeds baseline by the callout threshold"
+    },
+    "Retry" : {
+
+    },
+    "Returns your current consecutive workout streak in Metricly." : {
+
+    },
+    "Round %lld / %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Round %1$lld / %2$lld"
+          }
+        }
+      }
+    },
+    "RPE" : {
+
+    },
+    "RPE %@" : {
+
+    },
+    "RPE %lld" : {
+
+    },
+    "Run & Cardio" : {
+
+    },
+    "Save" : {
+
+    },
+    "Save as Template" : {
+
+    },
+    "Schedule" : {
+
+    },
+    "Search" : {
+
+    },
+    "Search everything" : {
+
+    },
+    "Search exercises" : {
+
+    },
+    "Search sessions" : {
+
+    },
+    "Search workouts or exercises" : {
+
+    },
+    "Sec" : {
+
+    },
+    "Second" : {
+
+    },
+    "Secondary" : {
+
+    },
+    "See All" : {
+
+    },
+    "See All Workouts" : {
+
+    },
+    "Select a workout A and workout B above to compare them side by side." : {
+
+    },
+    "Select exercise…" : {
+
+    },
+    "Select workout…" : {
+
+    },
+    "Send Feedback" : {
+
+    },
+    "Session Complete!" : {
+
+    },
+    "Sessions per week" : {
+
+    },
+    "Set %lld: %lld reps at %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Set %1$lld: %2$lld reps at %3$@"
+          }
+        }
+      }
+    },
+    "Set a distance target for each week" : {
+
+    },
+    "Set a weekly distance or session goal below." : {
+
+    },
+    "Set a weight target for an exercise and track your progress." : {
+      "comment" : "A description of the functionality of the lift goals feature.",
+      "isCommentAutoGenerated" : true
+    },
+    "Set added. Undo available." : {
+
+    },
+    "Set Day" : {
+
+    },
+    "Set Reminder" : {
+
+    },
+    "Set to 0 to disable this goal." : {
+
+    },
+    "Set Up Your Profile" : {
+
+    },
+    "Set your biological sex in Settings" : {
+
+    },
+    "Set your height in Settings" : {
+
+    },
+    "Sets: %lld" : {
+
+    },
+    "Settings" : {
+
+    },
+    "Share as Image" : {
+
+    },
+    "Share as Text" : {
+
+    },
+    "Share report" : {
+
+    },
+    "Share Run" : {
+
+    },
+    "Share with friends" : {
+
+    },
+    "Shows your recent workout statistics from Metricly." : {
+
+    },
+    "Skip" : {
+
+    },
+    "Skip for now" : {
+
+    },
+    "Skip rest timer" : {
+
+    },
+    "Sleep" : {
+
+    },
+    "Sleep Ready" : {
+
+    },
+    "Sleep score %lld, %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Sleep score %1$lld, %2$@"
+          }
+        }
+      }
+    },
+    "Smart Suggestions" : {
+
+    },
+    "Sort" : {
+
+    },
+    "Split" : {
+
+    },
+    "SPLIT" : {
+
+    },
+    "Splits" : {
+
+    },
+    "SS" : {
+
+    },
+    "StageEnd" : {
+
+    },
+    "StageStart" : {
+
+    },
+    "Start" : {
+
+    },
+    "START" : {
+
+    },
+    "Start %@" : {
+
+    },
+    "Start a session to see it here." : {
+
+    },
+    "Start a streak by hitting your goal again tomorrow" : {
+
+    },
+    "Start blank" : {
+
+    },
+    "Start First Session" : {
+
+    },
+    "Start rest timer" : {
+
+    },
+    "Start Workout" : {
+
+    },
+    "Start your first run or walk to see your stats here." : {
+
+    },
+    "Started \"%@\". Open Metricly to add exercises." : {
+
+    },
+    "Stay consistent 🔥" : {
+
+    },
+    "steps" : {
+
+    },
+    "Steps" : {
+
+    },
+    "Stop 1–2 reps short of failure" : {
+      "comment" : "Adjustment shown on a light day"
+    },
+    "Stop rest timer" : {
+
+    },
+    "Stop Timer" : {
+
+    },
+    "Stop Workout?" : {
+
+    },
+    "Strava" : {
+
+    },
+    "Streak" : {
+
+    },
+    "Strength Training" : {
+
+    },
+    "Strength workouts stay on Metricly — only cardio sessions get pushed to Strava." : {
+
+    },
+    "Substitutions" : {
+
+    },
+    "Subtract 15 seconds" : {
+
+    },
+    "Suggested" : {
+
+    },
+    "Suggested adjustments" : {
+
+    },
+    "Suggested Bedtime" : {
+
+    },
+    "Superset" : {
+
+    },
+    "Sync from Strava" : {
+
+    },
+    "Sync with Apple Health" : {
+
+    },
+    "Sync your activity data for deeper insights." : {
+
+    },
+    "System" : {
+
+    },
+    "System Caffeine" : {
+
+    },
+    "Take %@g × %lld times/day (20g total) to saturate your muscles quickly. Typically lasts 5–7 days." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Take %1$@g × %2$lld times/day (20g total) to saturate your muscles quickly. Typically lasts 5–7 days."
+          }
+        }
+      }
+    },
+    "Take a rest day or do gentle movement (walk, mobility)" : {
+      "comment" : "Adjustment shown on a rest day"
+    },
+    "Take progress photos to track your physical transformation over time." : {
+
+    },
+    "Taken today" : {
+
+    },
+    "Tap a template to quickly assign it to a day." : {
+
+    },
+    "Tap the + button to log your first workout." : {
+
+    },
+    "Tap to edit reps and weight, long press for more" : {
+
+    },
+    "Target" : {
+
+    },
+    "Target is at or below the bar weight." : {
+
+    },
+    "Target Reps" : {
+
+    },
+    "Target Weight" : {
+
+    },
+    "Target weight (%@)" : {
+
+    },
+    "Tells you what workout is scheduled for today in Metricly." : {
+
+    },
+    "Template" : {
+
+    },
+    "Template Saved" : {
+
+    },
+    "Templates" : {
+
+    },
+    "Templates have been added. You can find them when creating a new workout." : {
+
+    },
+    "This action cannot be undone." : {
+
+    },
+    "This cannot be undone." : {
+
+    },
+    "This photo will be permanently deleted." : {
+
+    },
+    "this week" : {
+
+    },
+    "This Week" : {
+
+    },
+    "THIS WEEK" : {
+
+    },
+    "This will create a new workout with the same exercises (no sets copied)." : {
+
+    },
+    "This will permanently delete this workout and all its data. This cannot be undone." : {
+
+    },
+    "This will save your %@ and end the session." : {
+
+    },
+    "Time" : {
+
+    },
+    "TIME" : {
+
+    },
+    "Timers" : {
+
+    },
+    "Today" : {
+
+    },
+    "TODAY" : {
+
+    },
+    "Today: %@" : {
+
+    },
+    "Today's Activity" : {
+
+    },
+    "Today's plan" : {
+
+    },
+    "Today's Plan" : {
+
+    },
+    "Today's plan: %@" : {
+
+    },
+    "Today's Workout" : {
+
+    },
+    "Tools" : {
+
+    },
+    "Total: %@" : {
+
+    },
+    "Track" : {
+
+    },
+    "Train smarter\nevery day." : {
+
+    },
+    "Training" : {
+
+    },
+    "Training Programs" : {
+
+    },
+    "Trends spotted in your training, sleep and recovery data over the last 90 days. These are observations, not medical advice." : {
+
+    },
+    "Try %@ next session" : {
+
+    },
+    "Try a different filter." : {
+
+    },
+    "Try a different search term" : {
+
+    },
+    "Try exercises with common names like Bench Press, Squat, or Deadlift." : {
+
+    },
+    "Try this" : {
+
+    },
+    "Type" : {
+
+    },
+    "Typical: 60–90 s for hypertrophy, 2–3 min for strength, 3–5 min for heavy compounds." : {
+
+    },
+    "Undo" : {
+
+    },
+    "Units" : {
+
+    },
+    "Unlink" : {
+
+    },
+    "Update in Settings → Profile" : {
+
+    },
+    "Update measurements in the Measurements tab for a new estimate." : {
+
+    },
+    "Use" : {
+
+    },
+    "Used for body-fat estimates and recovery calculations." : {
+
+    },
+    "Uses your global %lld-second default from Settings." : {
+
+    },
+    "Value" : {
+
+    },
+    "Value (%@)" : {
+
+    },
+    "View all" : {
+
+    },
+    "View full form guide" : {
+
+    },
+    "View Full Report" : {
+
+    },
+    "View on App Store" : {
+
+    },
+    "Volume" : {
+      "comment" : "Label for the x-axis in the volume by muscle group chart.",
+      "isCommentAutoGenerated" : true
+    },
+    "Volume by muscle group, %lld groups" : {
+
+    },
+    "Volume Comparison" : {
+
+    },
+    "Volume Trends" : {
+
+    },
+    "vs" : {
+
+    },
+    "Wake" : {
+
+    },
+    "Wake up" : {
+
+    },
+    "Want Metricly to remind you on your training days? You can set this up in Settings anytime." : {
+
+    },
+    "Warm-up" : {
+
+    },
+    "Water" : {
+
+    },
+    "We read every piece of feedback. Thank you for helping improve Metricly!" : {
+
+    },
+    "Weekly Distance" : {
+
+    },
+    "Weekly Distance Goal" : {
+
+    },
+    "Weekly Goal" : {
+
+    },
+    "Weekly Goal: %@" : {
+
+    },
+    "Weekly Report" : {
+
+    },
+    "Weekly Schedule" : {
+
+    },
+    "Weekly Session Goal" : {
+
+    },
+    "Weekly Sessions" : {
+
+    },
+    "WEEKS" : {
+
+    },
+    "Weight" : {
+
+    },
+    "Weight (%@)" : {
+
+    },
+    "Weight in kg" : {
+
+    },
+    "Weight unit" : {
+
+    },
+    "Weight Unit" : {
+
+    },
+    "Weight: %@" : {
+
+    },
+    "Well recovered (%lld%%) — good day to push" : {
+      "comment" : "Well-recovered reason. Argument is a 0-100 percent."
+    },
+    "WORK" : {
+
+    },
+    "Working" : {
+
+    },
+    "Workout" : {
+
+    },
+    "Workout complete" : {
+      "comment" : "Plan name shown when the user has already finished training today"
+    },
+    "Workout Complete" : {
+
+    },
+    "Workout Complete!" : {
+
+    },
+    "Workout completed, duration %@" : {
+
+    },
+    "Workout in progress" : {
+
+    },
+    "Workout in progress, elapsed %@" : {
+
+    },
+    "Workout Name" : {
+
+    },
+    "Workout Name (e.g. Push, Pull, Legs)" : {
+
+    },
+    "Workout name (leave empty for rest)" : {
+
+    },
+    "Workout Notes" : {
+
+    },
+    "Workout Stats" : {
+
+    },
+    "Workout Timers" : {
+
+    },
+    "Workouts" : {
+
+    },
+    "Workouts (%lld)" : {
+
+    },
+    "Workouts, exercises, runs, and cardio sessions" : {
+
+    },
+    "Workouts, exercises, runs…" : {
+
+    },
+    "YOU" : {
+
+    },
+    "You can add training days and exercises after creating the program." : {
+
+    },
+    "You're all set." : {
+
+    },
+    "You're on a %lld-day streak in Metricly. 🔥 Keep it up!" : {
+
+    },
+    "You're on a 1-day streak. Keep it going!" : {
+
+    },
+    "You've already trained today — %@. Great work." : {
+
+    },
+    "You've already trained today — nice work." : {
+      "comment" : "Reason shown when alreadyTrainedToday is true"
+    },
+    "You've hit %@ several times this week — consider a different focus" : {
+      "comment" : "Overworked-group adjustment. Argument is a lowercased muscle-group name."
+    },
+    "You've trained through %lld suggested rest days recently — your body may be asking for a real break." : {
+      "comment" : "Trust-cal reason for rest. Argument is a count of ignored rest suggestions."
+    },
+    "Your first workout" : {
+      "comment" : "Recommended plan name for brand-new users"
+    },
+    "Your name" : {
+
+    },
+    "Your name (optional)" : {
+
+    },
+    "Your templates" : {
+
+    },
+    "Your workout data syncs automatically across devices signed in to the same iCloud account." : {
+
+    }
+  },
+  "version" : "1.1"
+}

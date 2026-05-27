@@ -66,12 +66,15 @@ enum RecoveryEngine {
     ///   - health: Optional health signals. Pass default if unavailable.
     ///   - externalWorkouts: HealthKit workouts (non-app).
     ///   - cardioSessions: App-native cardio sessions (runs, rides, walks).
+    ///   - sorenessReports: User-reported soreness within the last 48h.
+    ///                     Stack with the model's volume/RPE estimate.
     ///   - now: Injectable for testability.
     static func evaluate(
         workouts: [Workout],
         health: HealthSignals = .init(),
         externalWorkouts: [ExternalWorkout] = [],
         cardioSessions: [CardioSession] = [],
+        sorenessReports: [SorenessEntry] = [],
         now: Date = .now
     ) -> RecoveryResult {
         let healthMultiplier = computeHealthMultiplier(health: health)
@@ -85,6 +88,16 @@ enum RecoveryEngine {
                 now: now
             )
         }
+
+        // Apply user-reported soreness as a per-group freshness override.
+        // Applied AFTER the per-muscle model so it shows up clearly in
+        // the user's own input — if they say "my legs are sore", legs
+        // freshness drops regardless of what the volume model thinks.
+        muscleResults = applySorenessReports(
+            muscleResults: muscleResults,
+            reports: sorenessReports,
+            now: now
+        )
 
         // Apply systemic fatigue from external workouts (runs, rides, etc.)
         muscleResults = applyExternalWorkoutFatigue(
@@ -210,6 +223,12 @@ enum RecoveryEngine {
         var sessions: [MuscleSession] = []
 
         for workout in workouts {
+            // Future-dated workouts (clock drift, manual date edit, watch
+            // out-of-sync) sit at the top of a newest-first list and would
+            // otherwise pass `date >= cutoff` and contribute zero or
+            // negative fatigue. Skip them but don't break — there may be
+            // legitimate past workouts after them in the array.
+            guard workout.date <= now else { continue }
             guard workout.date >= cutoff else { break } // sorted newest-first
             guard workout.endTime != nil else { continue } // only finished workouts
 
@@ -258,6 +277,9 @@ enum RecoveryEngine {
 
         var sessionVolumes: [Double] = []
         for workout in workouts {
+            // See `recentSessions` — future-dated workouts get skipped
+            // rather than terminating the loop.
+            guard workout.date <= now else { continue }
             guard workout.date >= cutoff, workout.endTime != nil else {
                 if workout.date < cutoff { break }
                 continue
@@ -472,6 +494,53 @@ enum RecoveryEngine {
             return MuscleFatigueResult(
                 group: result.group,
                 freshness: max(0, result.freshness - impact),
+                lastTrained: result.lastTrained,
+                effectiveRecoveryHours: result.effectiveRecoveryHours
+            )
+        }
+    }
+
+    // MARK: - Soreness Override
+
+    /// User-reported soreness (third signal alongside the model's
+    /// volume/RPE estimate). For each muscle group, the most recent
+    /// report within the lookback window applies as a freshness
+    /// multiplier — level 0 has no effect, level 4 drops freshness by
+    /// ~30%. If the user says "my legs are sore", legs freshness drops
+    /// regardless of what the objective model thinks.
+    ///
+    /// Why stack multiplicatively after the model rather than feeding
+    /// in as an input: keeps the model's outputs interpretable, lets
+    /// the UI render "you reported soreness" as a distinct reason, and
+    /// matches user intuition (their report wins).
+    private static func applySorenessReports(
+        muscleResults: [MuscleFatigueResult],
+        reports: [SorenessEntry],
+        now: Date
+    ) -> [MuscleFatigueResult] {
+        guard !reports.isEmpty else { return muscleResults }
+
+        let cutoff = now.addingTimeInterval(-EngineConstants.Recovery.sorenessLookbackHours * 3600)
+        // Bucket the most-recent report per muscle group (within window).
+        var latestByGroup: [MuscleGroup: SorenessEntry] = [:]
+        for report in reports {
+            guard report.date >= cutoff, report.date <= now else { continue }
+            if let existing = latestByGroup[report.group], existing.date >= report.date {
+                continue
+            }
+            latestByGroup[report.group] = report
+        }
+        guard !latestByGroup.isEmpty else { return muscleResults }
+
+        let step = EngineConstants.Recovery.sorenessLevelStep
+        return muscleResults.map { result in
+            guard let report = latestByGroup[result.group] else { return result }
+            let level = max(0, min(4, report.level))
+            guard level > 0 else { return result }
+            let multiplier = 1.0 - Double(level) * step
+            return MuscleFatigueResult(
+                group: result.group,
+                freshness: max(0, result.freshness * multiplier),
                 lastTrained: result.lastTrained,
                 effectiveRecoveryHours: result.effectiveRecoveryHours
             )

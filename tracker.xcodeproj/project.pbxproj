@@ -11,6 +11,7 @@
 		16DFA90F7DCF3037A4C2EF30 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 9368BA8071E780160200AF2C /* Assets.xcassets */; };
 		1EB787865C77762031B1F03C /* HealthKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 62964D20926F033C299E8669 /* HealthKit.framework */; settings = {ATTRIBUTES = (); }; };
 		256F025906207781C4A42241 /* WatchGymView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8542A36BEB6EAFCC197C9226 /* WatchGymView.swift */; };
+		2C483E36543470E6FC3B4E78 /* WidgetModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D4F51462FE8B1D8E7C56A0E /* WidgetModels.swift */; };
 		2FBFAED8CF597A8948429AB2 /* WatchRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 663DD188085EEE0F6A1E3458 /* WatchRootView.swift */; };
 		35515EA8CD7ABF9D043C5710 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4101AA73A1268A38D07B832B /* WidgetKit.framework */; settings = {ATTRIBUTES = (); }; };
 		424EEF5EC8024FAB25D38FC2 /* WatchWorkoutSessionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C7565ACAA622AD970A48063 /* WatchWorkoutSessionManager.swift */; };
@@ -53,9 +54,12 @@
 		93D922DE98A02C2ADF16FA4C /* WatchConnectivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A5301678701A47E0ABE3B26 /* WatchConnectivityManager.swift */; };
 		9D21304DDD863A01918674DE /* WatchRestTimerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5589E11C36A11B70766D53EB /* WatchRestTimerView.swift */; };
 		9D21304DDD863A01918674DF /* WatchActiveMetricsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5589E11C36A11B70766D53EC /* WatchActiveMetricsView.swift */; };
+		B73646A32DCED919C461C1A8 /* WidgetModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D4F51462FE8B1D8E7C56A0E /* WidgetModels.swift */; };
 		C191685841B1CD47F46D5C5D /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 39E4F1D6FA51D7480550839B /* Foundation.framework */; };
+		C2AE9414EA97FC26A44B282D /* WidgetModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D4F51462FE8B1D8E7C56A0E /* WidgetModels.swift */; };
 		C65C4106D61E19FD82FEBD27 /* MetriclyWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = FDE4FFC6BE5D207CB3754ED7 /* MetriclyWatch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		D25382435926316D83D43CC7 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 39E4F1D6FA51D7480550839B /* Foundation.framework */; };
+		E981D6360D6A5E9E3E8562B2 /* StravaImportService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 703FFA80F67EF45A2C03DB9E /* StravaImportService.swift */; };
 		EDB8AE92F24CFC88014E868E /* WatchComplications.swift in Sources */ = {isa = PBXBuildFile; fileRef = 450504C0961911BD593E7516 /* WatchComplications.swift */; };
 		F5E1D7AFB6B9A3642F1A8CE2 /* WatchCardioView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4124FAE731ACA1B9480E005F /* WatchCardioView.swift */; };
 /* End PBXBuildFile section */
@@ -147,6 +151,8 @@
 		6C7565ACAA622AD970A48063 /* WatchWorkoutSessionManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchWorkoutSessionManager.swift; sourceTree = "<group>"; };
 		6D730FE107BD884EB1ED495E /* MetriclyWatchComplications.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = MetriclyWatchComplications.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		6E48B48972259787CEA4E374 /* HealthDataCache.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = HealthDataCache.swift; sourceTree = "<group>"; };
+		703FFA80F67EF45A2C03DB9E /* StravaImportService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = StravaImportService.swift; sourceTree = "<group>"; };
+		7D4F51462FE8B1D8E7C56A0E /* WidgetModels.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WidgetModels.swift; sourceTree = "<group>"; };
 		8297692C2FC6441200590CAA /* Secrets.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secrets.xcconfig; sourceTree = "<group>"; };
 		82A0C4CE2F58E8E200BD421B /* tracker.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = tracker.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		82CCBB032F81354000BD46EA /* AppShortcuts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppShortcuts.swift; sourceTree = "<group>"; };
@@ -213,8 +219,6 @@
 		};
 		82ED21672FAE534200D1DEFF /* trackerTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = trackerTests;
 			sourceTree = "<group>";
 		};
@@ -358,6 +362,8 @@
 				D5A29A21938233E7A93C4D3 /* MetriclySchema.swift */,
 				ADABA831A2528A54D046938D /* WatchSyncModels.swift */,
 				6E48B48972259787CEA4E374 /* HealthDataCache.swift */,
+				7D4F51462FE8B1D8E7C56A0E /* WidgetModels.swift */,
+				703FFA80F67EF45A2C03DB9E /* StravaImportService.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -616,6 +622,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				EDB8AE92F24CFC88014E868E /* WatchComplications.swift in Sources */,
+				C2AE9414EA97FC26A44B282D /* WidgetModels.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -649,6 +656,8 @@
 				8DC996E2A0D7FD9E9693900C /* HealthDataCache.swift in Sources */,
 				9391243271CB6E909B85E048 /* EmptyStateView.swift in Sources */,
 				8987CD55846DEC390F04017A /* ErrorBanner.swift in Sources */,
+				2C483E36543470E6FC3B4E78 /* WidgetModels.swift in Sources */,
+				E981D6360D6A5E9E3E8562B2 /* StravaImportService.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -663,6 +672,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B73646A32DCED919C461C1A8 /* WidgetModels.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

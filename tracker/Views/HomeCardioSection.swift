@@ -28,7 +28,9 @@ struct HomeCardioSection: View {
                 // This week stat
                 VStack(alignment: .leading, spacing: 6) {
                     Text("This Week")
-                        .font(.system(size: 11, weight: .bold, design: .rounded))
+                        // Caption2 (~11pt) preserves the all-caps small-label
+                        // feel while letting Dynamic Type scale it.
+                        .font(.system(.caption2, design: .rounded).weight(.bold))
                         .foregroundStyle(.orange)
                         .tracking(0.4)
                         .textCase(.uppercase)
@@ -59,7 +61,7 @@ struct HomeCardioSection: View {
                     NavigationLink(destination: CardioSessionDetailView(session: last)) {
                         VStack(alignment: .leading, spacing: 6) {
                             Text("Last Run")
-                                .font(.system(size: 11, weight: .bold, design: .rounded))
+                                .font(.system(.caption2, design: .rounded).weight(.bold))
                                 .foregroundStyle(last.type.color)
                                 .tracking(0.4)
                                 .textCase(.uppercase)

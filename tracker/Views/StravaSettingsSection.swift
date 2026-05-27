@@ -1,7 +1,9 @@
 import SwiftUI
+import SwiftData
 
 /// Settings row group for the Strava integration. Connected state shows the
-/// athlete's name, a disconnect action, and the auto-share toggle.
+/// athlete's name, a disconnect action, the auto-share toggle, and a
+/// sync-from-Strava button to backfill historical activities.
 /// Disconnected state shows a single Connect button.
 ///
 /// The auto-share preference is persisted via `@AppStorage` rather than
@@ -11,6 +13,10 @@ struct StravaSettingsSection: View {
     @StateObject private var service = StravaService.shared
     @AppStorage("strava.autoShareCardio") private var autoShareCardio: Bool = true
     @State private var showingDisconnectConfirm = false
+    @State private var isSyncing = false
+    @State private var lastSyncResult: StravaImportService.Result?
+    @Environment(\.modelContext) private var modelContext
+    @Query private var existingSessions: [CardioSession]
 
     var body: some View {
         Section {
@@ -27,6 +33,7 @@ struct StravaSettingsSection: View {
                         }
                     }
                 }
+                syncFromStravaRow
                 Button(role: .destructive) {
                     showingDisconnectConfirm = true
                 } label: {
@@ -100,6 +107,86 @@ struct StravaSettingsSection: View {
             Image(systemName: "figure.run")
                 .font(.caption.bold())
                 .foregroundStyle(.orange)
+        }
+    }
+
+    // MARK: - Sync-from-Strava
+
+    private var syncFromStravaRow: some View {
+        Button {
+            Task { await runSync() }
+        } label: {
+            HStack(spacing: 12) {
+                settingsIcon("arrow.down.circle.fill", color: .blue)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("Sync from Strava")
+                        .foregroundStyle(.primary)
+                    Text(syncSubtitle)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                }
+                Spacer()
+                if isSyncing {
+                    ProgressView()
+                } else {
+                    Image(systemName: "arrow.down.right.square")
+                        .font(.caption.bold())
+                        .foregroundStyle(.tertiary)
+                }
+            }
+        }
+        .disabled(isSyncing)
+        .accessibilityHint("Imports your recent Strava activities as cardio sessions.")
+    }
+
+    private var syncSubtitle: String {
+        if isSyncing { return "Importing…" }
+        if let r = lastSyncResult {
+            let imported  = r.imported == 1 ? "1 new session" : "\(r.imported) new sessions"
+            let skipped   = r.skippedExisting > 0 ? " · \(r.skippedExisting) already had" : ""
+            let unsup     = r.unsupportedType > 0 ? " · \(r.unsupportedType) unsupported type\(r.unsupportedType == 1 ? "" : "s")" : ""
+            return "\(imported)\(skipped)\(unsup)"
+        }
+        return "Pull your recent Strava activities into Metricly."
+    }
+
+    private func runSync() async {
+        isSyncing = true
+        defer { isSyncing = false }
+        do {
+            let result = try await StravaImportService.sync(
+                existing: existingSessions,
+                in: modelContext
+            )
+            lastSyncResult = result
+            if result.imported == 0 && result.skippedExisting == 0 {
+                AppErrorBus.shared.report(
+                    message: String(localized: "Nothing new on Strava to import.", comment: "Toast when a Strava sync finds zero new and zero existing matches"),
+                    kind: .info
+                )
+            }
+        } catch StravaError.httpFailure(let status, _) where status == 401 {
+            // Tokens issued before the activity:read_all scope bump don't
+            // have permission to read the user's activity list — Strava
+            // returns 401 on the first sync attempt. Send the user to
+            // disconnect+reconnect rather than letting them retry endlessly.
+            AppErrorBus.shared.report(
+                message: String(localized: "Reconnect Strava to enable sync — your existing connection was created before this feature shipped.", comment: "Shown when Strava returns 401 (token missing the read scope)"),
+                kind: .warning
+            )
+        } catch StravaError.httpFailure(let status, _) where status == 429 {
+            // Strava enforces per-15-min and per-day quotas. Hitting 429
+            // means the user (or our retry loop) burned through them.
+            AppErrorBus.shared.report(
+                message: String(localized: "Strava is rate-limiting us — try again in 15 minutes.", comment: "Shown when Strava returns 429 (rate limit)"),
+                kind: .warning
+            )
+        } catch {
+            AppErrorBus.shared.report(
+                message: String(localized: "Strava sync failed — check your connection and try again.", comment: "Generic Strava sync failure"),
+                kind: .failure
+            )
         }
     }
 

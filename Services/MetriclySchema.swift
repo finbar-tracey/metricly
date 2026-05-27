@@ -8,32 +8,18 @@ import SwiftData
 /// CloudKit container divergence, store-shape mismatches, and silently
 /// reading from a different local file than the main app.
 ///
-/// Adding a new `@Model` type? Add it here once. Every container builder
-/// in the project reads this list.
+/// Adding a new `@Model` type? Add it to the latest schema version
+/// (currently `MetriclySchemaV2`). For a purely-additive change (a new
+/// @Model class, or a new optional field on an existing one) SwiftData
+/// can migrate automatically — append a `.lightweight` stage to the
+/// migration plan and you're done.
 enum MetriclySchema {
 
     /// Complete model set — keep in sync with trackerApp.init.
     /// Order is irrelevant; SwiftData reads this as a Set.
-    static let allModels: [any PersistentModel.Type] = [
-        Workout.self,
-        Exercise.self,
-        ExerciseSet.self,
-        UserSettings.self,
-        BodyWeightEntry.self,
-        TrainingProgram.self,
-        ProgramDay.self,
-        ProgramExercise.self,
-        BodyMeasurement.self,
-        LiftGoal.self,
-        ProgressPhoto.self,
-        CaffeineEntry.self,
-        WaterEntry.self,
-        CreatineEntry.self,
-        ManualActivity.self,
-        CardioSession.self
-    ]
+    static let allModels: [any PersistentModel.Type] = MetriclySchemaV3.models
 
-    static var schema: Schema { Schema(allModels) }
+    static var schema: Schema { Schema(versionedSchema: MetriclySchemaV3.self) }
 
     /// Build a CloudKit-backed container with the full schema. App
     /// Intents call this so they share the user's iCloud-synced store
@@ -43,9 +29,101 @@ enum MetriclySchema {
     /// intents still function when the user has iCloud disabled.
     static func makeSharedContainer() throws -> ModelContainer {
         let cloud = ModelConfiguration(cloudKitDatabase: .automatic)
-        if let cloudContainer = try? ModelContainer(for: schema, configurations: cloud) {
+        if let cloudContainer = try? ModelContainer(
+            for: schema,
+            migrationPlan: MetriclyMigrationPlan.self,
+            configurations: cloud
+        ) {
             return cloudContainer
         }
-        return try ModelContainer(for: schema)
+        return try ModelContainer(
+            for: schema,
+            migrationPlan: MetriclyMigrationPlan.self
+        )
+    }
+}
+
+// MARK: - Versioned schema (V1)
+//
+// First versioned slice of the schema. Today this is identical to what
+// shipped — purpose is the boilerplate so the next migration is a small
+// additive PR (V2 + a stage) rather than a big-bang restructure on a
+// store that holds years of user data.
+//
+// When you need to migrate:
+//   1. Copy this V1 block to a V2 below.
+//   2. Edit V2's models — add fields, rename, etc.
+//   3. Add a `MigrationStage` (lightweight or custom) between V1 and V2.
+//   4. Append the stage to `MetriclyMigrationPlan.stages`.
+//   5. Update `MetriclySchema.schema` to point at the new latest version.
+
+enum MetriclySchemaV1: VersionedSchema {
+    static var versionIdentifier: Schema.Version { Schema.Version(1, 0, 0) }
+
+    static var models: [any PersistentModel.Type] {
+        [
+            Workout.self,
+            Exercise.self,
+            ExerciseSet.self,
+            UserSettings.self,
+            BodyWeightEntry.self,
+            TrainingProgram.self,
+            ProgramDay.self,
+            ProgramExercise.self,
+            BodyMeasurement.self,
+            LiftGoal.self,
+            ProgressPhoto.self,
+            CaffeineEntry.self,
+            WaterEntry.self,
+            CreatineEntry.self,
+            ManualActivity.self,
+            CardioSession.self,
+        ]
+    }
+}
+
+// V2 adds `SorenessEntry` for user-reported muscle soreness, which the
+// recovery engine consumes as a third intensity signal (alongside
+// volume and RPE). Purely additive — no migration logic needed.
+
+enum MetriclySchemaV2: VersionedSchema {
+    static var versionIdentifier: Schema.Version { Schema.Version(2, 0, 0) }
+
+    static var models: [any PersistentModel.Type] {
+        MetriclySchemaV1.models + [SorenessEntry.self]
+    }
+}
+
+// V3 adds `PlanComplianceEvent` — daily snapshots of "did the user
+// follow the engine's suggestion?" used to bias future plan confidence.
+// Purely additive; no data transformation required.
+
+enum MetriclySchemaV3: VersionedSchema {
+    static var versionIdentifier: Schema.Version { Schema.Version(3, 0, 0) }
+
+    static var models: [any PersistentModel.Type] {
+        MetriclySchemaV2.models + [PlanComplianceEvent.self]
+    }
+}
+
+// MARK: - Migration plan
+//
+// SwiftData walks this chain on container init, replaying any stage
+// whose endpoints span the user's persisted version up to the active
+// latest. Append new stages here; never remove an older one.
+
+enum MetriclyMigrationPlan: SchemaMigrationPlan {
+    static var schemas: [any VersionedSchema.Type] {
+        [MetriclySchemaV1.self, MetriclySchemaV2.self, MetriclySchemaV3.self]
+    }
+
+    static var stages: [MigrationStage] {
+        [
+            // V1 → V2: lightweight (SwiftData auto-creates the new
+            // SorenessEntry table; no data transformation required).
+            .lightweight(fromVersion: MetriclySchemaV1.self, toVersion: MetriclySchemaV2.self),
+            // V2 → V3: lightweight (adds PlanComplianceEvent table).
+            .lightweight(fromVersion: MetriclySchemaV2.self, toVersion: MetriclySchemaV3.self),
+        ]
     }
 }

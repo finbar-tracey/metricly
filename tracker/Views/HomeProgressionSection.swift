@@ -40,7 +40,7 @@ struct HomeProgressionSection: View {
                             }
                             VStack(alignment: .leading, spacing: 3) {
                                 Text(suggestion.exerciseName)
-                                    .font(.system(size: 15, weight: .semibold, design: .rounded))
+                                    .font(.system(.subheadline, design: .rounded).weight(.semibold))
                                 if case .increase(let kg) = suggestion.recommendation.action {
                                     Text("Try \(weightUnit.format(kg)) next session")
                                         .font(.caption).foregroundStyle(.secondary)

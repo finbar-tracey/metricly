@@ -231,6 +231,7 @@ struct WeeklyMonthlyReportView: View {
             ToolbarItem(placement: .topBarTrailing) {
                 Button { shareAsImage() } label: { Image(systemName: "square.and.arrow.up") }
                     .disabled(periodWorkouts.isEmpty)
+                    .accessibilityLabel("Share report")
             }
         }
         .sheet(isPresented: $showingShare) {

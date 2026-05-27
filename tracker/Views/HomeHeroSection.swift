@@ -61,7 +61,7 @@ struct HomeHeroSection: View {
         HStack(alignment: .top, spacing: 10) {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Recovery Readiness")
-                    .font(.system(size: 12, weight: .bold, design: .rounded))
+                    .font(.system(.caption, design: .rounded).weight(.bold))
                     .foregroundStyle(.white.opacity(0.78))
                     .tracking(0.5)
                     .textCase(.uppercase)
@@ -133,7 +133,7 @@ struct HomeHeroSection: View {
     private var streakFallback: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text("Day Streak")
-                .font(.system(size: 12, weight: .bold, design: .rounded))
+                .font(.system(.caption, design: .rounded).weight(.bold))
                 .foregroundStyle(.white.opacity(0.78))
                 .tracking(0.5)
                 .textCase(.uppercase)

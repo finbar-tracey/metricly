@@ -48,7 +48,10 @@ struct HomeMuscleReadinessSection: View {
                                 .frame(width: 22, height: 22)
                         }
                         Text(result.group.rawValue)
-                            .font(.system(size: 10, weight: .semibold, design: .rounded))
+                            // Caption2 = 11pt default; .rounded preserved.
+                            // Scales with Dynamic Type up to the minimum
+                            // scale factor below.
+                            .font(.system(.caption2, design: .rounded).weight(.semibold))
                             .foregroundStyle(color)
                             .lineLimit(1)
                             .minimumScaleFactor(0.6)

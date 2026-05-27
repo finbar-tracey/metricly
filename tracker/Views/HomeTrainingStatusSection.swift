@@ -26,7 +26,7 @@ struct HomeTrainingStatusSection: View {
                             Spacer()
                             if weekDone {
                                 Text("DONE")
-                                    .font(.system(size: 10, weight: .bold, design: .rounded))
+                                    .font(.system(.caption2, design: .rounded).weight(.bold))
                                     .tracking(0.6)
                                     .foregroundStyle(.white)
                                     .padding(.horizontal, 9).padding(.vertical, 4)
@@ -52,7 +52,7 @@ struct HomeTrainingStatusSection: View {
                         Image(systemName: "flame.fill")
                             .foregroundStyle(currentStreak >= 3 ? .orange : .secondary)
                         Text("\(currentStreak) day streak")
-                            .font(.system(size: 15, weight: .semibold, design: .rounded))
+                            .font(.system(.subheadline, design: .rounded).weight(.semibold))
                     }
                     Spacer()
                     NavigationLink { SmartSuggestionsView() } label: {

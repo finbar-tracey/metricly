@@ -192,6 +192,7 @@ struct ExerciseDetailView: View {
                 } label: {
                     Image(systemName: "ellipsis.circle")
                 }
+                .accessibilityLabel("More")
             }
         }
         .navigationDestination(for: FormGuideDestination.self) { dest in

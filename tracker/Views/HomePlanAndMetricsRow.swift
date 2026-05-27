@@ -50,7 +50,7 @@ struct HomePlanAndMetricsRow: View {
 
         return VStack(alignment: .leading, spacing: 10) {
             Text("Today's Plan")
-                .font(.system(size: 16, weight: .bold, design: .rounded))
+                .font(.system(.headline, design: .rounded).weight(.bold))
 
             if hasPlan, let name = planned {
                 HStack(spacing: 4) {
@@ -132,7 +132,7 @@ struct HomePlanAndMetricsRow: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
                 Text("Key Metrics")
-                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .font(.system(.headline, design: .rounded).weight(.bold))
                 Spacer()
                 NavigationLink { HealthDashboardView() } label: {
                     Text("View all")

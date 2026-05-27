@@ -20,5 +20,11 @@
 	<string>$(STRAVA_CLIENT_ID)</string>
 	<key>STRAVA_CLIENT_SECRET</key>
 	<string>$(STRAVA_CLIENT_SECRET)</string>
+	<!-- Declares English as the development language. With this in place,
+	     Xcode's "Export Localizations" picks up every String(localized:)
+	     call in source as the English baseline, and adding a new language
+	     becomes a strings-file drop instead of a code refactor. -->
+	<key>CFBundleDevelopmentRegion</key>
+	<string>en</string>
 </dict>
 </plist>

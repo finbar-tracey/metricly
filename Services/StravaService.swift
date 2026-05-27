@@ -71,9 +71,11 @@ final class StravaService: NSObject, ObservableObject {
     /// OAuth scopes:
     /// - `read` so we can fetch the athlete profile (name display in Settings).
     /// - `activity:write` so we can push completed sessions.
-    /// We deliberately don't request `activity:read_all` — we don't pull
-    /// anything from Strava (HealthKit already delivers those activities).
-    private static let scopes = "read,activity:write"
+    /// - `activity:read_all` so we can pull the user's own activities back
+    ///   into Metricly (Strava → CardioSession backfill). Users with
+    ///   existing tokens issued before this scope was added will need to
+    ///   reconnect once for the read scope to take effect.
+    private static let scopes = "read,activity:write,activity:read_all"
 
     // MARK: - Published state
 
@@ -554,5 +556,78 @@ extension StravaService {
             throw StravaError.httpFailure(status: http.statusCode, body: bodyText)
         }
         return try JSONDecoder().decode(T.self, from: data)
+    }
+}
+
+
+// MARK: - Activity backfill (Strava → app)
+
+/// Lean projection of Strava's SummaryActivity — only the fields the
+/// import service needs. JSON decoding ignores any extra keys Strava
+/// sends, so adding a field here doesn't risk breaking on a Strava-
+/// side schema bump.
+struct StravaSummaryActivity: Decodable {
+    let id: Int
+    let name: String
+    let sport_type: String
+    let start_date: String          // ISO 8601 with timezone
+    let elapsed_time: Double        // seconds
+    let distance: Double            // meters
+    let total_elevation_gain: Double?
+    let average_heartrate: Double?
+    let max_heartrate: Double?
+    let calories: Double?
+    let trainer: Bool?              // true → indoor variant
+}
+
+extension StravaService {
+
+    /// Fetch the most recent `limit` activities, walking pages until we
+    /// either hit the limit or Strava returns an empty page. Authorized
+    /// — caller must have completed OAuth with the `activity:read_all`
+    /// scope.
+    ///
+    /// `after` truncates by start time: only activities with
+    /// `start_date >= after` are returned. Pass `nil` for "no floor".
+    func fetchActivities(limit: Int = 200, after: Date? = nil) async throws -> [StravaSummaryActivity] {
+        let token = try await accessToken()
+
+        var collected: [StravaSummaryActivity] = []
+        let perPage = 100
+        var page = 1
+        let afterEpoch: Int? = after.map { Int($0.timeIntervalSince1970) }
+
+        while collected.count < limit {
+            var components = URLComponents(string: "https://www.strava.com/api/v3/athlete/activities")!
+            var items: [URLQueryItem] = [
+                URLQueryItem(name: "per_page", value: "\(perPage)"),
+                URLQueryItem(name: "page", value: "\(page)"),
+            ]
+            if let afterEpoch {
+                items.append(URLQueryItem(name: "after", value: "\(afterEpoch)"))
+            }
+            components.queryItems = items
+            guard let url = components.url else { throw StravaError.invalidURL }
+
+            var request = URLRequest(url: url)
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let http = response as? HTTPURLResponse else { throw StravaError.noResponse }
+            guard (200..<300).contains(http.statusCode) else {
+                let bodyText = String(data: data, encoding: .utf8) ?? "<no body>"
+                throw StravaError.httpFailure(status: http.statusCode, body: bodyText)
+            }
+
+            let pageBatch = try JSONDecoder().decode([StravaSummaryActivity].self, from: data)
+            if pageBatch.isEmpty { break }
+            collected.append(contentsOf: pageBatch)
+
+            // Strava returns at most `perPage` per request — anything
+            // smaller means the next page would be empty.
+            if pageBatch.count < perPage { break }
+            page += 1
+        }
+
+        return Array(collected.prefix(limit))
     }
 }

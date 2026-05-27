@@ -116,11 +116,11 @@ struct ImportHelper {
 
                 for row in setRows {
                     guard let reps = Int(row[safe: 8] ?? ""),
-                          let weight = Double(row[safe: 9] ?? "")
+                          let weight = parseDecimal(row[safe: 9])
                     else { continue }
 
                     let rpe: Int? = if let rpeStr = row[safe: 10], let val = Int(rpeStr), (1...10).contains(val) { val } else { nil }
-                    let dist: Double? = if let distStr = row[safe: 11], let val = Double(distStr), val > 0 { val } else { nil }
+                    let dist: Double? = if let val = parseDecimal(row[safe: 11]), val > 0 { val } else { nil }
                     let durSecs: Int? = if let durStr = row[safe: 12], let val = Int(durStr), val > 0 { val } else { nil }
                     let set = ExerciseSet(reps: reps, weight: weight, rpe: rpe, distance: dist, durationSeconds: durSecs, exercise: exercise)
                     context.insert(set)
@@ -201,6 +201,30 @@ struct ImportHelper {
         }
 
         return rows
+    }
+
+    // MARK: - Locale-tolerant decimal parsing
+
+    /// Parses a decimal string accepting both period (`80.5`) and comma
+    /// (`80,5`) decimal separators. The app's own exports always use
+    /// period — this exists for CSVs that round-trip through external
+    /// tools (e.g. a German Excel) where the decimal mark gets swapped.
+    ///
+    /// Doesn't try to handle thousands separators — `1,234.5` and
+    /// `1.234,5` both return nil because they're ambiguous and we'd
+    /// rather drop the row than silently misread it as 1234.5 or 1.234.
+    static func parseDecimal(_ s: String?) -> Double? {
+        guard let s = s?.trimmingCharacters(in: .whitespaces), !s.isEmpty else { return nil }
+        if let v = Double(s) { return v }
+        // Only attempt the comma swap when there's exactly one comma and
+        // no period — the typical European single-decimal case. Anything
+        // more ambiguous than that falls through to nil.
+        let commaCount = s.filter { $0 == "," }.count
+        let hasPeriod  = s.contains(".")
+        if commaCount == 1 && !hasPeriod {
+            return Double(s.replacingOccurrences(of: ",", with: "."))
+        }
+        return nil
     }
 }
 

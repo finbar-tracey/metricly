@@ -15,6 +15,7 @@ struct MuscleRecoveryView: View {
     @State private var averageRestingHR: Double?
     @State private var healthDataLoaded = false
     @Query(sort: \CardioSession.date, order: .reverse) private var cardioSessions: [CardioSession]
+    @Query(sort: \SorenessEntry.date, order: .reverse) private var sorenessReports: [SorenessEntry]
     @State private var externalWorkouts: [ExternalWorkout] = []
     @State private var recoveryResult: RecoveryResult = .empty
 
@@ -29,7 +30,8 @@ struct MuscleRecoveryView: View {
                 sleepMinutes: healthDataLoaded ? lastNightSleep : nil
             ),
             externalWorkouts: externalWorkouts,
-            cardioSessions: Array(cardioSessions.prefix(50))
+            cardioSessions: Array(cardioSessions.prefix(50)),
+            sorenessReports: Array(sorenessReports.prefix(30))
         )
     }
 
@@ -42,6 +44,9 @@ struct MuscleRecoveryView: View {
                 }
                 if !externalWorkouts.isEmpty {
                     externalActivityCard
+                }
+                if !activeSorenessReports.isEmpty {
+                    sorenessReportsCard
                 }
                 muscleGroupsCard
                 suggestedCard
@@ -75,6 +80,7 @@ struct MuscleRecoveryView: View {
         }
         .onChange(of: workouts) { recomputeRecovery() }
         .onChange(of: cardioSessions) { recomputeRecovery() }
+        .onChange(of: sorenessReports) { recomputeRecovery() }
     }
 
     // MARK: - Hero Card
@@ -285,6 +291,89 @@ struct MuscleRecoveryView: View {
             .clipShape(RoundedRectangle(cornerRadius: 14))
         }
         .appCard()
+    }
+
+    // MARK: - Soreness Reports
+    //
+    // Shows the most-recent self-report per muscle group within the
+    // engine's 48h lookback window. Makes the soreness signal visible
+    // — without this, a user wonders why "legs" is red even though
+    // their objective fatigue numbers look OK.
+
+    /// The latest report per group within the 48h window. One row per
+    /// affected group, level > 0 only (level 0 = "no soreness" and
+    /// doesn't warrant a row).
+    private var activeSorenessReports: [SorenessEntry] {
+        let cutoff = Date.now.addingTimeInterval(-EngineConstants.Recovery.sorenessLookbackHours * 3600)
+        var seen = Set<MuscleGroup>()
+        return sorenessReports
+            .filter { $0.date >= cutoff && $0.level > 0 }
+            .filter { entry in
+                guard !seen.contains(entry.group) else { return false }
+                seen.insert(entry.group)
+                return true
+            }
+    }
+
+    private var sorenessReportsCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            SectionHeader(title: "Reported Soreness", icon: "figure.cooldown", color: .purple)
+                .accessibilityAddTraits(.isHeader)
+
+            VStack(spacing: 0) {
+                ForEach(Array(activeSorenessReports.enumerated()), id: \.element.id) { idx, report in
+                    sorenessRow(report)
+                    if idx < activeSorenessReports.count - 1 {
+                        Divider().padding(.leading, 52)
+                    }
+                }
+            }
+            .background(Color(.tertiarySystemGroupedBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+
+            Text(String(localized: "From your post-workout check-in. Counts for 48 hours.", comment: "Footnote under the Reported Soreness section"))
+                .font(.caption2)
+                .foregroundStyle(.tertiary)
+                .padding(.horizontal, 4)
+        }
+        .appCard()
+    }
+
+    private func sorenessRow(_ report: SorenessEntry) -> some View {
+        let level = SorenessEntry.Level(rawValue: max(0, min(4, report.level))) ?? .none
+        let tint = sorenessTint(for: report.level)
+        return HStack(spacing: 12) {
+            ZStack {
+                Circle().fill(tint.opacity(0.15)).frame(width: 36, height: 36)
+                Image(systemName: level.sfSymbol)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(tint)
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                Text(report.group.rawValue)
+                    .font(.subheadline.weight(.semibold))
+                Text(level.label)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
+            Text(report.date.formatted(.relative(presentation: .named, unitsStyle: .abbreviated)))
+                .font(.caption2)
+                .foregroundStyle(.tertiary)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .accessibilityElement(children: .combine)
+    }
+
+    private func sorenessTint(for level: Int) -> Color {
+        switch level {
+        case 0: return .green
+        case 1: return Color(red: 0.85, green: 0.80, blue: 0.20)
+        case 2: return .orange
+        case 3: return Color(red: 0.95, green: 0.40, blue: 0.20)
+        default: return .red
+        }
     }
 
     // MARK: - Muscle Groups Card

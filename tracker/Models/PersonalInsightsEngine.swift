@@ -94,15 +94,16 @@ enum PersonalInsightsEngine {
     /// after good sleep (≥7h) vs short sleep (<6h). Needs both groups present.
     static func sleepVsTopExercise(_ inputs: Inputs) -> Insight? {
         guard !inputs.sleepByDay.isEmpty else { return nil }
+        let C = EngineConstants.PersonalInsights.self
 
-        // Find top-frequency exercise across the last 90 days
-        let cutoff = Calendar.current.date(byAdding: .day, value: -90, to: .now) ?? .distantPast
+        // Find top-frequency exercise across the wide lookback window
+        let cutoff = Calendar.current.date(byAdding: .day, value: -C.wideLookbackDays, to: .now) ?? .distantPast
         let workouts = inputs.workouts.filter { $0.date >= cutoff && $0.endTime != nil }
         let allExercises = workouts.flatMap(\.exercises)
         let counts = Dictionary(grouping: allExercises, by: { $0.name.lowercased() })
             .mapValues { $0.count }
         guard let topName = counts.max(by: { $0.value < $1.value })?.key,
-              counts[topName, default: 0] >= 6
+              counts[topName, default: 0] >= C.minTopExerciseHits
         else { return nil }
 
         // Top working-set weight per session for that exercise
@@ -114,7 +115,7 @@ enum PersonalInsightsEngine {
             guard let max = sets.map(\.weight).max() else { return nil }
             return (w.date, max)
         }
-        guard perSession.count >= 6 else { return nil }
+        guard perSession.count >= C.minTopExerciseHits else { return nil }
 
         // Bucket by sleep on that calendar night (overnight sleep ending that morning)
         let sleepByDay = dictionaryByDay(inputs.sleepByDay) { ($0.date, $0.minutes) }
@@ -124,16 +125,18 @@ enum PersonalInsightsEngine {
             let day = Calendar.current.startOfDay(for: s.date)
             guard let mins = sleepByDay[day] else { continue }
             let h = mins / 60
-            if h >= 7      { goodGroup.append(s.topWeight) }
-            else if h < 6  { poorGroup.append(s.topWeight) }
+            if h >= C.goodSleepHours       { goodGroup.append(s.topWeight) }
+            else if h < C.shortSleepHours  { poorGroup.append(s.topWeight) }
         }
+        // 3-each is a per-bucket floor below the cross-insight default —
+        // we need *both* sleep buckets populated, so doubling up.
         guard goodGroup.count >= 3, poorGroup.count >= 3 else { return nil }
 
         let avgGood = goodGroup.reduce(0, +) / Double(goodGroup.count)
         let avgPoor = poorGroup.reduce(0, +) / Double(poorGroup.count)
         guard avgPoor > 0 else { return nil }
         let pct = (avgGood - avgPoor) / avgPoor * 100
-        guard abs(pct) >= 4 else { return nil }   // skip noise-level differences
+        guard abs(pct) >= C.minEffectPct else { return nil }   // skip noise-level differences
 
         let displayName = workouts
             .flatMap(\.exercises)
@@ -169,7 +172,8 @@ enum PersonalInsightsEngine {
     /// For each muscle group, compare top-set weight after 0–1 vs 2+ days off
     /// training that group. Picks the strongest pattern across groups.
     static func restDaysVsPerformance(_ inputs: Inputs) -> Insight? {
-        let cutoff = Calendar.current.date(byAdding: .day, value: -90, to: .now) ?? .distantPast
+        let C = EngineConstants.PersonalInsights.self
+        let cutoff = Calendar.current.date(byAdding: .day, value: -C.wideLookbackDays, to: .now) ?? .distantPast
         let finished = inputs.workouts.filter { $0.date >= cutoff && $0.endTime != nil }
             .sorted { $0.date < $1.date }
         guard finished.count >= 8 else { return nil }
@@ -204,7 +208,7 @@ enum PersonalInsightsEngine {
             let avgTired = tiredGroup.reduce(0, +) / Double(tiredGroup.count)
             guard avgTired > 0 else { continue }
             let pct = (avgFresh - avgTired) / avgTired * 100
-            guard abs(pct) >= 4 else { continue }
+            guard abs(pct) >= C.minEffectPct else { continue }
 
             let n = freshGroup.count + tiredGroup.count
             let msgWeight = Double(n) * 0.5 + abs(pct)
@@ -239,10 +243,11 @@ enum PersonalInsightsEngine {
 
     // MARK: - Insight: Late caffeine × sleep duration
 
-    /// Compare sleep duration on nights following caffeine after 3pm vs not.
+    /// Compare sleep duration on nights following caffeine after the late
+    /// cutoff hour vs not.
     static func lateCaffeineVsSleep(_ inputs: Inputs) -> Insight? {
         guard !inputs.caffeine.isEmpty, !inputs.sleepByDay.isEmpty else { return nil }
-        let lateHour = 15  // 3pm
+        let C = EngineConstants.PersonalInsights.self
 
         let sleepByDay = dictionaryByDay(inputs.sleepByDay) { ($0.date, $0.minutes) }
 
@@ -253,7 +258,7 @@ enum PersonalInsightsEngine {
             let day = Calendar.current.startOfDay(for: entry.date)
             caffeineDays.insert(day)
             let hour = Calendar.current.component(.hour, from: entry.date)
-            if hour >= lateHour { lateDays.insert(day) }
+            if hour >= C.lateCaffeineHour { lateDays.insert(day) }
         }
 
         var lateNights: [Double] = []     // minutes of sleep AFTER days with late caffeine
@@ -264,12 +269,12 @@ enum PersonalInsightsEngine {
             if lateDays.contains(day) { lateNights.append(mins) }
             else { earlyNights.append(mins) }
         }
-        guard lateNights.count >= 4, earlyNights.count >= 4 else { return nil }
+        guard lateNights.count >= C.minPairedSamples, earlyNights.count >= C.minPairedSamples else { return nil }
 
         let avgLate = lateNights.reduce(0, +) / Double(lateNights.count)
         let avgEarly = earlyNights.reduce(0, +) / Double(earlyNights.count)
         let diffMins = avgLate - avgEarly
-        guard abs(diffMins) >= 15 else { return nil }   // 15-minute threshold
+        guard abs(diffMins) >= C.minSleepDeltaMinutes else { return nil }
 
         let strength: Insight.Strength = {
             if abs(diffMins) >= 30 && lateNights.count + earlyNights.count >= 14 { return .strong }
@@ -295,7 +300,8 @@ enum PersonalInsightsEngine {
     /// Compare HRV the morning after high-volume vs low-volume training days.
     static func highVolumeVsHRV(_ inputs: Inputs) -> Insight? {
         guard !inputs.hrvByDay.isEmpty else { return nil }
-        let cutoff = Calendar.current.date(byAdding: .day, value: -60, to: .now) ?? .distantPast
+        let C = EngineConstants.PersonalInsights.self
+        let cutoff = Calendar.current.date(byAdding: .day, value: -C.mediumLookbackDays, to: .now) ?? .distantPast
         let workouts = inputs.workouts.filter { $0.date >= cutoff && $0.endTime != nil }
         guard workouts.count >= 8 else { return nil }
 
@@ -334,7 +340,7 @@ enum PersonalInsightsEngine {
         let avgLow  = afterLow.reduce(0, +)  / Double(afterLow.count)
         guard avgLow > 0 else { return nil }
         let pct = (avgHigh - avgLow) / avgLow * 100
-        guard abs(pct) >= 5 else { return nil }
+        guard abs(pct) >= C.minHRVEffectPct else { return nil }
 
         let strength: Insight.Strength = {
             if abs(pct) >= 10 && afterHigh.count + afterLow.count >= 10 { return .strong }
@@ -359,13 +365,13 @@ enum PersonalInsightsEngine {
     /// Long cardio sessions tend to reduce leg readiness over the next 36–48h.
     /// Heuristic: average "days until next leg session" after long vs short cardio.
     static func longRunVsLegs(_ inputs: Inputs) -> Insight? {
-        let cutoff = Calendar.current.date(byAdding: .day, value: -90, to: .now) ?? .distantPast
+        let C = EngineConstants.PersonalInsights.self
+        let cutoff = Calendar.current.date(byAdding: .day, value: -C.wideLookbackDays, to: .now) ?? .distantPast
         let runs = inputs.cardioSessions.filter { $0.date >= cutoff }
-        guard runs.count >= 4 else { return nil }
+        guard runs.count >= C.minPairedSamples else { return nil }
 
-        // Long = >= 8 km, short = < 5 km
-        let longRuns = runs.filter { $0.distanceMeters >= 8000 }
-        let shortRuns = runs.filter { $0.distanceMeters < 5000 && $0.distanceMeters > 1000 }
+        let longRuns = runs.filter { $0.distanceMeters >= C.longRunMeters }
+        let shortRuns = runs.filter { $0.distanceMeters < C.shortRunUpperMeters && $0.distanceMeters > C.shortRunLowerMeters }
         guard longRuns.count >= 2, shortRuns.count >= 2 else { return nil }
 
         // Days until next leg session
@@ -389,7 +395,7 @@ enum PersonalInsightsEngine {
         let avgLong = Double(longGaps.reduce(0, +)) / Double(longGaps.count)
         let avgShort = Double(shortGaps.reduce(0, +)) / Double(shortGaps.count)
         let diff = avgLong - avgShort
-        guard diff >= 0.5 else { return nil }   // need at least half a day's gap
+        guard diff >= C.minLongRunDaysGap else { return nil }
 
         let strength: Insight.Strength = diff >= 1.5 ? .moderate : .weak
 
@@ -397,8 +403,8 @@ enum PersonalInsightsEngine {
             category: .cardio,
             title: "Long runs nudge your leg sessions",
             message: String(
-                format: "After runs of 8 km or more, you tend to wait %.1f days longer before your next leg session.",
-                diff
+                format: "After runs of %.0f km or more, you tend to wait %.1f days longer before your next leg session.",
+                C.longRunMeters / 1000, diff
             ),
             detail: "Based on \(longGaps.count + shortGaps.count) cardio sessions",
             strength: strength,
@@ -413,17 +419,18 @@ enum PersonalInsightsEngine {
     /// lift between days when their body weight is above and below their
     /// 60-day average. Surfaces "do you lift better when you're heavier?"
     static func bodyWeightVsStrength(_ inputs: Inputs) -> Insight? {
-        guard inputs.bodyWeights.count >= 6 else { return nil }
-        let cutoff = Calendar.current.date(byAdding: .day, value: -90, to: .now) ?? .distantPast
+        let C = EngineConstants.PersonalInsights.self
+        guard inputs.bodyWeights.count >= C.minTopExerciseHits else { return nil }
+        let cutoff = Calendar.current.date(byAdding: .day, value: -C.wideLookbackDays, to: .now) ?? .distantPast
         let workouts = inputs.workouts.filter { $0.date >= cutoff && $0.endTime != nil }
-        guard workouts.count >= 6 else { return nil }
+        guard workouts.count >= C.minTopExerciseHits else { return nil }
 
         // Pick the top-frequency exercise across recent workouts
         let allExercises = workouts.flatMap(\.exercises)
         let counts = Dictionary(grouping: allExercises, by: { $0.name.lowercased() })
             .mapValues { $0.count }
         guard let topName = counts.max(by: { $0.value < $1.value })?.key,
-              counts[topName, default: 0] >= 6
+              counts[topName, default: 0] >= C.minTopExerciseHits
         else { return nil }
 
         // Average body weight over the window (in kg)
@@ -443,13 +450,14 @@ enum PersonalInsightsEngine {
             return (w.date, m)
         }
 
-        // For each session, find the closest body-weight reading within 7 days
+        // For each session, find the closest body-weight reading within the proximity window
+        let proximityWindow: TimeInterval = Double(C.bodyWeightProximityDays) * 24 * 3600
         let bwByDay = inputs.bodyWeights.sorted { $0.date < $1.date }
         var heavier: [Double] = []
         var lighter: [Double] = []
         for s in perSession {
             guard let nearest = bwByDay
-                .filter({ abs($0.date.timeIntervalSince(s.date)) <= 7 * 24 * 3600 })
+                .filter({ abs($0.date.timeIntervalSince(s.date)) <= proximityWindow })
                 .min(by: { abs($0.date.timeIntervalSince(s.date)) < abs($1.date.timeIntervalSince(s.date)) })
             else { continue }
             if nearest.weight > avgBW { heavier.append(s.topWeight) }
@@ -461,7 +469,7 @@ enum PersonalInsightsEngine {
         let avgLight = lighter.reduce(0, +) / Double(lighter.count)
         guard avgLight > 0 else { return nil }
         let pct = (avgHeavy - avgLight) / avgLight * 100
-        guard abs(pct) >= 4 else { return nil }
+        guard abs(pct) >= C.minEffectPct else { return nil }
 
         let displayName = workouts
             .flatMap(\.exercises)
@@ -494,7 +502,8 @@ enum PersonalInsightsEngine {
     /// morning, afternoon, and evening sessions. Reports the strongest time
     /// of day if the gap is meaningful.
     static func timeOfDayVsPerformance(_ inputs: Inputs) -> Insight? {
-        let cutoff = Calendar.current.date(byAdding: .day, value: -90, to: .now) ?? .distantPast
+        let C = EngineConstants.PersonalInsights.self
+        let cutoff = Calendar.current.date(byAdding: .day, value: -C.wideLookbackDays, to: .now) ?? .distantPast
         let workouts = inputs.workouts.filter { $0.date >= cutoff && $0.endTime != nil }
         guard workouts.count >= 8 else { return nil }
 
@@ -503,7 +512,7 @@ enum PersonalInsightsEngine {
         let counts = Dictionary(grouping: allExercises, by: { $0.name.lowercased() })
             .mapValues { $0.count }
         guard let topName = counts.max(by: { $0.value < $1.value })?.key,
-              counts[topName, default: 0] >= 8
+              counts[topName, default: 0] >= C.minTopExerciseHitsTimeOfDay
         else { return nil }
 
         // Bucket sessions by time of day
@@ -540,7 +549,7 @@ enum PersonalInsightsEngine {
               worst.avg > 0
         else { return nil }
         let pct = (best.avg - worst.avg) / worst.avg * 100
-        guard pct >= 4 else { return nil }
+        guard pct >= C.minEffectPct else { return nil }
 
         let displayName = workouts
             .flatMap(\.exercises)
@@ -572,23 +581,24 @@ enum PersonalInsightsEngine {
     /// Compare sessions per week in the last 28 days vs the prior 28 days.
     /// Surfaces meaningful changes in training volume.
     static func trainingFrequencyTrend(_ inputs: Inputs) -> Insight? {
+        let C = EngineConstants.PersonalInsights.self
         let cal = Calendar.current
         let now = Date.now
-        let recentStart  = cal.date(byAdding: .day, value: -28, to: now) ?? .distantPast
-        let priorStart   = cal.date(byAdding: .day, value: -56, to: now) ?? .distantPast
+        let recentStart  = cal.date(byAdding: .day, value: -C.trendWindowDays, to: now) ?? .distantPast
+        let priorStart   = cal.date(byAdding: .day, value: -C.trendWindowPriorDays, to: now) ?? .distantPast
 
         let recent = inputs.workouts.filter { $0.date >= recentStart && $0.endTime != nil }.count
                    + inputs.cardioSessions.filter { $0.date >= recentStart }.count
         let prior = inputs.workouts.filter { $0.date >= priorStart && $0.date < recentStart && $0.endTime != nil }.count
                   + inputs.cardioSessions.filter { $0.date >= priorStart && $0.date < recentStart }.count
 
-        guard prior >= 4 else { return nil }   // Need a baseline
-        guard recent >= 4 else { return nil }   // Don't want to scold someone who took a break
+        guard prior >= C.minPairedSamples else { return nil }   // Need a baseline
+        guard recent >= C.minPairedSamples else { return nil }  // Don't scold someone who took a break
 
         let recentPerWeek = Double(recent) / 4.0
         let priorPerWeek  = Double(prior) / 4.0
         let pct = (recentPerWeek - priorPerWeek) / priorPerWeek * 100
-        guard abs(pct) >= 15 else { return nil }   // 15% threshold to avoid noise
+        guard abs(pct) >= C.minTrendPct else { return nil }
 
         let strength: Insight.Strength = abs(pct) >= 30 ? .moderate : .weak
 
@@ -614,10 +624,11 @@ enum PersonalInsightsEngine {
     /// Average sessions per week — a baseline "consistency" insight that
     /// shows up early when there isn't enough data for the others.
     static func trainingFrequency(_ inputs: Inputs) -> Insight? {
-        let cutoff = Calendar.current.date(byAdding: .day, value: -28, to: .now) ?? .distantPast
+        let C = EngineConstants.PersonalInsights.self
+        let cutoff = Calendar.current.date(byAdding: .day, value: -C.trendWindowDays, to: .now) ?? .distantPast
         let sessions = inputs.workouts.filter { $0.date >= cutoff && $0.endTime != nil }.count
                      + inputs.cardioSessions.filter { $0.date >= cutoff }.count
-        guard sessions >= 4 else { return nil }
+        guard sessions >= C.minPairedSamples else { return nil }
         let perWeek = Double(sessions) / 4.0
 
         let strength: Insight.Strength = perWeek >= 4 ? .strong : (perWeek >= 2 ? .moderate : .weak)

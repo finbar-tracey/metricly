@@ -2,20 +2,12 @@ import WidgetKit
 import SwiftUI
 
 // MARK: - Shared data
+//
+// `WidgetSnapshot` lives in Services/WidgetModels.swift (compiled into
+// both the main app and this widget extension). Same for the app-group
+// suite identifier.
 
-struct WidgetSnapshot: Codable {
-    var streakDays: Int            = 0
-    var todayWorkoutName: String   = ""
-    var weeklyCardioKm: Double     = 0
-    var lastRunPace: String        = ""
-    var lastRunDist: String        = ""
-    var weeklyGoal: Int            = 0
-    var workoutsThisWeek: Int      = 0
-    var weeklyCardioGoalKm: Double = 0
-    var todayScheduledName: String = ""
-}
-
-let appGroupSuite = "group.com.Finbar.FinApp"
+let appGroupSuite = WidgetAppGroup.suiteName
 
 func loadSnapshot() -> WidgetSnapshot {
     guard let defaults = UserDefaults(suiteName: appGroupSuite),
@@ -23,6 +15,27 @@ func loadSnapshot() -> WidgetSnapshot {
           let snap = try? JSONDecoder().decode(WidgetSnapshot.self, from: data)
     else { return WidgetSnapshot() }
     return snap
+}
+
+// MARK: - Shared staleness overlay
+
+/// Tiny amber dot rendered in the top-trailing corner of any widget
+/// whose snapshot is older than ~12 hours (the main app hasn't
+/// foregrounded recently). Shared across every widget in the extension
+/// so the visual is consistent; each widget kind opts in by calling
+/// `.staleOverlay(snapshot.isStale)` on its outermost view.
+extension View {
+    func staleOverlay(_ isStale: Bool) -> some View {
+        overlay(alignment: .topTrailing) {
+            if isStale {
+                Circle()
+                    .fill(Color.orange)
+                    .frame(width: 6, height: 6)
+                    .padding(10)
+                    .accessibilityLabel("Data may be stale")
+            }
+        }
+    }
 }
 
 // MARK: - Entry & Provider
@@ -102,6 +115,7 @@ struct StreakWidgetView: View {
                 endPoint: .bottomTrailing
             )
         }
+        .staleOverlay(snap.isStale)
     }
 }
 
@@ -195,6 +209,7 @@ struct MetriclyWidgetView: View {
         .containerBackground(for: .widget) {
             Color(.secondarySystemGroupedBackground)
         }
+        .staleOverlay(snap.isStale)
     }
 }
 
@@ -324,6 +339,7 @@ struct MetriclyLargeWidgetView: View {
         .containerBackground(for: .widget) {
             Color(.systemBackground)
         }
+        .staleOverlay(snap.isStale)
     }
 }
 

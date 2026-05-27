@@ -117,7 +117,7 @@ struct HomeHealthGlanceSection: View {
                     .lineLimit(1)
                     .minimumScaleFactor(0.75)
                 Text(label)
-                    .font(.system(size: 11, weight: .semibold, design: .rounded))
+                    .font(.system(.caption2, design: .rounded).weight(.semibold))
                     .foregroundStyle(.secondary)
                     .tracking(0.3)
                     .textCase(.uppercase)

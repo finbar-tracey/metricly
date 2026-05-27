@@ -14,6 +14,8 @@ struct HomeDashboardView: View {
     @Query(sort: \WaterEntry.date, order: .reverse) private var waterEntries: [WaterEntry]
     @Query(sort: \CreatineEntry.date, order: .reverse) private var creatineEntries: [CreatineEntry]
     @Query(sort: \CardioSession.date, order: .reverse) private var cardioSessions: [CardioSession]
+    @Query(sort: \SorenessEntry.date, order: .reverse) private var sorenessReports: [SorenessEntry]
+    @Query(sort: \PlanComplianceEvent.day, order: .reverse) private var complianceEvents: [PlanComplianceEvent]
     @Environment(\.weightUnit) private var weightUnit
 
     @State private var todaySteps: Double = 0
@@ -104,7 +106,8 @@ struct HomeDashboardView: View {
             workouts: finishedWorkouts,
             health: liveHealthSignals,
             externalWorkouts: externalWorkouts,
-            cardioSessions: Array(cardioSessions.prefix(50))
+            cardioSessions: Array(cardioSessions.prefix(50)),
+            sorenessReports: Array(sorenessReports.prefix(30))
         )
         let twoWeeksAgo = Calendar.current.date(byAdding: .day, value: -14, to: .now) ?? .distantPast
         let recent = finishedWorkouts.filter { $0.date >= twoWeeksAgo }
@@ -115,7 +118,8 @@ struct HomeDashboardView: View {
             recentWorkouts: recent,
             alreadyTrainedToday: !todaysWorkouts.filter(\.isFinished).isEmpty
                 || cardioSessions.contains { Calendar.current.isDateInToday($0.date) },
-            hasAnyHistory: !finishedWorkouts.isEmpty
+            hasAnyHistory: !finishedWorkouts.isEmpty,
+            complianceEvents: Array(complianceEvents.prefix(14))
         )
         self.recoveryResult = recovery
         self.todayPlan = plan

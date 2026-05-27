@@ -126,6 +126,14 @@ enum EngineConstants {
         // Magnitude scaling: composite (type × work × pace) × this = final.
         static let cardioMagnitudeScale: Double = 2.0
 
+        // User-reported soreness (third intensity signal alongside
+        // training volume and RPE). Levels 0–4 from SorenessEntry.
+        /// Reports older than this are no longer considered.
+        static let sorenessLookbackHours: Double = 48
+        /// Each level beyond 0 multiplies freshness by (1 - step). So
+        /// level 1 = 0.925× freshness, level 4 = 0.70× freshness.
+        static let sorenessLevelStep: Double = 0.075
+
         // Display thresholds (color/label cutoffs on freshness 0–1).
         static let freshnessReadyThreshold: Double = 0.8
         static let freshnessAlmostThreshold: Double = 0.5
@@ -169,6 +177,11 @@ enum EngineConstants {
         /// logged a couple of recent sessions — otherwise it fires on
         /// their first day and feels nagging.
         static let neglectedMinRecentSessions: Int = 2
+        /// Working sets needed within the lookback window for a group to
+        /// count as "trained" — anything below this still flags as
+        /// neglected. Four sets ≈ one real exercise session; one token
+        /// set on a Saturday shouldn't satisfy the chest's weekly need.
+        static let neglectedMinWorkingSets: Int = 4
 
         // "Overworked group" heuristic.
         static let overworkedLookbackDays: Int = 5
@@ -187,6 +200,93 @@ enum EngineConstants {
 
         /// Cap on reasons shown on the plan card to keep it scannable.
         static let maxReasonsShown: Int = 3
+
+        // Trust-calibration thresholds (PlanComplianceEvent driven).
+        /// Compliance rate below this floor demotes the plan's confidence
+        /// by one bucket (high→medium, medium→low). Even a well-
+        /// instrumented user can't be predicted with "high confidence"
+        /// if they reliably ignore what the engine suggests.
+        static let complianceConfidenceFloor: Double = 0.6
+        /// Compliance rate below this floor surfaces a gentle "you've
+        /// ignored this before" reason on the plan card. Stricter than
+        /// the confidence floor so the wording only fires when the
+        /// pattern is meaningful.
+        static let complianceCalloutFloor: Double = 0.5
+        /// Need at least this many recent events before either
+        /// downgrade fires. A handful of days isn't enough signal.
+        static let complianceCalloutMinSamples: Int = 4
+        /// How far back to read compliance events for the trust-cal
+        /// adjustment. Matches the backfill's lookback window.
+        static let complianceLookbackDays: Int = 7
+    }
+
+    // MARK: - Personal insights engine
+    //
+    // Insight-engine knobs. Per-insight strength buckets and weight
+    // formulas stay inline at their call sites (they're locally tuned
+    // signal/noise tradeoffs) — only the cross-cutting ones live here.
+
+    enum PersonalInsights {
+
+        // Lookback windows
+        /// Wide window for most rich insights (sleep × lift, rest × perf,
+        /// body weight × strength, time of day).
+        static let wideLookbackDays: Int = 90
+        /// Narrower window for next-day HRV correlations where the user
+        /// realistically only has a couple of months of paired data.
+        static let mediumLookbackDays: Int = 60
+        /// 4-week buckets used by the consistency trend.
+        static let trendWindowDays: Int = 28
+        /// Combined 8-week window for the trend's prior-period baseline.
+        static let trendWindowPriorDays: Int = 56
+
+        // Sample-size minimums
+        /// Across most pattern-based insights, ≥4 paired samples is the
+        /// floor below which any percentage difference is just noise.
+        static let minPairedSamples: Int = 4
+        /// Floor for the "top exercise" detection — fewer than this and
+        /// we can't trust which lift is the user's regular compound.
+        static let minTopExerciseHits: Int = 6
+        /// Floor for the time-of-day insight where buckets fragment the
+        /// per-exercise count three ways; we need a bit more data.
+        static let minTopExerciseHitsTimeOfDay: Int = 8
+
+        // Effect-size thresholds (percent unless noted)
+        /// Default "is this signal real?" floor for percentage deltas.
+        /// Below ~4% the variability of human strength on a given day
+        /// dwarfs any pattern.
+        static let minEffectPct: Double = 4
+        /// HRV is intrinsically noisier than top-set weight, so we
+        /// demand a slightly larger effect before surfacing.
+        static let minHRVEffectPct: Double = 5
+        /// Trend swings smaller than this are too small to be worth
+        /// telling the user about.
+        static let minTrendPct: Double = 15
+        /// Sleep-delta threshold for the late-caffeine insight (minutes).
+        static let minSleepDeltaMinutes: Double = 15
+
+        // Domain thresholds
+        /// Hour-of-day cutoff for "late" caffeine (24h clock). Anything
+        /// from this hour onward counts as late.
+        static let lateCaffeineHour: Int = 15
+        /// Minimum distance to count as a "long" run for the leg-day
+        /// recovery insight. Tuned for recreational runners; ultra-
+        /// runners may want a higher floor.
+        static let longRunMeters: Double = 8_000
+        /// Maximum distance to count as a "short" run (and lower bound
+        /// excludes warm-up walks).
+        static let shortRunUpperMeters: Double = 5_000
+        static let shortRunLowerMeters: Double = 1_000
+        /// Maximum gap allowed between a workout and the nearest body-
+        /// weight reading for the BW × strength insight.
+        static let bodyWeightProximityDays: Int = 7
+        /// Minimum half-day gap between long and short runs' "next leg
+        /// session" averages before we surface the insight.
+        static let minLongRunDaysGap: Double = 0.5
+
+        // Sleep buckets (hours)
+        static let goodSleepHours: Double = 7
+        static let shortSleepHours: Double = 6
     }
 
     // MARK: - Progression advisor

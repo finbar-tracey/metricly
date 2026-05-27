@@ -30,7 +30,7 @@ struct HomeBedtimeSuggestion: View {
                 }
                 VStack(alignment: .leading, spacing: 3) {
                     Text("Suggested Bedtime")
-                        .font(.system(size: 15, weight: .semibold, design: .rounded))
+                        .font(.system(.subheadline, design: .rounded).weight(.semibold))
                     HStack(spacing: 6) {
                         Text(bedtime, format: .dateTime.hour().minute())
                             .font(.caption.weight(.semibold)).foregroundStyle(.secondary)
@@ -43,7 +43,7 @@ struct HomeBedtimeSuggestion: View {
                 if let clearTime {
                     VStack(alignment: .trailing, spacing: 2) {
                         Text("Clear by")
-                            .font(.system(size: 10, weight: .bold, design: .rounded))
+                            .font(.system(.caption2, design: .rounded).weight(.bold))
                             .foregroundStyle(.tertiary)
                             .tracking(0.3)
                             .textCase(.uppercase)

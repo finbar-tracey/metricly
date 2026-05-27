@@ -60,7 +60,9 @@ struct HomeQuickLinksSection: View {
                     .foregroundStyle(.white)
             }
             Text(title)
-                .font(.system(size: 15, weight: .semibold, design: .rounded))
+                // Subheadline = 15pt default; .rounded design preserved
+                // via the system(_:design:) overload. Scales with Dynamic Type.
+                .font(.system(.subheadline, design: .rounded).weight(.semibold))
                 .lineLimit(2)
                 .multilineTextAlignment(.leading)
         }

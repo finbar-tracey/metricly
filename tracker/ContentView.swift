@@ -7,6 +7,7 @@ struct ContentView: View {
     private var workouts: [Workout]
     @Query(sort: \CardioSession.date, order: .reverse) private var cardioSessions: [CardioSession]
     @Query private var settingsArray: [UserSettings]
+    @Query private var complianceEvents: [PlanComplianceEvent]
     @State private var workoutToDelete: Workout?
     @State private var showingOnboarding = false
     /// Workout currently being resumed in the cross-tab pill's sheet. Driven
@@ -171,6 +172,15 @@ struct ContentView: View {
             if !reminderDays.isEmpty {
                 ReminderManager.scheduleStreakNudges(days: reminderDays)
             }
+            // Fill in any missing compliance events for the last ~7 days
+            // so the engine's confidence model can see how the user's
+            // been responding to its suggestions.
+            ComplianceBackfill.run(
+                workouts: workouts,
+                cardioSessions: cardioSessions,
+                existingEvents: complianceEvents,
+                in: modelContext
+            )
             // Inactivity nudge — 3 days after last logged activity
             let lastWorkout = workouts.first?.date
             let lastCardio  = cardioSessions.first?.date
