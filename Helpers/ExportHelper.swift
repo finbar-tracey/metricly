@@ -235,7 +235,7 @@ struct ExportHelper {
         return formatter.string(from: date)
     }
 
-    static func escape(_ value: String) -> String {
+    nonisolated static func escape(_ value: String) -> String {
         if value.contains(",") || value.contains("\"") || value.contains("\n") {
             return "\"\(value.replacingOccurrences(of: "\"", with: "\"\""))\""
         }

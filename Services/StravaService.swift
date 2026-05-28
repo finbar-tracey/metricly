@@ -250,13 +250,13 @@ final class StravaService: NSObject, ObservableObject {
 
     // MARK: - Private: token endpoints
 
-    private struct TokenResponse: Decodable {
+    private struct TokenResponse: Decodable, Sendable {
         let access_token: String
         let refresh_token: String
         let expires_at: TimeInterval
         let athlete: Athlete?
 
-        struct Athlete: Decodable {
+        struct Athlete: Decodable, Sendable {
             let id: Int
             let firstname: String?
             let lastname: String?
@@ -432,7 +432,7 @@ enum StravaUploadState: Equatable {
 /// fields than this; we only decode what the app uses (the ID, mostly,
 /// so we could later store it on the CardioSession for duplicate-push
 /// detection — a follow-up commit).
-struct StravaActivity: Decodable {
+struct StravaActivity: Decodable, Sendable {
     let id: Int
     let name: String
     let sport_type: String
@@ -566,7 +566,7 @@ extension StravaService {
 /// import service needs. JSON decoding ignores any extra keys Strava
 /// sends, so adding a field here doesn't risk breaking on a Strava-
 /// side schema bump.
-struct StravaSummaryActivity: Decodable {
+struct StravaSummaryActivity: Decodable, Sendable {
     let id: Int
     let name: String
     let sport_type: String

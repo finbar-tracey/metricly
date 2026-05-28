@@ -4,6 +4,12 @@ import SwiftUI
 // MARK: - Shared keys (App Group UserDefaults)
 
 enum WatchSharedKeys {
+    /// App Group identifier shared with the iPhone app. Must stay byte-for-byte
+    /// equal to `WidgetAppGroup.suiteName` over on the phone side — `WidgetModels.swift`
+    /// isn't compiled into the watchOS target, so there's no shared constant
+    /// to reference and the literal has to be duplicated here. Renaming the
+    /// group means editing both sites; the comment in `WidgetModels` carries
+    /// the reverse warning so neither side drifts unnoticed.
     static let suite            = "group.com.Finbar.FinApp"
     static let recentExercises  = "watch.recentExercises"   // [String]
     static let todayPlanName    = "watch.todayPlanName"      // String
@@ -23,6 +29,16 @@ enum WatchSharedKeys {
     // Per-exercise rest overrides pushed from the iPhone. Maps exercise
     // name → seconds. Falls back to `restDuration` when missing.
     static let perExerciseRest  = "watch.perExerciseRest"    // [String: Int]
+
+    // Adaptive plan — what the engine recommends for today after factoring
+    // recovery, soreness, and compliance. The phone computes this and pushes
+    // it across; the watch surfaces it on the gym start screen so the user
+    // sees the same recommendation whether they look at iPhone or wrist.
+    // Mirrored from App Group keys written by PhoneConnectivityManager so the
+    // values survive a watch-app kill (cold launch reads them straight back).
+    static let adaptivePlanName  = "watch.adaptivePlanName"  // String
+    static let adaptiveIntensity = "watch.adaptiveIntensity" // String (rest/light/moderate/hard)
+    static let adaptiveTopReason = "watch.adaptiveTopReason" // String — one-line "why"
 }
 
 // MARK: - In-progress gym workout (Watch memory model)

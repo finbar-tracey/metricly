@@ -1272,6 +1272,9 @@
     "Four steps. Every day." : {
 
     },
+    "From your post-workout check-in. Counts for 48 hours." : {
+      "comment" : "Footnote under the Reported Soreness section"
+    },
     "g" : {
 
     },
@@ -1877,6 +1880,9 @@
     "Notes" : {
 
     },
+    "Nothing new on Strava to import." : {
+      "comment" : "Toast when a Strava sync finds zero new and zero existing matches"
+    },
     "Now" : {
 
     },
@@ -2066,6 +2072,9 @@
     },
     "Recent Sessions" : {
 
+    },
+    "Reconnect Strava to enable sync — your existing connection was created before this feature shipped." : {
+      "comment" : "Shown when Strava returns 401 (token missing the read scope)"
     },
     "Records your body weight in Metricly." : {
 
@@ -2394,6 +2403,12 @@
     },
     "Strava" : {
 
+    },
+    "Strava is rate-limiting us — try again in 15 minutes." : {
+      "comment" : "Shown when Strava returns 429 (rate limit)"
+    },
+    "Strava sync failed — check your connection and try again." : {
+      "comment" : "Generic Strava sync failure"
     },
     "Streak" : {
 

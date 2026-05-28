@@ -5,7 +5,7 @@ import Foundation
 /// queries on every appearance. Mirrors the `TodayPlanStore` pattern.
 enum InsightsStore {
 
-    private static let suiteName = "group.com.Finbar.FinApp"
+    private static let suiteName = WidgetAppGroup.suiteName
     private static let key = "currentInsights"
     private static let timestampKey = "currentInsightsGeneratedAt"
 

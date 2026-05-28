@@ -4,6 +4,128 @@ All notable changes to Metricly are documented here.
 
 ---
 
+## v1.5 — Unreleased
+
+The adaptive plan reaches the wrist, the Insights tab learns to talk
+about plan compliance, and a methodical sweep across the engine + view
+layers — driven by a fresh top-to-bottom review — removes drift,
+duplicate state, and a handful of latent bugs.
+
+### Added
+- **Compliance card on Insights**: A new "Plan compliance" card on the
+  Patterns tab summarises how often you followed the engine's
+  intensity recommendation over the last week. Coloured progress bar
+  (green ≥70%, amber ≥50%, red below) and a footnote naming the most-
+  often-skipped bucket ("Most often skipped: rest days (3)") so the
+  feedback loop is observable, not just internal.
+- **Watch shows today's adaptive plan**: The Watch start screen and
+  every watch-face complication family (rectangular, inline, circular,
+  corner) now read the engine's recommendation — not the schedule
+  label — so a "Push Day" that the engine downgraded to "Recovery"
+  shows as "Recovery" on the wrist too. Intensity badges (LIGHT / HARD)
+  appear on the watch face for non-default days; moderate stays
+  unmarked.
+- **Onboarding: adaptive coach page**: New page between Features and
+  Profile that explains the three ideas behind the adaptive engine —
+  "Tell it how you feel" (soreness), "It watches whether you listen"
+  (trust calibration), "Patterns surface over time" — so new users
+  know the app is observing them rather than just storing reps.
+
+### Fixed
+- **Skip-HealthKit button advanced to the wrong page** after the
+  onboarding renumbering — the page indicator stayed on Health and
+  the in-page Skip got hidden a page early.
+- **Plan compliance treated moderate↔hard as compliant**, hiding the
+  exact overtraining pattern (always pushing moderate days to hard)
+  that trust-cal needs to see to learn. Doc-comment said one thing,
+  code did another; now both agree only `.light ↔ .moderate` is a
+  soft match.
+- **HRV and resting-HR confidence without a baseline**: An isolated
+  today's reading with no rolling baseline was counting as a "health
+  signal" and silently nudging confidence to medium. Now requires the
+  same `today + baseline` pair the reason-text branch already
+  requires.
+- **Phone-side workout starts didn't refresh widgets** until the next
+  scheduled timeline reload (30–60 min). `publishActiveWorkout` now
+  calls `WidgetCenter.reloadAllTimelines()` immediately.
+- **Watch saw a phantom "On iPhone" banner** during its own session
+  whenever the phone foregrounded — the round-trip through
+  `collectWatchContext` was overwriting the watch's published active
+  state before the source-guard kicked in.
+- **Watch cold-launch could silently drop the phone-active banner**
+  when the `activeSource` key was missing — now treats an unset
+  source as "phone" rather than "ignore".
+- **Lock-screen and StandBy widgets** ignored the stale-data pill
+  added in v1.4. Now apply it for every family — circular, inline,
+  rectangular, and the standalone streak widget.
+- **Indoor Walks from the watch round-tripped as outdoor walks** —
+  `WatchCardioType` was missing the `indoorWalk` case so the reverse
+  mapping collapsed both walking variants.
+- **Watch's global rest timer fallback was stuck at 60s** regardless
+  of the user's iPhone setting — the App Group key it was reading was
+  never written by the phone. Now plumbed through `collectWatchContext`.
+- **VoiceOver read SwiftUI color debug strings** on the recovery hero
+  card — `accessibilityHint(color.description)` was sending
+  `"AnyShapeStyle(...)"` to the screen reader. Replaced with a proper
+  combined element + localized "Overall readiness 78 percent. Mostly
+  recovered. Light to moderate training recommended."
+- **Strava 401 (stale token) and 429 (rate limit)** now surface
+  actionable banner copy — "Reconnect Strava..." and "Strava is
+  rate-limiting us — try again in 15 minutes" — instead of a generic
+  failure.
+- **trackerTests target deployment-target mismatch** broke CI
+  silently — bumped to iOS 26.0 to match the host app module.
+
+### Changed
+- **GroupedListCard component**: Four MuscleRecoveryView cards
+  (Health Factors, External Activity, Reported Soreness, By Muscle
+  Group) used to rebuild the same `SectionHeader + tinted background
+  + clipShape + appCard()` shell independently. Collapsed to one
+  shared component.
+- **PersonalInsightsEngine `now:` injection**: Every cutoff
+  computation now anchors on `inputs.now` (default `.now`) for
+  deterministic tests, matching the convention already in
+  `RecoveryEngine` and `TodayPlanEngine`. Two shared helpers
+  (`finishedWorkouts(in:withinDays:)`, `topExerciseName(in:minHits:)`)
+  collapse 11 duplicated filter / top-frequency sites.
+- **ComplianceBackfill thresholds** (20 sets / 2000 kg / 60 min hard,
+  ≤8 sets ∧ ≤30 min light) moved into a new `EngineConstants.Compliance`
+  namespace so they can't drift away from the forward-direction
+  TodayPlan thresholds.
+- **Soreness color ramp consolidated** on `SorenessEntry.Level`. Both
+  the capture sheet and the readout card used to declare identical
+  5-level RGB ramps independently.
+- **App-group identifier consolidated** behind `WidgetAppGroup.suiteName`
+  in 8 sites (was hardcoded as `"group.com.Finbar.FinApp"`). The
+  watch app target keeps its own mirror under `WatchSharedKeys.suite`
+  with a cross-reference comment.
+- **AppTheme palette** gained `Signal.warning` (system yellow) — the
+  missing middle stop on traffic-light ramps. Four files migrated
+  off raw color literals onto AppTheme tokens.
+- **Onboarding clamped to xxLarge Dynamic Type** — chrome surface
+  with hand-tuned hero compositions stays recognisable at AX1–AX5
+  without rewriting every page to use Dynamic-Type-aware fonts.
+- **Sprint 12-13 strings localized** (~80 user-facing strings across
+  MuscleRecoveryView, FinishWorkoutSheet, PersonalInsightsView, and
+  StravaSettingsSection) — Sprint 11's `String(localized:)` migration
+  hadn't covered the parallel feature work.
+
+### Infrastructure
+- **38 new tests** across `ComplianceBackfillTests` (idempotency,
+  boundary, lookback), `MetriclySchemaMigrationTests` (V1→V3
+  round-trip on a real SQLite file), `StoreRoundTripTests` (history
+  window dedup, prune, lookup), `StravaErrorPresenterTests` (status
+  → reason mapping, anti-swap regression), and new pins on
+  `WatchSyncModelsTests` for the three adaptive-plan keys.
+- **`StravaErrorPresenter` extracted** from `StravaSettingsSection` so
+  the 401/429/generic mapping is unit-testable without standing up
+  the whole view + bus.
+- **Soreness/CardioType/CardioType-rawValue test pins**: a number of
+  stale assertions from earlier sprints (testing aspirational vs
+  actual rawValues) corrected to match shipped contracts.
+
+---
+
 ## v1.4 — 2026-05-28
 
 The engine becomes adaptive in a real sense — it now captures

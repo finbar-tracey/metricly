@@ -344,62 +344,68 @@ struct WatchCardioSummaryView: View {
 // MARK: - WatchCardioType (Watch-local mirror of CardioType)
 
 enum WatchCardioType: String, CaseIterable, Identifiable {
-    case run     = "Outdoor Run"
-    case treadmill = "Indoor Run"
-    case walk    = "Outdoor Walk"
-    case cycle   = "Outdoor Cycle"
+    case run         = "Outdoor Run"
+    case treadmill   = "Indoor Run"
+    case walk        = "Outdoor Walk"
+    case indoorWalk  = "Indoor Walk"
+    case cycle       = "Outdoor Cycle"
 
     var id: String { rawValue }
 
     var shortName: String {
         switch self {
-        case .run:       return "Run"
-        case .treadmill: return "Treadmill"
-        case .walk:      return "Walk"
-        case .cycle:     return "Cycle"
+        case .run:        return "Run"
+        case .treadmill:  return "Treadmill"
+        case .walk:       return "Walk"
+        case .indoorWalk: return "Indoor Walk"
+        case .cycle:      return "Cycle"
         }
     }
 
     var icon: String {
         switch self {
-        case .run, .treadmill: return "figure.run"
-        case .walk:            return "figure.walk"
-        case .cycle:           return "figure.outdoor.cycle"
+        case .run, .treadmill:      return "figure.run"
+        case .walk, .indoorWalk:    return "figure.walk"
+        case .cycle:                return "figure.outdoor.cycle"
         }
     }
 
     var color: Color {
         switch self {
-        case .run, .treadmill: return .orange
-        case .walk:            return .green
-        case .cycle:           return .blue
+        case .run, .treadmill:      return .orange
+        case .walk, .indoorWalk:    return .green
+        case .cycle:                return .blue
         }
     }
 
-    var isIndoor: Bool { self == .treadmill }
+    var isIndoor: Bool { self == .treadmill || self == .indoorWalk }
 
     var hkType: HKWorkoutActivityType {
         switch self {
-        case .run, .treadmill: return .running
-        case .walk:            return .walking
-        case .cycle:           return .cycling
+        case .run, .treadmill:      return .running
+        case .walk, .indoorWalk:    return .walking
+        case .cycle:                return .cycling
         }
     }
 
     /// Maps back to iPhone's CardioType.rawValue
     var payloadRaw: String {
         switch self {
-        case .run:       return "Outdoor Run"
-        case .treadmill: return "Indoor Run"
-        case .walk:      return "Outdoor Walk"
-        case .cycle:     return "Outdoor Cycle"
+        case .run:        return "Outdoor Run"
+        case .treadmill:  return "Indoor Run"
+        case .walk:       return "Outdoor Walk"
+        case .indoorWalk: return "Indoor Walk"
+        case .cycle:      return "Outdoor Cycle"
         }
     }
 
     static func from(hkType: HKWorkoutActivityType, isIndoor: Bool) -> WatchCardioType {
         switch hkType {
         case .running:  return isIndoor ? .treadmill : .run
-        case .walking:  return .walk
+        // Now correctly disambiguates the two walk variants — previously
+        // every `.walking` collapsed to `.walk` regardless of `isIndoor`,
+        // so an indoor-walk session round-tripped as outdoor.
+        case .walking:  return isIndoor ? .indoorWalk : .walk
         case .cycling:  return .cycle
         default:        return .run
         }

@@ -24,18 +24,28 @@ struct OnboardingView: View {
         TabView(selection: $currentPage) {
             welcomePage.tag(0)
             featuresPage.tag(1)
-            profilePage.tag(2)
-            healthPage.tag(3)
-            getStartedPage.tag(4)
+            adaptivePage.tag(2)
+            profilePage.tag(3)
+            healthPage.tag(4)
+            getStartedPage.tag(5)
         }
         .tabViewStyle(.page(indexDisplayMode: .always))
         .indexViewStyle(.page(backgroundDisplayMode: .always))
         .interactiveDismissDisabled()
+        // Onboarding is a chrome surface with hand-tuned hero compositions —
+        // fixed-size SF Symbol glyphs (.system(size: 52)) inside fixed-size
+        // Circles (width: 130) and multi-line copy that breaks visually at
+        // accessibility text sizes. Clamping at xxLarge keeps the layout
+        // recognisable for users on AX1–AX5 without rewriting every page
+        // to use Dynamic-Type-aware fonts. The chrome remains readable —
+        // xxLarge is two steps up from default — and the user can still
+        // use AX sizes everywhere else in the app.
+        .dynamicTypeSize(...DynamicTypeSize.xxLarge)
         .overlay(alignment: .topTrailing) {
-            if currentPage > 0 && currentPage < 4 {
+            if currentPage > 0 && currentPage < 5 {
                 Button {
                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                    withAnimation { currentPage = 4 }
+                    withAnimation { currentPage = 5 }
                 } label: {
                     Text("Skip")
                         .font(.system(size: 13, weight: .bold, design: .rounded))
@@ -60,7 +70,7 @@ struct OnboardingView: View {
     private var welcomePage: some View {
         ZStack {
             LinearGradient(
-                colors: [Color.accentColor, Color.blue.opacity(0.85)],
+                colors: AppTheme.Gradients.calm,
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
@@ -195,7 +205,88 @@ struct OnboardingView: View {
         .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 14))
     }
 
-    // MARK: - Page 3: Profile Setup
+    // MARK: - Page 3: Adaptive coach story
+    //
+    // Onboarding used to stop at "we'll show you a daily plan." That
+    // misses the part that makes this app different — your reports
+    // and your behaviour reshape the plan over time. This page tells
+    // that story before profile setup so users know why the
+    // soreness picker and the trust-calibration prompts exist later.
+
+    private var adaptivePage: some View {
+        ZStack {
+            Color(.systemGroupedBackground).ignoresSafeArea()
+
+            VStack(spacing: 24) {
+                Spacer().frame(height: 20)
+
+                VStack(spacing: 6) {
+                    Text(String(localized: "It gets smarter as you go", comment: "Onboarding adaptive-coach page title"))
+                        .font(.title.bold())
+                    Text(String(localized: "Three signals reshape today's plan.", comment: "Onboarding adaptive-coach page subtitle"))
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+
+                VStack(spacing: 12) {
+                    adaptiveStep(
+                        icon: "figure.cooldown",
+                        color: .purple,
+                        title: String(localized: "Tell it how you feel", comment: "Onboarding card title — soreness self-report"),
+                        subtitle: String(localized: "After each workout, mark any muscles that are sore. Your input wins over the model when they disagree.", comment: "Onboarding card subtitle — soreness self-report")
+                    )
+                    adaptiveStep(
+                        icon: "checkmark.seal.fill",
+                        color: .green,
+                        title: String(localized: "It watches whether you listen", comment: "Onboarding card title — trust calibration"),
+                        subtitle: String(localized: "If you reliably train through suggested rest days, the engine notices and adjusts its confidence — and how loudly it suggests rest next time.", comment: "Onboarding card subtitle — trust calibration")
+                    )
+                    adaptiveStep(
+                        icon: "chart.line.uptrend.xyaxis",
+                        color: .blue,
+                        title: String(localized: "Patterns surface over time", comment: "Onboarding card title — patterns"),
+                        subtitle: String(localized: "After ~90 days the Insights tab starts naming patterns the engine spotted in your data — sleep × performance, body weight × strength, and more.", comment: "Onboarding card subtitle — patterns")
+                    )
+                }
+                .padding(.horizontal)
+
+                Spacer()
+                nextButton
+            }
+            .padding(32)
+        }
+    }
+
+    /// Tile used by the adaptive-coach page. Similar to `howItWorksStep`
+    /// but without the numbered badge — these are concurrent signals,
+    /// not sequential steps.
+    private func adaptiveStep(icon: String, color: Color, title: String, subtitle: String) -> some View {
+        HStack(spacing: 14) {
+            ZStack {
+                Circle()
+                    .fill(color.opacity(0.16))
+                    .frame(width: 44, height: 44)
+                Image(systemName: icon)
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(color)
+            }
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.subheadline.weight(.bold))
+                Text(subtitle)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Spacer(minLength: 0)
+        }
+        .padding(14)
+        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 14))
+    }
+
+    // MARK: - Page 4: Profile Setup
 
     private var profilePage: some View {
         ZStack {
@@ -351,7 +442,7 @@ struct OnboardingView: View {
                             .padding(.vertical, 16)
                             .background(
                                 LinearGradient(
-                                    colors: [Color.red, Color(red: 0.85, green: 0.15, blue: 0.2)],
+                                    colors: AppTheme.Gradients.strain,
                                     startPoint: .topLeading,
                                     endPoint: .bottomTrailing
                                 )
@@ -362,14 +453,18 @@ struct OnboardingView: View {
                                 RoundedRectangle(cornerRadius: 16, style: .continuous)
                                     .stroke(Color.white.opacity(0.20), lineWidth: 0.5)
                             )
-                            .shadow(color: .red.opacity(0.45), radius: 14, y: 6)
+                            .shadow(color: AppTheme.Signal.strain.opacity(0.45), radius: 14, y: 6)
                         }
                         .buttonStyle(.pressableCard)
 
                         Button {
                             UIImpactFeedbackGenerator(style: .light).impactOccurred()
                             healthKitRequested = true
-                            withAnimation { currentPage = 4 }
+                            // Sprint 13 inserted the adaptivePage at tag 2 and
+                            // renumbered everything after it. The HealthKit
+                            // page is now tag 4; "Get Started" is tag 5. Skip
+                            // must advance past health, not back to it.
+                            withAnimation { currentPage = 5 }
                         } label: {
                             Text("Skip for now")
                                 .font(.system(size: 14, weight: .semibold, design: .rounded))
@@ -391,7 +486,7 @@ struct OnboardingView: View {
     private var getStartedPage: some View {
         ZStack {
             LinearGradient(
-                colors: [Color(red: 0.12, green: 0.68, blue: 0.4), Color(red: 0.0, green: 0.5, blue: 0.55)],
+                colors: AppTheme.Gradients.recovery,
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )

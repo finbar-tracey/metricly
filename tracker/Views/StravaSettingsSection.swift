@@ -26,8 +26,10 @@ struct StravaSettingsSection: View {
                     HStack(spacing: 12) {
                         settingsIcon("arrow.up.forward.circle.fill", color: .orange)
                         VStack(alignment: .leading, spacing: 1) {
-                            Text("Auto-share new cardio")
-                            Text("Pushes each completed run, ride, or walk to Strava.")
+                            Text(String(localized: "Auto-share new cardio",
+                                        comment: "Settings row title for the auto-share-to-Strava toggle"))
+                            Text(String(localized: "Pushes each completed run, ride, or walk to Strava.",
+                                        comment: "Settings row subtitle under Auto-share new cardio"))
                                 .font(.caption2)
                                 .foregroundStyle(.secondary)
                         }
@@ -39,7 +41,8 @@ struct StravaSettingsSection: View {
                 } label: {
                     HStack(spacing: 12) {
                         settingsIcon("xmark.circle.fill", color: .red)
-                        Text("Disconnect from Strava")
+                        Text(String(localized: "Disconnect from Strava",
+                                    comment: "Destructive settings button to unlink the Strava account"))
                     }
                 }
             } else {
@@ -57,11 +60,13 @@ struct StravaSettingsSection: View {
             HStack(spacing: 6) {
                 Image(systemName: "figure.run.circle.fill")
                     .foregroundStyle(.orange)
-                Text("Strava")
+                Text(String(localized: "Strava",
+                            comment: "Section header for the Strava integration settings"))
             }
         } footer: {
             if service.isConnected {
-                Text("Strength workouts stay on Metricly — only cardio sessions get pushed to Strava.")
+                Text(String(localized: "Strength workouts stay on Metricly — only cardio sessions get pushed to Strava.",
+                            comment: "Footer text under the Strava section when connected"))
             } else {
                 // The two-step hint exists because Strava's mobile sign-in
                 // page doesn't honour the OAuth redirect_uri after a fresh
@@ -69,23 +74,31 @@ struct StravaSettingsSection: View {
                 // Connect a second time finds an existing session and goes
                 // straight to the Authorize step.
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Connect your Strava account to share completed cardio sessions automatically.")
-                    Text("First time? If Strava asks you to sign in, finish that step, then come back here and tap Connect again.")
+                    Text(String(localized: "Connect your Strava account to share completed cardio sessions automatically.",
+                                comment: "Footer text inviting the user to connect Strava"))
+                    Text(String(localized: "First time? If Strava asks you to sign in, finish that step, then come back here and tap Connect again.",
+                                comment: "Footer hint explaining the Strava two-step OAuth flow"))
                         .foregroundStyle(.secondary)
                 }
             }
         }
         .confirmationDialog(
-            "Disconnect from Strava?",
+            String(localized: "Disconnect from Strava?",
+                   comment: "Confirmation dialog title shown before unlinking Strava"),
             isPresented: $showingDisconnectConfirm,
             titleVisibility: .visible
         ) {
-            Button("Disconnect", role: .destructive) {
+            Button(String(localized: "Disconnect",
+                          comment: "Destructive confirm button to unlink Strava"),
+                   role: .destructive) {
                 Task { await service.disconnect() }
             }
-            Button("Cancel", role: .cancel) {}
+            Button(String(localized: "Cancel",
+                          comment: "Cancel button on the Strava disconnect dialog"),
+                   role: .cancel) {}
         } message: {
-            Text("New cardio sessions will stop pushing to Strava. Your existing Strava data is unaffected.")
+            Text(String(localized: "New cardio sessions will stop pushing to Strava. Your existing Strava data is unaffected.",
+                        comment: "Message under the Strava disconnect confirmation"))
         }
     }
 
@@ -95,7 +108,8 @@ struct StravaSettingsSection: View {
         HStack(spacing: 12) {
             settingsIcon("checkmark.circle.fill", color: .green)
             VStack(alignment: .leading, spacing: 2) {
-                Text("Connected")
+                Text(String(localized: "Connected",
+                            comment: "Status label shown when Strava is currently linked"))
                     .font(.subheadline.weight(.semibold))
                 if let name = service.athleteDisplayName {
                     Text(name)
@@ -119,7 +133,8 @@ struct StravaSettingsSection: View {
             HStack(spacing: 12) {
                 settingsIcon("arrow.down.circle.fill", color: .blue)
                 VStack(alignment: .leading, spacing: 1) {
-                    Text("Sync from Strava")
+                    Text(String(localized: "Sync from Strava",
+                                comment: "Settings row that pulls Strava activities into Metricly"))
                         .foregroundStyle(.primary)
                     Text(syncSubtitle)
                         .font(.caption2)
@@ -166,27 +181,12 @@ struct StravaSettingsSection: View {
                     kind: .info
                 )
             }
-        } catch StravaError.httpFailure(let status, _) where status == 401 {
-            // Tokens issued before the activity:read_all scope bump don't
-            // have permission to read the user's activity list — Strava
-            // returns 401 on the first sync attempt. Send the user to
-            // disconnect+reconnect rather than letting them retry endlessly.
-            AppErrorBus.shared.report(
-                message: String(localized: "Reconnect Strava to enable sync — your existing connection was created before this feature shipped.", comment: "Shown when Strava returns 401 (token missing the read scope)"),
-                kind: .warning
-            )
-        } catch StravaError.httpFailure(let status, _) where status == 429 {
-            // Strava enforces per-15-min and per-day quotas. Hitting 429
-            // means the user (or our retry loop) burned through them.
-            AppErrorBus.shared.report(
-                message: String(localized: "Strava is rate-limiting us — try again in 15 minutes.", comment: "Shown when Strava returns 429 (rate limit)"),
-                kind: .warning
-            )
         } catch {
-            AppErrorBus.shared.report(
-                message: String(localized: "Strava sync failed — check your connection and try again.", comment: "Generic Strava sync failure"),
-                kind: .failure
-            )
+            // All status-code branches (401 reconnect prompt, 429 rate-
+            // limit, generic) live in `StravaErrorPresenter` so they're
+            // unit-testable without standing up the view + bus.
+            let p = StravaErrorPresenter.present(error)
+            AppErrorBus.shared.report(message: p.message, kind: p.kind)
         }
     }
 
@@ -199,9 +199,11 @@ struct StravaSettingsSection: View {
             HStack(spacing: 12) {
                 settingsIcon("figure.run.circle.fill", color: .orange)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Connect to Strava")
+                    Text(String(localized: "Connect to Strava",
+                                comment: "Settings row title for the OAuth connect button"))
                         .foregroundStyle(.primary)
-                    Text("Auto-share completed cardio sessions.")
+                    Text(String(localized: "Auto-share completed cardio sessions.",
+                                comment: "Settings row subtitle under Connect to Strava"))
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                 }

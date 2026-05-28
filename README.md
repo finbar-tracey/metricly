@@ -113,8 +113,8 @@ trackerTests/            # XCTest suite (engines + apply logic)
 
 ## Requirements
 
-- iOS 26.2+
-- watchOS 11.6+
+- iOS 26.0+ (app + widget extension)
+- watchOS 11.6+ (watch app + complications)
 - Xcode 16+
 - Swift 5
 
@@ -123,16 +123,37 @@ trackerTests/            # XCTest suite (engines + apply logic)
 1. Clone the repo
 2. Open `tracker.xcodeproj` in Xcode
 3. Select your development team in Signing & Capabilities for each target
-4. (Optional) For Strava upload, register an app at developers.strava.com and replace the placeholder credentials in `Services/StravaService.swift`. Callback URL must be `metricly://localhost/strava-callback`.
+4. (Optional, for Strava) Register an app at developers.strava.com, then
+   create `Config/Secrets.xcconfig` with:
+   ```
+   STRAVA_CLIENT_ID = your_id
+   STRAVA_CLIENT_SECRET = your_secret
+   ```
+   The file is gitignored; `ci_scripts/ci_post_clone.sh` materialises
+   the same values from env vars in CI. If either is missing the build
+   still passes — Strava just returns `.notConfigured` at runtime.
+   Callback URL must be `metricly://localhost/strava-callback`.
 5. Build and run on a device or simulator
 
 ## Tests
 
+The full test plan runs via `tracker.xctestplan` and is the same plan
+Xcode Cloud executes on every PR:
+
 ```sh
-xcodebuild -scheme tracker -destination 'platform=iOS Simulator,name=iPhone 17' test
+xcodebuild test -scheme tracker \
+  -destination 'platform=iOS Simulator,name=iPhone 17' \
+  -testPlan tracker
 ```
 
-The suite covers the recovery engine, today-plan engine, today-plan apply logic, progression advisor, streak math, widget data writer, CSV round-trip, and unit/formatting helpers.
+The suite covers the recovery engine (including soreness signals), the
+adaptive today-plan engine, today-plan apply logic, plan compliance
+backfill (boundary thresholds + idempotency), trust calibration, the
+schema migration plan (V1→V2→V3 round-trip on a real SQLite file),
+progression advisor, streak math, widget data writer, watch sync
+payloads + message-key contracts, Strava error mapping and import
+service, CSV round-trip, and unit/formatting helpers — ~180 tests
+across 22 files.
 
 ## License
 

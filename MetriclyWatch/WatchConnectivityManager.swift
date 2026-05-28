@@ -36,6 +36,20 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
     @Published var phoneActiveName:    String   = ""
     @Published var phoneActiveStartedAt: Date?  = nil
 
+    /// Engine-recommended workout for today. Differs from `todayPlanName`
+    /// (which is the schedule's literal label) when the adaptive plan
+    /// nudged things — e.g. schedule says "Push" but recovery is low so the
+    /// engine suggests "Recovery". Empty string means the phone hasn't
+    /// computed a plan yet.
+    @Published var adaptivePlanName:   String   = ""
+    /// `TodayPlan.Intensity.rawValue` — "rest"/"light"/"moderate"/"hard".
+    /// Drives the badge color on the gym start screen.
+    @Published var adaptiveIntensity:  String   = ""
+    /// First reason from the engine's reason list ("Recovery is low (32%)"
+    /// etc). Shown beneath the recommendation as a one-liner so the user
+    /// understands *why* the watch is suggesting what it is.
+    @Published var adaptiveTopReason:  String   = ""
+
     private override init() {
         super.init()
         loadCachedData()
@@ -130,6 +144,29 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
             perExerciseRest = map
             defaults?.set(map, forKey: WatchSharedKeys.perExerciseRest)
         }
+        // Global rest fallback. Mirrors to the App Group so cold-launch
+        // reads in `loadCachedData` see the user's actual setting, not
+        // the watch's hardcoded 60s default.
+        if let restSec = reply[WatchMessageKey.restDuration] as? Int, restSec > 0 {
+            restDuration = restSec
+            defaults?.set(restSec, forKey: WatchSharedKeys.restDuration)
+        }
+        // Adaptive plan — engine's recommendation for today. Persist to App
+        // Group defaults so the values survive an app kill (we'd otherwise
+        // wait for the next phone push, which may not arrive until the user
+        // foregrounds the iPhone).
+        if let aName = reply[WatchMessageKey.adaptivePlanName] as? String {
+            adaptivePlanName = aName
+            defaults?.set(aName, forKey: WatchSharedKeys.adaptivePlanName)
+        }
+        if let aInt = reply[WatchMessageKey.adaptiveIntensity] as? String {
+            adaptiveIntensity = aInt
+            defaults?.set(aInt, forKey: WatchSharedKeys.adaptiveIntensity)
+        }
+        if let aReason = reply[WatchMessageKey.adaptiveTopReason] as? String {
+            adaptiveTopReason = aReason
+            defaults?.set(aReason, forKey: WatchSharedKeys.adaptiveTopReason)
+        }
         // Phone-side active workout. A `0` (or missing) timestamp means
         // the phone has no active workout — clear local state.
         if let ts = reply[WatchMessageKey.activeStartedAt] as? Double {
@@ -144,29 +181,35 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
     /// refresh so the watch face updates within seconds rather than waiting
     /// for the next scheduled timeline reload.
     ///
-    /// Skips overwriting the shared state when the Watch is hosting its own
-    /// session (source == "watch") — otherwise a phone push would clobber
-    /// the local workout's start time.
+    /// Skips ALL writes — both publishable and App Group — when the Watch
+    /// is hosting its own session (source == "watch"). Two reasons:
+    ///   1. `collectWatchContext` on the phone reads its mirror of the
+    ///      App Group active state and round-trips it via WCSession reply.
+    ///      When the watch owns the session, that round-trip arrives back
+    ///      as a "phone push" with the watch's own start time — left
+    ///      unguarded it would set phoneActiveStartedAt on the watch,
+    ///      causing WatchGymView's `phoneActiveBanner` ("Workout on
+    ///      iPhone") to fire alongside the active wrist view.
+    ///   2. The complication would then flicker between "On iPhone" and
+    ///      the watch's own session state on every phone foreground.
     private func applyPhoneActiveState(name: String, startedAt: Date?) {
+        let defaults = UserDefaults(suiteName: WatchSharedKeys.suite)
+        let source = defaults?.string(forKey: WatchSharedKeys.activeSource) ?? ""
+        guard source != "watch" else { return }
+
         phoneActiveName = name
         phoneActiveStartedAt = startedAt
 
-        let defaults = UserDefaults(suiteName: WatchSharedKeys.suite)
-        let source = defaults?.string(forKey: WatchSharedKeys.activeSource) ?? ""
-        let watchOwned = source == "watch"
-
-        if !watchOwned {
-            if let startedAt {
-                defaults?.set(startedAt.timeIntervalSince1970, forKey: WatchSharedKeys.activeStartedAt)
-                defaults?.set(name, forKey: WatchSharedKeys.activeName)
-                defaults?.set("phone", forKey: WatchSharedKeys.activeSource)
-            } else {
-                defaults?.removeObject(forKey: WatchSharedKeys.activeStartedAt)
-                defaults?.removeObject(forKey: WatchSharedKeys.activeName)
-                defaults?.removeObject(forKey: WatchSharedKeys.activeSource)
-            }
-            WidgetCenter.shared.reloadAllTimelines()
+        if let startedAt {
+            defaults?.set(startedAt.timeIntervalSince1970, forKey: WatchSharedKeys.activeStartedAt)
+            defaults?.set(name, forKey: WatchSharedKeys.activeName)
+            defaults?.set("phone", forKey: WatchSharedKeys.activeSource)
+        } else {
+            defaults?.removeObject(forKey: WatchSharedKeys.activeStartedAt)
+            defaults?.removeObject(forKey: WatchSharedKeys.activeName)
+            defaults?.removeObject(forKey: WatchSharedKeys.activeSource)
         }
+        WidgetCenter.shared.reloadAllTimelines()
     }
 
     /// Looks up the rest duration for a specific exercise (case-insensitive),
@@ -193,15 +236,27 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
         currentStreak         = defaults.integer(forKey: WatchSharedKeys.currentStreak)
         restDuration          = defaults.integer(forKey: WatchSharedKeys.restDuration).nonZero ?? 60
         perExerciseRest       = defaults.dictionary(forKey: WatchSharedKeys.perExerciseRest) as? [String: Int] ?? [:]
+        adaptivePlanName      = defaults.string(forKey: WatchSharedKeys.adaptivePlanName) ?? ""
+        adaptiveIntensity     = defaults.string(forKey: WatchSharedKeys.adaptiveIntensity) ?? ""
+        adaptiveTopReason     = defaults.string(forKey: WatchSharedKeys.adaptiveTopReason) ?? ""
 
         // Cold-launch: if the phone wrote an active workout earlier and
         // the watch app was killed in the interim, surface it on first
-        // render. Only restore when the cached source was "phone" — watch
-        // sessions don't survive a kill, so a "watch" source on cold launch
-        // is stale and should be ignored.
+        // render.
+        //
+        // Source disambiguation:
+        // - `"watch"`: stale wrist session (watch sessions don't survive a
+        //    kill) — ignore so we don't show a phantom "On iPhone" banner.
+        // - `"phone"`: phone published it — restore.
+        // - `""` (empty): also restore. This is the cold-launch escape
+        //    hatch for an older build or any partial-write where the
+        //    source key didn't make it but the timestamp did. The
+        //    failure mode of trusting it (one stale banner for a few
+        //    seconds until the phone confirms or clears) is much
+        //    cheaper than the silent-drop failure mode of requiring it.
         let ts = defaults.double(forKey: WatchSharedKeys.activeStartedAt)
         let source = defaults.string(forKey: WatchSharedKeys.activeSource) ?? ""
-        if ts > 0 && source == "phone" {
+        if ts > 0 && source != "watch" {
             phoneActiveStartedAt = Date(timeIntervalSince1970: ts)
             phoneActiveName = defaults.string(forKey: WatchSharedKeys.activeName) ?? ""
         }

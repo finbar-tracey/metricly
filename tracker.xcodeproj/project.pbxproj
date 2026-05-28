@@ -26,7 +26,6 @@
 		82CCBB422F81354000BD46EA /* ExportHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82CCBB0B2F81354000BD46EA /* ExportHelper.swift */; };
 		82CCBB442F81354000BD46EA /* HapticsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82CCBB0D2F81354000BD46EA /* HapticsManager.swift */; };
 		82CCBB452F81354000BD46EA /* ImportHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82CCBB0E2F81354000BD46EA /* ImportHelper.swift */; };
-		82CCBB4E2F81354000BD46EA /* QuickStartHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82CCBB172F81354000BD46EA /* QuickStartHelper.swift */; };
 		82CCBB4F2F81354000BD46EA /* ReminderManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82CCBB182F81354000BD46EA /* ReminderManager.swift */; };
 		82CCBB512F81354000BD46EA /* ShareSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82CCBB1A2F81354000BD46EA /* ShareSheet.swift */; };
 		82CCBB5A2F81354000BD46EA /* WorkoutActivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82CCBB232F81354000BD46EA /* WorkoutActivityManager.swift */; };
@@ -34,7 +33,6 @@
 		82CCBB6C2F82C20700BD46EA /* HealthKitManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82CCBB6B2F82C20700BD46EA /* HealthKitManager.swift */; };
 		82CCBB892F8AD6AE00BD46EA /* WorkoutCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82CCBB882F8AD6AE00BD46EA /* WorkoutCardView.swift */; };
 		82CCBB8D2F8BF5CF00BD46EA /* FlowLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82CCBB8C2F8BF5CF00BD46EA /* FlowLayout.swift */; };
-		82CCBB922F8BF6CB00BD46EA /* QuickStartCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82CCBB912F8BF6CB00BD46EA /* QuickStartCard.swift */; };
 		82CCBB942F8BF6CB00BD46EA /* MuscleIconView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82CCBB932F8BF6CB00BD46EA /* MuscleIconView.swift */; };
 		82CCBB952F8BF6CB00BD46EA /* UndoBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82CCBB952F8BF6CA00BD46EA /* UndoBar.swift */; };
 		82CCBB962F8BF6CB00BD46EA /* HubRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82CCBB962F8BF6CA00BD46EA /* HubRow.swift */; };
@@ -43,6 +41,7 @@
 		82FD87A22FA5057700D73920 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 82FD87A12FA5057700D73920 /* WidgetKit.framework */; };
 		82FD87A42FA5057700D73920 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 82FD87A32FA5057700D73920 /* SwiftUI.framework */; };
 		82FD87B32FA5057800D73920 /* MetriclyWidgetsExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 82FD879F2FA5057700D73920 /* MetriclyWidgetsExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		841DBB4301C08F271C9FD4A6 /* GroupedListCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 830864E49F0360CE84E91484 /* GroupedListCard.swift */; };
 		8579BFCD02F9FB3CBF64154A /* MetriclyWatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2BA4CCAFFA20F72B2C77AE63 /* MetriclyWatchApp.swift */; };
 		8724577E02FB4DC83ACD458D /* PhoneConnectivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5A29A21938233E7A93C4C95 /* PhoneConnectivityManager.swift */; };
 		8724577E02FB4DC83ACD45A1 /* StravaService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5A29A21938233E7A93C4D1 /* StravaService.swift */; };
@@ -54,6 +53,7 @@
 		93D922DE98A02C2ADF16FA4C /* WatchConnectivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A5301678701A47E0ABE3B26 /* WatchConnectivityManager.swift */; };
 		9D21304DDD863A01918674DE /* WatchRestTimerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5589E11C36A11B70766D53EB /* WatchRestTimerView.swift */; };
 		9D21304DDD863A01918674DF /* WatchActiveMetricsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5589E11C36A11B70766D53EC /* WatchActiveMetricsView.swift */; };
+		AAF89095F7469A38E940519F /* StravaErrorPresenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD57A2F0DFB3E5C8E31FE25C /* StravaErrorPresenter.swift */; };
 		B73646A32DCED919C461C1A8 /* WidgetModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D4F51462FE8B1D8E7C56A0E /* WidgetModels.swift */; };
 		C191685841B1CD47F46D5C5D /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 39E4F1D6FA51D7480550839B /* Foundation.framework */; };
 		C2AE9414EA97FC26A44B282D /* WidgetModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D4F51462FE8B1D8E7C56A0E /* WidgetModels.swift */; };
@@ -159,7 +159,6 @@
 		82CCBB0B2F81354000BD46EA /* ExportHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportHelper.swift; sourceTree = "<group>"; };
 		82CCBB0D2F81354000BD46EA /* HapticsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HapticsManager.swift; sourceTree = "<group>"; };
 		82CCBB0E2F81354000BD46EA /* ImportHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportHelper.swift; sourceTree = "<group>"; };
-		82CCBB172F81354000BD46EA /* QuickStartHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickStartHelper.swift; sourceTree = "<group>"; };
 		82CCBB182F81354000BD46EA /* ReminderManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderManager.swift; sourceTree = "<group>"; };
 		82CCBB1A2F81354000BD46EA /* ShareSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareSheet.swift; sourceTree = "<group>"; };
 		82CCBB232F81354000BD46EA /* WorkoutActivityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutActivityManager.swift; sourceTree = "<group>"; };
@@ -167,7 +166,6 @@
 		82CCBB6B2F82C20700BD46EA /* HealthKitManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitManager.swift; sourceTree = "<group>"; };
 		82CCBB882F8AD6AE00BD46EA /* WorkoutCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutCardView.swift; sourceTree = "<group>"; };
 		82CCBB8C2F8BF5CF00BD46EA /* FlowLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowLayout.swift; sourceTree = "<group>"; };
-		82CCBB912F8BF6CB00BD46EA /* QuickStartCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickStartCard.swift; sourceTree = "<group>"; };
 		82CCBB932F8BF6CB00BD46EA /* MuscleIconView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MuscleIconView.swift; sourceTree = "<group>"; };
 		82CCBB952F8BF6CA00BD46EA /* UndoBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UndoBar.swift; sourceTree = "<group>"; };
 		82CCBB962F8BF6CA00BD46EA /* HubRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HubRow.swift; sourceTree = "<group>"; };
@@ -178,8 +176,10 @@
 		82FD87A12FA5057700D73920 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		82FD87A32FA5057700D73920 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 		82FD87BB2FA508A300D73920 /* MetriclyWidgetsExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = MetriclyWidgetsExtension.entitlements; sourceTree = "<group>"; };
+		830864E49F0360CE84E91484 /* GroupedListCard.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GroupedListCard.swift; sourceTree = "<group>"; };
 		8542A36BEB6EAFCC197C9226 /* WatchGymView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchGymView.swift; sourceTree = "<group>"; };
 		9368BA8071E780160200AF2C /* Assets.xcassets */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		AD57A2F0DFB3E5C8E31FE25C /* StravaErrorPresenter.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = StravaErrorPresenter.swift; sourceTree = "<group>"; };
 		ADABA831A2528A54D046938D /* WatchSyncModels.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchSyncModels.swift; sourceTree = "<group>"; };
 		BFF364D2C5FEBC8065E83970 /* EmptyStateView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EmptyStateView.swift; sourceTree = "<group>"; };
 		D5A29A21938233E7A93C4C95 /* PhoneConnectivityManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PhoneConnectivityManager.swift; sourceTree = "<group>"; };
@@ -219,6 +219,8 @@
 		};
 		82ED21672FAE534200D1DEFF /* trackerTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
 			path = trackerTests;
 			sourceTree = "<group>";
 		};
@@ -364,6 +366,7 @@
 				6E48B48972259787CEA4E374 /* HealthDataCache.swift */,
 				7D4F51462FE8B1D8E7C56A0E /* WidgetModels.swift */,
 				703FFA80F67EF45A2C03DB9E /* StravaImportService.swift */,
+				AD57A2F0DFB3E5C8E31FE25C /* StravaErrorPresenter.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -373,7 +376,6 @@
 			children = (
 				82CCBB0B2F81354000BD46EA /* ExportHelper.swift */,
 				82CCBB0E2F81354000BD46EA /* ImportHelper.swift */,
-				82CCBB172F81354000BD46EA /* QuickStartHelper.swift */,
 			);
 			path = Helpers;
 			sourceTree = "<group>";
@@ -385,12 +387,12 @@
 				82CCBB1A2F81354000BD46EA /* ShareSheet.swift */,
 				82CCBB882F8AD6AE00BD46EA /* WorkoutCardView.swift */,
 				82CCBB282F81354000BD46EA /* WorkoutShareCardView.swift */,
-				82CCBB912F8BF6CB00BD46EA /* QuickStartCard.swift */,
 				82CCBB932F8BF6CB00BD46EA /* MuscleIconView.swift */,
 				82CCBB952F8BF6CA00BD46EA /* UndoBar.swift */,
 				82CCBB962F8BF6CA00BD46EA /* HubRow.swift */,
 				BFF364D2C5FEBC8065E83970 /* EmptyStateView.swift */,
 				025DC0477A0DE102764A5E3B /* ErrorBanner.swift */,
+				830864E49F0360CE84E91484 /* GroupedListCard.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -636,13 +638,11 @@
 				82CCBB442F81354000BD46EA /* HapticsManager.swift in Sources */,
 				82CCBB452F81354000BD46EA /* ImportHelper.swift in Sources */,
 				82CCBB8D2F8BF5CF00BD46EA /* FlowLayout.swift in Sources */,
-				82CCBB4E2F81354000BD46EA /* QuickStartHelper.swift in Sources */,
 				82CCBB4F2F81354000BD46EA /* ReminderManager.swift in Sources */,
 				82CCBB512F81354000BD46EA /* ShareSheet.swift in Sources */,
 				82CCBB6C2F82C20700BD46EA /* HealthKitManager.swift in Sources */,
 				82CCBBA02F8BF6CB00BD46EA /* CardioTracker.swift in Sources */,
 				82CCBBA12F8BF6CB00BD46EA /* WidgetDataWriter.swift in Sources */,
-				82CCBB922F8BF6CB00BD46EA /* QuickStartCard.swift in Sources */,
 				82CCBB942F8BF6CB00BD46EA /* MuscleIconView.swift in Sources */,
 				82CCBB952F8BF6CB00BD46EA /* UndoBar.swift in Sources */,
 				82CCBB962F8BF6CB00BD46EA /* HubRow.swift in Sources */,
@@ -658,6 +658,8 @@
 				8987CD55846DEC390F04017A /* ErrorBanner.swift in Sources */,
 				2C483E36543470E6FC3B4E78 /* WidgetModels.swift in Sources */,
 				E981D6360D6A5E9E3E8562B2 /* StravaImportService.swift in Sources */,
+				AAF89095F7469A38E940519F /* StravaErrorPresenter.swift in Sources */,
+				841DBB4301C08F271C9FD4A6 /* GroupedListCard.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -716,7 +718,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.7;
+				MARKETING_VERSION = 1.8;
 				PRODUCT_BUNDLE_IDENTIFIER = Findows.tracker.watchkitapp.complications;
 				PRODUCT_NAME = MetriclyWatchComplications;
 				SDKROOT = watchos;
@@ -872,12 +874,12 @@
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.7;
+				MARKETING_VERSION = 1.8;
 				PRODUCT_BUNDLE_IDENTIFIER = Findows.tracker;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -917,12 +919,12 @@
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.7;
+				MARKETING_VERSION = 1.8;
 				PRODUCT_BUNDLE_IDENTIFIER = Findows.tracker;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -947,8 +949,8 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = R4CNRLU7KW;
 				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
-				MARKETING_VERSION = 1.7;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 1.8;
 				PRODUCT_BUNDLE_IDENTIFIER = Findows.trackerTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
@@ -969,8 +971,8 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = R4CNRLU7KW;
 				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
-				MARKETING_VERSION = 1.7;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 1.8;
 				PRODUCT_BUNDLE_IDENTIFIER = Findows.trackerTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
@@ -1002,7 +1004,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.7;
+				MARKETING_VERSION = 1.8;
 				PRODUCT_BUNDLE_IDENTIFIER = Findows.tracker.MetriclyWidgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -1034,7 +1036,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.7;
+				MARKETING_VERSION = 1.8;
 				PRODUCT_BUNDLE_IDENTIFIER = Findows.tracker.MetriclyWidgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -1063,7 +1065,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.7;
+				MARKETING_VERSION = 1.8;
 				PRODUCT_BUNDLE_IDENTIFIER = Findows.tracker.watchkitapp;
 				PRODUCT_NAME = MetriclyWatch;
 				SDKROOT = watchos;
@@ -1086,7 +1088,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.7;
+				MARKETING_VERSION = 1.8;
 				PRODUCT_BUNDLE_IDENTIFIER = Findows.tracker.watchkitapp.complications;
 				PRODUCT_NAME = MetriclyWatchComplications;
 				SDKROOT = watchos;
@@ -1113,7 +1115,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.7;
+				MARKETING_VERSION = 1.8;
 				PRODUCT_BUNDLE_IDENTIFIER = Findows.tracker.watchkitapp;
 				PRODUCT_NAME = MetriclyWatch;
 				SDKROOT = watchos;

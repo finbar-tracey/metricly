@@ -159,19 +159,27 @@ struct MetriclyLockScreenEntryView: View {
     private var snap: WidgetSnapshot { entry.snapshot }
 
     var body: some View {
-        switch family {
-        case .accessoryCircular:
-            // Alternate between streak and weekly ring based on whether a goal is set
-            if snap.weeklyGoal > 0 {
-                LockScreenCircularWeeklyView(snap: snap)
-            } else {
-                LockScreenCircularStreakView(snap: snap)
+        Group {
+            switch family {
+            case .accessoryCircular:
+                // Alternate between streak and weekly ring based on whether a goal is set
+                if snap.weeklyGoal > 0 {
+                    LockScreenCircularWeeklyView(snap: snap)
+                } else {
+                    LockScreenCircularStreakView(snap: snap)
+                }
+            case .accessoryRectangular:
+                LockScreenRectangularView(snap: snap)
+            default:
+                LockScreenInlineView(snap: snap)
             }
-        case .accessoryRectangular:
-            LockScreenRectangularView(snap: snap)
-        default:
-            LockScreenInlineView(snap: snap)
         }
+        // Sprint 29/31 added the stale pill to home-screen widgets but
+        // missed the lock-screen / StandBy families — those would happily
+        // show a 5-day-old streak with no visual signal that the data was
+        // frozen. Apply at the entry-view level so every family inherits
+        // it without each subview having to opt in.
+        .staleOverlay(snap.isStale)
     }
 }
 
@@ -183,6 +191,7 @@ struct MetriclyStreakCircularWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: MetriclyProvider()) { entry in
             LockScreenCircularStreakView(snap: entry.snapshot)
+                .staleOverlay(entry.snapshot.isStale)
                 .containerBackground(.background, for: .widget)
         }
         .configurationDisplayName("Streak")

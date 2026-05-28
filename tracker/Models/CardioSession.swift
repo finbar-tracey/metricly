@@ -84,7 +84,7 @@ enum CardioType: String, CaseIterable, Identifiable, Codable {
 
 // MARK: - CardioSplit
 
-struct CardioSplit: Codable, Identifiable {
+struct CardioSplit: Codable, Identifiable, Sendable {
     var id: Int                          // 1-based split number
     var splitDistanceMeters: Double      // distance covered in this split
     var cumulativeDistanceMeters: Double
@@ -117,7 +117,7 @@ struct CardioSplit: Codable, Identifiable {
 
 // MARK: - CardioRoutePoint
 
-struct CardioRoutePoint: Codable {
+struct CardioRoutePoint: Codable, Sendable {
     var latitude: Double
     var longitude: Double
     var altitude: Double

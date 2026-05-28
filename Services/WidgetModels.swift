@@ -17,7 +17,7 @@ import Foundation
 
 // MARK: - Stale-data threshold (shared)
 
-enum WidgetStaleness {
+nonisolated enum WidgetStaleness {
     /// Snapshots older than this are considered stale. Widgets render a
     /// dot to signal that the main app hasn't foregrounded recently and
     /// the displayed value may lag reality.
@@ -26,7 +26,7 @@ enum WidgetStaleness {
 
 // MARK: - Main app snapshot (workout / streak / cardio)
 
-struct WidgetSnapshot: Codable {
+nonisolated struct WidgetSnapshot: Codable, Sendable {
     var streakDays: Int            = 0
     var todayWorkoutName: String   = ""
     var weeklyCardioKm: Double     = 0
@@ -48,8 +48,8 @@ struct WidgetSnapshot: Codable {
 
 // MARK: - Caffeine snapshot
 
-struct CaffeineWidgetData: Codable {
-    struct Entry: Codable {
+nonisolated struct CaffeineWidgetData: Codable, Sendable {
+    nonisolated struct Entry: Codable, Sendable {
         var date: Date
         var milligrams: Double
     }
@@ -85,7 +85,7 @@ struct CaffeineWidgetData: Codable {
 
 // MARK: - Water snapshot
 
-struct WaterWidgetData: Codable {
+nonisolated struct WaterWidgetData: Codable, Sendable {
     var todayMl: Double = 0
     var goalMl: Double  = 2500
     var lastUpdatedAt: Date? = nil
@@ -116,6 +116,12 @@ struct WaterWidgetData: Codable {
 /// the main app's writer and the widget extension's readers must point
 /// here — the wrong suite gives you a silently-empty isolated
 /// UserDefaults instead of the actual shared one.
+///
+/// This file is compiled into the tracker, MetriclyWidgetsExtension, and
+/// MetriclyWatchComplications targets. The watchOS app target gets its
+/// own mirror in `MetriclyWatch/WatchModels.swift` (`WatchSharedKeys.suite`)
+/// since `WidgetModels.swift` isn't part of that target. If you rename
+/// the group identifier here, also update `WatchSharedKeys.suite`.
 enum WidgetAppGroup {
     static let suiteName = "group.com.Finbar.FinApp"
 }

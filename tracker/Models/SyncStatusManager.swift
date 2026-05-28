@@ -48,7 +48,7 @@ final class SyncStatusManager {
     // MARK: - Private
 
     private let lastSyncKey = "lastSuccessfulCloudKitSync"
-    private let suiteName = "group.com.Finbar.FinApp"
+    private let suiteName = WidgetAppGroup.suiteName
     private var observers: [NSObjectProtocol] = []
 
     private init() {

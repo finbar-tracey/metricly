@@ -7,7 +7,7 @@ import XCTest
 /// finishing a workout would clobber the streak/cardio/weekly counts.
 final class WidgetDataWriterTests: XCTestCase {
 
-    private let suiteName = "group.com.Finbar.FinApp"
+    private let suiteName = WidgetAppGroup.suiteName
 
     override func setUp() {
         super.setUp()

@@ -2,9 +2,9 @@ import Foundation
 
 // MARK: - Output
 
-struct TodayPlan: Codable, Equatable {
+nonisolated struct TodayPlan: Codable, Equatable, Sendable {
 
-    enum Intensity: String, Codable {
+    nonisolated enum Intensity: String, Codable, Sendable {
         case rest, light, moderate, hard
 
         var label: String {
@@ -17,7 +17,7 @@ struct TodayPlan: Codable, Equatable {
         }
     }
 
-    enum Confidence: String, Codable {
+    nonisolated enum Confidence: String, Codable, Sendable {
         case low, medium, high
 
         var label: String {
@@ -191,10 +191,17 @@ enum TodayPlanEngine {
         // Sleep callout
         if let sleep = health.sleepMinutes, sleep > 0 {
             let hours = sleep / 60
+            let formatted = String(format: "%.1f", hours)
             if hours < C.sleepShortHours {
-                reasons.append(String(format: "Sleep was short (%.1fh)", hours))
+                reasons.append(String(
+                    localized: "Sleep was short (\(formatted)h)",
+                    comment: "Reason shown when last night's sleep is under the short-sleep threshold; placeholder is hours like 5.4"
+                ))
             } else if hours >= C.sleepGoodHours {
-                reasons.append(String(format: "Slept well (%.1fh)", hours))
+                reasons.append(String(
+                    localized: "Slept well (\(formatted)h)",
+                    comment: "Reason shown when last night's sleep is at or above the good-sleep threshold; placeholder is hours like 7.8"
+                ))
             }
         }
 
@@ -202,9 +209,17 @@ enum TodayPlanEngine {
         if let hrv = health.todayHRV, let avg = health.averageHRV, avg > 0 {
             let pct = (hrv - avg) / avg
             if pct <= -C.hrvCalloutPct {
-                reasons.append("HRV is \(Int(abs(pct) * 100))% below your baseline")
+                let downBy = Int(abs(pct) * 100)
+                reasons.append(String(
+                    localized: "HRV is \(downBy)% below your baseline",
+                    comment: "Reason shown when today's HRV is meaningfully below the rolling baseline; placeholder is a whole-number percentage"
+                ))
             } else if pct >= C.hrvCalloutPct {
-                reasons.append("HRV is up \(Int(pct * 100))% from baseline")
+                let upBy = Int(pct * 100)
+                reasons.append(String(
+                    localized: "HRV is up \(upBy)% from baseline",
+                    comment: "Reason shown when today's HRV is meaningfully above the rolling baseline; placeholder is a whole-number percentage"
+                ))
             }
         }
 
@@ -359,8 +374,21 @@ enum TodayPlanEngine {
         workoutCount: Int
     ) -> TodayPlan.Confidence {
         var healthCount = 0
-        if health.todayHRV != nil { healthCount += 1 }
-        if health.todayRestingHR != nil { healthCount += 1 }
+        // HRV and RHR are only *actionable* when paired with a baseline —
+        // the reason-text branches above only fire when both today and
+        // average are present. Counting an isolated todayHRV or
+        // todayRestingHR here would over-promote confidence for a user
+        // whose HealthKit returned a current value but whose 30-day
+        // baseline hasn't built up yet. Match the same gate the reason
+        // copy uses so confidence and "why" stay aligned.
+        if health.todayHRV != nil,
+           let avg = health.averageHRV, avg > 0 {
+            healthCount += 1
+        }
+        if health.todayRestingHR != nil,
+           let avg = health.averageRestingHR, avg > 0 {
+            healthCount += 1
+        }
         if let s = health.sleepMinutes, s > 0 { healthCount += 1 }
 
         // Nothing on either axis → low.

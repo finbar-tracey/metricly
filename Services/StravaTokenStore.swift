@@ -15,7 +15,7 @@ enum StravaTokenStore {
     private static let service = "com.metricly.strava.tokens"
     private static let account = "default"
 
-    struct Tokens: Codable, Equatable {
+    struct Tokens: Codable, Equatable, Sendable {
         var accessToken: String
         var refreshToken: String
         /// Unix timestamp (seconds since epoch) when the access token

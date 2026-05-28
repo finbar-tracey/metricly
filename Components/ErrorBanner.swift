@@ -21,12 +21,12 @@ final class AppErrorBus {
 
     private(set) var current: BannerError?
 
-    struct BannerError: Identifiable, Equatable {
+    nonisolated struct BannerError: Identifiable, Equatable, Sendable {
         let id = UUID()
         let message: String
         let kind: Kind
 
-        enum Kind: Equatable {
+        nonisolated enum Kind: Equatable, Sendable {
             case warning   // amber
             case failure   // red
             case info      // blue

@@ -92,8 +92,8 @@ struct GetWorkoutStatsIntent: AppIntent {
 // without instantiating the AppIntents framework. Each intent's perform()
 // just consults these.
 
-enum IntentValidators {
-    enum Result: Equatable {
+nonisolated enum IntentValidators {
+    nonisolated enum Result: Equatable, Sendable {
         case ok
         case invalid(message: String)
     }

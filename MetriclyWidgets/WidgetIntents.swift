@@ -9,7 +9,7 @@ struct LogWaterFromWidgetIntent: AppIntent {
     static var title: LocalizedStringResource = "Log 250 ml Water"
     static var description = IntentDescription("Adds 250 ml to today's water intake from the home screen widget.")
 
-    private static let suite   = "group.com.Finbar.FinApp"
+    private static let suite   = WidgetAppGroup.suiteName
     private static let pendingKey = "pendingWaterMl"
 
     func perform() async throws -> some IntentResult {

@@ -2,6 +2,7 @@ import Foundation
 import Combine
 import WatchConnectivity
 import SwiftData
+import WidgetKit
 
 // MARK: - PhoneConnectivityManager
 //
@@ -85,9 +86,15 @@ final class PhoneConnectivityManager: NSObject, ObservableObject {
         // Active-workout state — read from shared defaults rather than
         // recomputing here, so we don't stomp on a watch-hosted session
         // that owns the state right now.
-        let defaults = UserDefaults(suiteName: "group.com.Finbar.FinApp")
+        let defaults = UserDefaults(suiteName: WidgetAppGroup.suiteName)
         let activeStartedAt = defaults?.double(forKey: "watch.activeStartedAt") ?? 0
         let activeName = defaults?.string(forKey: "watch.activeName") ?? ""
+
+        // Phone-side global rest fallback. The Watch was reading
+        // `watch.restDuration` from the App Group but nobody on the
+        // phone side wrote it, so the wrist's rest timer was stuck on
+        // its 60s hardcoded fallback regardless of the user's setting.
+        let restSeconds = settings?.defaultRestDuration ?? 60
 
         var context: [String: Any] = [
             WatchMessageKey.exerciseList:    Array(uniqueNames),
@@ -95,11 +102,21 @@ final class PhoneConnectivityManager: NSObject, ObservableObject {
             WatchMessageKey.todayExercises:  plannedExercises,
             WatchMessageKey.useKilograms:    useKg,
             WatchMessageKey.currentStreak:   streak,
+            WatchMessageKey.restDuration:    restSeconds,
             WatchMessageKey.activeStartedAt: activeStartedAt,
             WatchMessageKey.activeName:      activeName
         ]
         if !perRest.isEmpty {
             context[WatchMessageKey.perExerciseRest] = perRest
+        }
+        // Adaptive plan: read whatever the phone last computed (saved
+        // by HomeDashboardView's recomputeRecoveryAndPlan). Skipping
+        // recomputation here keeps the connectivity layer lightweight
+        // and ensures phone + watch never disagree.
+        if let plan = TodayPlanStore.load() {
+            context[WatchMessageKey.adaptivePlanName] = plan.recommendedName
+            context[WatchMessageKey.adaptiveIntensity] = plan.intensity.rawValue
+            context[WatchMessageKey.adaptiveTopReason] = plan.reasons.first ?? ""
         }
         return context
     }
@@ -111,7 +128,7 @@ final class PhoneConnectivityManager: NSObject, ObservableObject {
     func pushWatchContext() {
         let context = collectWatchContext()
         // Mirror to shared defaults for cold-launch reads on the Watch.
-        if let defaults = UserDefaults(suiteName: "group.com.Finbar.FinApp") {
+        if let defaults = UserDefaults(suiteName: WidgetAppGroup.suiteName) {
             if let useKg    = context[WatchMessageKey.useKilograms] as? Bool {
                 defaults.set(useKg,    forKey: "watch.useKilograms")
             }
@@ -126,6 +143,19 @@ final class PhoneConnectivityManager: NSObject, ObservableObject {
             }
             if let perRest  = context[WatchMessageKey.perExerciseRest] as? [String: Int] {
                 defaults.set(perRest,  forKey: "watch.perExerciseRest")
+            }
+            if let restSec  = context[WatchMessageKey.restDuration] as? Int {
+                defaults.set(restSec,  forKey: "watch.restDuration")
+            }
+            // Adaptive plan mirror — same cold-launch concern applies.
+            if let aName = context[WatchMessageKey.adaptivePlanName] as? String {
+                defaults.set(aName, forKey: "watch.adaptivePlanName")
+            }
+            if let aInt = context[WatchMessageKey.adaptiveIntensity] as? String {
+                defaults.set(aInt, forKey: "watch.adaptiveIntensity")
+            }
+            if let aReason = context[WatchMessageKey.adaptiveTopReason] as? String {
+                defaults.set(aReason, forKey: "watch.adaptiveTopReason")
             }
         }
 
@@ -147,7 +177,7 @@ final class PhoneConnectivityManager: NSObject, ObservableObject {
     /// Also writes to the shared App Group defaults so a cold-launched watch
     /// or complication reads the same overrides without WCSession.
     func pushRestOverrides(_ map: [String: Int]) {
-        let defaults = UserDefaults(suiteName: "group.com.Finbar.FinApp")
+        let defaults = UserDefaults(suiteName: WidgetAppGroup.suiteName)
         defaults?.set(map, forKey: "watch.perExerciseRest")
 
         guard WCSession.default.activationState == .activated else { return }
@@ -167,7 +197,7 @@ final class PhoneConnectivityManager: NSObject, ObservableObject {
     /// complication's next refresh sees the new state) and also pushes
     /// the change through `updateApplicationContext` for promptness.
     func publishActiveWorkout(name: String?, startedAt: Date?) {
-        let defaults = UserDefaults(suiteName: "group.com.Finbar.FinApp")
+        let defaults = UserDefaults(suiteName: WidgetAppGroup.suiteName)
         // Don't stomp on watch-hosted sessions — those clear themselves
         // via WatchWorkoutSessionManager when the wrist session ends.
         let source = defaults?.string(forKey: "watch.activeSource") ?? ""
@@ -185,6 +215,14 @@ final class PhoneConnectivityManager: NSObject, ObservableObject {
         } else {
             defaults?.removeObject(forKey: "watch.activeName")
         }
+
+        // Kick the home-screen widgets and watch complications so the
+        // "In Progress · <name>" state appears within seconds rather than
+        // waiting for their next scheduled timeline reload (which can be
+        // 30–60 minutes off when the system is being thrifty). The watch
+        // side does the same in WatchWorkoutSessionManager — this matches
+        // the symmetry.
+        WidgetCenter.shared.reloadAllTimelines()
 
         guard WCSession.default.activationState == .activated else { return }
         var context: [String: Any] = [:]
