@@ -49,6 +49,16 @@ struct WatchGymView: View {
                     .buttonStyle(.plain)
                 }
 
+                // Adaptive recommendation — the engine's "what should I
+                // train today" answer (factoring recovery, soreness, recent
+                // compliance). Surfaces above the scheduled plan because
+                // it's what the user should actually do; the schedule's
+                // literal name still shows below for context when they
+                // differ.
+                if !connectivity.adaptivePlanName.isEmpty {
+                    adaptivePlanCard
+                }
+
                 // Today's plan card — shows the name + exercise preview if
                 // the iPhone has pushed a planned workout for today.
                 if !connectivity.todayPlanName.isEmpty {
@@ -154,6 +164,79 @@ struct WatchGymView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(10)
         .background(Color.blue.opacity(0.15), in: RoundedRectangle(cornerRadius: 10))
+    }
+
+    // MARK: - Adaptive plan card
+    //
+    // The card the user actually reads before starting. Shows the engine's
+    // recommended workout name, an intensity badge ("HARD"/"MODERATE"/…)
+    // and the top reason ("Recovery is low (32%)") underneath. Tint follows
+    // the intensity so the user gets a colour signal before parsing words.
+
+    private var adaptivePlanCard: some View {
+        let tint = intensityTint(connectivity.adaptiveIntensity)
+        return VStack(alignment: .leading, spacing: 5) {
+            HStack(spacing: 6) {
+                Image(systemName: "sparkles")
+                    .font(.caption2)
+                    .foregroundStyle(tint)
+                Text("Today's Plan")
+                    .font(.caption2.weight(.bold))
+                    .foregroundStyle(.secondary)
+                    .textCase(.uppercase)
+                Spacer(minLength: 0)
+                if !connectivity.adaptiveIntensity.isEmpty {
+                    Text(connectivity.adaptiveIntensity.uppercased())
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(tint)
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 1)
+                        .background(tint.opacity(0.22), in: Capsule())
+                }
+            }
+
+            Text(connectivity.adaptivePlanName)
+                .font(.subheadline.weight(.semibold))
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+
+            if !connectivity.adaptiveTopReason.isEmpty {
+                Text(connectivity.adaptiveTopReason)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(10)
+        .background(tint.opacity(0.18), in: RoundedRectangle(cornerRadius: 10))
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(adaptiveAccessibilityLabel)
+    }
+
+    /// Colour for the adaptive intensity badge + card background. Matches
+    /// the iPhone home dashboard's intensity colouring so the user sees a
+    /// consistent signal across devices.
+    private func intensityTint(_ raw: String) -> Color {
+        switch raw {
+        case "rest":     return .gray
+        case "light":    return .blue
+        case "moderate": return .green
+        case "hard":     return .orange
+        default:         return .blue
+        }
+    }
+
+    private var adaptiveAccessibilityLabel: String {
+        var parts = ["Today's plan", connectivity.adaptivePlanName]
+        if !connectivity.adaptiveIntensity.isEmpty {
+            parts.append("\(connectivity.adaptiveIntensity) intensity")
+        }
+        if !connectivity.adaptiveTopReason.isEmpty {
+            parts.append(connectivity.adaptiveTopReason)
+        }
+        return parts.joined(separator: ", ")
     }
 
     // MARK: - Active workout
