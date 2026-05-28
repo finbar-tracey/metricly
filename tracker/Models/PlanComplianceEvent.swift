@@ -54,16 +54,26 @@ final class PlanComplianceEvent {
 // MARK: - Compliance classifier
 
 extension TodayPlan.Intensity {
-    /// Treat "moderate vs light" as a soft match (close to compliance).
-    /// "rest vs hard" is the only strict mismatch. This lets the engine
-    /// avoid scolding a user who did a light session on a hard day,
-    /// while still flagging the user who trains hard on rest days.
+    /// Compliance match used by the trust-calibration backfill.
+    ///
+    /// The ONLY soft match is `.light ↔ .moderate`: a user who did a
+    /// moderate session on a light day (or vice-versa) is "close enough"
+    /// — we don't want to scold them and we don't want trust-cal to
+    /// downgrade their confidence.
+    ///
+    /// `.moderate ↔ .hard` is deliberately NOT a soft match. A user who
+    /// always pushes "moderate" days to "hard" is overshooting the
+    /// engine's recommendation, and that's a signal trust-cal needs to
+    /// see — otherwise the engine can never learn "this user ignores
+    /// moderate suggestions and overtrains".
+    ///
+    /// `.rest` against anything except itself is a hard mismatch — that
+    /// covers both "trained hard on a rest day" and "took a rest day
+    /// when the engine said train".
     func matches(_ other: TodayPlan.Intensity) -> Bool {
         if self == other { return true }
         switch (self, other) {
         case (.light, .moderate), (.moderate, .light):
-            return true
-        case (.moderate, .hard), (.hard, .moderate):
             return true
         default:
             return false

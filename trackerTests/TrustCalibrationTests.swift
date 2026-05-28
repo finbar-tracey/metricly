@@ -20,12 +20,20 @@ final class TrustCalibrationTests: XCTestCase {
         }
     }
 
-    func testMatchesNeighboursAreTrue() {
-        // Soft matches around the bucket boundaries.
+    func testMatchesLightModerateBoundaryIsSoftMatch() {
+        // The only soft match: small over/undershoot of moderate.
         XCTAssertTrue(TodayPlan.Intensity.light.matches(.moderate))
         XCTAssertTrue(TodayPlan.Intensity.moderate.matches(.light))
-        XCTAssertTrue(TodayPlan.Intensity.moderate.matches(.hard))
-        XCTAssertTrue(TodayPlan.Intensity.hard.matches(.moderate))
+    }
+
+    func testModerateHardIsNotSoftMatch() {
+        // Deliberately a hard mismatch — a user who always pushes
+        // "moderate" days to "hard" is overshooting, and trust-cal needs
+        // to see that signal to learn the user ignores moderate
+        // suggestions and overtrains. Locks in the spec from
+        // PlanComplianceEvent.matches.
+        XCTAssertFalse(TodayPlan.Intensity.moderate.matches(.hard))
+        XCTAssertFalse(TodayPlan.Intensity.hard.matches(.moderate))
     }
 
     func testMatchesAcrossRestAndTrainingIsFalse() {
