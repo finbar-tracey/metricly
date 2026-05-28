@@ -121,6 +121,30 @@ final class PersonalInsightsEngineTests: XCTestCase {
         XCTAssertFalse(insights.contains { $0.title.contains("more lately") || $0.title.contains("less lately") })
     }
 
+    // MARK: - now injection
+
+    func testInputsNowControlsLookbackWindow() {
+        // Anchor "now" 100 days in the future. Workouts dated relative to
+        // *real* now are far outside the 28-day frequency window from
+        // anchored-now's perspective, so the frequency insight that would
+        // otherwise fire on the same dataset must be absent. Proves the
+        // lookback cutoff actually consumes `inputs.now`.
+        let realWorkouts = (0..<10).map { makeWorkout(daysAgo: $0 * 2) }
+        let farFuture = Date.now.addingTimeInterval(100 * 24 * 3600)
+
+        let baseline = PersonalInsightsEngine.generate(
+            PersonalInsightsEngine.Inputs(workouts: realWorkouts)
+        )
+        XCTAssertTrue(baseline.contains { $0.category == .consistency },
+                      "Baseline (default now) should produce a frequency insight")
+
+        let shifted = PersonalInsightsEngine.generate(
+            PersonalInsightsEngine.Inputs(workouts: realWorkouts, now: farFuture)
+        )
+        XCTAssertFalse(shifted.contains { $0.category == .consistency },
+                       "Shifting now 100 days forward should push the workouts outside the lookback")
+    }
+
     // MARK: - Helpers
 
     private func makeWorkout(daysAgo: Int) -> Workout {

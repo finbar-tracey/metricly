@@ -582,9 +582,12 @@ enum RecoveryEngine {
     }
 
     static func readinessLabel(_ score: Double) -> String {
-        if score >= 0.8 { return "You're well recovered. Great time for a hard session!" }
-        if score >= 0.5 { return "Mostly recovered. Light to moderate training recommended." }
-        if score >= 0.25 { return "Still recovering. Consider lighter work or different muscles." }
+        // Share thresholds with `freshnessLabel` so per-muscle and overall
+        // readiness messages don't drift when the buckets are retuned.
+        let R = EngineConstants.Recovery.self
+        if score >= R.freshnessReadyThreshold      { return "You're well recovered. Great time for a hard session!" }
+        if score >= R.freshnessAlmostThreshold     { return "Mostly recovered. Light to moderate training recommended." }
+        if score >= R.freshnessRecoveringThreshold { return "Still recovering. Consider lighter work or different muscles." }
         return "Significant fatigue. A rest day would be beneficial."
     }
 

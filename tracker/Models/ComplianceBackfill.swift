@@ -94,11 +94,14 @@ enum ComplianceBackfill {
         let cardioMinutes = dayCardio.reduce(0.0) { $0 + ($1.durationSeconds / 60) }
 
         // Heavy = 20+ working sets OR 2000+ kg volume OR 60+ min cardio
-        if totalSets >= 20 || totalVolumeKg >= 2000 || cardioMinutes >= 60 {
+        let C = EngineConstants.Compliance.self
+        if totalSets >= C.hardSetCount
+            || totalVolumeKg >= C.hardVolumeKg
+            || cardioMinutes >= C.hardCardioMinutes {
             return .hard
         }
         // Light = ≤ 8 sets and ≤ 30 min cardio
-        if totalSets <= 8 && cardioMinutes <= 30 {
+        if totalSets <= C.lightSetCount && cardioMinutes <= C.lightCardioMinutes {
             return .light
         }
         return .moderate

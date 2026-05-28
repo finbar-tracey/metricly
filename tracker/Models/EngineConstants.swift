@@ -220,6 +220,42 @@ enum EngineConstants {
         static let complianceLookbackDays: Int = 7
     }
 
+    // MARK: - Compliance backfill
+    //
+    // The compliance backfill is the inverse of the today-plan engine:
+    // it observes what the user actually did and classifies it into the
+    // same `rest / light / moderate / hard` buckets the engine recommends
+    // out of. These thresholds are intentionally forgiving — we'd rather
+    // under-flag non-compliance than scold a user for a 20-min light
+    // session on a moderate day — but they MUST stay paired with the
+    // forward direction. If `TodayPlan` retunes "hard" upward (more sets
+    // expected), the backfill's "what counts as hard" needs to move
+    // alongside it. Living here makes that pairing visible.
+
+    enum Compliance {
+
+        /// At-or-above this many working sets in a day → classified as hard.
+        static let hardSetCount: Int = 20
+
+        /// At-or-above this much total volume (sets × reps × weight, kg)
+        /// in a day → classified as hard. Even if set count is moderate,
+        /// 2000 kg of work is a real heavy session.
+        static let hardVolumeKg: Double = 2000
+
+        /// At-or-above this many cardio minutes in a day → classified as
+        /// hard. Catches the long-run / long-ride day where lifts are absent.
+        static let hardCardioMinutes: Double = 60
+
+        /// At-or-below this many working sets AND at-or-below
+        /// `lightCardioMinutes` → classified as light. Both conditions
+        /// must hold; a small-sets day with a long ride is still moderate.
+        static let lightSetCount: Int = 8
+
+        /// At-or-below this many cardio minutes (paired with the set
+        /// count above) → classified as light.
+        static let lightCardioMinutes: Double = 30
+    }
+
     // MARK: - Personal insights engine
     //
     // Insight-engine knobs. Per-insight strength buckets and weight

@@ -114,10 +114,51 @@ final class TodayPlanEngineTests: XCTestCase {
     }
 
     func testConfidenceMediumWithOneSignal() {
+        // Sleep is the canonical "needs no baseline" signal — pass it
+        // alone and confidence should land at .medium.
         let plan = TodayPlanEngine.generate(
             scheduledName: nil,
             recovery: makeRecovery(score: 0.75),
-            health: HealthSignals(todayHRV: 55),
+            health: HealthSignals(sleepMinutes: 480),
+            alreadyTrainedToday: false
+        )
+        XCTAssertEqual(plan.confidence, .medium)
+    }
+
+    func testIsolatedHRVWithoutBaselineDoesNotCountAsSignal() {
+        // HRV is only an actionable signal when paired with a baseline —
+        // the reason-text branch only fires when both today and average
+        // are present, so confidence must match. Without a baseline,
+        // today's reading is unusable noise and shouldn't nudge
+        // confidence away from .low.
+        let plan = TodayPlanEngine.generate(
+            scheduledName: nil,
+            recovery: makeRecovery(score: 0.75),
+            health: HealthSignals(todayHRV: 55),   // no averageHRV
+            alreadyTrainedToday: false
+        )
+        XCTAssertEqual(plan.confidence, .low,
+                       "Today's HRV alone (no baseline) is not a signal")
+    }
+
+    func testIsolatedRestingHRWithoutBaselineDoesNotCountAsSignal() {
+        let plan = TodayPlanEngine.generate(
+            scheduledName: nil,
+            recovery: makeRecovery(score: 0.75),
+            health: HealthSignals(todayRestingHR: 60),   // no averageRestingHR
+            alreadyTrainedToday: false
+        )
+        XCTAssertEqual(plan.confidence, .low,
+                       "Today's resting HR alone (no baseline) is not a signal")
+    }
+
+    func testHRVPairedWithBaselineDoesCountAsSignal() {
+        // Sanity check the inverse — once a baseline is present the
+        // signal counts and confidence ticks up to .medium.
+        let plan = TodayPlanEngine.generate(
+            scheduledName: nil,
+            recovery: makeRecovery(score: 0.75),
+            health: HealthSignals(todayHRV: 55, averageHRV: 55),
             alreadyTrainedToday: false
         )
         XCTAssertEqual(plan.confidence, .medium)

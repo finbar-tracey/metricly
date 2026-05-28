@@ -70,6 +70,11 @@ enum PersonalInsightsEngine {
         var sleepByDay: [(date: Date, minutes: Double)] = []
         var hrvByDay: [(date: Date, ms: Double)] = []
         var rhrByDay: [(date: Date, bpm: Double)] = []
+        /// Wall-clock "now" used for all lookback-window computations.
+        /// Defaults to `.now`; tests inject a fixed date so cutoffs are
+        /// deterministic. Matches the same convention as `RecoveryEngine`
+        /// and `TodayPlanEngine`.
+        var now: Date = .now
     }
 
     static func generate(_ inputs: Inputs) -> [Insight] {
@@ -97,13 +102,8 @@ enum PersonalInsightsEngine {
         let C = EngineConstants.PersonalInsights.self
 
         // Find top-frequency exercise across the wide lookback window
-        let cutoff = Calendar.current.date(byAdding: .day, value: -C.wideLookbackDays, to: .now) ?? .distantPast
-        let workouts = inputs.workouts.filter { $0.date >= cutoff && $0.endTime != nil }
-        let allExercises = workouts.flatMap(\.exercises)
-        let counts = Dictionary(grouping: allExercises, by: { $0.name.lowercased() })
-            .mapValues { $0.count }
-        guard let topName = counts.max(by: { $0.value < $1.value })?.key,
-              counts[topName, default: 0] >= C.minTopExerciseHits
+        let workouts = finishedWorkouts(in: inputs, withinDays: C.wideLookbackDays)
+        guard let topName = topExerciseName(in: workouts, minHits: C.minTopExerciseHits)
         else { return nil }
 
         // Top working-set weight per session for that exercise
@@ -173,8 +173,7 @@ enum PersonalInsightsEngine {
     /// training that group. Picks the strongest pattern across groups.
     static func restDaysVsPerformance(_ inputs: Inputs) -> Insight? {
         let C = EngineConstants.PersonalInsights.self
-        let cutoff = Calendar.current.date(byAdding: .day, value: -C.wideLookbackDays, to: .now) ?? .distantPast
-        let finished = inputs.workouts.filter { $0.date >= cutoff && $0.endTime != nil }
+        let finished = finishedWorkouts(in: inputs, withinDays: C.wideLookbackDays)
             .sorted { $0.date < $1.date }
         guard finished.count >= 8 else { return nil }
 
@@ -301,8 +300,7 @@ enum PersonalInsightsEngine {
     static func highVolumeVsHRV(_ inputs: Inputs) -> Insight? {
         guard !inputs.hrvByDay.isEmpty else { return nil }
         let C = EngineConstants.PersonalInsights.self
-        let cutoff = Calendar.current.date(byAdding: .day, value: -C.mediumLookbackDays, to: .now) ?? .distantPast
-        let workouts = inputs.workouts.filter { $0.date >= cutoff && $0.endTime != nil }
+        let workouts = finishedWorkouts(in: inputs, withinDays: C.mediumLookbackDays)
         guard workouts.count >= 8 else { return nil }
 
         // Total volume per workout day
@@ -366,7 +364,7 @@ enum PersonalInsightsEngine {
     /// Heuristic: average "days until next leg session" after long vs short cardio.
     static func longRunVsLegs(_ inputs: Inputs) -> Insight? {
         let C = EngineConstants.PersonalInsights.self
-        let cutoff = Calendar.current.date(byAdding: .day, value: -C.wideLookbackDays, to: .now) ?? .distantPast
+        let cutoff = Calendar.current.date(byAdding: .day, value: -C.wideLookbackDays, to: inputs.now) ?? .distantPast
         let runs = inputs.cardioSessions.filter { $0.date >= cutoff }
         guard runs.count >= C.minPairedSamples else { return nil }
 
@@ -421,16 +419,12 @@ enum PersonalInsightsEngine {
     static func bodyWeightVsStrength(_ inputs: Inputs) -> Insight? {
         let C = EngineConstants.PersonalInsights.self
         guard inputs.bodyWeights.count >= C.minTopExerciseHits else { return nil }
-        let cutoff = Calendar.current.date(byAdding: .day, value: -C.wideLookbackDays, to: .now) ?? .distantPast
-        let workouts = inputs.workouts.filter { $0.date >= cutoff && $0.endTime != nil }
+        let cutoff = Calendar.current.date(byAdding: .day, value: -C.wideLookbackDays, to: inputs.now) ?? .distantPast
+        let workouts = finishedWorkouts(in: inputs, withinDays: C.wideLookbackDays)
         guard workouts.count >= C.minTopExerciseHits else { return nil }
 
         // Pick the top-frequency exercise across recent workouts
-        let allExercises = workouts.flatMap(\.exercises)
-        let counts = Dictionary(grouping: allExercises, by: { $0.name.lowercased() })
-            .mapValues { $0.count }
-        guard let topName = counts.max(by: { $0.value < $1.value })?.key,
-              counts[topName, default: 0] >= C.minTopExerciseHits
+        guard let topName = topExerciseName(in: workouts, minHits: C.minTopExerciseHits)
         else { return nil }
 
         // Average body weight over the window (in kg)
@@ -503,16 +497,11 @@ enum PersonalInsightsEngine {
     /// of day if the gap is meaningful.
     static func timeOfDayVsPerformance(_ inputs: Inputs) -> Insight? {
         let C = EngineConstants.PersonalInsights.self
-        let cutoff = Calendar.current.date(byAdding: .day, value: -C.wideLookbackDays, to: .now) ?? .distantPast
-        let workouts = inputs.workouts.filter { $0.date >= cutoff && $0.endTime != nil }
+        let workouts = finishedWorkouts(in: inputs, withinDays: C.wideLookbackDays)
         guard workouts.count >= 8 else { return nil }
 
         // Most-frequent compound lift
-        let allExercises = workouts.flatMap(\.exercises)
-        let counts = Dictionary(grouping: allExercises, by: { $0.name.lowercased() })
-            .mapValues { $0.count }
-        guard let topName = counts.max(by: { $0.value < $1.value })?.key,
-              counts[topName, default: 0] >= C.minTopExerciseHitsTimeOfDay
+        guard let topName = topExerciseName(in: workouts, minHits: C.minTopExerciseHitsTimeOfDay)
         else { return nil }
 
         // Bucket sessions by time of day
@@ -583,9 +572,8 @@ enum PersonalInsightsEngine {
     static func trainingFrequencyTrend(_ inputs: Inputs) -> Insight? {
         let C = EngineConstants.PersonalInsights.self
         let cal = Calendar.current
-        let now = Date.now
-        let recentStart  = cal.date(byAdding: .day, value: -C.trendWindowDays, to: now) ?? .distantPast
-        let priorStart   = cal.date(byAdding: .day, value: -C.trendWindowPriorDays, to: now) ?? .distantPast
+        let recentStart  = cal.date(byAdding: .day, value: -C.trendWindowDays,      to: inputs.now) ?? .distantPast
+        let priorStart   = cal.date(byAdding: .day, value: -C.trendWindowPriorDays, to: inputs.now) ?? .distantPast
 
         let recent = inputs.workouts.filter { $0.date >= recentStart && $0.endTime != nil }.count
                    + inputs.cardioSessions.filter { $0.date >= recentStart }.count
@@ -625,7 +613,7 @@ enum PersonalInsightsEngine {
     /// shows up early when there isn't enough data for the others.
     static func trainingFrequency(_ inputs: Inputs) -> Insight? {
         let C = EngineConstants.PersonalInsights.self
-        let cutoff = Calendar.current.date(byAdding: .day, value: -C.trendWindowDays, to: .now) ?? .distantPast
+        let cutoff = Calendar.current.date(byAdding: .day, value: -C.trendWindowDays, to: inputs.now) ?? .distantPast
         let sessions = inputs.workouts.filter { $0.date >= cutoff && $0.endTime != nil }.count
                      + inputs.cardioSessions.filter { $0.date >= cutoff }.count
         guard sessions >= C.minPairedSamples else { return nil }
@@ -653,6 +641,33 @@ enum PersonalInsightsEngine {
     }
 
     // MARK: - Helpers
+
+    /// Workouts that finished within the last `days` days, anchored at
+    /// `inputs.now`. Eight call sites used to re-derive this with
+    /// `inputs.workouts.filter { $0.date >= cutoff && $0.endTime != nil }`
+    /// — collapsed here so retuning "what counts as recent" is a single
+    /// edit and the time-window logic is testable in isolation.
+    private static func finishedWorkouts(in inputs: Inputs, withinDays days: Int) -> [Workout] {
+        let cutoff = Calendar.current.date(byAdding: .day, value: -days, to: inputs.now)
+            ?? .distantPast
+        return inputs.workouts.filter { $0.date >= cutoff && $0.endTime != nil }
+    }
+
+    /// Most-frequently-trained exercise across the given workouts, as a
+    /// lowercased name. Returns nil if the top exercise appears fewer
+    /// than `minHits` times — that's the "we don't have enough data to
+    /// pick a representative compound lift" early-out three insights
+    /// (sleep × lift, body weight × lift, time of day × lift) used to
+    /// reimplement independently.
+    private static func topExerciseName(in workouts: [Workout], minHits: Int) -> String? {
+        let counts = Dictionary(grouping: workouts.flatMap(\.exercises),
+                                by: { $0.name.lowercased() })
+            .mapValues { $0.count }
+        guard let top = counts.max(by: { $0.value < $1.value })?.key,
+              counts[top, default: 0] >= minHits
+        else { return nil }
+        return top
+    }
 
     /// Bucket an arbitrary date+value sequence by start-of-day, keeping the
     /// largest value per day (longest sleep, highest HRV, etc.).
