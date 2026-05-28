@@ -26,6 +26,10 @@ enum AppTheme {
         static let strainDeep   = Color(red: 0.78, green: 0.20, blue: 0.20)
         static let caution      = Color.orange
         static let cautionDeep  = Color(red: 0.85, green: 0.50, blue: 0.10)
+        /// Borderline-but-not-bad signal — the middle stop on traffic-light
+        /// ramps (recovery → warning → caution → strain). Uses the system
+        /// yellow so it adapts to dark mode without a custom RGB tuple.
+        static let warning      = Color.yellow
         static let focus        = Color(red: 0.55, green: 0.35, blue: 0.95)
         static let calm         = Color(red: 0.30, green: 0.55, blue: 0.95)
         /// Button accent for "Continue Workout" / progress CTAs — warmer

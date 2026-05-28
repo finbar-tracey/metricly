@@ -1,5 +1,6 @@
 import Foundation
 import SwiftData
+import SwiftUI
 
 /// User-reported muscle soreness on a 0–4 scale. Captured after a
 /// workout (FinishWorkoutSheet) and read by RecoveryEngine as a third
@@ -64,6 +65,34 @@ extension SorenessEntry {
             case .significant: return "exclamationmark.circle.fill"
             case .severe:      return "exclamationmark.triangle.fill"
             }
+        }
+
+        /// Display tint for soreness severity. Lives on the enum so the
+        /// FinishWorkoutSheet capture UI and the MuscleRecoveryView
+        /// readout can't drift apart — they were byte-for-byte identical
+        /// 5-level ramps before this consolidation.
+        ///
+        /// Color intent (calibrated against AppTheme.Signal where possible):
+        ///   .none        — green       (no signal)
+        ///   .mild        — yellow      (low signal, not strain)
+        ///   .moderate    — orange      (notable, train carefully)
+        ///   .significant — red-orange  (recovery prioritised)
+        ///   .severe      — red         (don't train this group)
+        var tint: Color {
+            switch self {
+            case .none:        return .green
+            case .mild:        return Color(red: 0.85, green: 0.80, blue: 0.20)
+            case .moderate:    return .orange
+            case .significant: return Color(red: 0.95, green: 0.40, blue: 0.20)
+            case .severe:      return .red
+            }
+        }
+
+        /// Convenience: clamp a raw Int level (0–4) to the closest enum
+        /// case and return its tint. Used by both capture and readout
+        /// surfaces that work with the raw `Int` from `SorenessEntry.level`.
+        static func tint(forLevel raw: Int) -> Color {
+            (Level(rawValue: max(0, min(4, raw))) ?? .none).tint
         }
     }
 }

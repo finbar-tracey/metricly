@@ -56,7 +56,10 @@ struct MuscleRecoveryView: View {
             .padding(.bottom, 36)
         }
         .background(Color(.systemGroupedBackground))
-        .navigationTitle("Recovery")
+        .navigationTitle(String(
+            localized: "Recovery",
+            comment: "Navigation title for the muscle recovery / readiness screen"
+        ))
         .task {
             guard settingsArray.first?.healthKitEnabled == true else { return }
             let hk = HealthDataCache.shared
@@ -87,7 +90,6 @@ struct MuscleRecoveryView: View {
 
     private var heroCard: some View {
         let score = recoveryResult.readinessScore
-        let readinessColor = RecoveryEngine.freshnessColor(score)
         let palette: [Color] = score >= 0.70
             ? AppTheme.Gradients.recovery
             : (score >= 0.45 ? AppTheme.Gradients.caution : AppTheme.Gradients.strain)
@@ -108,7 +110,10 @@ struct MuscleRecoveryView: View {
                     .frame(width: 72, height: 72)
 
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Overall Readiness")
+                        Text(String(
+                            localized: "Overall Readiness",
+                            comment: "Hero label above the recovery readiness percentage"
+                        ))
                             .font(.system(size: 12, weight: .bold, design: .rounded))
                             .foregroundStyle(.white.opacity(0.82))
                             .tracking(0.5)
@@ -135,43 +140,51 @@ struct MuscleRecoveryView: View {
                     .overlay(Capsule().stroke(.white.opacity(0.25), lineWidth: 0.5))
 
                 Text(healthDataLoaded
-                    ? "Based on workouts, sleep, heart rate & HRV"
-                    : "Based on recent workouts and training volume")
+                    ? String(localized: "Based on workouts, sleep, heart rate & HRV",
+                             comment: "Hero subtitle shown when HealthKit data is loaded")
+                    : String(localized: "Based on recent workouts and training volume",
+                             comment: "Hero subtitle shown when HealthKit data is not yet loaded"))
                     .font(.caption)
                     .foregroundStyle(.white.opacity(0.78))
             }
             .padding(20)
         }
-        .accessibilityHint(readinessColor.description)
+        // Merge the score, "%", and readiness label into a single VO
+        // utterance instead of three stops. Previously this passed
+        // `readinessColor.description` as a hint, which reads out the raw
+        // SwiftUI debug string ("Color(red: ...)") via VoiceOver.
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(String(
+            localized: "Overall readiness \(Int(score * 100)) percent. \(RecoveryEngine.readinessLabel(score))",
+            comment: "VoiceOver label for the recovery hero card combining the numeric score and the readiness sentence"
+        ))
     }
 
     // MARK: - Health Factors Card
 
     private var healthFactorsCard: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            SectionHeader(title: "Health Factors", icon: "waveform.path.ecg", color: .purple)
-
-            VStack(spacing: 0) {
-                if let hrv = latestHRV {
-                    healthRow(icon: "waveform.path.ecg", color: .purple, label: "HRV",
-                              value: "\(Int(hrv)) ms", indicator: hrvIndicator)
-                    Divider().padding(.leading, 16)
-                }
-                if let rhr = todayRestingHR {
-                    healthRow(icon: "heart.fill", color: .red, label: "Resting HR",
-                              value: "\(Int(rhr)) bpm", indicator: rhrIndicator)
-                    if lastNightSleep > 0 { Divider().padding(.leading, 16) }
-                }
-                if lastNightSleep > 0 {
-                    let h = Int(lastNightSleep) / 60, m = Int(lastNightSleep) % 60
-                    healthRow(icon: "bed.double.fill", color: .indigo, label: "Sleep",
-                              value: "\(h)h \(m)m", indicator: sleepIndicator)
-                }
+        GroupedListCard(
+            title: String(localized: "Health Factors",
+                          comment: "Section header above the HRV / RHR / Sleep traffic-light row"),
+            icon: "waveform.path.ecg",
+            color: .purple
+        ) {
+            if let hrv = latestHRV {
+                healthRow(icon: "waveform.path.ecg", color: .purple, label: "HRV",
+                          value: "\(Int(hrv)) ms", indicator: hrvIndicator)
+                Divider().padding(.leading, 16)
             }
-            .background(Color(.tertiarySystemGroupedBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 14))
+            if let rhr = todayRestingHR {
+                healthRow(icon: "heart.fill", color: .red, label: "Resting HR",
+                          value: "\(Int(rhr)) bpm", indicator: rhrIndicator)
+                if lastNightSleep > 0 { Divider().padding(.leading, 16) }
+            }
+            if lastNightSleep > 0 {
+                let h = Int(lastNightSleep) / 60, m = Int(lastNightSleep) % 60
+                healthRow(icon: "bed.double.fill", color: .indigo, label: "Sleep",
+                          value: "\(h)h \(m)m", indicator: sleepIndicator)
+            }
         }
-        .appCard()
     }
 
     private func healthRow(icon: String, color: Color, label: String, value: String, indicator: some View) -> some View {
@@ -208,7 +221,7 @@ struct MuscleRecoveryView: View {
         if let hrv = latestHRV, let avg = averageHRV, avg > 0 {
             let ratio = hrv / avg
             Circle()
-                .fill(ratio >= 1.0 ? Color.green : ratio >= 0.85 ? Color.yellow : Color.orange)
+                .fill(healthTint(ratio >= 1.0 ? .good : ratio >= 0.85 ? .borderline : .bad))
                 .frame(width: 10, height: 10)
         }
     }
@@ -218,7 +231,7 @@ struct MuscleRecoveryView: View {
         if let rhr = todayRestingHR, let avg = averageRestingHR, avg > 0 {
             let ratio = rhr / avg
             Circle()
-                .fill(ratio <= 1.05 ? Color.green : ratio <= 1.10 ? Color.yellow : Color.orange)
+                .fill(healthTint(ratio <= 1.05 ? .good : ratio <= 1.10 ? .borderline : .bad))
                 .frame(width: 10, height: 10)
         }
     }
@@ -227,18 +240,32 @@ struct MuscleRecoveryView: View {
     private var sleepIndicator: some View {
         let hours = lastNightSleep / 60
         Circle()
-            .fill(hours >= 7 ? Color.green : hours >= 6 ? Color.yellow : Color.orange)
+            .fill(healthTint(hours >= 7 ? .good : hours >= 6 ? .borderline : .bad))
             .frame(width: 10, height: 10)
+    }
+
+    /// Three-state traffic light tinting for the HRV/RHR/Sleep dots.
+    /// Pulled through AppTheme so a future palette tweak ripples
+    /// through every indicator at once.
+    private enum HealthState { case good, borderline, bad }
+    private func healthTint(_ state: HealthState) -> Color {
+        switch state {
+        case .good:       return AppTheme.Signal.recovery
+        case .borderline: return AppTheme.Signal.warning
+        case .bad:        return AppTheme.Signal.caution
+        }
     }
 
     // MARK: - External Activity Card
 
     private var externalActivityCard: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            SectionHeader(title: "External Activity", icon: "figure.run", color: .orange)
-
-            VStack(spacing: 0) {
-                ForEach(Array(externalWorkouts.prefix(5).enumerated()), id: \.element.id) { idx, workout in
+        GroupedListCard(
+            title: String(localized: "External Activity",
+                          comment: "Section header above the list of workouts pulled from HealthKit / Strava"),
+            icon: "figure.run",
+            color: .orange
+        ) {
+            ForEach(Array(externalWorkouts.prefix(5).enumerated()), id: \.element.id) { idx, workout in
                     HStack(spacing: 12) {
                         ZStack {
                             RoundedRectangle(cornerRadius: 11, style: .continuous)
@@ -286,11 +313,7 @@ struct MuscleRecoveryView: View {
                         Divider().padding(.leading, 64)
                     }
                 }
-            }
-            .background(Color(.tertiarySystemGroupedBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 14))
         }
-        .appCard()
     }
 
     // MARK: - Soreness Reports
@@ -316,27 +339,21 @@ struct MuscleRecoveryView: View {
     }
 
     private var sorenessReportsCard: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            SectionHeader(title: "Reported Soreness", icon: "figure.cooldown", color: .purple)
-                .accessibilityAddTraits(.isHeader)
-
-            VStack(spacing: 0) {
-                ForEach(Array(activeSorenessReports.enumerated()), id: \.element.id) { idx, report in
-                    sorenessRow(report)
-                    if idx < activeSorenessReports.count - 1 {
-                        Divider().padding(.leading, 52)
-                    }
+        GroupedListCard(
+            title: String(localized: "Reported Soreness",
+                          comment: "Section header above the user's recent post-workout soreness reports"),
+            icon: "figure.cooldown",
+            color: .purple,
+            footnote: String(localized: "From your post-workout check-in. Counts for 48 hours.",
+                             comment: "Footnote under the Reported Soreness section")
+        ) {
+            ForEach(Array(activeSorenessReports.enumerated()), id: \.element.id) { idx, report in
+                sorenessRow(report)
+                if idx < activeSorenessReports.count - 1 {
+                    Divider().padding(.leading, 52)
                 }
             }
-            .background(Color(.tertiarySystemGroupedBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 14))
-
-            Text(String(localized: "From your post-workout check-in. Counts for 48 hours.", comment: "Footnote under the Reported Soreness section"))
-                .font(.caption2)
-                .foregroundStyle(.tertiary)
-                .padding(.horizontal, 4)
         }
-        .appCard()
     }
 
     private func sorenessRow(_ report: SorenessEntry) -> some View {
@@ -367,33 +384,25 @@ struct MuscleRecoveryView: View {
     }
 
     private func sorenessTint(for level: Int) -> Color {
-        switch level {
-        case 0: return .green
-        case 1: return Color(red: 0.85, green: 0.80, blue: 0.20)
-        case 2: return .orange
-        case 3: return Color(red: 0.95, green: 0.40, blue: 0.20)
-        default: return .red
-        }
+        SorenessEntry.Level.tint(forLevel: level)
     }
 
     // MARK: - Muscle Groups Card
 
     private var muscleGroupsCard: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            SectionHeader(title: "By Muscle Group", icon: "figure.strengthtraining.traditional", color: .accentColor)
-
-            VStack(spacing: 0) {
-                ForEach(Array(recoveryResult.muscleResults.enumerated()), id: \.element.id) { idx, result in
-                    muscleRow(result)
-                    if idx < recoveryResult.muscleResults.count - 1 {
-                        Divider().padding(.leading, 62)
-                    }
+        GroupedListCard(
+            title: String(localized: "By Muscle Group",
+                          comment: "Section header above the per-muscle freshness breakdown"),
+            icon: "figure.strengthtraining.traditional",
+            color: .accentColor
+        ) {
+            ForEach(Array(recoveryResult.muscleResults.enumerated()), id: \.element.id) { idx, result in
+                muscleRow(result)
+                if idx < recoveryResult.muscleResults.count - 1 {
+                    Divider().padding(.leading, 62)
                 }
             }
-            .background(Color(.tertiarySystemGroupedBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 14))
         }
-        .appCard()
     }
 
     private func muscleRow(_ result: MuscleFatigueResult) -> some View {
@@ -438,7 +447,10 @@ struct MuscleRecoveryView: View {
                     Text(RecoveryEngine.timeAgoText(from: last))
                         .font(.caption2).foregroundStyle(.secondary)
                 } else {
-                    Text("Not trained recently")
+                    Text(String(
+                        localized: "Not trained recently",
+                        comment: "Shown in the by-muscle breakdown when the muscle hasn't been trained in the lookback window"
+                    ))
                         .font(.caption2).foregroundStyle(.secondary)
                 }
             }
@@ -451,7 +463,11 @@ struct MuscleRecoveryView: View {
     private var suggestedCard: some View {
         let ready = recoveryResult.muscleResults.filter { $0.freshness >= 0.8 }
         return VStack(alignment: .leading, spacing: 14) {
-            SectionHeader(title: "Suggested Today", icon: "checkmark.circle.fill", color: .green)
+            SectionHeader(
+                title: String(localized: "Suggested Today",
+                              comment: "Section header above the engine's per-muscle 'train this' recommendations"),
+                icon: "checkmark.circle.fill", color: .green
+            )
 
             if ready.isEmpty {
                 HStack(spacing: 12) {
@@ -470,7 +486,10 @@ struct MuscleRecoveryView: View {
                             .font(.system(size: 18, weight: .bold))
                             .foregroundStyle(.white)
                     }
-                    Text("All muscles are still recovering. Consider a rest day or light cardio.")
+                    Text(String(
+                        localized: "All muscles are still recovering. Consider a rest day or light cardio.",
+                        comment: "Shown under Suggested Today when every muscle group is below the ready threshold"
+                    ))
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                     Spacer()

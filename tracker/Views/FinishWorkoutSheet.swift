@@ -56,10 +56,16 @@ struct FinishWorkoutSheet: View {
                 .padding(.bottom, 36)
             }
             .background(Color(.systemGroupedBackground))
-            .navigationTitle("Workout Complete")
+            .navigationTitle(String(
+                localized: "Workout Complete",
+                comment: "Navigation title on the finish-workout summary sheet"
+            ))
             .navigationBarTitleDisplayMode(.inline)
-            .alert("Stay consistent 🔥", isPresented: $showingReminderPrompt) {
-                Button("Set Reminder") {
+            .alert(String(localized: "Stay consistent 🔥",
+                          comment: "Alert title prompting the user to set up workout reminders"),
+                   isPresented: $showingReminderPrompt) {
+                Button(String(localized: "Set Reminder",
+                              comment: "Alert button that opens the reminder setup")) {
                     // Request permission then open Settings to let user pick days
                     Task {
                         let status = await ReminderManager.checkAuthorizationStatus()
@@ -72,13 +78,21 @@ struct FinishWorkoutSheet: View {
                         }
                     }
                 }
-                Button("Maybe Later", role: .cancel) {}
+                Button(String(localized: "Maybe Later",
+                              comment: "Dismiss button on the reminder-prompt alert"),
+                       role: .cancel) {}
             } message: {
-                Text("Want Metricly to remind you on your training days? You can set this up in Settings anytime.")
+                Text(String(
+                    localized: "Want Metricly to remind you on your training days? You can set this up in Settings anytime.",
+                    comment: "Body text of the reminder-setup prompt alert"
+                ))
             }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+                    Button(String(localized: "Cancel",
+                                  comment: "Toolbar button to dismiss the finish-workout sheet")) {
+                        dismiss()
+                    }
                 }
                 ToolbarItem(placement: .primaryAction) {
                     Button {
@@ -89,8 +103,11 @@ struct FinishWorkoutSheet: View {
                     }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { finishWorkout() }
-                        .font(.headline)
+                    Button(String(localized: "Done",
+                                  comment: "Toolbar button that commits the workout summary")) {
+                        finishWorkout()
+                    }
+                    .font(.headline)
                 }
             }
             .sheet(isPresented: $showingShare) {
@@ -106,7 +123,7 @@ struct FinishWorkoutSheet: View {
     private var celebrationCard: some View {
         ZStack(alignment: .topLeading) {
             LinearGradient(
-                colors: [Color.green, Color(red: 0.1, green: 0.72, blue: 0.35).opacity(0.7)],
+                colors: AppTheme.Gradients.recovery,
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
@@ -127,7 +144,8 @@ struct FinishWorkoutSheet: View {
                             .foregroundStyle(.white)
                     }
                     VStack(alignment: .leading, spacing: 3) {
-                        Text("Great work!")
+                        Text(String(localized: "Great work!",
+                                    comment: "Celebration headline on the finish-workout hero card"))
                             .font(.title2.weight(.bold))
                             .foregroundStyle(.white)
                         Text(workout.name)
@@ -139,7 +157,8 @@ struct FinishWorkoutSheet: View {
 
                 // Star rating
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("How was it?")
+                    Text(String(localized: "How was it?",
+                                comment: "Prompt above the star rating row on the hero card"))
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.white.opacity(0.75))
 
@@ -180,16 +199,36 @@ struct FinishWorkoutSheet: View {
 
     private var statsCard: some View {
         VStack(alignment: .leading, spacing: 12) {
-            SectionHeader(title: "Summary", icon: "chart.bar.fill", color: .accentColor)
+            SectionHeader(
+                title: String(localized: "Summary",
+                              comment: "Section header above the duration / exercises / sets / volume stat strip"),
+                icon: "chart.bar.fill", color: .accentColor
+            )
 
             HStack(spacing: 0) {
-                finishStat(icon: "clock", value: workout.formattedDuration ?? "-", label: "Duration", color: .orange)
+                finishStat(icon: "clock",
+                           value: workout.formattedDuration ?? "-",
+                           label: String(localized: "Duration",
+                                         comment: "Stat label under workout duration"),
+                           color: .orange)
                 Divider().frame(height: 50)
-                finishStat(icon: "figure.strengthtraining.functional", value: "\(workout.exercises.count)", label: "Exercises", color: .accentColor)
+                finishStat(icon: "figure.strengthtraining.functional",
+                           value: "\(workout.exercises.count)",
+                           label: String(localized: "Exercises",
+                                         comment: "Stat label under the exercise count"),
+                           color: .accentColor)
                 Divider().frame(height: 50)
-                finishStat(icon: "repeat", value: "\(totalSets)", label: "Sets", color: .purple)
+                finishStat(icon: "repeat",
+                           value: "\(totalSets)",
+                           label: String(localized: "Sets",
+                                         comment: "Stat label under the working-set count"),
+                           color: .purple)
                 Divider().frame(height: 50)
-                finishStat(icon: "scalemass", value: formatVolume(totalVolume), label: "Volume", color: .green)
+                finishStat(icon: "scalemass",
+                           value: formatVolume(totalVolume),
+                           label: String(localized: "Volume",
+                                         comment: "Stat label under the total weight lifted"),
+                           color: .green)
             }
             .padding(.vertical, 12)
             .background(Color(.secondarySystemGroupedBackground))
@@ -241,10 +280,17 @@ struct FinishWorkoutSheet: View {
 
     private var sorenessCard: some View {
         VStack(alignment: .leading, spacing: 12) {
-            SectionHeader(title: "How sore are you?", icon: "figure.cooldown", color: .purple)
-                .accessibilityAddTraits(.isHeader)
+            SectionHeader(
+                title: String(localized: "How sore are you?",
+                              comment: "Section header above the per-muscle soreness picker"),
+                icon: "figure.cooldown", color: .purple
+            )
+            .accessibilityAddTraits(.isHeader)
 
-            Text("Optional — tells the recovery engine where you actually feel it.")
+            Text(String(
+                localized: "Optional — tells the recovery engine where you actually feel it.",
+                comment: "Caption under the soreness section explaining it's optional"
+            ))
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
@@ -294,22 +340,22 @@ struct FinishWorkoutSheet: View {
     }
 
     private func severityColor(_ level: Int) -> Color {
-        switch level {
-        case 0: return .green
-        case 1: return Color(red: 0.85, green: 0.80, blue: 0.20)
-        case 2: return .orange
-        case 3: return Color(red: 0.95, green: 0.40, blue: 0.20)
-        default: return .red
-        }
+        SorenessEntry.Level.tint(forLevel: level)
     }
 
     // MARK: - Notes card
 
     private var notesCard: some View {
         VStack(alignment: .leading, spacing: 12) {
-            SectionHeader(title: "Notes", icon: "note.text", color: .secondary)
+            SectionHeader(
+                title: String(localized: "Notes",
+                              comment: "Section header above the workout notes text field"),
+                icon: "note.text", color: .secondary
+            )
 
-            TextField("How did it feel? Any notes...", text: $notes, axis: .vertical)
+            TextField(String(localized: "How did it feel? Any notes...",
+                             comment: "Placeholder text inside the workout notes field"),
+                      text: $notes, axis: .vertical)
                 .lineLimit(3...6)
                 .font(.subheadline)
                 .padding(14)
@@ -354,7 +400,11 @@ struct FinishWorkoutSheet: View {
 
     private var prCard: some View {
         VStack(alignment: .leading, spacing: 12) {
-            SectionHeader(title: "Personal Records", icon: "trophy.fill", color: .yellow)
+            SectionHeader(
+                title: String(localized: "Personal Records",
+                              comment: "Section header above the PRs achieved in this session"),
+                icon: "trophy.fill", color: .yellow
+            )
 
             VStack(spacing: 0) {
                 ForEach(sessionPRs) { pr in
@@ -368,7 +418,10 @@ struct FinishWorkoutSheet: View {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(pr.exerciseName)
                                 .font(.subheadline.weight(.semibold))
-                            Text("New best: \(weightUnit.format(pr.weight))")
+                            Text(String(
+                                localized: "New best: \(weightUnit.format(pr.weight))",
+                                comment: "Subtitle on a PR row; placeholder is the weight string e.g. '120 kg'"
+                            ))
                                 .font(.caption).foregroundStyle(.secondary)
                         }
                         Spacer()
@@ -399,11 +452,16 @@ struct FinishWorkoutSheet: View {
 
     private var ratingLabel: String {
         switch rating {
-        case 1: return "Rough"
-        case 2: return "Okay"
-        case 3: return "Decent"
-        case 4: return "Great"
-        case 5: return "Crushed it!"
+        case 1: return String(localized: "Rough",
+                              comment: "1-star rating label on the post-workout self-rating row")
+        case 2: return String(localized: "Okay",
+                              comment: "2-star rating label on the post-workout self-rating row")
+        case 3: return String(localized: "Decent",
+                              comment: "3-star rating label on the post-workout self-rating row")
+        case 4: return String(localized: "Great",
+                              comment: "4-star rating label on the post-workout self-rating row")
+        case 5: return String(localized: "Crushed it!",
+                              comment: "5-star rating label on the post-workout self-rating row")
         default: return ""
         }
     }
