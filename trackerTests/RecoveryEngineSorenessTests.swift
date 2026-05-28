@@ -37,7 +37,7 @@ final class RecoveryEngineSorenessTests: XCTestCase {
         let report = entry(.legs, 0)
         let result = RecoveryEngine.evaluate(workouts: [], sorenessReports: [report])
         let legs = result.muscleResults.first(where: { $0.group == .legs })
-        XCTAssertEqual(legs?.freshness, 1.0, accuracy: 0.001)
+        XCTAssertEqual(legs?.freshness ?? 0, 1.0, accuracy: 0.001)
     }
 
     // MARK: - Per-group impact
@@ -78,7 +78,7 @@ final class RecoveryEngineSorenessTests: XCTestCase {
         let stale = entry(.legs, 4, hoursAgo: 50)
         let result = RecoveryEngine.evaluate(workouts: [], sorenessReports: [stale])
         let legs = result.muscleResults.first(where: { $0.group == .legs })
-        XCTAssertEqual(legs?.freshness, 1.0, accuracy: 0.001,
+        XCTAssertEqual(legs?.freshness ?? 0, 1.0, accuracy: 0.001,
                        "Reports older than the lookback shouldn't affect freshness")
     }
 
@@ -87,7 +87,7 @@ final class RecoveryEngineSorenessTests: XCTestCase {
         let future = SorenessEntry(date: Date.now.addingTimeInterval(3600), group: .legs, level: 4)
         let result = RecoveryEngine.evaluate(workouts: [], sorenessReports: [future])
         let legs = result.muscleResults.first(where: { $0.group == .legs })
-        XCTAssertEqual(legs?.freshness, 1.0, accuracy: 0.001)
+        XCTAssertEqual(legs?.freshness ?? 0, 1.0, accuracy: 0.001)
     }
 
     func testMostRecentReportWinsWhenMultiplePresent() {
@@ -110,7 +110,7 @@ final class RecoveryEngineSorenessTests: XCTestCase {
         let bad = SorenessEntry(date: .now, group: .chest, level: -3)
         let result = RecoveryEngine.evaluate(workouts: [], sorenessReports: [bad])
         let chest = result.muscleResults.first(where: { $0.group == .chest })
-        XCTAssertEqual(chest?.freshness, 1.0, accuracy: 0.001)
+        XCTAssertEqual(chest?.freshness ?? 0, 1.0, accuracy: 0.001)
     }
 
     func testLevelAboveMaxIsClamped() {
