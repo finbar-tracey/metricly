@@ -219,8 +219,6 @@
 		};
 		82ED21672FAE534200D1DEFF /* trackerTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = trackerTests;
 			sourceTree = "<group>";
 		};

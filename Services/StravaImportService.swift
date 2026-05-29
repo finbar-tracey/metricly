@@ -34,20 +34,69 @@ enum StravaImportService {
         return importActivities(activities, existing: existing, in: context)
     }
 
+    /// Tolerances for the fuzzy-dedup check. These are the windows
+    /// within which two CardioSession-shaped events are considered
+    /// "the same workout from different sources" (e.g. Apple Watch
+    /// recorded → both HealthKit and Strava both received it, then
+    /// Metricly imports Strava and would otherwise create a duplicate).
+    ///
+    /// Tunable knobs — not in `EngineConstants` because they belong
+    /// strictly to the import path, not the engine's reasoning.
+    enum DedupTolerance {
+        /// Start time must match within this window. Apple Health and
+        /// Strava sometimes disagree by a few seconds on the trigger
+        /// instant; 5 minutes is the published tolerance Apple suggests
+        /// for matching HKWorkout records and is generous enough for
+        /// manual entries with rounded minutes.
+        static let startWindow: TimeInterval = 5 * 60
+        /// Elapsed time must match within this window. Watch and
+        /// Strava can disagree on auto-pause behaviour by ~30s; 60s is
+        /// safely above that without merging genuinely different
+        /// sessions of comparable length.
+        static let durationWindow: TimeInterval = 60
+        /// Distance must match within this many meters. GPS jitter
+        /// alone can shift the reported total by ±50m; 100m covers
+        /// that plus the small differences in distance-smoothing
+        /// algorithms across vendors.
+        static let distanceWindow: Double = 100
+    }
+
     /// Pure-value import step — exposed for unit tests that don't want
     /// to round-trip the network. Inserts each new mapped session into
     /// `context` and saves once at the end.
+    ///
+    /// Two-layer dedup:
+    ///  1. **By Strava activity ID** — catches any activity Metricly
+    ///     previously imported OR pushed up to Strava (we stamp the
+    ///     `stravaActivityID` on the session at upload time too).
+    ///  2. **Fuzzy match against existing sessions** — same CardioType
+    ///     and start/duration/distance within `DedupTolerance`.
+    ///     Catches the common watch-recorded path where the session
+    ///     lands in both Apple Health (via HKWorkout) and Strava (via
+    ///     auto-share), then Metricly imports Strava — without this
+    ///     layer the user gets two cardio rows for the same run.
+    ///
+    /// The seen-ID set is mutated inside the loop so duplicate IDs
+    /// within a single Strava response don't slip through either.
     @discardableResult
     static func importActivities(
         _ activities: [StravaSummaryActivity],
         existing: [CardioSession],
         in context: ModelContext
     ) -> Result {
-        let existingIDs = Set(existing.compactMap(\.stravaActivityID))
+        var seenIDs = Set(existing.compactMap(\.stravaActivityID))
+        // Snapshot existing sessions for the fuzzy match. We append to
+        // it as we insert so two activities in the same response that
+        // look like the same session (rare but possible if Strava
+        // surfaces both an "upload" and a "manual log" of the same
+        // event) only land once.
+        var fuzzyPool: [CardioSession] = existing
         var result = Result()
 
         for activity in activities {
-            if existingIDs.contains(activity.id) {
+            // Layer 1: ID match (both directions — already-imported AND
+            // already-uploaded sessions live in `seenIDs`).
+            if seenIDs.contains(activity.id) {
                 result.skippedExisting += 1
                 continue
             }
@@ -57,7 +106,18 @@ enum StravaImportService {
             }
 
             let session = makeSession(from: activity, type: type)
+
+            // Layer 2: fuzzy match against existing + already-inserted
+            // sessions in this batch.
+            if fuzzyPool.contains(where: { isFuzzyDuplicate($0, of: session) }) {
+                result.skippedExisting += 1
+                seenIDs.insert(activity.id)
+                continue
+            }
+
             context.insert(session)
+            seenIDs.insert(activity.id)
+            fuzzyPool.append(session)
             result.imported += 1
         }
 
@@ -65,6 +125,24 @@ enum StravaImportService {
             try? context.save()
         }
         return result
+    }
+
+    /// Pure predicate — exposed so the test bundle can pin the
+    /// tolerance windows without standing up a full ModelContext.
+    /// Returns true when `existing` and `candidate` look like the
+    /// same real-world event captured by two different ingestion
+    /// paths (e.g. HKWorkout + Strava auto-share).
+    static func isFuzzyDuplicate(_ existing: CardioSession,
+                                 of candidate: CardioSession) -> Bool {
+        guard existing.type == candidate.type else { return false }
+        let t = DedupTolerance.self
+        let startDelta = abs(existing.start.timeIntervalSince(candidate.start))
+        guard startDelta <= t.startWindow else { return false }
+        let durationDelta = abs(existing.durationSeconds - candidate.durationSeconds)
+        guard durationDelta <= t.durationWindow else { return false }
+        let distanceDelta = abs(existing.distanceMeters - candidate.distanceMeters)
+        guard distanceDelta <= t.distanceWindow else { return false }
+        return true
     }
 
     // MARK: - Mapping (pure value, unit-testable)

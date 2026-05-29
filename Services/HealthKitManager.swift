@@ -1,5 +1,6 @@
 import HealthKit
 import SwiftUI
+import CoreLocation
 
 @MainActor
 final class HealthKitManager {
@@ -503,7 +504,57 @@ final class HealthKitManager {
         if !samples.isEmpty { try await builder.addSamples(samples) }
         try await builder.endCollection(at: end)
         try await builder.addMetadata([HKMetadataKeyWorkoutBrandName: session.title])
-        try await builder.finishWorkout()
+        let workout = try await builder.finishWorkout()
+
+        // Save the GPS route alongside the workout when we have one.
+        // Apple Health attaches this to the HKWorkout so the user gets
+        // a route map in the Fitness app (otherwise outdoor runs land
+        // in Health without their route — distance + calories + HR,
+        // but no map of where they actually went).
+        //
+        // Skip when:
+        //   - The activity is indoor (no GPS to save).
+        //   - We have no route points (manual entry or GPS-denied).
+        //   - finishWorkout returned nil (rare; HK couldn't materialise
+        //     the workout, in which case there's nothing to attach to).
+        if let workout, session.type.usesGPS, !session.routePoints.isEmpty {
+            try await saveRoute(for: workout, points: session.routePoints)
+        }
+    }
+
+    /// Convert a CardioSession's persisted route points back into
+    /// `CLLocation`s and attach them to an `HKWorkout` via
+    /// `HKWorkoutRouteBuilder`. Split out of `saveCardioSession` so the
+    /// builder lifecycle (insertRouteData → finishRoute) is easy to
+    /// follow and any failure here doesn't taint the workout save
+    /// (caller catches and surfaces a warning while the workout itself
+    /// is already persisted).
+    private func saveRoute(for workout: HKWorkout,
+                           points: [CardioRoutePoint]) async throws {
+        let locations: [CLLocation] = points.map { p in
+            CLLocation(
+                coordinate: CLLocationCoordinate2D(
+                    latitude: p.latitude, longitude: p.longitude
+                ),
+                altitude: p.altitude,
+                horizontalAccuracy: kCLLocationAccuracyBest,
+                verticalAccuracy:   kCLLocationAccuracyBest,
+                course:             -1,    // unknown — we don't persist it
+                speed:              -1,    // unknown — derive from successive locations if needed
+                timestamp:          p.timestamp
+            )
+        }
+        guard !locations.isEmpty else { return }
+
+        let routeBuilder = HKWorkoutRouteBuilder(healthStore: store, device: .local())
+        try await routeBuilder.insertRouteData(locations)
+        // Attach the route to the workout; metadata is optional but
+        // helps the user later identify Metricly-sourced routes when
+        // exporting Health data.
+        _ = try await routeBuilder.finishRoute(
+            with: workout,
+            metadata: [HKMetadataKeyWorkoutBrandName: "Metricly"]
+        )
     }
 
     func saveBodyWeight(_ kg: Double, date: Date) async throws {

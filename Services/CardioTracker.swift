@@ -191,6 +191,12 @@ final class CardioTracker: NSObject {
         let avgHR: Double? = heartRateSamples.isEmpty
             ? nil
             : heartRateSamples.reduce(0, +) / Double(heartRateSamples.count)
+        // Max HR was tracked internally but never exposed before; the
+        // resulting CardioSession dropped the peak even though the
+        // watch path persisted it. Surface it here so iPhone-recorded
+        // sessions match the watch-recorded shape and can show "peak
+        // 178 bpm" on the post-workout card.
+        let maxHR: Double? = heartRateSamples.max()
 
         return SessionResult(
             type:               currentType,
@@ -200,6 +206,7 @@ final class CardioTracker: NSObject {
             splits:             splits,
             locations:          locations,
             avgHeartRate:       avgHR,
+            maxHeartRate:       maxHR,
             sessionStart:       sessionStart ?? .now
         )
     }
@@ -488,6 +495,11 @@ struct SessionResult {
     let splits: [CardioSplit]
     let locations: [CLLocation]
     let avgHeartRate: Double?
+    /// Peak heart rate observed during the session, or nil when no HR
+    /// samples were collected. Previously `CardioTracker` tracked this
+    /// internally but never surfaced it — iPhone-recorded sessions
+    /// lost the peak while watch-recorded sessions preserved it.
+    let maxHeartRate: Double?
     /// Wall-clock start time of the session. Threaded through so
     /// `CardioActiveView` can populate `CardioSession.startDate`
     /// correctly instead of falling back to `.now` (which is the finish

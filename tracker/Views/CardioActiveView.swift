@@ -580,6 +580,11 @@ struct CardioActiveView: View {
             elevationGainMeters: result.elevationGainMeters
         )
         session.avgHeartRate  = result.avgHeartRate
+        // Peak HR — previously dropped on the iPhone path. The watch
+        // path already persists it; this brings the two recorders in
+        // sync so post-workout cards show "peak X bpm" regardless of
+        // which device recorded the session.
+        session.maxHeartRate  = result.maxHeartRate
         session.routePoints   = result.locations.map { CardioRoutePoint(location: $0) }
         session.splits        = result.splits
         session.caloriesBurned = tracker.estimatedCalories(bodyWeightKg: bodyWeightKg)

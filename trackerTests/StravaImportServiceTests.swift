@@ -166,7 +166,16 @@ final class StravaImportServiceTests: XCTestCase {
 
     func testRerunningSyncDoesNotDuplicate() throws {
         let context = try makeContext()
-        let activities = [activity(id: 1), activity(id: 2)]
+        // Two genuinely different activities — distinct start times
+        // and distances so the fuzzy-dedup layer doesn't collapse them
+        // into one. This test specifically exercises the ID-based
+        // dedup layer on the rerun.
+        let activities = [
+            activity(id: 1, startISO: "2026-04-15T08:30:00Z",
+                     elapsed: 1800, distance: 5000),
+            activity(id: 2, startISO: "2026-04-16T18:00:00Z",
+                     elapsed: 2400, distance: 7500),
+        ]
 
         // First pass: import both.
         let first = StravaImportService.importActivities(activities, existing: [], in: context)
@@ -176,9 +185,167 @@ final class StravaImportServiceTests: XCTestCase {
         // the just-inserted sessions.
         let now = try context.fetch(FetchDescriptor<CardioSession>())
 
-        // Second pass with the same activities: should skip both.
+        // Second pass with the same activities: should skip both via
+        // the ID layer (stravaActivityID is set on each).
         let second = StravaImportService.importActivities(activities, existing: now, in: context)
         XCTAssertEqual(second.imported, 0)
         XCTAssertEqual(second.skippedExisting, 2)
+    }
+
+    // MARK: - Fuzzy dedup against HealthKit-imported / app-recorded sessions
+    //
+    // The common real-world path: user records a run on Apple Watch.
+    // The run lands in Apple Health (becomes a HealthKit Workout) and
+    // also auto-shares to Strava. Metricly imports Strava — without
+    // fuzzy dedup, the user gets a duplicate cardio row for the same
+    // physical event. These tests pin the tolerance windows and the
+    // behaviour around the boundary so a future retune is intentional.
+
+    /// Build a non-Strava CardioSession (no stravaActivityID) so the
+    /// ID-based dedup layer doesn't catch it. This is what an
+    /// HKWorkout-imported or app-recorded session looks like to the
+    /// fuzzy matcher.
+    private func nonStravaSession(
+        date: Date,
+        type: CardioType = .outdoorRun,
+        duration: Double = 1800,
+        distance: Double = 5000
+    ) -> CardioSession {
+        CardioSession(
+            date: date,
+            title: "From Apple Health",
+            type: type,
+            durationSeconds: duration,
+            distanceMeters: distance
+        )
+    }
+
+    func testFuzzyDedupSkipsHealthKitOriginRunWithinTolerance() throws {
+        // The canonical case. A run already exists from Apple Health
+        // (no stravaActivityID). The user imports Strava and the same
+        // run comes through. Fuzzy match must catch it.
+        let context = try makeContext()
+        let startISO = "2026-04-15T08:30:00Z"
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime]
+        let start = formatter.date(from: startISO) ?? .now
+
+        let existing = nonStravaSession(date: start)
+        context.insert(existing)
+
+        // Strava version: identical timing, off by 2 seconds on start
+        // and 5m on distance — all comfortably inside the windows.
+        let stravaSide = activity(id: 999, startISO: startISO,
+                                  elapsed: 1800, distance: 5005)
+        let result = StravaImportService.importActivities(
+            [stravaSide], existing: [existing], in: context
+        )
+        XCTAssertEqual(result.imported, 0)
+        XCTAssertEqual(result.skippedExisting, 1)
+    }
+
+    func testFuzzyDedupDoesNotMergeDifferentTypes() throws {
+        // Same time, same distance, different activity types. Should
+        // never merge — a run and a walk at 8 AM are two real events.
+        let context = try makeContext()
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime]
+        let start = formatter.date(from: "2026-04-15T08:30:00Z") ?? .now
+
+        let run = nonStravaSession(date: start, type: .outdoorRun)
+        let walkStrava = activity(id: 1, sport: "Walk",
+                                  startISO: "2026-04-15T08:30:00Z",
+                                  elapsed: 1800, distance: 5000)
+        let result = StravaImportService.importActivities(
+            [walkStrava], existing: [run], in: context
+        )
+        XCTAssertEqual(result.imported, 1,
+                       "Type mismatch should not be fuzzy-deduped")
+    }
+
+    func testFuzzyDedupRespectsStartTimeWindow() throws {
+        // Boundary: a Strava activity ~6 min later than an existing
+        // session should NOT merge (window is 5 min). Catches drift in
+        // either direction of the constant.
+        let context = try makeContext()
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime]
+        let baseStart = formatter.date(from: "2026-04-15T08:30:00Z") ?? .now
+        let sixMinLater = baseStart.addingTimeInterval(6 * 60)
+        let sixMinISO = formatter.string(from: sixMinLater)
+
+        let existing = nonStravaSession(date: baseStart)
+        let stravaSide = activity(id: 1, startISO: sixMinISO)
+        let result = StravaImportService.importActivities(
+            [stravaSide], existing: [existing], in: context
+        )
+        XCTAssertEqual(result.imported, 1,
+                       "Outside startWindow should not merge")
+    }
+
+    func testFuzzyDedupRespectsDistanceWindow() throws {
+        // Boundary: 200m difference exceeds the 100m window.
+        let context = try makeContext()
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime]
+        let start = formatter.date(from: "2026-04-15T08:30:00Z") ?? .now
+
+        let existing = nonStravaSession(date: start, distance: 5000)
+        let stravaSide = activity(id: 1, startISO: "2026-04-15T08:30:00Z",
+                                  elapsed: 1800, distance: 5200)
+        let result = StravaImportService.importActivities(
+            [stravaSide], existing: [existing], in: context
+        )
+        XCTAssertEqual(result.imported, 1,
+                       "Outside distanceWindow should not merge")
+    }
+
+    func testFuzzyDedupRespectsDurationWindow() throws {
+        // 120s duration difference exceeds the 60s window.
+        let context = try makeContext()
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime]
+        let start = formatter.date(from: "2026-04-15T08:30:00Z") ?? .now
+
+        let existing = nonStravaSession(date: start, duration: 1800)
+        let stravaSide = activity(id: 1, startISO: "2026-04-15T08:30:00Z",
+                                  elapsed: 1920, distance: 5000)
+        let result = StravaImportService.importActivities(
+            [stravaSide], existing: [existing], in: context
+        )
+        XCTAssertEqual(result.imported, 1,
+                       "Outside durationWindow should not merge")
+    }
+
+    func testIsFuzzyDuplicatePredicateIsSymmetric() throws {
+        // Pure predicate: same arguments swapped should produce the
+        // same result. Catches future implementations that
+        // accidentally lean on one side's data (e.g. picking
+        // existing.distance as the baseline).
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime]
+        let start = formatter.date(from: "2026-04-15T08:30:00Z") ?? .now
+
+        let a = nonStravaSession(date: start)
+        let b = nonStravaSession(date: start.addingTimeInterval(60))
+
+        XCTAssertEqual(
+            StravaImportService.isFuzzyDuplicate(a, of: b),
+            StravaImportService.isFuzzyDuplicate(b, of: a)
+        )
+    }
+
+    func testDedupCatchesDuplicateIDsInsideSingleResponse() throws {
+        // Strava's `/activities` endpoint pages with cursor-based
+        // pagination; under heavy load, the same activity can appear
+        // on two adjacent pages. The fix is the mutable `seenIDs` set
+        // inside the loop — first hit imports, second hit skips.
+        let context = try makeContext()
+        let dup = activity(id: 42)
+        let result = StravaImportService.importActivities(
+            [dup, dup], existing: [], in: context
+        )
+        XCTAssertEqual(result.imported, 1)
+        XCTAssertEqual(result.skippedExisting, 1)
     }
 }

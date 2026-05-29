@@ -319,6 +319,38 @@ final class StravaService: NSObject, ObservableObject {
 
     // MARK: - Private: HTTP
 
+    /// `application/x-www-form-urlencoded`-correct encoding. The earlier
+    /// version of this code used `.urlQueryAllowed`, which is the
+    /// character set for URL *query strings* and not for form bodies:
+    /// values containing `&`, `+`, `=`, `?`, or other characters that
+    /// have meaning inside form bodies were left unencoded, so a Strava
+    /// activity name like "Run & Ride" would split into two key/value
+    /// pairs at the `&`. The fix uses the documented unreserved set
+    /// (alnum + `-._~`) plus the `application/x-www-form-urlencoded`
+    /// convention of encoding spaces as `+`.
+    // Internal (not private) so the `_StravaFormEncoderTests` in the test
+    // bundle can exercise it without going through a real URLSession.
+    // `nonisolated` because the function is pure — no StravaService
+    // instance state, no MainActor work — and the test bundle is a
+    // nonisolated context.
+    internal nonisolated static func formEncode(_ body: [String: String]) -> Data? {
+        // Allowed = the strict "unreserved" set from RFC 3986. Everything
+        // else gets percent-encoded; spaces become `+` per the form-URL
+        // serialization spec.
+        let allowed = CharacterSet(charactersIn:
+            "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~ "
+        )
+        let encoded = body
+            .map { key, value -> String in
+                let k = key.addingPercentEncoding(withAllowedCharacters: allowed) ?? ""
+                let v = value.addingPercentEncoding(withAllowedCharacters: allowed) ?? ""
+                return "\(k)=\(v)"
+            }
+            .joined(separator: "&")
+            .replacingOccurrences(of: " ", with: "+")
+        return encoded.data(using: .utf8)
+    }
+
     /// POSTs `application/x-www-form-urlencoded` body, decodes JSON
     /// response. Throws `StravaError.httpFailure` on non-2xx with the raw
     /// body so we can debug malformed requests in the wild.
@@ -329,13 +361,7 @@ final class StravaService: NSObject, ObservableObject {
         var request = URLRequest(url: endpoint)
         request.httpMethod = "POST"
         request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
-        let encoded = body
-            .map { key, value in
-                let v = value.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
-                return "\(key)=\(v)"
-            }
-            .joined(separator: "&")
-        request.httpBody = encoded.data(using: .utf8)
+        request.httpBody = Self.formEncode(body)
 
         let (data, response) = try await URLSession.shared.data(for: request)
         guard let http = response as? HTTPURLResponse else {
@@ -545,13 +571,7 @@ extension StravaService {
         request.httpMethod = "POST"
         request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        let encoded = body
-            .map { key, value in
-                let v = value.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
-                return "\(key)=\(v)"
-            }
-            .joined(separator: "&")
-        request.httpBody = encoded.data(using: .utf8)
+        request.httpBody = Self.formEncode(body)
 
         let (data, response) = try await URLSession.shared.data(for: request)
         guard let http = response as? HTTPURLResponse else {
