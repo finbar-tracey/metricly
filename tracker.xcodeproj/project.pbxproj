@@ -21,6 +21,7 @@
 		61E65B49C870A8DE919AF15E /* WatchSyncModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = ADABA831A2528A54D046938D /* WatchSyncModels.swift */; };
 		63D4CA14C514390DDE603321 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5F25E98828C1435245FC19FC /* SwiftUI.framework */; settings = {ATTRIBUTES = (); }; };
 		7234F76A6DB6A51D5BC9115B /* WatchModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2BE5CDBF4BEBD2DAD8351B6F /* WatchModels.swift */; };
+		7A7C72C7E93942D45FF95F1C /* ImportFormats.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92966310B8AC2882130F857F /* ImportFormats.swift */; };
 		8297692D2FC6441200590CAA /* Secrets.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = 8297692C2FC6441200590CAA /* Secrets.xcconfig */; };
 		82CCBB3A2F81354000BD46EA /* AppShortcuts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82CCBB032F81354000BD46EA /* AppShortcuts.swift */; };
 		82CCBB422F81354000BD46EA /* ExportHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82CCBB0B2F81354000BD46EA /* ExportHelper.swift */; };
@@ -178,6 +179,7 @@
 		82FD87BB2FA508A300D73920 /* MetriclyWidgetsExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = MetriclyWidgetsExtension.entitlements; sourceTree = "<group>"; };
 		830864E49F0360CE84E91484 /* GroupedListCard.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GroupedListCard.swift; sourceTree = "<group>"; };
 		8542A36BEB6EAFCC197C9226 /* WatchGymView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchGymView.swift; sourceTree = "<group>"; };
+		92966310B8AC2882130F857F /* ImportFormats.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ImportFormats.swift; sourceTree = "<group>"; };
 		9368BA8071E780160200AF2C /* Assets.xcassets */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		AD57A2F0DFB3E5C8E31FE25C /* StravaErrorPresenter.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = StravaErrorPresenter.swift; sourceTree = "<group>"; };
 		ADABA831A2528A54D046938D /* WatchSyncModels.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchSyncModels.swift; sourceTree = "<group>"; };
@@ -374,6 +376,7 @@
 			children = (
 				82CCBB0B2F81354000BD46EA /* ExportHelper.swift */,
 				82CCBB0E2F81354000BD46EA /* ImportHelper.swift */,
+				92966310B8AC2882130F857F /* ImportFormats.swift */,
 			);
 			path = Helpers;
 			sourceTree = "<group>";
@@ -658,6 +661,7 @@
 				E981D6360D6A5E9E3E8562B2 /* StravaImportService.swift in Sources */,
 				AAF89095F7469A38E940519F /* StravaErrorPresenter.swift in Sources */,
 				841DBB4301C08F271C9FD4A6 /* GroupedListCard.swift in Sources */,
+				7A7C72C7E93942D45FF95F1C /* ImportFormats.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

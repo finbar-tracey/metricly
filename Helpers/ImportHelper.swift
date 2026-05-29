@@ -28,17 +28,43 @@ struct ImportHelper {
 
         let rows = parseCSVRows(content)
         guard rows.count > 1 else { throw ImportError.noData }
+        let headerRow = rows[0]
+        let dataRows = Array(rows.dropFirst())
 
-        // Validate header
-        let header = rows[0].map { $0.trimmingCharacters(in: .whitespaces).lowercased() }
-        guard header.count >= 10,
-              header[0].contains("date"),
-              header[1].contains("workout"),
-              header[8].contains("reps"),
-              header[9].contains("weight")
-        else {
+        // Detect format and dispatch. Metricly's own import keeps its
+        // rich inline parser (it preserves Metricly-specific fields
+        // like the per-workout rating and the explicit muscle-group
+        // category that Strong/Hevy don't export). Strong and Hevy go
+        // through the structured parsers in `ImportFormats.swift` and
+        // share a common `insertParsedWorkouts` assembler.
+        switch ImportFormat.detect(header: headerRow) {
+        case .strong:
+            let parsed = StrongParser.parseRows(dataRows)
+            guard !parsed.isEmpty else { throw ImportError.noData }
+            return insertParsedWorkouts(parsed, into: context)
+
+        case .hevy:
+            let parsed = HevyParser.parseRows(header: headerRow, rows: dataRows)
+            guard !parsed.isEmpty else { throw ImportError.noData }
+            return insertParsedWorkouts(parsed, into: context)
+
+        case .metricly:
+            // fall through to the existing inline Metricly path below.
+            break
+
+        case .none:
             throw ImportError.invalidFormat
         }
+
+        // Metricly's own format from here on — the original inline
+        // parser, preserved verbatim so Metricly-side fields
+        // (per-workout rating, explicit category, superset group ID)
+        // continue to round-trip correctly.
+        let header = headerRow.map { $0.trimmingCharacters(in: .whitespaces).lowercased() }
+        // (Header check already happened in detect(); we keep the
+        // local `header` lowercase alias for the existing positional
+        // code below.)
+        _ = header
 
         // Group rows by workout (date + name combo)
         struct WorkoutKey: Hashable {
@@ -133,6 +159,63 @@ struct ImportHelper {
 
         try context.save()
         return importedCount
+    }
+
+    // MARK: - Assembler for Strong / Hevy ParsedWorkouts
+
+    /// Turn a `[ParsedWorkout]` (produced by `StrongParser` or
+    /// `HevyParser`) into SwiftData rows on `context`. Returns the
+    /// number of workouts inserted.
+    ///
+    /// Category inference: the parsed shape doesn't carry a muscle
+    /// group, so we infer one from the exercise name via
+    /// `MuscleGroup.inferred(fromName:)` (matches the same heuristic
+    /// the live workout flow uses for new exercises). Categories
+    /// without a confident match land as `.other` — better than
+    /// guessing and corrupting recovery math.
+    static func insertParsedWorkouts(_ workouts: [ParsedWorkout],
+                                     into context: ModelContext) -> Int {
+        var imported = 0
+        for parsed in workouts {
+            let workout = Workout(name: parsed.title, date: parsed.startDate)
+            workout.notes = parsed.notes
+            workout.startTime = parsed.startDate
+            workout.endTime = parsed.endDate
+            context.insert(workout)
+
+            for (order, parsedEx) in parsed.exercises.enumerated() {
+                let category = MuscleGroup.inferred(fromName: parsedEx.name)
+                let exercise = Exercise(
+                    name: parsedEx.name,
+                    workout: workout,
+                    category: category
+                )
+                exercise.order = order
+                exercise.notes = parsedEx.notes
+                if let supersetGroup = parsedEx.supersetGroup {
+                    exercise.supersetGroup = supersetGroup
+                }
+                context.insert(exercise)
+                workout.exercises.append(exercise)
+
+                for parsedSet in parsedEx.sets {
+                    let set = ExerciseSet(
+                        reps: parsedSet.reps,
+                        weight: parsedSet.weightKg,
+                        isWarmUp: parsedSet.isWarmUp,
+                        rpe: parsedSet.rpe,
+                        distance: parsedSet.distanceMeters,
+                        durationSeconds: parsedSet.durationSeconds,
+                        exercise: exercise
+                    )
+                    context.insert(set)
+                    exercise.sets.append(set)
+                }
+            }
+            imported += 1
+        }
+        try? context.save()
+        return imported
     }
 
     // MARK: - CSV Parsing
