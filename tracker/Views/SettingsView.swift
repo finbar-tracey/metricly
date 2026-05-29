@@ -24,6 +24,10 @@ struct SettingsView: View {
     /// SwiftData. Nil → no preview, no sheet. Set by the
     /// `.fileImporter` callback below; cleared on import-or-cancel.
     @State private var pendingImportPreview: ImportHelper.ImportPreview?
+    /// Post-import "wow moment" — set after a Strong/Hevy commit
+    /// succeeds, drives the ImportSuccessSheet. Wraps the analysis
+    /// in an Identifiable holder so `sheet(item:)` accepts it.
+    @State private var pendingImportSuccess: ImportSuccessPresentation?
     // Cardio / PDF export
     @Query(sort: \CardioSession.date, order: .reverse) private var cardioSessions: [CardioSession]
     @State private var showingCardioExport = false
@@ -431,11 +435,37 @@ struct SettingsView: View {
                 onImport: {
                     let count = ImportHelper.commitPreview(preview, into: modelContext)
                     pendingImportPreview = nil
-                    importResult = "Successfully imported \(count) workout\(count == 1 ? "" : "s")."
-                    showImportResult = true
+                    if count > 0 {
+                        // Strong/Hevy committed — run the analyser
+                        // over the parsed workouts (cheap, in-memory)
+                        // and present the wow-moment sheet instead
+                        // of the bland count alert.
+                        let analysis = ImportAnalyzer.analyze(preview.workouts)
+                        pendingImportSuccess = ImportSuccessPresentation(analysis: analysis)
+                    } else {
+                        importResult = "Nothing was imported."
+                        showImportResult = true
+                    }
                 },
                 onCancel: {
                     pendingImportPreview = nil
+                }
+            )
+        }
+        .sheet(item: $pendingImportSuccess) { presentation in
+            ImportSuccessSheet(
+                analysis: presentation.analysis,
+                onStartRecommended: {
+                    pendingImportSuccess = nil
+                    // Switch to the Training tab so the user lands
+                    // on the workout-start surface where today's
+                    // adaptive plan picks up. ContentView listens
+                    // for this notification (same path the top-
+                    // insight tap uses on Home).
+                    NotificationCenter.default.post(name: .openTrainingTab, object: nil)
+                },
+                onDismiss: {
+                    pendingImportSuccess = nil
                 }
             )
         }
@@ -556,4 +586,13 @@ enum SettingsRoute: Hashable {
     case profile
     case reminders
     case templates
+}
+
+/// Identifiable wrapper so SwiftUI's `sheet(item:)` can drive the
+/// post-import success sheet from a freshly-computed `ImportAnalysis`.
+/// The analysis itself has no identity; a fresh UUID per import
+/// keeps the binding well-defined.
+private struct ImportSuccessPresentation: Identifiable {
+    let id = UUID()
+    let analysis: ImportAnalysis
 }

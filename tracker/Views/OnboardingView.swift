@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import UniformTypeIdentifiers
 
 struct OnboardingView: View {
     @Environment(\.dismiss) private var dismiss
@@ -15,6 +16,14 @@ struct OnboardingView: View {
     @State private var weeklyGoal = 3
     @State private var dailyWaterGoalMl = 2500
     @State private var healthKitRequested = false
+    // Import-from-Strong/Hevy state on the Get Started page. Same
+    // flow as Settings → Import: file picker → preview sheet →
+    // confirm → wow-moment sheet. After the user sees the wow
+    // sheet, onboarding completes the same way Start Fresh does.
+    @State private var showingImport = false
+    @State private var pendingImportPreview: ImportHelper.ImportPreview?
+    @State private var pendingImportSuccess: OnboardingImportSuccess?
+    @State private var importErrorMessage: String?
 
     private var settings: UserSettings {
         settingsArray.first ?? UserSettings()
@@ -519,14 +528,136 @@ struct OnboardingView: View {
 
                 Spacer()
 
-                gradientNextButton(label: "Start Training", color: .white, textColor: Color(red: 0.12, green: 0.68, blue: 0.4)) {
-                    applySettings()
-                    onComplete()
-                    dismiss()
+                VStack(spacing: 12) {
+                    // Primary CTA — the reviewer's pitch: importing
+                    // an existing Strong/Hevy history gives Metricly
+                    // months of data to analyse before the user logs
+                    // a single set. Tapping fires the same flow as
+                    // Settings → Import.
+                    Button {
+                        showingImport = true
+                    } label: {
+                        HStack(spacing: 10) {
+                            Image(systemName: "tray.and.arrow.down.fill")
+                                .font(.system(size: 16, weight: .bold))
+                            Text("Import history (Strong / Hevy)")
+                                .font(.system(size: 16, weight: .bold, design: .rounded))
+                                .tracking(0.3)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(Color.white)
+                        .foregroundStyle(Color(red: 0.12, green: 0.68, blue: 0.4))
+                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .shadow(color: .black.opacity(0.18), radius: 14, y: 6)
+                    }
+                    .buttonStyle(.pressableCard)
+
+                    // Secondary — keep the existing "no history,
+                    // start fresh" path for users with no Strong/Hevy
+                    // export to bring across.
+                    Button {
+                        applySettings()
+                        onComplete()
+                        dismiss()
+                    } label: {
+                        Text("Start fresh")
+                            .font(.system(size: 14, weight: .semibold, design: .rounded))
+                            .tracking(0.3)
+                            .foregroundStyle(.white)
+                            .padding(.vertical, 12)
+                            .padding(.horizontal, 22)
+                    }
+                    .buttonStyle(.pressableCard)
                 }
             }
             .padding(32)
         }
+        .fileImporter(
+            isPresented: $showingImport,
+            allowedContentTypes: [.commaSeparatedText, .plainText],
+            allowsMultipleSelection: false
+        ) { result in
+            switch result {
+            case .success(let urls):
+                guard let url = urls.first else { return }
+                do {
+                    switch try ImportHelper.plan(from: url) {
+                    case .preview(let preview):
+                        pendingImportPreview = preview
+                    case .metriclyDirect:
+                        // Re-importing your own Metricly export
+                        // from an onboarding flow is unusual but
+                        // legal — let it through, skipping the
+                        // wow sheet since the user already knows
+                        // what's in their export.
+                        let count = try ImportHelper.importCSV(from: url, into: modelContext)
+                        importErrorMessage = nil
+                        finishWithImport(workoutCount: count)
+                    }
+                } catch {
+                    importErrorMessage = error.localizedDescription
+                }
+            case .failure(let error):
+                importErrorMessage = error.localizedDescription
+            }
+        }
+        .sheet(item: $pendingImportPreview) { preview in
+            ImportPreviewSheet(
+                preview: preview,
+                onImport: {
+                    let count = ImportHelper.commitPreview(preview, into: modelContext)
+                    pendingImportPreview = nil
+                    if count > 0 {
+                        let analysis = ImportAnalyzer.analyze(preview.workouts)
+                        pendingImportSuccess = OnboardingImportSuccess(analysis: analysis)
+                    } else {
+                        finishWithImport(workoutCount: 0)
+                    }
+                },
+                onCancel: {
+                    pendingImportPreview = nil
+                }
+            )
+        }
+        .sheet(item: $pendingImportSuccess) { presentation in
+            ImportSuccessSheet(
+                analysis: presentation.analysis,
+                onStartRecommended: {
+                    pendingImportSuccess = nil
+                    applySettings()
+                    onComplete()
+                    dismiss()
+                    NotificationCenter.default.post(name: .openTrainingTab, object: nil)
+                },
+                onDismiss: {
+                    pendingImportSuccess = nil
+                    applySettings()
+                    onComplete()
+                    dismiss()
+                }
+            )
+        }
+        .alert("Import Failed",
+               isPresented: Binding(
+                get: { importErrorMessage != nil },
+                set: { if !$0 { importErrorMessage = nil } }
+               )
+        ) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(importErrorMessage ?? "")
+        }
+    }
+
+    /// Common completion path used by the Metricly-direct fallback
+    /// and the empty-import edge case. Same final state as the
+    /// "Start fresh" button — onboarding closes, the user lands on
+    /// Home with whatever data the import did (or didn't) land.
+    private func finishWithImport(workoutCount: Int) {
+        applySettings()
+        onComplete()
+        dismiss()
     }
 
     // MARK: - Helpers
@@ -650,4 +781,13 @@ struct OnboardingView: View {
         s.weeklyGoal = weeklyGoal
         s.dailyWaterGoalMl = dailyWaterGoalMl
     }
+}
+
+/// Identifiable wrapper so SwiftUI's `sheet(item:)` can drive the
+/// post-import success sheet from a freshly-computed `ImportAnalysis`
+/// inside the onboarding flow. Mirrors the wrapper in SettingsView —
+/// each surface keeps its own so the types don't have to be public.
+private struct OnboardingImportSuccess: Identifiable {
+    let id = UUID()
+    let analysis: ImportAnalysis
 }

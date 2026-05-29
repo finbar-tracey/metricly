@@ -63,6 +63,7 @@
 		E981D6360D6A5E9E3E8562B2 /* StravaImportService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 703FFA80F67EF45A2C03DB9E /* StravaImportService.swift */; };
 		EDB8AE92F24CFC88014E868E /* WatchComplications.swift in Sources */ = {isa = PBXBuildFile; fileRef = 450504C0961911BD593E7516 /* WatchComplications.swift */; };
 		F5E1D7AFB6B9A3642F1A8CE2 /* WatchCardioView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4124FAE731ACA1B9480E005F /* WatchCardioView.swift */; };
+		FD012D63EB42610B0B26DA1E /* ImportAnalyzer.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB7196003915356F98225F20 /* ImportAnalyzer.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -190,6 +191,7 @@
 		D5A29A21938233E7A93C4D3 /* MetriclySchema.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MetriclySchema.swift; sourceTree = "<group>"; };
 		E7BFB9689E4590B0397BD07C /* MetriclyWatchComplications.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = MetriclyWatchComplications.entitlements; sourceTree = "<group>"; };
 		EBF0E4BA9016748E21F092B3 /* MetriclyWatch.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = MetriclyWatch.entitlements; sourceTree = "<group>"; };
+		FB7196003915356F98225F20 /* ImportAnalyzer.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ImportAnalyzer.swift; sourceTree = "<group>"; };
 		FDE4FFC6BE5D207CB3754ED7 /* MetriclyWatch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MetriclyWatch.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -377,6 +379,7 @@
 				82CCBB0B2F81354000BD46EA /* ExportHelper.swift */,
 				82CCBB0E2F81354000BD46EA /* ImportHelper.swift */,
 				92966310B8AC2882130F857F /* ImportFormats.swift */,
+				FB7196003915356F98225F20 /* ImportAnalyzer.swift */,
 			);
 			path = Helpers;
 			sourceTree = "<group>";
@@ -662,6 +665,7 @@
 				AAF89095F7469A38E940519F /* StravaErrorPresenter.swift in Sources */,
 				841DBB4301C08F271C9FD4A6 /* GroupedListCard.swift in Sources */,
 				7A7C72C7E93942D45FF95F1C /* ImportFormats.swift in Sources */,
+				FD012D63EB42610B0B26DA1E /* ImportAnalyzer.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
