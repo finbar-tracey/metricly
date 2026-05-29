@@ -12,7 +12,16 @@ import UserNotifications
 
 @main
 struct trackerApp: App {
-    let modelContainer: ModelContainer
+    /// Non-nil on the happy path: SwiftData container ready, app boots
+    /// into ContentView. Nil only when both the CloudKit AND local
+    /// container creation paths failed AND the on-disk quarantine
+    /// recovery also failed — in that case `recoveryError` carries the
+    /// last error and `body` shows a recovery screen instead of
+    /// fatalError-crashing. The user keeps a launchable app, and any
+    /// quarantined `.corrupt-…` files in Application Support are
+    /// reachable via Files / iCloud for manual export.
+    let modelContainer: ModelContainer?
+    let recoveryError: Error?
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
 
     init() {
@@ -36,7 +45,8 @@ struct trackerApp: App {
         // gets a default-inferred migration that doesn't match the plan
         // (App Intents were already correctly threading the plan via
         // `MetriclySchema.makeSharedContainer()`; the main app was not).
-        let container: ModelContainer
+        let container: ModelContainer?
+        let recoveryError: Error?
         do {
             let cloudConfig = ModelConfiguration(cloudKitDatabase: .automatic)
             container = try ModelContainer(
@@ -44,6 +54,7 @@ struct trackerApp: App {
                 migrationPlan: MetriclyMigrationPlan.self,
                 configurations: cloudConfig
             )
+            recoveryError = nil
         } catch {
             print("⚠️ CloudKit container failed: \(error). Trying local store.")
             do {
@@ -51,13 +62,14 @@ struct trackerApp: App {
                     for: MetriclySchema.schema,
                     migrationPlan: MetriclyMigrationPlan.self
                 )
+                recoveryError = nil
             } catch {
-                // Local store can't open. Previously this path silently
-                // deleted default.store / -shm / -wal — catastrophic for
-                // a fitness app where users have years of training data.
-                // Instead: quarantine the broken files (rename with a
-                // timestamp) so the data is recoverable manually, then
-                // start fresh on top.
+                // Local store can't open. Quarantine the broken files
+                // (rename with a timestamp) so the data is reachable via
+                // Files for manual export, then retry once on a fresh
+                // store. If even that fails, fall through to the
+                // recovery scene — DON'T fatalError; the user keeps a
+                // launchable app and a recoverable on-disk trail.
                 print("⚠️ Local store corrupted, quarantining: \(error)")
                 Self.quarantineCorruptedStore()
                 do {
@@ -65,22 +77,32 @@ struct trackerApp: App {
                         for: MetriclySchema.schema,
                         migrationPlan: MetriclyMigrationPlan.self
                     )
-                } catch {
-                    fatalError("Cannot create any SwiftData container: \(error)")
+                    recoveryError = nil
+                } catch let retryError {
+                    // Last resort: surface a recovery screen.
+                    print("⚠️ Cannot create any SwiftData container after quarantine: \(retryError)")
+                    container = nil
+                    recoveryError = retryError
                 }
             }
         }
-        // Seed UserSettings once so views never need to insert from computed properties
-        let context = container.mainContext
-        let descriptor = FetchDescriptor<UserSettings>()
-        if (try? context.fetchCount(descriptor)) == 0 {
-            context.insert(UserSettings())
+        // Seed UserSettings once so views never need to insert from
+        // computed properties. Only runs on the happy path; the
+        // recovery scene doesn't need or have a context.
+        if let container {
+            let context = container.mainContext
+            let descriptor = FetchDescriptor<UserSettings>()
+            if (try? context.fetchCount(descriptor)) == 0 {
+                context.insert(UserSettings())
+            }
+
+            // Boot Watch connectivity — must happen after the container
+            // is ready.
+            let phoneManager = PhoneConnectivityManager.shared
+            phoneManager.modelContext = context
         }
         self.modelContainer = container
-
-        // Boot Watch connectivity — must happen after the container is ready
-        let phoneManager = PhoneConnectivityManager.shared
-        phoneManager.modelContext = context
+        self.recoveryError = recoveryError
     }
 
     /// Rename the broken SQLite store files (and their WAL/SHM siblings)
@@ -109,11 +131,14 @@ struct trackerApp: App {
                     try fm.moveItem(at: source, to: dest)
                     print("📦 Quarantined \(name) → \(dest.lastPathComponent)")
                 } catch {
-                    // If even the rename fails, fall back to delete so we
-                    // can still launch the app. Data is gone in that case,
-                    // but the alternative is fatalError on every launch.
-                    try? fm.removeItem(at: source)
-                    print("⚠️ Quarantine rename failed for \(name); deleted instead: \(error)")
+                    // Quarantine failed. Previously this path deleted the
+                    // file as a fallback so the app could launch — but
+                    // that's data loss the user can never recover from.
+                    // Now: leave the file in place. The next container
+                    // open will fail again, the app falls through to the
+                    // recovery scene, and the user can export the
+                    // original file via Files for support.
+                    print("⚠️ Quarantine rename failed for \(name): \(error). Leaving file in place; recovery scene will show.")
                 }
             }
         }
@@ -121,10 +146,14 @@ struct trackerApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
-                .onAppear { pushWatchContext() }
+            if let modelContainer {
+                ContentView()
+                    .onAppear { pushWatchContext() }
+                    .modelContainer(modelContainer)
+            } else {
+                DataRecoveryView(error: recoveryError)
+            }
         }
-        .modelContainer(modelContainer)
     }
 
     /// Refresh the Watch's view of the world on foreground. Two things
@@ -139,6 +168,8 @@ struct trackerApp: App {
     ///    drift apart.
     @MainActor
     private func pushWatchContext() {
+        // Recovery scene has no container; nothing to push.
+        guard let modelContainer else { return }
         let workouts = (try? modelContainer.mainContext.fetch(FetchDescriptor<Workout>())) ?? []
         let inProgress = workouts.first { !$0.isTemplate && $0.endTime == nil }
         PhoneConnectivityManager.shared.publishActiveWorkout(

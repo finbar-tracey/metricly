@@ -95,8 +95,17 @@ enum PersonalInsightsEngine {
 
     // MARK: - Insight: Sleep × top exercise
 
-    /// For the user's most-frequent compound lift, compare top-set weight
-    /// after good sleep (≥7h) vs short sleep (<6h). Needs both groups present.
+    /// For the user's most-frequent compound lift, compare *estimated
+    /// 1RM* after good sleep (≥7h) vs short sleep (<6h). Needs both
+    /// groups present.
+    ///
+    /// The v1.5 review flagged a real correctness issue with the older
+    /// raw-top-weight comparison: a 100kg × 3 set (e1RM ≈ 110kg) and a
+    /// 90kg × 10 set (e1RM ≈ 120kg) are different stimuli, but raw
+    /// weight read the first as "heavier". Switching to estimated 1RM
+    /// via the Epley formula normalises across rep ranges so the
+    /// insight compares like-for-like — even when the user mixes
+    /// strength days and hypertrophy days for the same exercise.
     static func sleepVsTopExercise(_ inputs: Inputs) -> Insight? {
         guard !inputs.sleepByDay.isEmpty else { return nil }
         let C = EngineConstants.PersonalInsights.self
@@ -106,13 +115,15 @@ enum PersonalInsightsEngine {
         guard let topName = topExerciseName(in: workouts, minHits: C.minTopExerciseHits)
         else { return nil }
 
-        // Top working-set weight per session for that exercise
+        // Per-session estimated 1RM for that exercise. `topWeight`
+        // stays as the variable name for the smaller diff but now
+        // holds the e1RM value, not the raw weight.
         let perSession: [(date: Date, topWeight: Double)] = workouts.compactMap { w in
             let sets = w.exercises
                 .filter { $0.name.lowercased() == topName }
                 .flatMap(\.sets)
                 .filter { !$0.isWarmUp && $0.weight > 0 }
-            guard let max = sets.map(\.weight).max() else { return nil }
+            guard let max = sets.map(estimated1RM(of:)).max() else { return nil }
             return (w.date, max)
         }
         guard perSession.count >= C.minTopExerciseHits else { return nil }
@@ -182,12 +193,43 @@ enum PersonalInsightsEngine {
         var bestInsight: (group: MuscleGroup, pct: Double, n: Int, msgWeight: Double)?
 
         for group in MuscleGroup.allCases where group != .cardio && group != .other {
-            // Sessions that trained this group
+            // Sessions that trained this group. We restrict to the
+            // user's MOST-FREQUENT exercise within the group so we
+            // compare like-for-like across sessions — the previous
+            // shape took the max across *every* exercise in the
+            // category, mixing 200 kg squat top sets with 250 kg
+            // leg-press top sets and confusing "stronger after rest"
+            // with "used a different exercise this session." Falling
+            // back to nil when no dominant exercise meets the minimum
+            // hit count skips the muscle entirely rather than
+            // surfacing a noisy comparison.
+            let groupTopName = topExerciseName(
+                in: finished.filter { w in
+                    w.exercises.contains { $0.category == group }
+                },
+                minHits: 3
+            )
             var sessionsForGroup: [(date: Date, topWeight: Double)] = []
             for w in finished {
-                let exercises = w.exercises.filter { $0.category == group }
-                let sets = exercises.flatMap(\.sets).filter { !$0.isWarmUp && $0.weight > 0 }
-                guard let max = sets.map(\.weight).max() else { continue }
+                let sets = w.exercises
+                    .filter { ex in
+                        // Prefer the dominant exercise when we have
+                        // one; only fall back to "any exercise in
+                        // this group" for muscles where no single
+                        // movement dominates (the floor is 3 hits, so
+                        // sparse data flows through this fallback).
+                        if let groupTopName {
+                            return ex.name.lowercased() == groupTopName
+                        }
+                        return ex.category == group
+                    }
+                    .flatMap(\.sets)
+                    .filter { !$0.isWarmUp && $0.weight > 0 }
+                // Estimated 1RM, same rationale as the other strength
+                // insights: 100kg×3 and 90kg×10 are different stimuli;
+                // e1RM normalises so a rep-scheme change between
+                // sessions doesn't masquerade as a strength change.
+                guard let max = sets.map(estimated1RM(of:)).max() else { continue }
                 sessionsForGroup.append((w.date, max))
             }
             guard sessionsForGroup.count >= 4 else { continue }
@@ -440,7 +482,12 @@ enum PersonalInsightsEngine {
                 .filter { $0.name.lowercased() == topName }
                 .flatMap(\.sets)
                 .filter { !$0.isWarmUp && $0.weight > 0 }
-            guard let m = sets.map(\.weight).max() else { return nil }
+            // Estimated 1RM (same reason as sleepVsTopExercise above):
+            // raw top weight confused different rep schemes for the
+            // same exercise. Comparing e1RM normalises strength
+            // expression so the bodyweight correlation is the only
+            // independent variable left.
+            guard let m = sets.map(estimated1RM(of:)).max() else { return nil }
             return (w.date, m)
         }
 
@@ -510,11 +557,17 @@ enum PersonalInsightsEngine {
         var evening: [Double] = []     // 17+
         for w in workouts {
             let hour = Calendar.current.component(.hour, from: w.startTime ?? w.date)
+            // Estimated 1RM (Epley) — same rep-scheme normalisation as
+            // sleepVsTopExercise / bodyWeightVsStrength. The user
+            // might do heavy triples in the morning and 10-rep sets in
+            // the evening; raw top weight would read morning as
+            // "better" purely by load, hiding the actual performance
+            // difference.
             let topSet = w.exercises
                 .filter { $0.name.lowercased() == topName }
                 .flatMap(\.sets)
                 .filter { !$0.isWarmUp && $0.weight > 0 }
-                .map(\.weight).max()
+                .map(estimated1RM(of:)).max()
             guard let weight = topSet else { continue }
 
             if hour < 12 { morning.append(weight) }
@@ -667,6 +720,28 @@ enum PersonalInsightsEngine {
               counts[top, default: 0] >= minHits
         else { return nil }
         return top
+    }
+
+    /// Estimated 1RM via the Epley formula —
+    ///   `e1RM = weight × (1 + reps / divisor)`, where the divisor is
+    ///   the standard 30 (lives in `EngineConstants.Progression.epleyDivisor`).
+    ///
+    /// Used by every strength insight that aggregates "top set" across
+    /// sessions. Raw top weight read 100kg × 3 (≈ 110kg) as heavier
+    /// than 90kg × 10 (≈ 120kg) — but they're different stimuli, and
+    /// the second is a stronger expression. The v1.5 review flagged
+    /// the noise this introduced; estimated 1RM normalises across
+    /// rep ranges so the variable the insight cares about (sleep,
+    /// bodyweight, time of day) is the only independent left.
+    ///
+    /// Defensive at the boundaries: zero weight yields zero, 1-rep
+    /// sets short-circuit to the weight itself (Epley's `(1 + 1/30)`
+    /// is ~1.033 which would over-credit a true single).
+    private static func estimated1RM(of set: ExerciseSet) -> Double {
+        guard set.weight > 0 else { return 0 }
+        let reps = max(1, set.reps)
+        if reps == 1 { return set.weight }
+        return set.weight * (1.0 + Double(reps) / EngineConstants.Progression.epleyDivisor)
     }
 
     /// Bucket an arbitrary date+value sequence by start-of-day, keeping the

@@ -341,6 +341,17 @@ struct HomeDashboardView: View {
                     TopInsightCardView(insight: insight) {
                         NotificationCenter.default.post(name: .openInsightsTab, object: nil)
                     }
+                } else if shouldOfferInsightsTease {
+                    // No cached insight yet but the user has logged
+                    // enough sessions for the engine to find at least
+                    // a baseline frequency insight. Surface a tease
+                    // card here — without it, the Insights tab stays
+                    // hidden behind a navigation step new users don't
+                    // know to take (v1.5-review #13: insights too
+                    // hidden).
+                    InsightsTeaseCard {
+                        NotificationCenter.default.post(name: .openInsightsTab, object: nil)
+                    }
                 }
                 HomePlanAndMetricsRow(
                     plan: todayPlan,
@@ -362,6 +373,24 @@ struct HomeDashboardView: View {
                 )
             }
         )
+    }
+
+    /// Should we surface the "Find your first training pattern" tease
+    /// card on Home? Gated on:
+    ///   - No cached insights yet (`topInsight == nil`).
+    ///   - The user has logged at least 5 finished workouts. Below
+    ///     that, the engine wouldn't find anything to talk about and
+    ///     teasing patterns would just route the user to an empty
+    ///     state (which the Insights view handles, but it's a
+    ///     wasted tap and breaks the "Metricly noticed something"
+    ///     feeling).
+    /// The 5-workout floor matches the `trainingFrequency` insight's
+    /// own minimum, which is the most permissive insight the engine
+    /// has — anything below it is guaranteed to return empty.
+    private var shouldOfferInsightsTease: Bool {
+        guard topInsight == nil else { return false }
+        let finished = allWorkouts.lazy.filter { !$0.isTemplate && $0.endTime != nil }
+        return finished.prefix(5).count >= 5
     }
 
     /// Returns the CTA kind to show today, or nil to hide the CTA card.

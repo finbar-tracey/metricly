@@ -121,13 +121,35 @@ final class PhoneConnectivityManager: NSObject, ObservableObject {
         return context
     }
 
-    /// Push the full context via WCSession application context. Also writes
-    /// to the App Group defaults so cold-launched watch reads (before
-    /// WCSession activates) see the same state.
+    /// Push the full context via WCSession application context, and
+    /// mirror it to the iPhone's App Group defaults for the home-screen
+    /// widgets and Live Activity to read.
+    ///
+    /// **Why the mirror exists.** App Groups are NOT shared between
+    /// iPhone and Apple Watch — each device has its own UserDefaults
+    /// store under the same suite identifier. Writing here does NOT
+    /// make the watch see these values. The watch's cold-launch reads
+    /// come from the WATCH'S App Group, which is populated by the
+    /// watch's own `WatchConnectivityManager.handleExerciseDataReply`
+    /// mirroring the incoming WCSession payload to its local defaults.
+    ///
+    /// So the mirror below serves two iPhone-side readers:
+    ///   1. The widget extension (`MetriclyWidgets`), which reads
+    ///      `watch.todayPlanName` / `watch.adaptivePlanName` / etc. to
+    ///      render the home-screen complications.
+    ///   2. The watch *complication* extension on first install —
+    ///      complications can run before the watch app has activated
+    ///      WCSession, but they read their own App Group, populated by
+    ///      the watch app's prior WCSession receive.
+    ///
+    /// Phone-to-watch communication is exclusively via WCSession.
+    /// updateApplicationContext below.
     @MainActor
     func pushWatchContext() {
         let context = collectWatchContext()
-        // Mirror to shared defaults for cold-launch reads on the Watch.
+        // Mirror to the iPhone's shared defaults — widget readers + the
+        // watch complication's own cold cache (which is fed via the
+        // watch app's WCSession receive, not directly from this write).
         if let defaults = UserDefaults(suiteName: WidgetAppGroup.suiteName) {
             if let useKg    = context[WatchMessageKey.useKilograms] as? Bool {
                 defaults.set(useKg,    forKey: "watch.useKilograms")
@@ -147,7 +169,9 @@ final class PhoneConnectivityManager: NSObject, ObservableObject {
             if let restSec  = context[WatchMessageKey.restDuration] as? Int {
                 defaults.set(restSec,  forKey: "watch.restDuration")
             }
-            // Adaptive plan mirror — same cold-launch concern applies.
+            // Adaptive plan mirror — iPhone-side widgets (and the
+            // watch complication's cold cache via its own WCSession
+            // receive — not directly from this write) read these.
             if let aName = context[WatchMessageKey.adaptivePlanName] as? String {
                 defaults.set(aName, forKey: "watch.adaptivePlanName")
             }
