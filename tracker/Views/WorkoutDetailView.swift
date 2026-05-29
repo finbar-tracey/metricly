@@ -429,9 +429,27 @@ struct WorkoutDetailView: View {
             if settings.focusModeReminder && !workout.isFinished && !workout.isTemplate {
                 showFocusPrompt = true
             }
-            // Pull today's plan once when entering — banner only shows if there
-            // are adjustments and the user hasn't already trained today.
-            if let plan = TodayPlanStore.load(), !plan.alreadyTrainedToday {
+            // Pull today's plan once when entering — banner only shows
+            // when this workout is *actually* the one the plan applies
+            // to. Previously the banner attached to any unfinished
+            // workout, so opening yesterday's abandoned session saw
+            // today's adaptive advice land on the wrong workout.
+            //
+            // Four gates:
+            //   1. The plan exists and the user hasn't already trained
+            //      today (already-trained → no edits to make).
+            //   2. The workout is dated today (no retroactive edits to
+            //      historical sessions).
+            //   3. The workout's name matches the plan's recommendation
+            //      (case-insensitive) — applying "Push Day" adjustments
+            //      to a "Legs" workout would actively trash the user's
+            //      planned legs session.
+            //   4. The plan isn't a rest day (nothing to adjust).
+            if let plan = TodayPlanStore.load(),
+               !plan.alreadyTrainedToday,
+               Calendar.current.isDateInToday(workout.date),
+               workout.name.localizedCaseInsensitiveCompare(plan.recommendedName) == .orderedSame,
+               plan.intensity != .rest {
                 planAdjustments = plan
             }
         }

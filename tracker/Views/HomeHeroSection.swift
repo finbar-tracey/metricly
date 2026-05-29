@@ -14,6 +14,18 @@ struct HomeHeroSection: View {
     let healthKitEnabled: Bool
     let healthDataLoaded: Bool
     let recovery: RecoveryResult
+    /// Engine-recommended plan for today. When the adaptive plan has a
+    /// usable recommendation (intensity ≠ rest, name populated), the
+    /// hero's suggestion chip reads from it instead of
+    /// `recovery.suggestedWorkoutType`. Two reasons: (1) the adaptive
+    /// card right below the hero displays the same plan, so reading
+    /// from two different sources causes the hero to say "Train Legs"
+    /// while the card says "Pull Day · Light"; (2) the engine factors
+    /// schedule, history, and compliance — the recovery-only suggestion
+    /// is a strict subset. Pass `nil` while the plan is still
+    /// computing on cold launch; the chip falls back to the
+    /// recovery-only suggestion in that case.
+    let todayPlan: TodayPlan?
     let hrv: Double?
     let currentStreak: Int
     let allWorkouts: [Workout]
@@ -95,7 +107,33 @@ struct HomeHeroSection: View {
     @ViewBuilder
     private var suggestionChip: some View {
         let score = recovery.readinessScore
-        if score >= 0.50 {
+
+        // Source-of-truth: the adaptive plan, when available. The
+        // recovery-only fallback (`recovery.suggestedWorkoutType`) is
+        // used only when the adaptive engine hasn't computed yet (cold
+        // launch) or has nothing actionable to say.
+        if let plan = todayPlan,
+           plan.intensity != .rest,
+           !plan.recommendedName.isEmpty,
+           plan.recommendedName != "—" {
+            Button(action: onStartWorkout) {
+                chipContent(icon: "bolt.fill",
+                            label: "Today: \(plan.recommendedName)")
+            }
+            .buttonStyle(.pressableCard)
+        } else if todayPlan?.intensity == .rest {
+            // Engine has actually said "rest today" — surface that
+            // directly instead of falling through to the recovery-only
+            // threshold below (which can disagree if the engine
+            // weighted compliance / schedule against the score alone).
+            NavigationLink { MuscleRecoveryView() } label: {
+                chipContent(icon: "moon.fill", label: "Rest day recommended")
+            }
+            .buttonStyle(.pressableCard)
+        } else if score >= 0.50 {
+            // Pre-plan cold-launch fallback: keep showing *something*
+            // useful rather than a blank hero. Matches the previous
+            // "Great day to train X" behaviour.
             Button(action: onStartWorkout) {
                 chipContent(
                     icon: "bolt.fill",

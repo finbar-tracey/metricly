@@ -85,14 +85,25 @@ enum TodayPlanApply {
     /// Perform the changes from `preview` on `workout`. Caller is
     /// responsible for saving the context afterwards (so a single
     /// save batches well with other edits).
+    ///
+    /// Note: we remove from the parent SwiftData `@Relationship` array
+    /// *before* `context.delete(...)`. Just calling `delete` leaves the
+    /// stale reference in `workout.exercises` (and `exercise.sets`)
+    /// until the view tears down and re-fetches, which surfaces as
+    /// "I applied adjustments but the exercise still appears until I
+    /// close and re-open the workout." Removing from the array first
+    /// gives the @Query-backed views an immediately consistent view of
+    /// the workout while the persistence layer catches up.
     @discardableResult
     static func apply(plan: TodayPlan, to workout: Workout, in context: ModelContext) -> Preview {
         let preview = preview(plan: plan, on: workout)
         for ex in preview.exercisesToRemove {
+            workout.exercises.removeAll { $0.persistentModelID == ex.persistentModelID }
             context.delete(ex)
         }
         for ex in preview.exercisesToTrim {
             if let blank = trimCandidate(in: ex) {
+                ex.sets.removeAll { $0.persistentModelID == blank.persistentModelID }
                 context.delete(blank)
             }
         }

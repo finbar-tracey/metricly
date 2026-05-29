@@ -314,6 +314,14 @@ struct HomeDashboardView: View {
                     healthKitEnabled: healthKitEnabled,
                     healthDataLoaded: healthDataLoaded,
                     recovery: recoveryResult,
+                    // Pass the adaptive plan so the hero's suggestion
+                    // chip reads from the same source as the adaptive
+                    // card below it. Empty/placeholder plans get
+                    // ignored by the hero (`recommendedName == "—"`),
+                    // so passing the in-memory @State value here is
+                    // safe even before recompute completes on cold
+                    // launch.
+                    todayPlan: todayPlan,
                     hrv: hrv,
                     currentStreak: currentStreak,
                     allWorkouts: allWorkouts,
@@ -510,6 +518,21 @@ struct HomeDashboardView: View {
                $0.name.localizedCaseInsensitiveCompare(planName) == .orderedSame
            }) {
             workout.copyExercises(from: template.exercises, into: modelContext)
+        }
+
+        // Actually apply the adaptive plan. Previously this method
+        // only copied the template — the accessibility label
+        // promised "with today's plan applied automatically" but the
+        // call was missing, so go-easy/avoid-group pruning and
+        // light-day trailing-set trimming never happened from Quick
+        // Start. Only run when we actually used the adaptive
+        // recommendation (not the schedule fallback), and only when
+        // we copied a template the plan can prune; an empty workout
+        // has nothing to apply against.
+        if adaptive != nil,
+           !workout.exercises.isEmpty,
+           todayPlan.intensity != .rest {
+            TodayPlanApply.apply(plan: todayPlan, to: workout, in: modelContext)
         }
 
         modelContext.saveOrLog()

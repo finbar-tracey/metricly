@@ -241,6 +241,121 @@ struct GetTodayWorkoutIntent: AppIntent {
     }
 }
 
+// MARK: - Start Today's Workout Intent
+//
+// Sibling to `StartWorkoutIntent` (which creates a generic blank
+// workout). This one is the "the user actually wants to *do* today's
+// adaptive recommendation" path: it builds the same TodayPlan the
+// home dashboard does, finds the matching template, copies its
+// exercises into a fresh workout, applies the safe plan adjustments
+// (avoid-group pruning, light-day trailing-set trim), publishes the
+// active state to the watch, and opens the app.
+//
+// Two intents instead of a single one because the value proposition
+// differs: "Start a workout" is a low-friction generic shortcut;
+// "Start today's Metricly workout" is the high-conviction Action
+// Button / Siri default that surfaces the adaptive feature without
+// the user having to open the app first.
+
+struct StartTodayWorkoutIntent: AppIntent {
+    static var title: LocalizedStringResource = "Start Today's Workout"
+    static var description: IntentDescription = "Starts today's adaptive workout — the engine's recommendation with plan adjustments applied."
+    static var openAppWhenRun: Bool = true
+
+    @MainActor
+    func perform() async throws -> some IntentResult & ProvidesDialog {
+        let container: ModelContainer
+        do {
+            container = try MetriclySchema.makeSharedContainer()
+        } catch {
+            return .result(dialog: "I couldn't start today's workout right now — try opening Metricly directly.")
+        }
+        let context = container.mainContext
+
+        // Already trained today? Don't start a duplicate; surface the
+        // existing workout's name instead so Siri's response makes sense.
+        let startOfDay = Calendar.current.startOfDay(for: .now)
+        let allWorkouts = (try? context.fetch(FetchDescriptor<Workout>())) ?? []
+        if let existing = allWorkouts.first(where: {
+            !$0.isTemplate && $0.date >= startOfDay
+        }) {
+            return .result(dialog: "You've already started \"\(existing.name)\" today.")
+        }
+
+        // Build the same plan the home dashboard does. Same caveat as
+        // GetTodayWorkoutIntent: Siri intents can't reach HealthKit
+        // during execution, so we pass empty HealthSignals and accept
+        // the engine's confidence downgrade.
+        let settings = try? context.fetch(FetchDescriptor<UserSettings>()).first
+        let weekday = Calendar.current.component(.weekday, from: .now)
+        let scheduledName = settings?.weeklyPlan[weekday] ?? ""
+        let twoWeeksAgo = Calendar.current.date(byAdding: .day, value: -14, to: .now) ?? .distantPast
+        let recentWorkouts = allWorkouts.filter { !$0.isTemplate && $0.endTime != nil && $0.date >= twoWeeksAgo }
+        let cardio = (try? context.fetch(FetchDescriptor<CardioSession>())) ?? []
+        let recovery = RecoveryEngine.evaluate(
+            workouts: allWorkouts.filter { !$0.isTemplate && $0.endTime != nil },
+            health: HealthSignals(),
+            cardioSessions: cardio
+        )
+        let hasAnyHistory = allWorkouts.contains { !$0.isTemplate && $0.endTime != nil }
+        let plan = TodayPlanEngine.generate(
+            scheduledName: scheduledName.isEmpty ? nil : scheduledName,
+            recovery: recovery,
+            health: HealthSignals(),
+            recentWorkouts: recentWorkouts,
+            alreadyTrainedToday: false,
+            hasAnyHistory: hasAnyHistory
+        )
+
+        // No history → no recommendation worth starting; nudge the
+        // user to log a baseline session first.
+        if !hasAnyHistory {
+            return .result(dialog: "Log your first workout in Metricly so I can start recommending what to train.")
+        }
+
+        // The engine says rest. Don't kick off a session — surface why
+        // and let the user decide whether to long-press past it from
+        // the home Quick Start path.
+        if plan.intensity == .rest {
+            return .result(dialog: "Metricly recommends rest today. Open the app if you want to override.")
+        }
+
+        // Find a template matching the plan's recommended name (case-
+        // insensitive — matches the home dashboard's Quick Start path).
+        let templates = allWorkouts.filter { $0.isTemplate }
+        let template = templates.first {
+            $0.name.localizedCaseInsensitiveCompare(plan.recommendedName) == .orderedSame
+        }
+
+        let workout = Workout(name: plan.recommendedName, date: .now)
+        context.insert(workout)
+        if let template {
+            workout.copyExercises(from: template.exercises, into: context)
+        }
+        // Apply the plan: drop avoid-group exercises (no logged sets),
+        // trim the trailing blank set on light days. Same call the home
+        // Quick Start uses; same safety rules.
+        if !workout.exercises.isEmpty {
+            TodayPlanApply.apply(plan: plan, to: workout, in: context)
+        }
+        do {
+            try context.save()
+        } catch {
+            return .result(dialog: "I created the workout but couldn't save it — open Metricly to retry.")
+        }
+
+        // Publish to the watch so the complication and any face widgets
+        // flip to "In Progress · <name>" without waiting for the next
+        // scheduled timeline reload.
+        PhoneConnectivityManager.shared.publishActiveWorkout(
+            name: workout.name,
+            startedAt: workout.date
+        )
+
+        return .result(dialog: "Started \(plan.recommendedName). Opening Metricly.")
+    }
+}
+
 // MARK: - App Shortcuts Provider
 
 struct MetriclyShortcutsProvider: AppShortcutsProvider {
@@ -275,6 +390,17 @@ struct MetriclyShortcutsProvider: AppShortcutsProvider {
             ],
             shortTitle: "Today's Workout",
             systemImageName: "calendar"
+        )
+        AppShortcut(
+            intent: StartTodayWorkoutIntent(),
+            phrases: [
+                "Start today's workout in \(.applicationName)",
+                "Start my workout in \(.applicationName)",
+                "Begin today's workout with \(.applicationName)",
+                "Start the recommended workout in \(.applicationName)"
+            ],
+            shortTitle: "Start Today's Workout",
+            systemImageName: "play.fill"
         )
         AppShortcut(
             intent: GetWorkoutStatsIntent(),
