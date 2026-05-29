@@ -19,6 +19,11 @@ struct SettingsView: View {
     @State private var showImportResult = false
     @State private var showImportError = false
     @State private var importErrorMessage = ""
+    /// Strong/Hevy imports first surface a preview sheet so the user
+    /// can confirm what's about to land before the rows go into
+    /// SwiftData. Nil → no preview, no sheet. Set by the
+    /// `.fileImporter` callback below; cleared on import-or-cancel.
+    @State private var pendingImportPreview: ImportHelper.ImportPreview?
     // Cardio / PDF export
     @Query(sort: \CardioSession.date, order: .reverse) private var cardioSessions: [CardioSession]
     @State private var showingCardioExport = false
@@ -399,9 +404,18 @@ struct SettingsView: View {
             case .success(let urls):
                 guard let url = urls.first else { return }
                 do {
-                    let count = try ImportHelper.importCSV(from: url, into: modelContext)
-                    importResult = "Successfully imported \(count) workout\(count == 1 ? "" : "s")."
-                    showImportResult = true
+                    // Two-phase: plan() detects the format and parses
+                    // Strong/Hevy into a preview structure; Metricly's
+                    // own format is fast + self-explanatory so it
+                    // commits straight away.
+                    switch try ImportHelper.plan(from: url) {
+                    case .preview(let preview):
+                        pendingImportPreview = preview
+                    case .metriclyDirect:
+                        let count = try ImportHelper.importCSV(from: url, into: modelContext)
+                        importResult = "Successfully imported \(count) workout\(count == 1 ? "" : "s")."
+                        showImportResult = true
+                    }
                 } catch {
                     importErrorMessage = error.localizedDescription
                     showImportError = true
@@ -410,6 +424,20 @@ struct SettingsView: View {
                 importErrorMessage = error.localizedDescription
                 showImportError = true
             }
+        }
+        .sheet(item: $pendingImportPreview) { preview in
+            ImportPreviewSheet(
+                preview: preview,
+                onImport: {
+                    let count = ImportHelper.commitPreview(preview, into: modelContext)
+                    pendingImportPreview = nil
+                    importResult = "Successfully imported \(count) workout\(count == 1 ? "" : "s")."
+                    showImportResult = true
+                },
+                onCancel: {
+                    pendingImportPreview = nil
+                }
+            )
         }
         .alert("Import Successful", isPresented: $showImportResult) {
             Button("OK", role: .cancel) {}

@@ -17,6 +17,96 @@ struct ImportHelper {
         }
     }
 
+    /// A pre-parse preview of a Strong/Hevy CSV used by the Settings
+    /// flow to show the user a "We found N workouts, K exercises"
+    /// confirmation sheet before committing. Metricly's own format
+    /// imports directly (no preview) because users importing their
+    /// own export already know what's in it.
+    struct ImportPreview: Identifiable {
+        /// SwiftUI's `sheet(item:)` needs Identifiable. The id is a
+        /// stable per-instance UUID — uniqueness is per-sheet-
+        /// presentation, not per-content, so a fresh UUID per init
+        /// is correct.
+        let id = UUID()
+        let format: ImportFormat
+        let workouts: [ParsedWorkout]
+
+        var workoutCount: Int { workouts.count }
+        var exerciseCount: Int {
+            Set(workouts.flatMap { $0.exercises.map { $0.name.lowercased() } }).count
+        }
+        var totalSetCount: Int {
+            workouts.reduce(0) { $0 + $1.exercises.reduce(0) { $0 + $1.sets.count } }
+        }
+        /// Earliest workout date in the file, for "history since…" copy.
+        var earliestDate: Date? {
+            workouts.map(\.startDate).min()
+        }
+        var sampleWorkout: ParsedWorkout? { workouts.first }
+    }
+
+    /// One of:
+    ///  - `.preview(ImportPreview)` — Strong/Hevy file, caller should
+    ///     show a confirmation sheet and call
+    ///     `commitPreview(_:into:)` on user confirm.
+    ///  - `.metriclyDirect(rowsToImport: Int)` — Metricly's own
+    ///     format; the import is fast and the user already knows
+    ///     what's in their own export, so commit directly with the
+    ///     existing path.
+    ///  - throws `ImportError` for unknown/empty/malformed input.
+    enum ImportPlan {
+        case preview(ImportPreview)
+        case metriclyDirect      // caller falls through to importCSV
+    }
+
+    /// Inspect a CSV at `url` and decide how to import it. Pure
+    /// (no model-context side effects) so the Settings UI can decide
+    /// what to present before committing.
+    static func plan(from url: URL) throws -> ImportPlan {
+        let content = try readContents(of: url)
+        let rows = parseCSVRows(content)
+        guard rows.count > 1 else { throw ImportError.noData }
+        let header = rows[0]
+        let dataRows = Array(rows.dropFirst())
+
+        switch ImportFormat.detect(header: header) {
+        case .strong:
+            let workouts = StrongParser.parseRows(dataRows)
+            guard !workouts.isEmpty else { throw ImportError.noData }
+            return .preview(ImportPreview(format: .strong, workouts: workouts))
+
+        case .hevy:
+            let workouts = HevyParser.parseRows(header: header, rows: dataRows)
+            guard !workouts.isEmpty else { throw ImportError.noData }
+            return .preview(ImportPreview(format: .hevy, workouts: workouts))
+
+        case .metricly:
+            return .metriclyDirect
+
+        case .none:
+            throw ImportError.invalidFormat
+        }
+    }
+
+    /// Commit a previously-planned `ImportPreview` into a context.
+    /// Returns the number of workouts inserted.
+    @discardableResult
+    static func commitPreview(_ preview: ImportPreview,
+                              into context: ModelContext) -> Int {
+        insertParsedWorkouts(preview.workouts, into: context)
+    }
+
+    /// Shared file-read with security-scoped-resource handling. Used
+    /// by both the preview-plan path and the direct-import path so
+    /// they can't drift on how they reach the user's chosen file.
+    private static func readContents(of url: URL) throws -> String {
+        if url.startAccessingSecurityScopedResource() {
+            defer { url.stopAccessingSecurityScopedResource() }
+            return try String(contentsOf: url, encoding: .utf8)
+        }
+        return try String(contentsOf: url, encoding: .utf8)
+    }
+
     static func importCSV(from url: URL, into context: ModelContext) throws -> Int {
         let content: String
         if url.startAccessingSecurityScopedResource() {
