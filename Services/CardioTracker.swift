@@ -199,7 +199,8 @@ final class CardioTracker: NSObject {
             elevationGainMeters: elevationGainMeters,
             splits:             splits,
             locations:          locations,
-            avgHeartRate:       avgHR
+            avgHeartRate:       avgHR,
+            sessionStart:       sessionStart ?? .now
         )
     }
 
@@ -487,4 +488,9 @@ struct SessionResult {
     let splits: [CardioSplit]
     let locations: [CLLocation]
     let avgHeartRate: Double?
+    /// Wall-clock start time of the session. Threaded through so
+    /// `CardioActiveView` can populate `CardioSession.startDate`
+    /// correctly instead of falling back to `.now` (which is the finish
+    /// time and was the root of the v1.5-review date-semantic bug).
+    let sessionStart: Date
 }

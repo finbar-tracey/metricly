@@ -140,6 +140,12 @@ struct CardioRoutePoint: Codable, Sendable {
 @Model
 final class CardioSession {
     var id: UUID        = UUID()
+    /// Legacy single-date field. Historically meant different things in
+    /// different writers — Watch and iPhone recorders stored finish time,
+    /// Strava import stored start time. New writers populate `startDate`
+    /// and `endDate` explicitly (below) and mirror `date` to `startDate`
+    /// for backwards compatibility with any reader still touching this
+    /// field directly. Always read through `start` / `end` instead.
     var date: Date      = Date()
     var title: String   = ""
     var cardioType: String = CardioType.outdoorRun.rawValue
@@ -162,15 +168,35 @@ final class CardioSession {
     /// existing rows hydrate with nil.
     var stravaActivityID: Int? = nil
 
+    /// Wall-clock start of the session. Lightweight migration (additive
+    /// Optional) — legacy rows hydrate with nil and fall back to `date`
+    /// via the `start` computed accessor. Every new write populates this.
+    var startDate: Date? = nil
+
+    /// Wall-clock end of the session. Same migration story as `startDate`;
+    /// the `end` computed accessor falls back to `start + durationSeconds`
+    /// for legacy rows.
+    var endDate: Date? = nil
+
     init(
         date: Date = .now,
         title: String = "",
         type: CardioType = .outdoorRun,
         durationSeconds: Double = 0,
         distanceMeters: Double = 0,
-        elevationGainMeters: Double = 0
+        elevationGainMeters: Double = 0,
+        startDate: Date? = nil,
+        endDate: Date? = nil
     ) {
-        self.date               = date
+        // For new writers: `date` is treated as the session start. New
+        // call sites pass `startDate` explicitly; everything else gets
+        // both written off `date` so the legacy field and the new
+        // structured fields stay in lock-step.
+        let resolvedStart = startDate ?? date
+        let resolvedEnd   = endDate ?? resolvedStart.addingTimeInterval(durationSeconds)
+        self.date               = resolvedStart
+        self.startDate          = resolvedStart
+        self.endDate            = resolvedEnd
         self.title              = title.isEmpty ? type.shortName : title
         self.cardioType         = type.rawValue
         self.durationSeconds    = durationSeconds
@@ -183,6 +209,20 @@ final class CardioSession {
     var type: CardioType {
         CardioType(rawValue: cardioType) ?? .outdoorRun
     }
+
+    /// Canonical session start. Prefers the explicit `startDate` field
+    /// (populated by every new writer); falls back to the legacy `date`
+    /// for rows written before the start/end split. Callers should use
+    /// this instead of `.date` for HealthKit `beginCollection(at:)`,
+    /// Strava upload's `start_date_local`, and any UI showing "when did
+    /// this happen".
+    var start: Date { startDate ?? date }
+
+    /// Canonical session end. Prefers `endDate`; falls back to
+    /// `start + durationSeconds` so legacy rows still produce a sane
+    /// end time for HealthKit's `endCollection(at:)`. Use this for
+    /// HealthKit sample windows and "finished at" UI.
+    var end: Date { endDate ?? start.addingTimeInterval(durationSeconds) }
 
     var routePoints: [CardioRoutePoint] {
         get { (try? JSONDecoder().decode([CardioRoutePoint].self, from: routeData ?? Data())) ?? [] }

@@ -9,10 +9,29 @@ import SwiftData
 /// reading from a different local file than the main app.
 ///
 /// Adding a new `@Model` type? Add it to the latest schema version
-/// (currently `MetriclySchemaV2`). For a purely-additive change (a new
+/// (currently `MetriclySchemaV3`). For a purely-additive change (a new
 /// @Model class, or a new optional field on an existing one) SwiftData
 /// can migrate automatically — append a `.lightweight` stage to the
 /// migration plan and you're done.
+///
+/// **Versioned-schema policy (important).** Each `MetriclySchemaVN`
+/// below references the *live* model classes (`Workout.self`,
+/// `CardioSession.self`, etc.) rather than a frozen per-version
+/// snapshot. That's deliberate and works fine for the changes we've
+/// shipped so far — every one has been an additive optional field or a
+/// new model. Lightweight migration handles those by inferring the
+/// diff from the type system, and the live class is good enough.
+///
+/// For any **non-additive** change (rename, change a field's type,
+/// change a relationship's cascade, drop a field, narrow an optional),
+/// the live-class shortcut breaks: V1 would no longer accurately
+/// describe what V1 stores held on disk, and SwiftData's inference
+/// can't reconstruct the old shape. The fix at that point is to
+/// freeze the affected model under a per-version `models/` subfolder
+/// — e.g. `MetriclySchemaV3.Workout` — and use a `.custom` stage with
+/// explicit field copies. Don't lean on the existing migration tests
+/// as proof of safety for that future change; they cover the additive
+/// path only.
 enum MetriclySchema {
 
     /// Complete model set — keep in sync with trackerApp.init.

@@ -143,4 +143,65 @@ final class CardioMathTests: XCTestCase {
         let heavier = session.estimatedCalories(bodyWeightKg: 90)
         XCTAssertGreaterThan(heavier, lighter)
     }
+
+    // MARK: - start / end accessors (v1.5-review timestamp fix)
+    //
+    // The legacy `date` field meant different things to different
+    // writers — Watch + iPhone recorders stored finish time, Strava
+    // import stored start time. New writers populate startDate/endDate
+    // explicitly; the `start` / `end` accessors are what every reader
+    // (HealthKit save, Strava upload, UI) is supposed to use.
+
+    func testStartFallsBackToDateForLegacyRows() {
+        // Legacy session: only `date` populated; startDate/endDate nil.
+        // `start` must return `date` so old data still produces a valid
+        // HealthKit window via the accessor.
+        let legacy = CardioSession(durationSeconds: 1800)
+        let stamp = legacy.date
+        XCTAssertEqual(legacy.start, stamp,
+                       "Legacy rows: .start should equal the stored .date")
+    }
+
+    func testEndFallsBackToStartPlusDurationForLegacyRows() {
+        // Legacy session: end should be derived from start + duration
+        // so HealthKit's beginCollection / endCollection get a sane
+        // window even without an explicit endDate on disk.
+        let legacy = CardioSession(durationSeconds: 1800)
+        let expected = legacy.start.addingTimeInterval(1800)
+        XCTAssertEqual(legacy.end.timeIntervalSinceReferenceDate,
+                       expected.timeIntervalSinceReferenceDate,
+                       accuracy: 0.001)
+    }
+
+    func testInitPopulatesBothStartDateAndEndDateExplicitly() {
+        // New writers (CardioActiveView, StravaImportService, watch
+        // payload persistence) all flow through the standard init.
+        // After it runs, both fields must be populated — falling back
+        // to the legacy `date` accessor for new sessions would
+        // perpetuate the v1.5-review timestamp ambiguity.
+        let start = Date(timeIntervalSinceReferenceDate: 700_000_000)
+        let session = CardioSession(date: start, durationSeconds: 2400)
+        XCTAssertEqual(session.startDate, start)
+        XCTAssertEqual(session.endDate,
+                       start.addingTimeInterval(2400))
+        // Legacy `date` field also mirrors start, so any reader that
+        // hasn't migrated to `.start` still sees a sensible value.
+        XCTAssertEqual(session.date, start)
+    }
+
+    func testEndAccessorPrefersExplicitEndDateOverDuration() {
+        // Defensive: if a future writer ever sets endDate without
+        // exactly matching start + duration (e.g. a session that was
+        // paused — durationSeconds is "active time", end is wall-clock),
+        // the accessor should trust the explicit field.
+        let start = Date(timeIntervalSinceReferenceDate: 700_000_000)
+        let session = CardioSession(date: start, durationSeconds: 1800)
+        // Override the end to mimic a paused session: 60-min wall-clock
+        // window, 30-min active duration.
+        session.endDate = start.addingTimeInterval(3600)
+        XCTAssertEqual(session.end.timeIntervalSinceReferenceDate,
+                       start.addingTimeInterval(3600).timeIntervalSinceReferenceDate,
+                       accuracy: 0.001,
+                       "Explicit endDate must win over start+duration")
+    }
 }

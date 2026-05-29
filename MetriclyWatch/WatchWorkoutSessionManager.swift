@@ -39,7 +39,12 @@ final class WatchWorkoutSessionManager: NSObject, ObservableObject {
     private var session  : HKWorkoutSession?
     private var builder  : HKLiveWorkoutBuilder?
     private var timer    : Timer?
-    private var startDate: Date?
+    /// Wall-clock start of the current session, or `nil` when idle.
+    /// Exposed (private(set)) so `WatchCardioView.finishCardio` can
+    /// stamp the `WatchCardioPayload.date` as the actual start time
+    /// instead of `.now` — the latter is the finish time and was the
+    /// root of the v1.5-review timestamp bug on the iPhone side.
+    private(set) var startDate: Date?
 
     // Config captured for the current session
     private(set) var activityType : HKWorkoutActivityType = .traditionalStrengthTraining

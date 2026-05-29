@@ -436,8 +436,12 @@ final class HealthKitManager {
     /// Save a cardio session to Apple Health with distance and active calories.
     func saveCardioSession(_ session: CardioSession) async throws {
         guard isAvailable else { return }
-        let end   = session.date
-        let start = end.addingTimeInterval(-session.durationSeconds)
+        // Use the canonical `start`/`end` accessors instead of the legacy
+        // `date` field. Old writers stored finish time in `date`; new
+        // writers populate `startDate`/`endDate` explicitly, and the
+        // accessors fall back safely for either shape.
+        let start = session.start
+        let end   = session.end
         guard session.durationSeconds > 0 else { return }
 
         let config = HKWorkoutConfiguration()

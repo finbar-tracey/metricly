@@ -30,14 +30,27 @@ struct trackerApp: App {
         // the project — main app + App Intents — uses the same model
         // list. Adding a new @Model? Update MetriclySchema.allModels.
 
+        // Always pass `MetriclyMigrationPlan` so SwiftData walks the
+        // V1 → V2 → V3 stages on first launch after an upgrade. Without
+        // this, a user upgrading from a pre-V3 store either crashes or
+        // gets a default-inferred migration that doesn't match the plan
+        // (App Intents were already correctly threading the plan via
+        // `MetriclySchema.makeSharedContainer()`; the main app was not).
         let container: ModelContainer
         do {
             let cloudConfig = ModelConfiguration(cloudKitDatabase: .automatic)
-            container = try ModelContainer(for: MetriclySchema.schema, configurations: cloudConfig)
+            container = try ModelContainer(
+                for: MetriclySchema.schema,
+                migrationPlan: MetriclyMigrationPlan.self,
+                configurations: cloudConfig
+            )
         } catch {
             print("⚠️ CloudKit container failed: \(error). Trying local store.")
             do {
-                container = try ModelContainer(for: MetriclySchema.schema)
+                container = try ModelContainer(
+                    for: MetriclySchema.schema,
+                    migrationPlan: MetriclyMigrationPlan.self
+                )
             } catch {
                 // Local store can't open. Previously this path silently
                 // deleted default.store / -shm / -wal — catastrophic for
@@ -48,7 +61,10 @@ struct trackerApp: App {
                 print("⚠️ Local store corrupted, quarantining: \(error)")
                 Self.quarantineCorruptedStore()
                 do {
-                    container = try ModelContainer(for: MetriclySchema.schema)
+                    container = try ModelContainer(
+                        for: MetriclySchema.schema,
+                        migrationPlan: MetriclyMigrationPlan.self
+                    )
                 } catch {
                     fatalError("Cannot create any SwiftData container: \(error)")
                 }

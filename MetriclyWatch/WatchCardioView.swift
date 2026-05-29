@@ -258,9 +258,14 @@ struct WatchCardioActiveView: View {
     // MARK: - Finish
 
     private func finishCardio() {
+        // Send the actual session start as the payload's date — the
+        // phone's `persistCardio` populates `CardioSession` from this
+        // and the iPhone treats `date` as the session start. Falling
+        // back to `.now` here would stamp the finish time onto the
+        // session and re-introduce the v1.5-review timestamp bug.
         let payload = WatchCardioPayload(
             id:              UUID(),
-            date:            Date.now,
+            date:            sessionManager.startDate ?? Date.now,
             activityTypeRaw: cardioType.payloadRaw,
             durationSeconds: Double(sessionManager.elapsedSeconds),
             distanceMeters:  sessionManager.distanceMeters,

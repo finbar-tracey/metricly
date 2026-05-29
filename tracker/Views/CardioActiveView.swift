@@ -565,9 +565,14 @@ struct CardioActiveView: View {
         // Use latest logged body weight; fall back to 70 kg if none recorded yet
         let bodyWeightKg = bodyWeightEntries.first?.weight ?? 70.0
 
-        // Build CardioSession and persist
+        // Build CardioSession and persist. Pass the actual session start
+        // (from `CardioTracker.sessionStart`) instead of `.now` — the
+        // legacy `date: .now` populated the field with finish time and
+        // was the root of the v1.5-review timestamp bug (Strava upload
+        // sent finish time as start, HealthKit shifted everything back
+        // by duration). The new init writes start/end explicitly.
         let session = CardioSession(
-            date: .now,
+            date: result.sessionStart,
             title: cardioType.shortName,
             type: cardioType,
             durationSeconds: result.durationSeconds,

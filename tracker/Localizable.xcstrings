@@ -702,6 +702,12 @@
     "Advance to Week %lld" : {
 
     },
+    "After ~90 days the Insights tab starts naming patterns the engine spotted in your data — sleep × performance, body weight × strength, and more." : {
+      "comment" : "Onboarding card subtitle — patterns"
+    },
+    "After each workout, mark any muscles that are sore. Your input wins over the model when they disagree." : {
+      "comment" : "Onboarding card subtitle — soreness self-report"
+    },
     "Aim for a top-end set on a key lift" : {
       "comment" : "Adjustment shown on a hard day"
     },
@@ -715,7 +721,7 @@
 
     },
     "All muscles are still recovering. Consider a rest day or light cardio." : {
-
+      "comment" : "Shown under Suggested Today when every muscle group is below the ready threshold"
     },
     "All Sessions" : {
 
@@ -766,10 +772,10 @@
 
     },
     "Auto-share completed cardio sessions." : {
-
+      "comment" : "Settings row subtitle under Connect to Strava"
     },
     "Auto-share new cardio" : {
-
+      "comment" : "Settings row title for the auto-share-to-Strava toggle"
     },
     "Auto-start Rest Timer" : {
 
@@ -796,13 +802,13 @@
 
     },
     "Based on recent workouts and training volume" : {
-
+      "comment" : "Hero subtitle shown when HealthKit data is not yet loaded"
     },
     "Based on the American Council on Exercise (ACE) body fat categories." : {
 
     },
     "Based on workouts, sleep, heart rate & HRV" : {
-
+      "comment" : "Hero subtitle shown when HealthKit data is loaded"
     },
     "Based on your recovery and training history" : {
 
@@ -855,6 +861,9 @@
     "Brzycki: weight × 36/(37 − reps). Most accurate for lower rep sets." : {
 
     },
+    "By Muscle Group" : {
+      "comment" : "Section header above the per-muscle freshness breakdown"
+    },
     "Caffeine" : {
 
     },
@@ -871,7 +880,7 @@
 
     },
     "Cancel" : {
-
+      "comment" : "Cancel button on the Strava disconnect dialog\nToolbar button to dismiss the finish-workout sheet"
     },
     "Cardio" : {
 
@@ -950,13 +959,13 @@
 
     },
     "Connect to Strava" : {
-
+      "comment" : "Settings row title for the OAuth connect button"
     },
     "Connect your Strava account to share completed cardio sessions automatically." : {
-
+      "comment" : "Footer text inviting the user to connect Strava"
     },
     "Connected" : {
-
+      "comment" : "Status label shown when Strava is currently linked"
     },
     "consecutive days at %@+ steps" : {
 
@@ -996,6 +1005,9 @@
     },
     "Creatine: %@g / day" : {
 
+    },
+    "Crushed it!" : {
+      "comment" : "5-star rating label on the post-workout self-rating row"
     },
     "Current Streak" : {
 
@@ -1045,6 +1057,9 @@
     "Days" : {
 
     },
+    "Decent" : {
+      "comment" : "3-star rating label on the post-workout self-rating row"
+    },
     "Default Rest: %llds" : {
 
     },
@@ -1091,13 +1106,13 @@
 
     },
     "Disconnect" : {
-
+      "comment" : "Destructive confirm button to unlink Strava"
     },
     "Disconnect from Strava" : {
-
+      "comment" : "Destructive settings button to unlink the Strava account"
     },
     "Disconnect from Strava?" : {
-
+      "comment" : "Confirmation dialog title shown before unlinking Strava"
     },
     "Dismiss" : {
 
@@ -1112,7 +1127,7 @@
 
     },
     "Done" : {
-
+      "comment" : "Toolbar button that commits the workout summary"
     },
     "DONE" : {
 
@@ -1130,7 +1145,7 @@
 
     },
     "Duration" : {
-
+      "comment" : "Stat label under workout duration"
     },
     "Duration: %lld weeks" : {
 
@@ -1219,7 +1234,7 @@
 
     },
     "Exercises" : {
-
+      "comment" : "Stat label under the exercise count"
     },
     "Exercises (%lld)" : {
 
@@ -1235,6 +1250,9 @@
     },
     "Export Workouts as PDF" : {
 
+    },
+    "External Activity" : {
+      "comment" : "Section header above the list of workouts pulled from HealthKit / Strava"
     },
     "FAT" : {
 
@@ -1255,13 +1273,24 @@
 
     },
     "First time? If Strava asks you to sign in, finish that step, then come back here and tap Connect again." : {
-
+      "comment" : "Footer hint explaining the Strava two-step OAuth flow"
     },
     "Focus Mode Reminder" : {
 
     },
     "Focus reminder prompts you to enable a Fitness Focus when starting a workout." : {
 
+    },
+    "Followed %lld of %lld plans in the last week" : {
+      "comment" : "Subtitle showing how many recommended plans the user actually followed",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Followed %1$lld of %2$lld plans in the last week"
+          }
+        }
+      }
     },
     "Form guidance isn't available for \"%@\" yet. Guides cover the most common exercises." : {
 
@@ -1325,9 +1354,11 @@
     "grams" : {
 
     },
+    "Great" : {
+      "comment" : "4-star rating label on the post-workout self-rating row"
+    },
     "Great work!" : {
-      "comment" : "A title of a congratulatory message.",
-      "isCommentAutoGenerated" : true
+      "comment" : "Celebration headline on the finish-workout hero card"
     },
     "Group" : {
 
@@ -1346,6 +1377,9 @@
     },
     "Health Dashboard" : {
 
+    },
+    "Health Factors" : {
+      "comment" : "Section header above the HRV / RHR / Sleep traffic-light row"
     },
     "Heart Rate" : {
 
@@ -1378,7 +1412,7 @@
 
     },
     "How did it feel? Any notes..." : {
-
+      "comment" : "Placeholder text inside the workout notes field"
     },
     "How it works" : {
 
@@ -1386,8 +1420,11 @@
     "How many cardio sessions per week" : {
 
     },
+    "How sore are you?" : {
+      "comment" : "Section header above the per-muscle soreness picker"
+    },
     "How was it?" : {
-
+      "comment" : "Prompt above the star rating row on the hero card"
     },
     "How we handle your data" : {
 
@@ -1401,6 +1438,12 @@
     "HRV" : {
 
     },
+    "HRV is %lld%% below your baseline" : {
+      "comment" : "Reason shown when today's HRV is meaningfully below the rolling baseline; placeholder is a whole-number percentage"
+    },
+    "HRV is up %lld%% from baseline" : {
+      "comment" : "Reason shown when today's HRV is meaningfully above the rolling baseline; placeholder is a whole-number percentage"
+    },
     "I couldn't save that water entry just now — please try again from the app." : {
 
     },
@@ -1412,6 +1455,9 @@
     },
     "iCloud Sync" : {
 
+    },
+    "If you reliably train through suggested rest days, the engine notices and adjusts its confidence — and how loudly it suggests rest next time." : {
+      "comment" : "Onboarding card subtitle — trust calibration"
     },
     "Import" : {
 
@@ -1456,6 +1502,12 @@
     "Insights" : {
 
     },
+    "It gets smarter as you go" : {
+      "comment" : "Onboarding adaptive-coach page title"
+    },
+    "It watches whether you listen" : {
+      "comment" : "Onboarding card title — trust calibration"
+    },
     "Just the bar!" : {
 
     },
@@ -1469,7 +1521,7 @@
 
     },
     "Keep logging workouts and connecting Health data — we'll surface patterns as soon as we have enough to compare." : {
-
+      "comment" : "Empty-state subtitle explaining how more data unlocks insights"
     },
     "Key Metrics" : {
 
@@ -1606,8 +1658,11 @@
     "Long press to start a workout with today's plan applied automatically." : {
 
     },
+    "Looking for patterns" : {
+      "comment" : "VoiceOver label for the patterns loading state"
+    },
     "Looking for patterns…" : {
-
+      "comment" : "Status text while the insights engine is computing"
     },
     "Low" : {
 
@@ -1628,7 +1683,7 @@
 
     },
     "Maybe Later" : {
-
+      "comment" : "Dismiss button on the reminder-prompt alert"
     },
     "Measurements" : {
 
@@ -1679,6 +1734,18 @@
     "More" : {
 
     },
+    "Most often skipped: hard days (%lld)" : {
+      "comment" : "Footnote naming the most-ignored intensity bucket"
+    },
+    "Most often skipped: light days (%lld)" : {
+      "comment" : "Footnote naming the most-ignored intensity bucket"
+    },
+    "Most often skipped: moderate days (%lld)" : {
+      "comment" : "Footnote naming the most-ignored intensity bucket"
+    },
+    "Most often skipped: rest days (%lld)" : {
+      "comment" : "Footnote naming the most-ignored intensity bucket"
+    },
     "ms" : {
 
     },
@@ -1695,10 +1762,10 @@
 
     },
     "New best: %@" : {
-
+      "comment" : "Subtitle on a PR row; placeholder is the weight string e.g. '120 kg'"
     },
     "New cardio sessions will stop pushing to Strava. Your existing Strava data is unaffected." : {
-
+      "comment" : "Message under the Strava disconnect confirmation"
     },
     "New personal record achieved" : {
 
@@ -1857,7 +1924,7 @@
 
     },
     "Not enough data yet" : {
-
+      "comment" : "Empty-state title shown when the insights engine produced zero results"
     },
     "Not enough data yet." : {
 
@@ -1875,10 +1942,10 @@
 
     },
     "Not trained recently" : {
-
+      "comment" : "Shown in the by-muscle breakdown when the muscle hasn't been trained in the lookback window"
     },
     "Notes" : {
-
+      "comment" : "Section header above the workout notes text field"
     },
     "Nothing new on Strava to import." : {
       "comment" : "Toast when a Strava sync finds zero new and zero existing matches"
@@ -1901,6 +1968,9 @@
     "OK" : {
 
     },
+    "Okay" : {
+      "comment" : "2-star rating label on the post-workout self-rating row"
+    },
     "Once you've logged a few sessions, today's plan will adapt to your recovery." : {
       "comment" : "First-time user reason when a schedule exists"
     },
@@ -1914,7 +1984,7 @@
 
     },
     "Optional — tells the recovery engine where you actually feel it." : {
-
+      "comment" : "Caption under the soreness section explaining it's optional"
     },
     "Optional notes" : {
 
@@ -1926,7 +1996,18 @@
 
     },
     "Overall Readiness" : {
-
+      "comment" : "Hero label above the recovery readiness percentage"
+    },
+    "Overall readiness %lld percent. %@" : {
+      "comment" : "VoiceOver label for the recovery hero card combining the numeric score and the readiness sentence",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Overall readiness %1$lld percent. %2$@"
+          }
+        }
+      }
     },
     "Overrides your default for %@ only. The Watch's rest timer respects this value too." : {
 
@@ -1947,7 +2028,10 @@
 
     },
     "Patterns improve as you log more data. Most insights need 90+ days and 8+ matching sessions before they appear." : {
-
+      "comment" : "Footer explaining the data threshold for insights"
+    },
+    "Patterns surface over time" : {
+      "comment" : "Onboarding card title — patterns"
     },
     "PEAK" : {
 
@@ -1975,13 +2059,13 @@
 
     },
     "Personal patterns" : {
-
+      "comment" : "Title of the Insights tab header card"
     },
     "Personal record" : {
 
     },
     "Personal Records" : {
-
+      "comment" : "Section header above the PRs achieved in this session"
     },
     "Personalize your experience. You can change these anytime in Settings." : {
 
@@ -1997,6 +2081,9 @@
     },
     "Pick Two Workouts" : {
 
+    },
+    "Plan compliance" : {
+      "comment" : "Card title for the plan-compliance summary on the Patterns tab"
     },
     "Plate Calculator" : {
 
@@ -2050,7 +2137,7 @@
 
     },
     "Pushes each completed run, ride, or walk to Strava." : {
-
+      "comment" : "Settings row subtitle under Auto-share new cardio"
     },
     "Quick pick from templates" : {
 
@@ -2080,7 +2167,7 @@
 
     },
     "Recovery" : {
-
+      "comment" : "Navigation title for the muscle recovery / readiness screen"
     },
     "Recovery is low (%lld%%)" : {
       "comment" : "Low-recovery reason. Argument is a 0-100 percent."
@@ -2124,6 +2211,9 @@
     "Report bugs or suggest features" : {
 
     },
+    "Reported Soreness" : {
+      "comment" : "Section header above the user's recent post-workout soreness reports"
+    },
     "Reps" : {
 
     },
@@ -2153,6 +2243,9 @@
     },
     "Returns your current consecutive workout streak in Metricly." : {
 
+    },
+    "Rough" : {
+      "comment" : "1-star rating label on the post-workout self-rating row"
     },
     "Round %lld / %lld" : {
       "localizations" : {
@@ -2260,7 +2353,7 @@
 
     },
     "Set Reminder" : {
-
+      "comment" : "Alert button that opens the reminder setup"
     },
     "Set to 0 to disable this goal." : {
 
@@ -2273,6 +2366,9 @@
     },
     "Set your height in Settings" : {
 
+    },
+    "Sets" : {
+      "comment" : "Stat label under the working-set count"
     },
     "Sets: %lld" : {
 
@@ -2322,6 +2418,12 @@
           }
         }
       }
+    },
+    "Sleep was short (%@h)" : {
+      "comment" : "Reason shown when last night's sleep is under the short-sleep threshold; placeholder is hours like 5.4"
+    },
+    "Slept well (%@h)" : {
+      "comment" : "Reason shown when last night's sleep is at or above the good-sleep threshold; placeholder is hours like 7.8"
     },
     "Smart Suggestions" : {
 
@@ -2381,7 +2483,7 @@
 
     },
     "Stay consistent 🔥" : {
-
+      "comment" : "Alert title prompting the user to set up workout reminders"
     },
     "steps" : {
 
@@ -2402,7 +2504,7 @@
 
     },
     "Strava" : {
-
+      "comment" : "Section header for the Strava integration settings"
     },
     "Strava is rate-limiting us — try again in 15 minutes." : {
       "comment" : "Shown when Strava returns 429 (rate limit)"
@@ -2417,7 +2519,7 @@
 
     },
     "Strength workouts stay on Metricly — only cardio sessions get pushed to Strava." : {
-
+      "comment" : "Footer text under the Strava section when connected"
     },
     "Substitutions" : {
 
@@ -2434,11 +2536,17 @@
     "Suggested Bedtime" : {
 
     },
+    "Suggested Today" : {
+      "comment" : "Section header above the engine's per-muscle 'train this' recommendations"
+    },
+    "Summary" : {
+      "comment" : "Section header above the duration / exercises / sets / volume stat strip"
+    },
     "Superset" : {
 
     },
     "Sync from Strava" : {
-
+      "comment" : "Settings row that pulls Strava activities into Metricly"
     },
     "Sync with Apple Health" : {
 
@@ -2495,6 +2603,9 @@
     "Target weight (%@)" : {
 
     },
+    "Tell it how you feel" : {
+      "comment" : "Onboarding card title — soreness self-report"
+    },
     "Tells you what workout is scheduled for today in Metricly." : {
 
     },
@@ -2536,6 +2647,9 @@
     },
     "This will save your %@ and end the session." : {
 
+    },
+    "Three signals reshape today's plan." : {
+      "comment" : "Onboarding adaptive-coach page subtitle"
     },
     "Time" : {
 
@@ -2589,7 +2703,7 @@
 
     },
     "Trends spotted in your training, sleep and recovery data over the last 90 days. These are observations, not medical advice." : {
-
+      "comment" : "Subtitle disclaimer under the Insights tab header card"
     },
     "Try %@ next session" : {
 
@@ -2655,8 +2769,7 @@
 
     },
     "Volume" : {
-      "comment" : "Label for the x-axis in the volume by muscle group chart.",
-      "isCommentAutoGenerated" : true
+      "comment" : "Stat label under the total weight lifted"
     },
     "Volume by muscle group, %lld groups" : {
 
@@ -2677,7 +2790,7 @@
 
     },
     "Want Metricly to remind you on your training days? You can set this up in Settings anytime." : {
-
+      "comment" : "Body text of the reminder-setup prompt alert"
     },
     "Warm-up" : {
 
@@ -2749,7 +2862,7 @@
       "comment" : "Plan name shown when the user has already finished training today"
     },
     "Workout Complete" : {
-
+      "comment" : "Navigation title on the finish-workout summary sheet"
     },
     "Workout Complete!" : {
 

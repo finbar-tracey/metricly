@@ -467,7 +467,13 @@ extension StravaService {
         var body: [String: String] = [
             "name":             name,
             "sport_type":       mapping.sportType,
-            "start_date_local": Self.iso8601LocalString(from: session.date),
+            // Use `session.start` (the canonical start accessor) — `session.date`
+            // is the legacy field whose meaning depended on the writer, so
+            // app-recorded sessions stored finish time there. The accessor
+            // resolves to `startDate ?? date`, which is correct for new
+            // sessions and matches the old Strava-import semantic for legacy
+            // imported sessions.
+            "start_date_local": Self.iso8601LocalString(from: session.start),
             "elapsed_time":     String(Int(session.durationSeconds))
         ]
         if session.distanceMeters > 0.5 {
