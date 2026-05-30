@@ -134,7 +134,7 @@ struct WorkoutScheduleView: View {
             .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .stroke(Color.white.opacity(0.05), lineWidth: 0.5)
+                    .stroke(AppTheme.cardHairline, lineWidth: 0.5)
             )
         }
         .appCard()
