@@ -92,6 +92,15 @@ enum TodayPlanEngine {
         /// "first workout" plan instead of robotic empty-state output.
         hasAnyHistory: Bool = true,
         complianceEvents: [PlanComplianceEvent] = [],
+        /// User-reported "how did that feel?" rows from
+        /// `FinishWorkoutSheet`. The engine looks at the rolling 7-day
+        /// window: if a clear majority of recent sessions felt "too
+        /// easy" or "too hard", a reason line names the pattern so
+        /// the user can see *why* today's plan reads the way it does.
+        /// This sprint doesn't change intensity from this signal —
+        /// just surfaces it — pending more data on how the signal
+        /// behaves against competing inputs (recovery, compliance).
+        feedbackEvents: [WorkoutFeedbackEvent] = [],
         /// Injectable "now" for testability. Production callers should omit.
         now: Date = .now
     ) -> TodayPlan {
@@ -186,6 +195,23 @@ enum TodayPlanEngine {
            let ignoredKind = summary.mostIgnoredKind,
            intensity == ignoredKind {
             reasons.append(complianceReasonCopy(for: ignoredKind, ignored: summary.ignoredCount(for: ignoredKind)))
+        }
+
+        // User-reported difficulty pattern — emerges when the user
+        // has tapped "Too hard" / "Too easy" on at least
+        // `feedbackCalloutMinSamples` recent sessions AND one bucket
+        // wins by a clear margin. Surfaces as a reason line so the
+        // user understands today's plan partly reflects what they
+        // told us, not just what the model inferred. Doesn't change
+        // intensity in this sprint (see `feedbackEvents` doc above).
+        if let feedbackSummary = recentFeedback(events: feedbackEvents, now: now),
+           feedbackSummary.sampleSize >= C.feedbackCalloutMinSamples,
+           let majority = feedbackSummary.majority,
+           // Skip the "about right" majority — the engine reaching
+           // agreement with the user is the default state, not
+           // something the reasons list needs to crow about.
+           majority != .aboutRight {
+            reasons.append(feedbackReasonCopy(for: majority))
         }
 
         // Sleep callout
@@ -472,6 +498,75 @@ enum TodayPlanEngine {
             return String(localized: "Moderate days have been drifting heavy lately — keep a lid on volume today.", comment: "Trust-cal reason for moderate intensity")
         case .hard:
             return String(localized: "Recent hard days have been undertrained — there's room to push if you're up for it.", comment: "Trust-cal reason for hard intensity")
+        }
+    }
+
+    // MARK: - User feedback loop
+    //
+    // Reported counterpart to the inferred compliance signal. The user
+    // tells us directly after a workout whether it was too easy /
+    // about right / too hard via FinishWorkoutSheet. This sprint
+    // surfaces a clear majority in the reason list; future sprints
+    // can nudge intensity from it once we understand how it interacts
+    // with recovery + compliance.
+
+    struct FeedbackSummary: Equatable {
+        let sampleSize: Int
+        let countByFeel: [WorkoutFeedbackEvent.Feel: Int]
+
+        /// The feel that strictly wins the recent window — `nil` when
+        /// no single bucket has a clear lead. "Clear lead" means at
+        /// least 60% of the sample (the simple-majority threshold;
+        /// stricter than 50% so a 3-2 split doesn't fire a reason).
+        var majority: WorkoutFeedbackEvent.Feel? {
+            guard sampleSize > 0 else { return nil }
+            let threshold = Int(ceil(Double(sampleSize) * 0.6))
+            return countByFeel.first { $0.value >= threshold }?.key
+        }
+    }
+
+    /// Roll up recent `WorkoutFeedbackEvent` rows into a `FeedbackSummary`
+    /// over the same lookback window the trust-cal uses
+    /// (`complianceLookbackDays`). Returns nil when there are zero
+    /// usable events.
+    static func recentFeedback(
+        events: [WorkoutFeedbackEvent],
+        now: Date = .now
+    ) -> FeedbackSummary? {
+        let cutoff = Calendar.current.date(
+            byAdding: .day,
+            value: -EngineConstants.TodayPlan.complianceLookbackDays,
+            to: now
+        ) ?? .distantPast
+
+        let inWindow = events.filter { event in
+            event.day >= cutoff && event.feel != nil
+        }
+        guard !inWindow.isEmpty else { return nil }
+
+        var counts: [WorkoutFeedbackEvent.Feel: Int] = [:]
+        for event in inWindow {
+            guard let f = event.feel else { continue }
+            counts[f, default: 0] += 1
+        }
+        return FeedbackSummary(sampleSize: inWindow.count, countByFeel: counts)
+    }
+
+    /// Copy for the reason line when a feedback majority emerges.
+    /// "About right" intentionally does NOT produce a reason — the
+    /// plan agreeing with the user's experience is the default state
+    /// and naming it would feel like padding.
+    static func feedbackReasonCopy(for feel: WorkoutFeedbackEvent.Feel) -> String {
+        switch feel {
+        case .tooHard:
+            return String(localized: "Recent sessions felt tough — Metricly is taking it down.",
+                          comment: "User-feedback reason when the majority of recent self-rated workouts felt too hard")
+        case .tooEasy:
+            return String(localized: "Recent sessions felt easy — there's room to push more.",
+                          comment: "User-feedback reason when the majority of recent self-rated workouts felt too easy")
+        case .aboutRight:
+            return String(localized: "Recent sessions hit the mark — staying the course.",
+                          comment: "User-feedback reason when recent self-ratings indicate the plan is well-tuned")
         }
     }
 

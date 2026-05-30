@@ -16,6 +16,7 @@ struct HomeDashboardView: View {
     @Query(sort: \CardioSession.date, order: .reverse) private var cardioSessions: [CardioSession]
     @Query(sort: \SorenessEntry.date, order: .reverse) private var sorenessReports: [SorenessEntry]
     @Query(sort: \PlanComplianceEvent.day, order: .reverse) private var complianceEvents: [PlanComplianceEvent]
+    @Query(sort: \WorkoutFeedbackEvent.day, order: .reverse) private var feedbackEvents: [WorkoutFeedbackEvent]
     @Environment(\.weightUnit) private var weightUnit
 
     @State private var todaySteps: Double = 0
@@ -119,7 +120,8 @@ struct HomeDashboardView: View {
             alreadyTrainedToday: !todaysWorkouts.filter(\.isFinished).isEmpty
                 || cardioSessions.contains { Calendar.current.isDateInToday($0.date) },
             hasAnyHistory: !finishedWorkouts.isEmpty,
-            complianceEvents: Array(complianceEvents.prefix(14))
+            complianceEvents: Array(complianceEvents.prefix(14)),
+            feedbackEvents: Array(feedbackEvents.prefix(14))
         )
         self.recoveryResult = recovery
         self.todayPlan = plan

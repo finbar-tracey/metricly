@@ -218,6 +218,20 @@ enum EngineConstants {
         /// How far back to read compliance events for the trust-cal
         /// adjustment. Matches the backfill's lookback window.
         static let complianceLookbackDays: Int = 7
+
+        // MARK: User feedback ("how did that feel?")
+        //
+        // Sibling to the compliance constants — this gates the reason
+        // line that surfaces when the user has tapped a majority feel
+        // on several recent finishes. Threshold is intentionally lower
+        // than compliance's `4` because reported feedback is higher-
+        // quality signal per data point (we asked directly), so 3
+        // events with a clear majority is enough.
+
+        /// Minimum number of recent `WorkoutFeedbackEvent` rows before
+        /// the feedback reason line is allowed to fire. Below this we
+        /// don't have enough data to call a "majority."
+        static let feedbackCalloutMinSamples: Int = 3
     }
 
     // MARK: - Compliance backfill

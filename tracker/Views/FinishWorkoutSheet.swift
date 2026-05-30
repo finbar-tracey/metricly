@@ -22,6 +22,10 @@ struct FinishWorkoutSheet: View {
     /// Per-muscle-group soreness level the user picks. Only groups
     /// trained in this workout appear in the UI. 0 = none (not stored).
     @State private var sorenessLevels: [MuscleGroup: Int] = [:]
+    /// User-reported "how did it feel?" — optional, defaults to nil
+    /// (skip persisting). Drives the engine's user-feedback signal
+    /// alongside the inferred trust-calibration loop.
+    @State private var feel: WorkoutFeedbackEvent.Feel?
     @Environment(\.modelContext) private var modelContext
 
     init(workout: Workout) {
@@ -49,6 +53,7 @@ struct FinishWorkoutSheet: View {
                     celebrationCard
                     statsCard
                     if !sessionPRs.isEmpty { prCard }
+                    feelCard
                     if !trainedGroupsForSoreness.isEmpty { sorenessCard }
                     notesCard
                 }
@@ -343,6 +348,90 @@ struct FinishWorkoutSheet: View {
         SorenessEntry.Level.tint(forLevel: level)
     }
 
+    // MARK: - "How did it feel?" card
+    //
+    // Optional user feedback — the reported counterpart to
+    // PlanComplianceEvent's inferred signal. Feeds
+    // TodayPlanEngine.recentFeedback; when a majority pattern
+    // emerges, the engine surfaces a reason line on the home
+    // dashboard. Three buttons, single-select, defaults to nil so
+    // skipping is the obvious path for users who don't want to engage.
+
+    private var feelCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            SectionHeader(
+                title: String(localized: "How did it feel?",
+                              comment: "Section header above the post-workout feel picker"),
+                icon: "thermometer.medium",
+                color: .pink
+            )
+            .accessibilityAddTraits(.isHeader)
+
+            Text(String(
+                localized: "Optional — helps Metricly tune your next plan to match what you felt.",
+                comment: "Caption under the post-workout feel picker explaining it's optional"
+            ))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            HStack(spacing: 8) {
+                ForEach(WorkoutFeedbackEvent.Feel.allCases) { option in
+                    feelButton(option)
+                }
+            }
+        }
+    }
+
+    private func feelButton(_ option: WorkoutFeedbackEvent.Feel) -> some View {
+        let isSelected = feel == option
+        let tint = feelTint(for: option)
+        return Button {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                // Tapping the already-selected button clears the
+                // selection — gives the user an undo path without a
+                // separate "skip" button.
+                feel = isSelected ? nil : option
+            }
+        } label: {
+            VStack(spacing: 6) {
+                Image(systemName: option.icon)
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundStyle(isSelected ? .white : tint)
+                Text(option.label)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(isSelected ? .white : .primary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 14)
+            .background(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(isSelected ? tint : Color(.secondarySystemGroupedBackground))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(isSelected ? tint : Color.secondary.opacity(0.18),
+                            lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(option.label)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+
+    /// Tint per feel — blue for "easy" (cool), green for "right", red
+    /// for "hard" (warm). Matches the broader Signal palette so the
+    /// row reads as a temperature gauge.
+    private func feelTint(for option: WorkoutFeedbackEvent.Feel) -> Color {
+        switch option {
+        case .tooEasy:    return AppTheme.Signal.calm
+        case .aboutRight: return AppTheme.Signal.recovery
+        case .tooHard:    return AppTheme.Signal.strain
+        }
+    }
+
     // MARK: - Notes card
 
     private var notesCard: some View {
@@ -478,6 +567,22 @@ struct FinishWorkoutSheet: View {
         for (group, level) in sorenessLevels where level > 0 {
             let entry = SorenessEntry(date: .now, group: group, level: level)
             modelContext.insert(entry)
+        }
+
+        // User feedback ("how did it feel?") — optional. If the user
+        // tapped a feel, store a `WorkoutFeedbackEvent` tagged with
+        // the day and the engine's suggested intensity at capture
+        // time (read from `TodayPlanStore`). The engine reads recent
+        // events via @Query in HomeDashboardView and surfaces a
+        // reason line when a clear majority pattern emerges.
+        if let feel {
+            let suggested = TodayPlanStore.load()?.intensity
+            let event = WorkoutFeedbackEvent(
+                day: .now,
+                feel: feel,
+                suggested: suggested
+            )
+            modelContext.insert(event)
         }
 
         let totalSets = workout.exercises.flatMap(\.sets).count

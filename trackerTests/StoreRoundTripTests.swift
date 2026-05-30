@@ -144,10 +144,17 @@ final class StoreRoundTripTests: XCTestCase {
     func testSavingSameDayTwiceCollapsesToOneEntry() {
         // The user opened the app twice on the same day — the second
         // recompute should replace the first, not stack alongside it.
-        TodayPlanStore.save(samplePlan(generatedAt: day(-1).addingTimeInterval(8 * 3600),
-                                       name: "Morning"))
-        TodayPlanStore.save(samplePlan(generatedAt: day(-1).addingTimeInterval(18 * 3600),
-                                       name: "Evening"))
+        //
+        // Anchor on startOfDay(yesterday) + N hours rather than
+        // day(-1) + N hours; the latter offsets from .now, so when
+        // the test runs late in the day "yesterday + 18h" crosses
+        // midnight into today and the dedup correctly DOESN'T fire.
+        // The test was flaky on morning runs for the same reason.
+        let yesterdayStart = Calendar.current.startOfDay(for: day(-1))
+        let yesterdayMorning = yesterdayStart.addingTimeInterval(8 * 3600)
+        let yesterdayEvening = yesterdayStart.addingTimeInterval(20 * 3600)
+        TodayPlanStore.save(samplePlan(generatedAt: yesterdayMorning, name: "Morning"))
+        TodayPlanStore.save(samplePlan(generatedAt: yesterdayEvening, name: "Evening"))
         let h = TodayPlanStore.history()
         XCTAssertEqual(h.count, 1, "Same calendar day must dedup")
         XCTAssertEqual(h.first?.recommendedName, "Evening",

@@ -154,11 +154,41 @@ final class MetriclySchemaMigrationTests: XCTestCase {
 
     func testMigrationPlanContainsExpectedStages() {
         // Locks in the chain so future schema bumps require an explicit
-        // edit. Catches the case where someone adds V4 to the schema set
+        // edit. Catches the case where someone adds V5 to the schema set
         // but forgets the corresponding stage in the plan.
-        XCTAssertEqual(MetriclyMigrationPlan.stages.count, 2,
-                       "V1→V2 and V2→V3 — bumping this requires a thoughtful migration plan update")
-        XCTAssertEqual(MetriclyMigrationPlan.schemas.count, 3,
-                       "V1, V2, V3 — same warning applies")
+        XCTAssertEqual(MetriclyMigrationPlan.stages.count, 3,
+                       "V1→V2, V2→V3, V3→V4 — bumping this requires a thoughtful migration plan update")
+        XCTAssertEqual(MetriclyMigrationPlan.schemas.count, 4,
+                       "V1, V2, V3, V4 — same warning applies")
+    }
+
+    func testV4FeedbackEventTableIsQueryablePostMigration() throws {
+        // V4 added WorkoutFeedbackEvent. After full V1→V4 migration on
+        // a populated store, the new table must exist (queryable +
+        // writable), and V1 data must still survive — both checks
+        // wrapped here so the existing tests' wider span isn't
+        // duplicated.
+        try seedV1Store()
+        let migrated = try openMigrated()
+        let ctx = migrated.mainContext
+
+        let events = try ctx.fetch(FetchDescriptor<WorkoutFeedbackEvent>())
+        XCTAssertTrue(events.isEmpty,
+                      "Feedback table should exist and be empty post-migration from V1")
+
+        // Write one — proves the table is fully realised, not just
+        // queryable.
+        let event = WorkoutFeedbackEvent(
+            day: .now,
+            feel: .aboutRight,
+            suggested: .moderate
+        )
+        ctx.insert(event)
+        try ctx.save()
+        XCTAssertEqual(try ctx.fetch(FetchDescriptor<WorkoutFeedbackEvent>()).count, 1)
+
+        // The V1 workout we seeded is still there.
+        let workouts = try ctx.fetch(FetchDescriptor<Workout>())
+        XCTAssertEqual(workouts.count, 1)
     }
 }
