@@ -216,6 +216,7 @@ struct CardioBestsView: View {
                 if sessions.isEmpty {
                     emptyState
                 } else {
+                    bestsHero
                     benchmarksSection
                     allTimeSection
                     volumeSection
@@ -229,6 +230,43 @@ struct CardioBestsView: View {
         .background(Color(.systemGroupedBackground))
         .navigationTitle("Personal Bests")
         .navigationBarTitleDisplayMode(.large)
+    }
+
+    // MARK: - Summary hero
+
+    /// Headline records for the selected activity — gives Personal Bests the
+    /// same hero treatment as the rest of the app instead of opening cold on
+    /// the distance grid.
+    private var bestsHero: some View {
+        HeroCard(palette: [group.color, group.color.opacity(0.72), group.color.opacity(0.55)]) {
+            VStack(alignment: .leading, spacing: 14) {
+                HStack(spacing: 6) {
+                    Image(systemName: "trophy.fill")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(.white.opacity(0.85))
+                    Text("\(group.rawValue) · Personal Bests")
+                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                        .foregroundStyle(.white.opacity(0.85))
+                        .tracking(0.5)
+                        .textCase(.uppercase)
+                }
+                HStack(spacing: 0) {
+                    HeroStatCol(value: longestSession?.formattedDistance(useKm: useKm) ?? "—", label: "Longest")
+                    Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 40)
+                    HeroStatCol(value: fastestPaceSession.map { formatPaceShort($0.avgPaceSecPerKm) } ?? "—", label: "Best Pace")
+                    Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 40)
+                    HeroStatCol(value: "\(sessions.count)", label: group.rawValue)
+                }
+                .padding(.vertical, 12)
+                .background(.ultraThinMaterial.opacity(0.55), in: RoundedRectangle(cornerRadius: AppTheme.miniCardRadius, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppTheme.miniCardRadius, style: .continuous)
+                        .stroke(.white.opacity(0.18), lineWidth: 0.5)
+                )
+            }
+            .padding(20)
+        }
+        .frame(minHeight: 130)
     }
 
     // MARK: - Benchmarks
