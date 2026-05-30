@@ -7,6 +7,7 @@ struct TrainingHubView: View {
     @Query(sort: \CardioSession.date, order: .reverse)
     private var cardioSessions: [CardioSession]
     @Environment(\.weightUnit) private var weightUnit
+    @State private var showingAddWorkout = false
 
     private var finishedWorkouts: [Workout] { workouts.filter { $0.endTime != nil } }
     private var currentStreak: Int { Workout.currentStreak(from: workouts, cardioSessions: cardioSessions) }
@@ -25,32 +26,12 @@ struct TrainingHubView: View {
 
     var body: some View {
         List {
-            // ── Hero stats strip ──────────────────────────────────────────
+            // ── Hero card + Start CTA ─────────────────────────────────────
             Section {
-                HStack(spacing: 0) {
-                    heroStat(intValue: finishedWorkouts.count,
-                             label: "Workouts",
-                             icon: "figure.strengthtraining.traditional",
-                             color: .blue)
-                    Divider().frame(height: 44)
-                    heroStat(intValue: currentStreak,
-                             label: "Streak",
-                             icon: "flame.fill",
-                             color: .orange)
-                    Divider().frame(height: 44)
-                    heroStat(intValue: uniqueExerciseCount,
-                             label: "Exercises",
-                             icon: "dumbbell.fill",
-                             color: .purple)
-                    Divider().frame(height: 44)
-                    heroStat(
-                        value: weeklyCardioKm > 0.05 ? weightUnit.distanceUnit.format(weeklyCardioKm) : "—",
-                        label: "\(weightUnit.distanceUnit.label) this wk",
-                        icon: "figure.run",
-                        color: .green
-                    )
-                }
-                .padding(.vertical, 8)
+                trainingHeroCard
+                    .listRowBackground(Color.clear)
+                    .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 8, trailing: 16))
+                    .listRowSeparator(.hidden)
             }
 
             // ── Workouts ─────────────────────────────────────────────────
@@ -129,51 +110,69 @@ struct TrainingHubView: View {
         .scrollContentBackground(.hidden)
         .tabBackground(tint: AppTheme.Signal.calm, height: 320)
         .navigationTitle("Training")
+        .sheet(isPresented: $showingAddWorkout) {
+            AddWorkoutSheet()
+        }
     }
 
     // MARK: - Subviews
 
-    private func heroStat(value: String, label: String, icon: String, color: Color) -> some View {
-        VStack(spacing: 5) {
-            ZStack {
-                Circle().fill(color.opacity(0.12)).frame(width: 34, height: 34)
-                Image(systemName: icon)
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(color)
-            }
-            Text(value)
-                .font(.system(size: 20, weight: .black, design: .rounded))
-                .monospacedDigit()
-            Text(label)
-                .font(.caption2.weight(.medium))
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.7)
-        }
-        .frame(maxWidth: .infinity)
-    }
+    /// Calm-gradient hero — gives Training the same hero treatment as the
+    /// other tabs, and carries the primary "Start Workout" CTA the hub was
+    /// missing. Stats: workouts · streak · unique exercises · cardio this week.
+    private var trainingHeroCard: some View {
+        HeroCard(palette: AppTheme.Gradients.calm) {
+            VStack(alignment: .leading, spacing: 14) {
+                HStack(spacing: 6) {
+                    Image(systemName: "figure.strengthtraining.traditional")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(.white.opacity(0.85))
+                    Text("Training")
+                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                        .foregroundStyle(.white.opacity(0.85))
+                        .tracking(0.5)
+                        .textCase(.uppercase)
+                }
 
-    /// Integer variant — animates digit changes via contentTransition(.numericText).
-    private func heroStat(intValue: Int, label: String, icon: String, color: Color) -> some View {
-        VStack(spacing: 5) {
-            ZStack {
-                Circle().fill(color.opacity(0.12)).frame(width: 34, height: 34)
-                Image(systemName: icon)
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(color)
+                HStack(spacing: 0) {
+                    HeroStatCol(value: "\(finishedWorkouts.count)", label: "Workouts",
+                                icon: "figure.strengthtraining.traditional")
+                    Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 40)
+                    HeroStatCol(value: "\(currentStreak)", label: "Streak", icon: "flame.fill")
+                    Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 40)
+                    HeroStatCol(value: "\(uniqueExerciseCount)", label: "Exercises", icon: "dumbbell.fill")
+                    Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 40)
+                    HeroStatCol(value: weeklyCardioKm > 0.05 ? weightUnit.distanceUnit.format(weeklyCardioKm) : "—",
+                                label: "\(weightUnit.distanceUnit.label) this wk", icon: "figure.run")
+                }
+                .padding(.vertical, 12)
+                .background(.ultraThinMaterial.opacity(0.55), in: RoundedRectangle(cornerRadius: AppTheme.miniCardRadius, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppTheme.miniCardRadius, style: .continuous)
+                        .stroke(.white.opacity(0.18), lineWidth: 0.5)
+                )
+
+                Button {
+                    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                    showingAddWorkout = true
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "plus.circle.fill")
+                            .font(.system(size: 16, weight: .bold))
+                        Text("Start Workout")
+                            .font(.system(size: 16, weight: .bold, design: .rounded))
+                    }
+                    .foregroundStyle(AppTheme.Signal.calm)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(.white, in: RoundedRectangle(cornerRadius: AppTheme.cardRadius, style: .continuous))
+                    .shadow(color: .black.opacity(0.15), radius: 8, y: 4)
+                }
+                .buttonStyle(.pressableCard)
             }
-            AnimatedInt(
-                value: intValue,
-                font: .system(size: 20, weight: .black, design: .rounded),
-                color: .primary
-            )
-            Text(label)
-                .font(.caption2.weight(.medium))
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.7)
+            .padding(20)
         }
-        .frame(maxWidth: .infinity)
+        .frame(minHeight: 145)
     }
 
     /// A richer row for the primary "Run & Cardio" entry — shows last session inline.
