@@ -197,11 +197,21 @@ struct HomePlanAndMetricsRow: View {
     }
 
     private func miniMetricRow(icon: String, color: Color, label: String, value: String, status: String, good: Bool) -> some View {
-        HStack(spacing: 8) {
-            Image(systemName: icon)
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(color)
-                .frame(width: 18)
+        HStack(spacing: 10) {
+            ZStack {
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            colors: [color.opacity(0.26), color.opacity(0.12)],
+                            startPoint: .topLeading, endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 26, height: 26)
+                    .overlay(Circle().stroke(color.opacity(0.28), lineWidth: 0.5))
+                Image(systemName: icon)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(color)
+            }
             Text(label)
                 .font(.caption)
                 .foregroundStyle(.secondary)
