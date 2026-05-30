@@ -372,10 +372,17 @@ struct CaffeineTrackerView: View {
                                 Text("\(Int(fav.mg))mg").font(.caption2).foregroundStyle(.secondary)
                             }
                             .padding(.horizontal, 14).padding(.vertical, 8)
-                            .background(Color.brown.opacity(0.12), in: Capsule())
+                            .background(
+                                LinearGradient(
+                                    colors: [Color.brown.opacity(0.20), Color.brown.opacity(0.10)],
+                                    startPoint: .topLeading, endPoint: .bottomTrailing
+                                ),
+                                in: Capsule()
+                            )
+                            .overlay(Capsule().stroke(Color.brown.opacity(0.25), lineWidth: 0.5))
                             .foregroundStyle(Color.brown)
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.pressableCard)
                     }
                 }
             }
@@ -423,10 +430,35 @@ struct CaffeineTrackerView: View {
             SectionHeader(title: "Caffeine Decay", icon: "waveform.path.ecg", color: .brown)
             Chart {
                 ForEach(data) { point in
-                    LineMark(x: .value("Time", point.date), y: .value("Caffeine", point.mg))
-                        .interpolationMethod(.catmullRom).foregroundStyle(Color.brown)
                     AreaMark(x: .value("Time", point.date), y: .value("Caffeine", point.mg))
-                        .interpolationMethod(.catmullRom).foregroundStyle(Color.brown.opacity(0.15).gradient)
+                        .interpolationMethod(.catmullRom)
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [Color.brown.opacity(0.30), Color.brown.opacity(0.02)],
+                                startPoint: .top, endPoint: .bottom
+                            )
+                        )
+                    LineMark(x: .value("Time", point.date), y: .value("Caffeine", point.mg))
+                        .interpolationMethod(.catmullRom)
+                        .lineStyle(StrokeStyle(lineWidth: 2.5, lineCap: .round))
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [Color(red: 0.82, green: 0.48, blue: 0.20), Color.brown],
+                                startPoint: .leading, endPoint: .trailing
+                            )
+                        )
+                }
+                // "Now" marker — the current level, so the curve reads as
+                // a live snapshot ("you have X mg right now, decaying to…").
+                if let nowPoint = data.first {
+                    PointMark(x: .value("Time", nowPoint.date), y: .value("Caffeine", nowPoint.mg))
+                        .symbolSize(130)
+                        .foregroundStyle(Color.brown)
+                        .annotation(position: .top, alignment: .center) {
+                            Text("\(Int(nowPoint.mg))mg")
+                                .font(.caption2.bold())
+                                .foregroundStyle(.brown)
+                        }
                 }
                 RuleMark(y: .value("Sleep Ready", 25))
                     .lineStyle(StrokeStyle(lineWidth: 1, dash: [5, 3]))
@@ -511,12 +543,24 @@ struct CaffeineTrackerView: View {
                         Text("Log \(Int(effectiveMg)) mg \(selectedSource)").font(.subheadline.bold())
                     }
                     .frame(maxWidth: .infinity).padding(.vertical, 14)
-                    .background(effectiveMg <= 0 ? Color(.systemFill) : Color.brown.opacity(0.9))
+                    .background(
+                        Group {
+                            if effectiveMg <= 0 {
+                                Color(.systemFill)
+                            } else {
+                                LinearGradient(
+                                    colors: [Color(red: 0.82, green: 0.48, blue: 0.20), Color.brown],
+                                    startPoint: .topLeading, endPoint: .bottomTrailing
+                                )
+                            }
+                        }
+                    )
                     .foregroundStyle(effectiveMg <= 0 ? Color.secondary : Color.white)
                     .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardRadius))
+                    .shadow(color: effectiveMg <= 0 ? .clear : Color.brown.opacity(0.40), radius: 8, y: 4)
                 }
                 .disabled(effectiveMg <= 0)
-                .buttonStyle(.plain)
+                .buttonStyle(.pressableCard)
                 .padding(.horizontal, 16).padding(.vertical, 12)
             }
             .background(Color(.tertiarySystemGroupedBackground))
@@ -550,7 +594,7 @@ struct CaffeineTrackerView: View {
                                 .stroke(selectedSource == preset.name ? Color.brown : .clear, lineWidth: 1.5)
                         )
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressableCard)
                 }
             }
         }
@@ -628,6 +672,25 @@ struct CaffeineTrackerView: View {
         .frame(maxWidth: .infinity)
     }
 
+    /// Shared gradient icon disc — the app-wide gradient-fill + hairline
+    /// treatment replacing this screen's old flat `color.opacity(…)` circles.
+    private func gradientDisc(_ icon: String, color: Color, size: CGFloat, glyph: CGFloat) -> some View {
+        ZStack {
+            Circle()
+                .fill(
+                    LinearGradient(
+                        colors: [color.opacity(0.26), color.opacity(0.12)],
+                        startPoint: .topLeading, endPoint: .bottomTrailing
+                    )
+                )
+                .frame(width: size, height: size)
+                .overlay(Circle().stroke(color.opacity(0.28), lineWidth: 0.5))
+            Image(systemName: icon)
+                .font(.system(size: glyph, weight: .semibold))
+                .foregroundStyle(color)
+        }
+    }
+
     // MARK: - Time of Day Card
 
     private var timeOfDayCard: some View {
@@ -641,7 +704,15 @@ struct CaffeineTrackerView: View {
                 ForEach(breakdown, id: \.period) { item in
                     HStack(spacing: 10) {
                         ZStack {
-                            RoundedRectangle(cornerRadius: 6).fill(item.color.opacity(0.12)).frame(width: 28, height: 28)
+                            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                .fill(
+                                    LinearGradient(
+                                        colors: [item.color.opacity(0.26), item.color.opacity(0.12)],
+                                        startPoint: .topLeading, endPoint: .bottomTrailing
+                                    )
+                                )
+                                .frame(width: 28, height: 28)
+                                .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(item.color.opacity(0.28), lineWidth: 0.5))
                             Image(systemName: item.icon).font(.system(size: 11, weight: .semibold)).foregroundStyle(item.color)
                         }
                         Text(item.period).font(.caption).frame(width: 65, alignment: .leading)
@@ -665,20 +736,14 @@ struct CaffeineTrackerView: View {
         let streak = caffeineFreeStreak
         return HStack(spacing: 16) {
             if streak > 0 {
-                ZStack {
-                    Circle().fill(Color.green.opacity(0.12)).frame(width: 48, height: 48)
-                    Image(systemName: "leaf.fill").font(.system(size: 20)).foregroundStyle(.green)
-                }
+                gradientDisc("leaf.fill", color: .green, size: 48, glyph: 20)
                 VStack(alignment: .leading, spacing: 3) {
                     Text("\(streak) caffeine-free day\(streak == 1 ? "" : "s")")
                         .font(.subheadline.weight(.semibold))
                     Text("Keep it going!").font(.caption).foregroundStyle(.secondary)
                 }
             } else if let lastFree = daysSinceFreeDayText {
-                ZStack {
-                    Circle().fill(Color.brown.opacity(0.12)).frame(width: 48, height: 48)
-                    Image(systemName: "cup.and.saucer.fill").font(.system(size: 20)).foregroundStyle(.brown)
-                }
+                gradientDisc("cup.and.saucer.fill", color: .brown, size: 48, glyph: 20)
                 VStack(alignment: .leading, spacing: 3) {
                     Text("Last caffeine-free day").font(.subheadline.weight(.semibold))
                     Text(lastFree).font(.caption).foregroundStyle(.secondary)
@@ -724,7 +789,15 @@ struct CaffeineTrackerView: View {
         let preset = CaffeineEntry.presets.first { $0.name == entry.source }
         return HStack(spacing: 12) {
             ZStack {
-                RoundedRectangle(cornerRadius: 8).fill(Color.brown.opacity(0.12)).frame(width: 38, height: 38)
+                RoundedRectangle(cornerRadius: 11, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [Color.brown.opacity(0.26), Color.brown.opacity(0.12)],
+                            startPoint: .topLeading, endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 38, height: 38)
+                    .overlay(RoundedRectangle(cornerRadius: 11, style: .continuous).stroke(Color.brown.opacity(0.28), lineWidth: 0.5))
                 Image(systemName: preset?.icon ?? "pill.fill")
                     .font(.system(size: 14, weight: .semibold)).foregroundStyle(.brown)
             }
