@@ -94,6 +94,29 @@ final class TrainingBlockTests: XCTestCase {
         XCTAssertEqual(TrainingBlockEngine.currentBlock(in: [b1, b2], at: day(30))?.phase, .deload)
     }
 
+    func testCurrentBlockPicksMostRecentWhenOverlapping() {
+        // Defensive: if the user accidentally has two blocks that
+        // both contain the same date (data-import bug, manual edit,
+        // double-insert), the engine must pick the more-recent
+        // startDate deterministically rather than relying on the
+        // caller's sort order. Sprint 38-C fix.
+        let b1 = TrainingBlock(startDate: day(0),  weekCount: 4, phase: .accumulate)
+        let b2 = TrainingBlock(startDate: day(10), weekCount: 4, phase: .deload)
+        // Both contain day(15). The newer (b2) should win regardless
+        // of the input order — pass them ascending here, the old
+        // implementation would have returned b1.
+        XCTAssertEqual(
+            TrainingBlockEngine.currentBlock(in: [b1, b2], at: day(15))?.phase,
+            .deload,
+            "Overlapping blocks: most-recent startDate wins regardless of input order"
+        )
+        // Same input order reversed — answer should be identical.
+        XCTAssertEqual(
+            TrainingBlockEngine.currentBlock(in: [b2, b1], at: day(15))?.phase,
+            .deload
+        )
+    }
+
     func testCurrentBlockReturnsNilInGap() {
         let b1 = TrainingBlock(startDate: day(0), weekCount: 4, phase: .accumulate)
         // The block ends at day 28; day 30 falls in a gap with no

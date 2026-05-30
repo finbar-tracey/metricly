@@ -788,20 +788,31 @@ enum PersonalInsightsEngine {
         // long or the deload too aggressive). Both stay observational.
         let title: String
         let msg: String
+        let pctInt = Int(abs(pct).rounded())
+        let lowerName = displayName.lowercased()
         if pct >= 0 {
-            title = "Your blocks are working"
+            title = String(
+                localized: "Your blocks are working",
+                comment: "Block-phase performance insight title: accumulation weeks read stronger than deload weeks, the expected periodisation pattern."
+            )
             msg = String(
-                format: "Your %@ averages %.0f%% higher during accumulation weeks than deload weeks — the planned recovery is letting you push harder when it matters.",
-                displayName.lowercased(), abs(pct)
+                localized: "Your \(lowerName) averages \(pctInt)% higher during accumulation weeks than deload weeks — the planned recovery is letting you push harder when it matters.",
+                comment: "Block-phase performance insight message — positive direction. First placeholder is the user's dominant exercise name, lowercased. Second placeholder is the e1RM percentage difference (whole number)."
             )
         } else {
-            title = "Accumulation is wearing you down"
+            title = String(
+                localized: "Accumulation is wearing you down",
+                comment: "Block-phase performance insight title: deload weeks register stronger than accumulation weeks, the inverse periodisation pattern that suggests over-reach."
+            )
             msg = String(
-                format: "Your %@ averages %.0f%% higher during deload weeks than accumulation weeks. Consider shortening your accumulate phase or extending the deload.",
-                displayName.lowercased(), abs(pct)
+                localized: "Your \(lowerName) averages \(pctInt)% higher during deload weeks than accumulation weeks. Consider shortening your accumulate phase or extending the deload.",
+                comment: "Block-phase performance insight message — inverse direction. First placeholder is the user's dominant exercise name, lowercased. Second placeholder is the e1RM percentage difference (whole number)."
             )
         }
-        let detail = "Based on \(accumulateGroup.count) accumulation + \(deloadGroup.count) deload sessions"
+        let detail = String(
+            localized: "Based on \(accumulateGroup.count) accumulation + \(deloadGroup.count) deload sessions",
+            comment: "Detail subtitle on the block-phase performance insight card. Both placeholders are session counts."
+        )
 
         return Insight(
             category: .performance,
@@ -883,24 +894,36 @@ enum PersonalInsightsEngine {
 
         let title: String
         let msg: String
+        let deltaStr = String(format: "%.1f", abs(delta))
+        let delStr   = String(format: "%.1f", avgDel)
+        let accStr   = String(format: "%.1f", avgAcc)
         if delta > 0 {
             // Deload weeks register LESS sore than accumulate weeks —
             // the periodisation is doing what it's supposed to.
-            title = "Deload weeks ease your soreness"
+            title = String(
+                localized: "Deload weeks ease your soreness",
+                comment: "Block-phase soreness insight title: deload weeks are quieter than accumulation weeks, the expected physiological-recovery pattern."
+            )
             msg = String(
-                format: "Your reported soreness averages %.1f points lower during deload weeks (%.1f / 4) than accumulation weeks (%.1f / 4). The planned recovery is doing its job.",
-                abs(delta), avgDel, avgAcc
+                localized: "Your reported soreness averages \(deltaStr) points lower during deload weeks (\(delStr) / 4) than accumulation weeks (\(accStr) / 4). The planned recovery is doing its job.",
+                comment: "Block-phase soreness insight message — positive direction. Placeholders: 1=absolute delta, 2=deload average, 3=accumulation average, all formatted to one decimal on a 0-4 scale."
             )
         } else {
             // Deload weeks are NOT easing soreness — recovery isn't
             // happening even though the volume cut is.
-            title = "Deload weeks aren't easing soreness"
+            title = String(
+                localized: "Deload weeks aren't easing soreness",
+                comment: "Block-phase soreness insight title: deload weeks register no lower than accumulation weeks, suggesting the deload isn't producing physiological recovery."
+            )
             msg = String(
-                format: "Your reported soreness during deload weeks (%.1f / 4) is no lower than accumulation weeks (%.1f / 4). Consider lengthening your deload or cutting volume more aggressively.",
-                avgDel, avgAcc
+                localized: "Your reported soreness during deload weeks (\(delStr) / 4) is no lower than accumulation weeks (\(accStr) / 4). Consider lengthening your deload or cutting volume more aggressively.",
+                comment: "Block-phase soreness insight message — inverse direction. Placeholders: 1=deload average, 2=accumulation average, both formatted to one decimal on a 0-4 scale."
             )
         }
-        let detail = "Based on \(accumulateLevels.count) accumulation + \(deloadLevels.count) deload reports"
+        let detail = String(
+            localized: "Based on \(accumulateLevels.count) accumulation + \(deloadLevels.count) deload reports",
+            comment: "Detail subtitle on the block-phase soreness insight card. Both placeholders are report counts."
+        )
 
         return Insight(
             category: .recovery,

@@ -29,9 +29,21 @@ enum TrainingBlockEngine {
     /// The block whose window contains `date`, or `nil` if none does.
     /// O(n) over the block list — fine for the realistic block counts
     /// (a year of training is ~13 blocks at 4-on/1-off).
+    ///
+    /// **Overlap handling.** When two blocks happen to contain the
+    /// same date (data-import bug, manual edit, accidental double-
+    /// insert), the *most-recent-startDate* match wins. The previous
+    /// `blocks.first { contains }` implementation depended on the
+    /// caller's sort order to make this choice — fine when the only
+    /// caller was HomeDashboardView's descending-startDate @Query,
+    /// fragile once other callers sort differently. Picking by
+    /// startDate explicitly makes the resolution deterministic
+    /// regardless of input order.
     static func currentBlock(in blocks: [TrainingBlock],
                              at date: Date = .now) -> TrainingBlock? {
-        blocks.first { $0.contains(date) }
+        blocks
+            .filter { $0.contains(date) }
+            .max(by: { $0.startDate < $1.startDate })
     }
 
     /// The most recent block whose `endDate` is on or before `date`.
@@ -83,7 +95,10 @@ enum TrainingBlockEngine {
                 nextPhase: .accumulate,
                 nextWeekCount: 4,
                 shouldRecommendNow: true,
-                rationale: "Start a 4-week accumulation block."
+                rationale: String(
+                    localized: "Start a 4-week accumulation block.",
+                    comment: "Empty-state recommendation surfaced on the Home training-block chip and detail-sheet dialog when the user has no block history."
+                )
             )
         }
 
@@ -97,11 +112,17 @@ enum TrainingBlockEngine {
         case .accumulate:
             nextPhase = .deload
             nextWeekCount = 1
-            rationale = "Accumulation finished — schedule a deload week."
+            rationale = String(
+                localized: "Accumulation finished — schedule a deload week.",
+                comment: "Recommendation rationale after an accumulation block has ended; the engine suggests a deload as the natural next block."
+            )
         case .deload:
             nextPhase = .accumulate
             nextWeekCount = 4
-            rationale = "Deload finished — start the next accumulation block."
+            rationale = String(
+                localized: "Deload finished — start the next accumulation block.",
+                comment: "Recommendation rationale after a deload week has ended; the engine suggests a fresh accumulation block."
+            )
         }
 
         return AdvancementRecommendation(

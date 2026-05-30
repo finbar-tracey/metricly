@@ -174,13 +174,11 @@ struct WatchGymView: View {
     // the intensity so the user gets a colour signal before parsing words.
 
     private var adaptivePlanCard: some View {
-        // Two tints — the badge keeps the intensity color so the user
-        // still reads what to DO today; the card background switches
-        // to a deload-specific calm purple during a deload week so the
-        // surface itself signals "recovery week" at a glance. Outside
-        // a deload (or on a rest day) the two collapse to the same
-        // color and the card looks exactly as it did before.
-        let intensityColor = intensityTint(connectivity.adaptiveIntensity)
+        // Card tint switches to a deload-specific calm purple during a
+        // deload week so the surface itself signals "recovery week" at
+        // a glance. Outside a deload (or on a rest day) it collapses
+        // back to the intensity color and the card looks exactly as it
+        // did pre-v1.8.
         let cardTint = adaptiveCardTint
         let badgeLabel = adaptiveBadgeText
         return VStack(alignment: .leading, spacing: 5) {
@@ -202,10 +200,6 @@ struct WatchGymView: View {
                         .background(cardTint.opacity(0.22), in: Capsule())
                 }
             }
-            // Suppress unused warning when accumulate / no block makes
-            // intensityColor identical to cardTint; the binding is kept
-            // for future per-element color customisation.
-            let _ = intensityColor
 
             Text(connectivity.adaptivePlanName)
                 .font(.subheadline.weight(.semibold))

@@ -279,16 +279,28 @@ enum TodayPlanEngine {
             reasons.append(complianceReasonCopy(for: ignoredKind, ignored: summary.ignoredCount(for: ignoredKind)))
         }
 
-        // Feedback reason — names the OUTCOME. When the nudge actually
-        // shifted intensity ("dropped to moderate"), the reason is
-        // concrete; when feedback was heard but the floor/ceiling
-        // prevented a further shift, fall back to the gentler
-        // acknowledgment copy.
+        // Feedback reason — names the OUTCOME. When the FEEDBACK NUDGE
+        // specifically moved intensity, the reason is concrete
+        // ("dropped to moderate"); when feedback was heard but the
+        // nudge bottomed/topped out (light→tooHard floor, hard→tooEasy
+        // ceiling), or when something else moved intensity (a deload
+        // cap), we fall back to the gentler acknowledgment copy.
+        //
+        // **Why postFeedbackIntensity, not baseIntensity.**  Previously
+        // this compared against baseIntensity — but that conflates a
+        // deload cap (.hard → .light because of the block) with a
+        // feedback shift (.hard → .moderate because the user reported
+        // too hard). The concrete copy would then misattribute the
+        // block-driven drop to feedback ("Heard your 'too hard' —
+        // dropping today to light" when actually .moderate was where
+        // feedback wanted to land and the deload pushed past it).
+        // Comparing against postFeedbackIntensity isolates whether
+        // the feedback nudge itself shifted things.
         if let majority = feedbackMajority {
-            if intensity != baseIntensity {
+            if postFeedbackIntensity != baseIntensity {
                 reasons.append(feedbackShiftReason(
                     for: majority,
-                    to: intensity
+                    to: postFeedbackIntensity
                 ))
             } else {
                 reasons.append(feedbackReasonCopy(for: majority))
