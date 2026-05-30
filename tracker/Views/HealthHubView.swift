@@ -4,6 +4,7 @@ import SwiftData
 struct HealthHubView: View {
     @Query(sort: \BodyWeightEntry.date, order: .reverse) private var bodyWeights: [BodyWeightEntry]
     @Query(sort: \WaterEntry.date, order: .reverse) private var waterEntries: [WaterEntry]
+    @Query private var settingsArray: [UserSettings]
     @Environment(\.weightUnit) private var weightUnit
 
     private var latestWeightText: String {
@@ -11,11 +12,30 @@ struct HealthHubView: View {
         return weightUnit.formatShort(w)
     }
 
-    private var waterTodayText: String {
+    /// Today's total water intake in millilitres.
+    private var waterTodayMl: Double {
         let start = Calendar.current.startOfDay(for: .now)
-        let ml = waterEntries.filter { $0.date >= start }.reduce(0) { $0 + $1.milliliters }
-        if ml <= 0 { return "—" }
-        return ml >= 1000 ? String(format: "%.1f L", ml / 1000) : "\(Int(ml)) ml"
+        return waterEntries.filter { $0.date >= start }.reduce(0) { $0 + $1.milliliters }
+    }
+
+    private var waterGoalMl: Double { Double(settingsArray.first?.dailyWaterGoalMl ?? 2500) }
+
+    private var waterProgress: Double { waterGoalMl > 0 ? min(1, waterTodayMl / waterGoalMl) : 0 }
+
+    private func mlShort(_ ml: Double) -> String {
+        ml >= 1000 ? String(format: "%.1f L", ml / 1000) : "\(Int(ml)) ml"
+    }
+
+    private var waterTodayText: String {
+        waterTodayMl <= 0 ? "—" : mlShort(waterTodayMl)
+    }
+
+    /// Signed change between the two most recent weigh-ins, e.g. "+0.3 kg"
+    /// or "-0.5 kg". "—" until there are two entries to compare.
+    private var weightTrendText: String {
+        guard bodyWeights.count >= 2 else { return "—" }
+        let delta = bodyWeights[0].weight - bodyWeights[1].weight
+        return (delta >= 0 ? "+" : "") + weightUnit.formatShort(delta)
     }
 
     var body: some View {
@@ -90,7 +110,7 @@ struct HealthHubView: View {
                 HStack(spacing: 0) {
                     HeroStatCol(value: latestWeightText, label: "Weight", icon: "scalemass.fill")
                     Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 40)
-                    HeroStatCol(value: waterTodayText, label: "Water today", icon: "drop.fill")
+                    HeroStatCol(value: weightTrendText, label: "Trend", icon: "arrow.up.arrow.down")
                     Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 40)
                     HeroStatCol(value: "\(bodyWeights.count)", label: "Weigh-ins", icon: "calendar")
                 }
@@ -100,9 +120,44 @@ struct HealthHubView: View {
                     RoundedRectangle(cornerRadius: AppTheme.miniCardRadius, style: .continuous)
                         .stroke(.white.opacity(0.18), lineWidth: 0.5)
                 )
+
+                hydrationGauge
             }
             .padding(20)
         }
         .frame(minHeight: 130)
+    }
+
+    /// Live hydration gauge in the hero — today's intake against the
+    /// daily goal, so the Health tab opens on a glanceable daily metric
+    /// (the body-tab analogue of the other heroes' rings) rather than a
+    /// static number with no target.
+    private var hydrationGauge: some View {
+        VStack(alignment: .leading, spacing: 7) {
+            HStack(spacing: 6) {
+                Image(systemName: "drop.fill")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(.white.opacity(0.85))
+                Text("HYDRATION")
+                    .font(.system(size: 10, weight: .bold))
+                    .tracking(0.5)
+                    .foregroundStyle(.white.opacity(0.78))
+                Spacer()
+                Text("\(mlShort(waterTodayMl)) / \(mlShort(waterGoalMl))")
+                    .font(.system(size: 12, weight: .bold, design: .rounded))
+                    .foregroundStyle(.white)
+                    .monospacedDigit()
+            }
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(.white.opacity(0.22))
+                    Capsule()
+                        .fill(.white)
+                        .frame(width: max(6, geo.size.width * waterProgress))
+                        .shadow(color: .black.opacity(0.12), radius: 3, y: 1)
+                }
+            }
+            .frame(height: 7)
+        }
     }
 }
