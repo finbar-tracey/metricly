@@ -409,7 +409,14 @@ struct AchievementsView: View {
                 SectionHeader(title: "Almost There", icon: "target", color: .orange)
                 VStack(spacing: 0) {
                     ForEach(Array(nextUp.enumerated()), id: \.element.id) { idx, a in
-                        nextUpRow(a)
+                        Button {
+                            withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                                selectedCategory = a.category
+                            }
+                        } label: {
+                            nextUpRow(a)
+                        }
+                        .buttonStyle(.plain)
                         if idx < nextUp.count - 1 {
                             Divider().padding(.leading, 56)
                         }
