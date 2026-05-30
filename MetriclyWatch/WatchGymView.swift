@@ -174,26 +174,38 @@ struct WatchGymView: View {
     // the intensity so the user gets a colour signal before parsing words.
 
     private var adaptivePlanCard: some View {
-        let tint = intensityTint(connectivity.adaptiveIntensity)
+        // Two tints — the badge keeps the intensity color so the user
+        // still reads what to DO today; the card background switches
+        // to a deload-specific calm purple during a deload week so the
+        // surface itself signals "recovery week" at a glance. Outside
+        // a deload (or on a rest day) the two collapse to the same
+        // color and the card looks exactly as it did before.
+        let intensityColor = intensityTint(connectivity.adaptiveIntensity)
+        let cardTint = adaptiveCardTint
+        let badgeLabel = adaptiveBadgeText
         return VStack(alignment: .leading, spacing: 5) {
             HStack(spacing: 6) {
                 Image(systemName: "sparkles")
                     .font(.caption2)
-                    .foregroundStyle(tint)
+                    .foregroundStyle(cardTint)
                 Text("Today's Plan")
                     .font(.caption2.weight(.bold))
                     .foregroundStyle(.secondary)
                     .textCase(.uppercase)
                 Spacer(minLength: 0)
-                if !connectivity.adaptiveIntensity.isEmpty {
-                    Text(connectivity.adaptiveIntensity.uppercased())
+                if let label = badgeLabel {
+                    Text(label.uppercased())
                         .font(.system(size: 9, weight: .bold))
-                        .foregroundStyle(tint)
+                        .foregroundStyle(cardTint)
                         .padding(.horizontal, 5)
                         .padding(.vertical, 1)
-                        .background(tint.opacity(0.22), in: Capsule())
+                        .background(cardTint.opacity(0.22), in: Capsule())
                 }
             }
+            // Suppress unused warning when accumulate / no block makes
+            // intensityColor identical to cardTint; the binding is kept
+            // for future per-element color customisation.
+            let _ = intensityColor
 
             Text(connectivity.adaptivePlanName)
                 .font(.subheadline.weight(.semibold))
@@ -209,7 +221,7 @@ struct WatchGymView: View {
                 HStack(spacing: 4) {
                     Image(systemName: blockGlyph)
                         .font(.system(size: 8, weight: .bold))
-                        .foregroundStyle(tint)
+                        .foregroundStyle(cardTint)
                     Text(blockStripText)
                         .font(.caption2.weight(.semibold))
                         .foregroundStyle(.secondary)
@@ -228,9 +240,37 @@ struct WatchGymView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(10)
-        .background(tint.opacity(0.18), in: RoundedRectangle(cornerRadius: 10))
+        .background(cardTint.opacity(0.18), in: RoundedRectangle(cornerRadius: 10))
         .accessibilityElement(children: .combine)
         .accessibilityLabel(adaptiveAccessibilityLabel)
+    }
+
+    /// Card tint — block phase overrides intensity when meaningful.
+    /// Deload reads as a calm purple/blue (distinct from a regular
+    /// light-day blue) so the surface itself signals "recovery week";
+    /// outside a deload, falls back to the intensity color so an
+    /// accumulate light day still reads as the normal blue.
+    /// Rest always wins over deload — a recovery-engine rest day
+    /// trumps the periodisation override.
+    private var adaptiveCardTint: Color {
+        if connectivity.adaptiveIntensity == "rest" { return .gray }
+        if connectivity.blockPhase == "deload"      { return .purple }
+        return intensityTint(connectivity.adaptiveIntensity)
+    }
+
+    /// Pure label derivation. Lives here so view code stays thin and
+    /// the same rule can drive complication + watch app from one
+    /// source. Mirrors `MetriclyWatchComplications.adaptiveBadgeLabel`
+    /// — the watch target can't see the complications target's
+    /// symbols, so the rule is duplicated rather than shared.
+    private var adaptiveBadgeText: String? {
+        if connectivity.adaptiveIntensity == "rest" { return "Rest" }
+        if connectivity.blockPhase == "deload"      { return "Deload" }
+        switch connectivity.adaptiveIntensity {
+        case "light": return "Light"
+        case "hard":  return "Hard"
+        default:      return nil
+        }
     }
 
     /// "Wk 2/4 · Deload" — compact week label + phase. Pulls the

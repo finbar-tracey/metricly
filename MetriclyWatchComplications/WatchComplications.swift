@@ -19,6 +19,12 @@ struct MetriclyEntry: TimelineEntry {
     /// ("rest"/"light"/"moderate"/"hard"). Powers an inline badge in
     /// rectangular and a "Plan · Intensity" pattern in inline.
     let adaptiveIntensity: String
+    /// `TrainingBlock.Phase.rawValue` of the user's active block
+    /// ("accumulate"/"deload"), or `""` when no block is active.
+    /// During deload weeks the complication's badge label switches
+    /// from "LIGHT" to "DELOAD" so the wrist instantly signals
+    /// "recovery week" rather than reading as just-a-light-day.
+    let blockPhase:      String
     /// When non-nil, the Watch has an active workout going. Complications
     /// render an "In Progress" state so a glance shows the current session
     /// instead of yesterday's streak.
@@ -40,6 +46,7 @@ struct MetriclyProvider: TimelineProvider {
                       todayPlan: "Push Day",
                       adaptivePlan: "Push Day",
                       adaptiveIntensity: "moderate",
+                      blockPhase: "",
                       activeStartedAt: nil,
                       activeName: "")
     }
@@ -72,6 +79,10 @@ struct MetriclyProvider: TimelineProvider {
         // schedule's literal label below.
         let adaptivePlan      = defaults?.string(forKey: "watch.adaptivePlanName")  ?? ""
         let adaptiveIntensity = defaults?.string(forKey: "watch.adaptiveIntensity") ?? ""
+        // Block phase published by Sprint 32's iPhone → Watch payload
+        // and mirrored to the App Group. Empty string is the "no
+        // active block" sentinel.
+        let blockPhase        = defaults?.string(forKey: "watch.blockPhase") ?? ""
         let startedTS = defaults?.double(forKey: "watch.activeStartedAt") ?? 0
         let startedAt: Date? = startedTS > 0 ? Date(timeIntervalSince1970: startedTS) : nil
         let activeName = defaults?.string(forKey: "watch.activeName") ?? ""
@@ -80,6 +91,7 @@ struct MetriclyProvider: TimelineProvider {
                              todayPlan: todayPlan,
                              adaptivePlan: adaptivePlan,
                              adaptiveIntensity: adaptiveIntensity,
+                             blockPhase: blockPhase,
                              activeStartedAt: startedAt,
                              activeName: activeName)
     }
@@ -94,17 +106,35 @@ private func displayPlan(_ entry: MetriclyEntry) -> String {
     entry.adaptivePlan.isEmpty ? entry.todayPlan : entry.adaptivePlan
 }
 
-/// Two-letter shorthand for the intensity badge in tight complication
-/// real estate. nil means "no badge worth showing" (no intensity or
-/// moderate, which is the neutral default users don't need flagged).
-private func intensityShort(_ raw: String) -> String? {
-    switch raw {
-    case "rest":     return "Rest"
-    case "light":    return "Light"
-    case "hard":     return "Hard"
-    case "moderate": return nil       // default, not worth taxing the user's eye with
-    default:         return nil
+/// Short badge label for the complication. Block phase overrides
+/// intensity when meaningful:
+///
+///   - `.rest` always wins — recovery-engine rest day overrides
+///     any periodisation context.
+///   - During a `.deload` block, every non-rest intensity reads as
+///     "Deload" so the user instantly sees "this is the recovery
+///     week" without having to spot the small "Wk N/M · Deload"
+///     strip in the gym view. The wrist signals the multi-week
+///     state at a glance.
+///   - Outside a deload block, `.light` and `.hard` still surface
+///     by name; `.moderate` returns nil (the neutral default the
+///     user doesn't need flagged).
+///
+/// nil means "no badge worth showing."
+func adaptiveBadgeLabel(intensity: String, blockPhase: String) -> String? {
+    if intensity == "rest" { return "Rest" }
+    if blockPhase == "deload" { return "Deload" }
+    switch intensity {
+    case "light": return "Light"
+    case "hard":  return "Hard"
+    default:      return nil
     }
+}
+
+/// Back-compat shim — the old name still used by some callers.
+/// Forwards to the new block-aware helper with an empty phase.
+private func intensityShort(_ raw: String, blockPhase: String = "") -> String? {
+    adaptiveBadgeLabel(intensity: raw, blockPhase: blockPhase)
 }
 
 // MARK: - Complication Views
@@ -192,7 +222,7 @@ struct RectangularView: View {
                             .font(.caption)
                             .foregroundStyle(.secondary)
                             .lineLimit(1)
-                        if let badge = intensityShort(entry.adaptiveIntensity) {
+                        if let badge = intensityShort(entry.adaptiveIntensity, blockPhase: entry.blockPhase) {
                             Text(badge.uppercased())
                                 .font(.system(size: 9, weight: .black))
                                 .foregroundStyle(.secondary)
@@ -219,7 +249,7 @@ struct InlineView: View {
             let plan = displayPlan(entry)
             if plan.isEmpty {
                 Label("\(entry.streak) day streak", systemImage: "flame.fill")
-            } else if let badge = intensityShort(entry.adaptiveIntensity) {
+            } else if let badge = intensityShort(entry.adaptiveIntensity, blockPhase: entry.blockPhase) {
                 // "Push · Hard" form when the engine has flagged today
                 // as non-default intensity — surfaces the adaptive
                 // recommendation at a single glance.
