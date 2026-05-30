@@ -180,8 +180,9 @@ struct CreatineTrackerView: View {
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 12)
                         .background(.white, in: Capsule())
+                        .shadow(color: .black.opacity(0.15), radius: 8, y: 4)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressableCard)
                 }
             }
             .padding(20)
@@ -193,12 +194,7 @@ struct CreatineTrackerView: View {
     private var loadingPhaseCard: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(spacing: 10) {
-                ZStack {
-                    Circle().fill(Color.yellow.opacity(0.15)).frame(width: 36, height: 36)
-                    Image(systemName: "bolt.fill")
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundStyle(.yellow)
-                }
+                gradientDisc("bolt.fill", color: .yellow, size: 36, glyph: 14)
                 Text("Loading Phase Active")
                     .font(.subheadline.weight(.semibold))
                 Spacer()
@@ -258,6 +254,25 @@ struct CreatineTrackerView: View {
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity)
+    }
+
+    /// Shared gradient icon disc — the app-wide gradient-fill + hairline
+    /// treatment, replacing this screen's flat `color.opacity(…)` circles.
+    private func gradientDisc(_ icon: String, color: Color, size: CGFloat, glyph: CGFloat) -> some View {
+        ZStack {
+            Circle()
+                .fill(
+                    LinearGradient(
+                        colors: [color.opacity(0.26), color.opacity(0.12)],
+                        startPoint: .topLeading, endPoint: .bottomTrailing
+                    )
+                )
+                .frame(width: size, height: size)
+                .overlay(Circle().stroke(color.opacity(0.28), lineWidth: 0.5))
+            Image(systemName: icon)
+                .font(.system(size: glyph, weight: .semibold))
+                .foregroundStyle(color)
+        }
     }
 
     // MARK: - Compliance Card
@@ -372,12 +387,7 @@ struct CreatineTrackerView: View {
                     let prefixed = Array(entries.prefix(14))
                     ForEach(Array(prefixed.enumerated()), id: \.element.id) { idx, entry in
                         HStack(spacing: 12) {
-                            ZStack {
-                                Circle().fill(Color.blue.opacity(0.12)).frame(width: 32, height: 32)
-                                Image(systemName: "pill.fill")
-                                    .font(.system(size: 12, weight: .semibold))
-                                    .foregroundStyle(.blue)
-                            }
+                            gradientDisc("pill.fill", color: .blue, size: 32, glyph: 12)
                             VStack(alignment: .leading, spacing: 2) {
                                 Text("\(String(format: "%.0f", entry.grams))g creatine")
                                     .font(.subheadline.weight(.semibold))
