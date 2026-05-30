@@ -7,6 +7,7 @@ struct ExerciseLibraryView: View {
     @Environment(\.weightUnit) private var weightUnit
     @State private var searchText = ""
     @State private var cachedExercises: [ExerciseInfo] = []
+    @State private var selectedGroup: MuscleGroup?
 
     // Rebuild only when workouts change, not on every keystroke
     private func buildAllExercises() -> [ExerciseInfo] {
@@ -46,8 +47,15 @@ struct ExerciseLibraryView: View {
     }
 
     private var groupedExercises: [(MuscleGroup, [ExerciseInfo])] {
-        let grouped = Dictionary(grouping: filteredExercises) { $0.category ?? .other }
+        let base = filteredExercises.filter { selectedGroup == nil || ($0.category ?? .other) == selectedGroup }
+        let grouped = Dictionary(grouping: base) { $0.category ?? .other }
         return grouped.sorted { $0.key.rawValue < $1.key.rawValue }
+    }
+
+    /// Muscle groups that actually have exercises, for the filter-chip bar.
+    private var presentGroups: [MuscleGroup] {
+        let present = Set(cachedExercises.map { $0.category ?? .other })
+        return MuscleGroup.allCases.filter { present.contains($0) }
     }
 
     var body: some View {
@@ -98,18 +106,76 @@ struct ExerciseLibraryView: View {
             }
         }
         .searchable(text: $searchText, prompt: "Search exercises")
+        .safeAreaInset(edge: .top, spacing: 0) {
+            if presentGroups.count > 1 { filterChipBar }
+        }
         .navigationTitle("Exercise Library")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear { cachedExercises = buildAllExercises() }
         .onChange(of: workouts.count) { cachedExercises = buildAllExercises() }
     }
 
+    /// Horizontal muscle-group filter chips pinned above the list. Tapping a
+    /// chip narrows the list to that group; "All" clears the filter. Lets
+    /// users jump to a muscle group without scrolling the full A–Z library.
+    private var filterChipBar: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                filterChip(title: "All", color: .accentColor, icon: "square.grid.2x2.fill", group: nil)
+                ForEach(presentGroups) { group in
+                    filterChip(title: group.rawValue, color: groupColor(group), icon: group.icon, group: group)
+                }
+            }
+            .padding(.horizontal)
+            .padding(.vertical, 8)
+        }
+        .background(.bar)
+    }
+
+    private func filterChip(title: String, color: Color, icon: String, group: MuscleGroup?) -> some View {
+        let isSelected = selectedGroup == group
+        return Button {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
+                selectedGroup = isSelected ? nil : group
+            }
+        } label: {
+            HStack(spacing: 5) {
+                Image(systemName: icon).font(.system(size: 11, weight: .bold))
+                Text(title).font(.system(size: 13, weight: .semibold, design: .rounded))
+            }
+            .padding(.horizontal, 12).padding(.vertical, 7)
+            .background {
+                if isSelected {
+                    Capsule()
+                        .fill(
+                            LinearGradient(
+                                colors: [color, color.opacity(0.72)],
+                                startPoint: .topLeading, endPoint: .bottomTrailing
+                            )
+                        )
+                        .shadow(color: color.opacity(0.40), radius: 6, y: 3)
+                } else {
+                    Capsule().fill(color.opacity(0.12))
+                }
+            }
+            .foregroundStyle(isSelected ? .white : color)
+        }
+        .buttonStyle(.pressableCard)
+    }
+
     private func exerciseRow(_ exercise: ExerciseInfo, group: MuscleGroup) -> some View {
         HStack(spacing: 12) {
             ZStack {
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(groupColor(group).opacity(0.12))
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [groupColor(group).opacity(0.26), groupColor(group).opacity(0.12)],
+                            startPoint: .topLeading, endPoint: .bottomTrailing
+                        )
+                    )
                     .frame(width: 34, height: 34)
+                    .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(groupColor(group).opacity(0.28), lineWidth: 0.5))
                 MuscleIconView(group: group, color: groupColor(group))
                     .frame(width: 18, height: 18)
             }
