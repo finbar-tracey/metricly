@@ -71,7 +71,19 @@ enum HRZone: String {
         }
     }
 
-    static func zone(for bpm: Double) -> HRZone {
+    /// Classify a heart rate. When `maxHR` is provided, uses %-of-max zones
+    /// (the standard 5-zone model); otherwise falls back to absolute BPM
+    /// bands, which is what the app uses until the user sets their max HR.
+    static func zone(for bpm: Double, maxHR: Double? = nil) -> HRZone {
+        if let maxHR, maxHR > 0 {
+            switch bpm / maxHR {
+            case 0.90...:     return .max
+            case 0.80..<0.90: return .threshold
+            case 0.70..<0.80: return .tempo
+            case 0.60..<0.70: return .aerobic
+            default:          return .easy
+            }
+        }
         switch bpm {
         case 170...:    return .max
         case 152..<170: return .threshold

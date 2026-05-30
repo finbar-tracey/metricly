@@ -174,7 +174,7 @@ struct CardioCompletionView: View {
                         if let hr = session.avgHeartRate {
                             // Surface the average-effort HR zone, mirroring the
                             // live zone ring on the active session.
-                            let zone = HRZone.zone(for: hr)
+                            let zone = HRZone.zone(for: hr, maxHR: settingsArray.first?.resolvedMaxHR)
                             miniStat(icon: "heart.fill", value: "\(Int(hr))",
                                      label: "Z\(zone.number) · \(zone.rawValue)", color: zone.color)
                         }

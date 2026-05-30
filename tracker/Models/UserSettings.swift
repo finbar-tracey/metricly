@@ -46,6 +46,13 @@ final class UserSettings {
     var weeklyCardioDistanceGoalKm: Double = 0   // 0 = not set
     var weeklyCardioSessionGoal: Int       = 0   // 0 = not set
 
+    // Heart-rate zones — 0 = auto (uses absolute HR bands). When set, cardio
+    // HR zones are computed as a percentage of this max heart rate.
+    var maxHeartRate: Int = 0
+
+    /// User max HR as a Double, or nil when unset (auto / absolute bands).
+    var resolvedMaxHR: Double? { maxHeartRate > 0 ? Double(maxHeartRate) : nil }
+
     // Weekly workout schedule — JSON [weekday: name], weekday 1=Sun … 7=Sat
     var weeklyPlanData: Data? = nil
 

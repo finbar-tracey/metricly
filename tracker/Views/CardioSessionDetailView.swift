@@ -128,7 +128,7 @@ struct CardioSessionDetailView: View {
         var totals: [HRZone: Double] = [:]
         for split in session.splits {
             guard let hr = split.avgHeartRate else { continue }
-            totals[HRZone.zone(for: hr), default: 0] += split.durationSeconds
+            totals[HRZone.zone(for: hr, maxHR: settingsArray.first?.resolvedMaxHR), default: 0] += split.durationSeconds
         }
         let order: [HRZone] = [.max, .threshold, .tempo, .aerobic, .easy]
         return order.compactMap { z in

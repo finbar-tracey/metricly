@@ -397,7 +397,7 @@ struct CardioActiveView: View {
     /// 5-segment zone bar. Surfaces intensity at a glance mid-run — the
     /// HR equivalent of the pace-zone colouring already used above.
     private func heartRateZoneModule(hr: Double) -> some View {
-        let zone = HRZone.zone(for: hr)
+        let zone = HRZone.zone(for: hr, maxHR: settingsArray.first?.resolvedMaxHR)
         // ~90–185 bpm display range so the ring fills (and reddens) as the
         // session gets harder.
         let fill = max(0.0, min(1.0, (hr - 90) / 95.0))
