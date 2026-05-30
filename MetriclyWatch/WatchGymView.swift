@@ -200,6 +200,24 @@ struct WatchGymView: View {
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
 
+            // Block strip — single-line "Wk 2/4 · Deload" between the
+            // plan name and the top reason. Sits inside the card (not
+            // separate) so the tint already conveys intensity and the
+            // strip just adds periodisation context without doubling
+            // the surface area on a 44mm screen.
+            if !connectivity.blockWeekLabel.isEmpty {
+                HStack(spacing: 4) {
+                    Image(systemName: blockGlyph)
+                        .font(.system(size: 8, weight: .bold))
+                        .foregroundStyle(tint)
+                    Text(blockStripText)
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.75)
+                }
+            }
+
             if !connectivity.adaptiveTopReason.isEmpty {
                 Text(connectivity.adaptiveTopReason)
                     .font(.caption2)
@@ -213,6 +231,30 @@ struct WatchGymView: View {
         .background(tint.opacity(0.18), in: RoundedRectangle(cornerRadius: 10))
         .accessibilityElement(children: .combine)
         .accessibilityLabel(adaptiveAccessibilityLabel)
+    }
+
+    /// "Wk 2/4 · Deload" — compact week label + phase. Pulls the
+    /// label apart and rebuilds it as "Wk N/M" instead of "Week N of
+    /// M" because watch screens read better with fewer characters per
+    /// line, and the iPhone owns the long-form label.
+    private var blockStripText: String {
+        let compact = connectivity.blockWeekLabel
+            .replacingOccurrences(of: "Week ", with: "Wk ")
+            .replacingOccurrences(of: " of ", with: "/")
+        guard !connectivity.blockPhase.isEmpty else { return compact }
+        let phaseLabel = connectivity.blockPhase.capitalized
+        return "\(compact) · \(phaseLabel)"
+    }
+
+    /// SF Symbol for the block strip's leading glyph. Matches the
+    /// iPhone chip glyphs so a user looking at both devices sees the
+    /// same visual signature for the same phase.
+    private var blockGlyph: String {
+        switch connectivity.blockPhase {
+        case "deload":     return "arrow.down.right"
+        case "accumulate": return "arrow.up.right"
+        default:           return "calendar"
+        }
     }
 
     /// Colour for the adaptive intensity badge + card background. Matches
@@ -232,6 +274,14 @@ struct WatchGymView: View {
         var parts = ["Today's plan", connectivity.adaptivePlanName]
         if !connectivity.adaptiveIntensity.isEmpty {
             parts.append("\(connectivity.adaptiveIntensity) intensity")
+        }
+        if !connectivity.blockWeekLabel.isEmpty {
+            // Spell out the long form for VoiceOver — the compact "Wk
+            // 2/4" reads poorly aloud.
+            let phaseSpoken = connectivity.blockPhase.isEmpty
+                ? ""
+                : ", \(connectivity.blockPhase) block"
+            parts.append("\(connectivity.blockWeekLabel)\(phaseSpoken)")
         }
         if !connectivity.adaptiveTopReason.isEmpty {
             parts.append(connectivity.adaptiveTopReason)

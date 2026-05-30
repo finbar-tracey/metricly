@@ -49,6 +49,15 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
     /// etc). Shown beneath the recommendation as a one-liner so the user
     /// understands *why* the watch is suggesting what it is.
     @Published var adaptiveTopReason:  String   = ""
+    /// `TrainingBlock.Phase.rawValue` of the user's active block ("accumulate"
+    /// or "deload"), or `""` when no block is active. The watch's gym start
+    /// screen drops the periodisation strip entirely when this is empty
+    /// rather than rendering a half-filled row.
+    @Published var blockPhase:         String   = ""
+    /// Pre-formatted "Week N of M" label for the active block, or `""`.
+    /// The phone does the date math once at the source so this is plain
+    /// text on arrival — the watch never needs to call into engine code.
+    @Published var blockWeekLabel:     String   = ""
 
     private override init() {
         super.init()
@@ -167,6 +176,18 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
             adaptiveTopReason = aReason
             defaults?.set(aReason, forKey: WatchSharedKeys.adaptiveTopReason)
         }
+        // Training block context — phase + "Week N of M" label.
+        // Empty strings mean "no active block"; we still write them so
+        // the App Group reflects the absence (otherwise a stale cached
+        // value would survive after the block ended).
+        if let phase = reply[WatchMessageKey.blockPhase] as? String {
+            blockPhase = phase
+            defaults?.set(phase, forKey: WatchSharedKeys.blockPhase)
+        }
+        if let label = reply[WatchMessageKey.blockWeekLabel] as? String {
+            blockWeekLabel = label
+            defaults?.set(label, forKey: WatchSharedKeys.blockWeekLabel)
+        }
         // Phone-side active workout. A `0` (or missing) timestamp means
         // the phone has no active workout — clear local state.
         if let ts = reply[WatchMessageKey.activeStartedAt] as? Double {
@@ -239,6 +260,8 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
         adaptivePlanName      = defaults.string(forKey: WatchSharedKeys.adaptivePlanName) ?? ""
         adaptiveIntensity     = defaults.string(forKey: WatchSharedKeys.adaptiveIntensity) ?? ""
         adaptiveTopReason     = defaults.string(forKey: WatchSharedKeys.adaptiveTopReason) ?? ""
+        blockPhase            = defaults.string(forKey: WatchSharedKeys.blockPhase) ?? ""
+        blockWeekLabel        = defaults.string(forKey: WatchSharedKeys.blockWeekLabel) ?? ""
 
         // Cold-launch: if the phone wrote an active workout earlier and
         // the watch app was killed in the interim, surface it on first

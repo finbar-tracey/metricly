@@ -39,6 +39,12 @@ enum WatchSharedKeys {
     static let adaptivePlanName  = "watch.adaptivePlanName"  // String
     static let adaptiveIntensity = "watch.adaptiveIntensity" // String (rest/light/moderate/hard)
     static let adaptiveTopReason = "watch.adaptiveTopReason" // String — one-line "why"
+
+    // Training block context — the periodisation strip on the gym
+    // start screen. Empty strings mean "no active block" and the UI
+    // should drop the strip rather than render an empty row.
+    static let blockPhase        = "watch.blockPhase"        // String — accumulate/deload, "" if none
+    static let blockWeekLabel    = "watch.blockWeekLabel"    // String — "Week 2 of 4", "" if none
 }
 
 // MARK: - In-progress gym workout (Watch memory model)

@@ -80,6 +80,17 @@ nonisolated enum WatchMessageKey {
     /// First reason from the plan's reason list, for the watch UI to
     /// show a one-liner ("Recovery is low (32%)" etc.).
     static let adaptiveTopReason    = "adaptiveTopReason"
+    /// `TrainingBlock.Phase.rawValue` for the user's active block, or
+    /// the empty string when nothing is active. Watch complications
+    /// surface "Wk 2/4 · Deload" next to intensity so the wrist's
+    /// adaptive surface carries the same periodisation story Home
+    /// does. Empty here means "no active block", not "no signal" —
+    /// the watch should drop the block strip entirely.
+    static let blockPhase           = "blockPhase"
+    /// Pre-formatted "Week N of M" label for the active block, or
+    /// the empty string. Pre-formatting on the phone side keeps the
+    /// watch reader thin — date math happens once at the source.
+    static let blockWeekLabel       = "blockWeekLabel"
     static let requestExercises = "requestExercises"
     /// Map of exercise name → rest seconds. iPhone pushes the user's
     /// per-exercise rest overrides so the Watch's rest timer respects them.

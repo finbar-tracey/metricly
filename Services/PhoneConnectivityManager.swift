@@ -118,6 +118,20 @@ final class PhoneConnectivityManager: NSObject, ObservableObject {
             context[WatchMessageKey.adaptiveIntensity] = plan.intensity.rawValue
             context[WatchMessageKey.adaptiveTopReason] = plan.reasons.first ?? ""
         }
+
+        // Training block context — resolved from SwiftData rather than
+        // a cached snapshot since blocks are infrequent and the engine
+        // call is constant-time. Empty strings when there's no active
+        // block; the watch interprets that as "drop the block strip".
+        let blocks = (try? ctx.fetch(FetchDescriptor<TrainingBlock>())) ?? []
+        if let active = TrainingBlockEngine.currentBlock(in: blocks) {
+            context[WatchMessageKey.blockPhase] = active.phase.rawValue
+            context[WatchMessageKey.blockWeekLabel] =
+                TrainingBlockEngine.progressLabel(for: active) ?? ""
+        } else {
+            context[WatchMessageKey.blockPhase] = ""
+            context[WatchMessageKey.blockWeekLabel] = ""
+        }
         return context
     }
 
@@ -180,6 +194,15 @@ final class PhoneConnectivityManager: NSObject, ObservableObject {
             }
             if let aReason = context[WatchMessageKey.adaptiveTopReason] as? String {
                 defaults.set(aReason, forKey: "watch.adaptiveTopReason")
+            }
+            // Block context mirror — iPhone-side widgets read these to
+            // render "Wk 2/4 · Deload" next to the adaptive plan;
+            // matches the same pattern as the adaptive trio above.
+            if let phase = context[WatchMessageKey.blockPhase] as? String {
+                defaults.set(phase, forKey: "watch.blockPhase")
+            }
+            if let weekLabel = context[WatchMessageKey.blockWeekLabel] as? String {
+                defaults.set(weekLabel, forKey: "watch.blockWeekLabel")
             }
         }
 
