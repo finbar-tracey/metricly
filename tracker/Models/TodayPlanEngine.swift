@@ -101,6 +101,14 @@ enum TodayPlanEngine {
         /// just surfaces it — pending more data on how the signal
         /// behaves against competing inputs (recovery, compliance).
         feedbackEvents: [WorkoutFeedbackEvent] = [],
+        /// The user's active training block at `now`, if any. When
+        /// present and in `.deload` phase, intensity is capped at
+        /// `.light` regardless of recovery/feedback. An `.accumulate`
+        /// block doesn't change intensity but does add a reason line
+        /// naming the periodisation context so the user understands
+        /// the multi-week arc behind today's call. Nil means no
+        /// active periodisation — engine behaves identically to V4.
+        currentBlock: TrainingBlock? = nil,
         /// Injectable "now" for testability. Production callers should omit.
         now: Date = .now
     ) -> TodayPlan {
@@ -202,10 +210,26 @@ enum TodayPlanEngine {
             return m
         }()
 
-        let intensity: TodayPlan.Intensity = nudgeIntensity(
+        let postFeedbackIntensity: TodayPlan.Intensity = nudgeIntensity(
             base: baseIntensity,
             byFeedback: feedbackMajority
         )
+
+        // Periodisation override. A `.deload` block caps intensity at
+        // `.light` — the whole point of a deload is to let cumulative
+        // fatigue dissipate, even on days the user feels recovered.
+        // `.rest` is sacred: if recovery already said rest, the block
+        // doesn't promote it back to light.
+        let intensity: TodayPlan.Intensity = {
+            guard let block = currentBlock,
+                  block.phase == .deload,
+                  postFeedbackIntensity != .rest else {
+                return postFeedbackIntensity
+            }
+            // Light is already light — and hard / moderate both come
+            // down to light. Single floor.
+            return .light
+        }()
 
         // Recovery-driven base reason — describes how the BODY reads,
         // which is the foundation of the recommendation regardless of
@@ -219,6 +243,28 @@ enum TodayPlanEngine {
             reasons.append(String(localized: "Well recovered (\(Int(score * 100))%) — good day to push", comment: "Well-recovered reason. Argument is a 0-100 percent."))
         case .moderate:
             break
+        }
+
+        // Periodisation reason — names the active block and the user's
+        // position in it, so today's call sits inside a multi-week arc
+        // rather than reading as a one-off. Surfaced regardless of
+        // whether the block changed intensity: on a deload it explains
+        // the override; on an accumulate it gives narrative ("week 2
+        // of 4, build week").
+        if let block = currentBlock,
+           let weekLabel = TrainingBlockEngine.progressLabel(for: block, at: now) {
+            switch block.phase {
+            case .deload:
+                reasons.append(String(
+                    localized: "Deload week — keep it light (\(weekLabel))",
+                    comment: "Periodisation reason during a deload block. Argument is 'Week N of M'."
+                ))
+            case .accumulate:
+                reasons.append(String(
+                    localized: "Accumulation block — \(weekLabel.lowercased())",
+                    comment: "Periodisation reason during an accumulation block. Argument is 'Week N of M', lowercased."
+                ))
+            }
         }
 
         // Trust calibration: surface when the user has been ignoring

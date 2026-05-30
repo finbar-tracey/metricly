@@ -156,10 +156,10 @@ final class MetriclySchemaMigrationTests: XCTestCase {
         // Locks in the chain so future schema bumps require an explicit
         // edit. Catches the case where someone adds V5 to the schema set
         // but forgets the corresponding stage in the plan.
-        XCTAssertEqual(MetriclyMigrationPlan.stages.count, 3,
-                       "V1→V2, V2→V3, V3→V4 — bumping this requires a thoughtful migration plan update")
-        XCTAssertEqual(MetriclyMigrationPlan.schemas.count, 4,
-                       "V1, V2, V3, V4 — same warning applies")
+        XCTAssertEqual(MetriclyMigrationPlan.stages.count, 4,
+                       "V1→V2, V2→V3, V3→V4, V4→V5 — bumping this requires a thoughtful migration plan update")
+        XCTAssertEqual(MetriclyMigrationPlan.schemas.count, 5,
+                       "V1, V2, V3, V4, V5 — same warning applies")
     }
 
     func testV4FeedbackEventTableIsQueryablePostMigration() throws {
@@ -188,6 +188,35 @@ final class MetriclySchemaMigrationTests: XCTestCase {
         XCTAssertEqual(try ctx.fetch(FetchDescriptor<WorkoutFeedbackEvent>()).count, 1)
 
         // The V1 workout we seeded is still there.
+        let workouts = try ctx.fetch(FetchDescriptor<Workout>())
+        XCTAssertEqual(workouts.count, 1)
+    }
+
+    func testV5TrainingBlockTableIsQueryablePostMigration() throws {
+        // V5 added TrainingBlock — the periodisation primitive for
+        // Sprint 30's adaptive training blocks. After full V1→V5
+        // migration on a populated store, the new table must exist
+        // (queryable + writable), and V1 data must still survive.
+        try seedV1Store()
+        let migrated = try openMigrated()
+        let ctx = migrated.mainContext
+
+        let blocks = try ctx.fetch(FetchDescriptor<TrainingBlock>())
+        XCTAssertTrue(blocks.isEmpty,
+                      "Block table should exist and be empty post-migration from V1")
+
+        // Write one — proves the table is fully realised, not just
+        // queryable.
+        let block = TrainingBlock(
+            startDate: .now,
+            weekCount: 4,
+            phase: .accumulate
+        )
+        ctx.insert(block)
+        try ctx.save()
+        XCTAssertEqual(try ctx.fetch(FetchDescriptor<TrainingBlock>()).count, 1)
+
+        // V1 workouts survive untouched.
         let workouts = try ctx.fetch(FetchDescriptor<Workout>())
         XCTAssertEqual(workouts.count, 1)
     }

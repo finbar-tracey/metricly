@@ -17,6 +17,7 @@ struct HomeDashboardView: View {
     @Query(sort: \SorenessEntry.date, order: .reverse) private var sorenessReports: [SorenessEntry]
     @Query(sort: \PlanComplianceEvent.day, order: .reverse) private var complianceEvents: [PlanComplianceEvent]
     @Query(sort: \WorkoutFeedbackEvent.day, order: .reverse) private var feedbackEvents: [WorkoutFeedbackEvent]
+    @Query(sort: \TrainingBlock.startDate, order: .reverse) private var trainingBlocks: [TrainingBlock]
     @Environment(\.weightUnit) private var weightUnit
 
     @State private var todaySteps: Double = 0
@@ -121,7 +122,8 @@ struct HomeDashboardView: View {
                 || cardioSessions.contains { Calendar.current.isDateInToday($0.date) },
             hasAnyHistory: !finishedWorkouts.isEmpty,
             complianceEvents: Array(complianceEvents.prefix(14)),
-            feedbackEvents: Array(feedbackEvents.prefix(14))
+            feedbackEvents: Array(feedbackEvents.prefix(14)),
+            currentBlock: TrainingBlockEngine.currentBlock(in: trainingBlocks)
         )
         self.recoveryResult = recovery
         self.todayPlan = plan
@@ -338,6 +340,25 @@ struct HomeDashboardView: View {
                 if let cta = ctaKind {
                     HomeContextualCTASection(kind: cta, weightUnit: weightUnit)
                 }
+                // Periodisation chip — sits between hero (today's
+                // recovery snapshot) and the adaptive plan card. The
+                // mental model is "this week → this block → this
+                // day"; the chip provides the missing middle layer.
+                // When there's no active block, it surfaces a soft
+                // CTA to start one rather than burying periodisation
+                // in Settings.
+                HomeTrainingBlockChip(
+                    activeBlock: TrainingBlockEngine.currentBlock(in: trainingBlocks),
+                    allBlocks: trainingBlocks,
+                    onStartBlock: { newBlock in
+                        modelContext.insert(newBlock)
+                        try? modelContext.save()
+                        // Recompute plan so the new block's reason
+                        // line + (if deload) intensity cap take
+                        // effect immediately, not on the next refresh.
+                        recomputeRecoveryAndPlan()
+                    }
+                )
                 adaptivePlanCard
                 if let insight = topInsight {
                     TopInsightCardView(insight: insight) {

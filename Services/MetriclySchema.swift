@@ -9,7 +9,7 @@ import SwiftData
 /// reading from a different local file than the main app.
 ///
 /// Adding a new `@Model` type? Add it to the latest schema version
-/// (currently `MetriclySchemaV4`). For a purely-additive change (a new
+/// (currently `MetriclySchemaV5`). For a purely-additive change (a new
 /// @Model class, or a new optional field on an existing one) SwiftData
 /// can migrate automatically — append a `.lightweight` stage to the
 /// migration plan and you're done.
@@ -36,9 +36,9 @@ enum MetriclySchema {
 
     /// Complete model set — keep in sync with trackerApp.init.
     /// Order is irrelevant; SwiftData reads this as a Set.
-    static let allModels: [any PersistentModel.Type] = MetriclySchemaV4.models
+    static let allModels: [any PersistentModel.Type] = MetriclySchemaV5.models
 
-    static var schema: Schema { Schema(versionedSchema: MetriclySchemaV4.self) }
+    static var schema: Schema { Schema(versionedSchema: MetriclySchemaV5.self) }
 
     /// Build a CloudKit-backed container with the full schema. App
     /// Intents call this so they share the user's iCloud-synced store
@@ -139,6 +139,20 @@ enum MetriclySchemaV4: VersionedSchema {
     }
 }
 
+// V5 adds `TrainingBlock` — the periodisation primitive that lets the
+// engine reason in multi-week arcs (4-week accumulate → 1-week deload)
+// rather than only day-by-day. Purely additive; existing users land in
+// V5 with no blocks and the engine falls back to the V4 behaviour
+// (recovery owns intensity outright) until they start one.
+
+enum MetriclySchemaV5: VersionedSchema {
+    static var versionIdentifier: Schema.Version { Schema.Version(5, 0, 0) }
+
+    static var models: [any PersistentModel.Type] {
+        MetriclySchemaV4.models + [TrainingBlock.self]
+    }
+}
+
 // MARK: - Migration plan
 //
 // SwiftData walks this chain on container init, replaying any stage
@@ -148,7 +162,8 @@ enum MetriclySchemaV4: VersionedSchema {
 enum MetriclyMigrationPlan: SchemaMigrationPlan {
     static var schemas: [any VersionedSchema.Type] {
         [MetriclySchemaV1.self, MetriclySchemaV2.self,
-         MetriclySchemaV3.self, MetriclySchemaV4.self]
+         MetriclySchemaV3.self, MetriclySchemaV4.self,
+         MetriclySchemaV5.self]
     }
 
     static var stages: [MigrationStage] {
@@ -160,6 +175,8 @@ enum MetriclyMigrationPlan: SchemaMigrationPlan {
             .lightweight(fromVersion: MetriclySchemaV2.self, toVersion: MetriclySchemaV3.self),
             // V3 → V4: lightweight (adds WorkoutFeedbackEvent table).
             .lightweight(fromVersion: MetriclySchemaV3.self, toVersion: MetriclySchemaV4.self),
+            // V4 → V5: lightweight (adds TrainingBlock table).
+            .lightweight(fromVersion: MetriclySchemaV4.self, toVersion: MetriclySchemaV5.self),
         ]
     }
 }
