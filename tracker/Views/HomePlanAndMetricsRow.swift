@@ -62,13 +62,20 @@ struct HomePlanAndMetricsRow: View {
                     .padding(.bottom, 2)
 
                 HStack(spacing: 8) {
+                    let discTint = doneCount > 0 ? Color.green : Color.accentColor
                     ZStack {
                         Circle()
-                            .fill(doneCount > 0 ? Color.green.opacity(0.15) : Color(.tertiarySystemGroupedBackground))
+                            .fill(
+                                LinearGradient(
+                                    colors: [discTint.opacity(0.26), discTint.opacity(0.12)],
+                                    startPoint: .topLeading, endPoint: .bottomTrailing
+                                )
+                            )
                             .frame(width: 30, height: 30)
+                            .overlay(Circle().stroke(discTint.opacity(0.28), lineWidth: 0.5))
                         Image(systemName: doneCount > 0 ? "checkmark" : "dumbbell.fill")
                             .font(.system(size: 11, weight: .semibold))
-                            .foregroundStyle(doneCount > 0 ? Color.green : Color.accentColor)
+                            .foregroundStyle(discTint)
                     }
                     Text(name)
                         .font(.caption.weight(.semibold))
