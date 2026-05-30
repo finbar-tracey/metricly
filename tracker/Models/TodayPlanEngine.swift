@@ -170,19 +170,55 @@ enum TodayPlanEngine {
 
         let C = EngineConstants.TodayPlan.self
 
-        // Intensity decision driven primarily by readiness score.
-        let intensity: TodayPlan.Intensity
+        // Two-phase intensity decision:
+        //   1. Recovery score picks a *base* intensity (rest/light/
+        //      moderate/hard). This is the body-state read.
+        //   2. Recent user feedback can nudge that base by AT MOST one
+        //      bucket — but never overrides rest (body trumps user
+        //      preference; if recovery says rest, we mean it).
+        // Reasons are appended after both phases so a feedback nudge
+        // can name the actual outcome ("dropped today to moderate")
+        // rather than just acknowledging the signal in the abstract.
+        let baseIntensity: TodayPlan.Intensity
         if score < C.restThreshold {
-            intensity = .rest
-            reasons.append(String(localized: "Recovery is low (\(Int(score * 100))%)", comment: "Low-recovery reason. Argument is a 0-100 percent."))
+            baseIntensity = .rest
         } else if score < C.lightThreshold {
-            intensity = .light
-            reasons.append(String(localized: "Partial recovery — a lighter session today will help you bounce back", comment: "Partial-recovery reason"))
+            baseIntensity = .light
         } else if score >= C.hardThreshold {
-            intensity = .hard
-            reasons.append(String(localized: "Well recovered (\(Int(score * 100))%) — good day to push", comment: "Well-recovered reason. Argument is a 0-100 percent."))
+            baseIntensity = .hard
         } else {
-            intensity = .moderate
+            baseIntensity = .moderate
+        }
+
+        // Recent-feedback majority — used both for the nudge below and
+        // for the reason line further down. Computed once.
+        let feedbackSummary = recentFeedback(events: feedbackEvents, now: now)
+        let feedbackMajority: WorkoutFeedbackEvent.Feel? = {
+            guard let s = feedbackSummary,
+                  s.sampleSize >= C.feedbackCalloutMinSamples,
+                  let m = s.majority,
+                  m != .aboutRight
+            else { return nil }
+            return m
+        }()
+
+        let intensity: TodayPlan.Intensity = nudgeIntensity(
+            base: baseIntensity,
+            byFeedback: feedbackMajority
+        )
+
+        // Recovery-driven base reason — describes how the BODY reads,
+        // which is the foundation of the recommendation regardless of
+        // any feedback nudge that followed.
+        switch baseIntensity {
+        case .rest:
+            reasons.append(String(localized: "Recovery is low (\(Int(score * 100))%)", comment: "Low-recovery reason. Argument is a 0-100 percent."))
+        case .light:
+            reasons.append(String(localized: "Partial recovery — a lighter session today will help you bounce back", comment: "Partial-recovery reason"))
+        case .hard:
+            reasons.append(String(localized: "Well recovered (\(Int(score * 100))%) — good day to push", comment: "Well-recovered reason. Argument is a 0-100 percent."))
+        case .moderate:
+            break
         }
 
         // Trust calibration: surface when the user has been ignoring
@@ -197,21 +233,20 @@ enum TodayPlanEngine {
             reasons.append(complianceReasonCopy(for: ignoredKind, ignored: summary.ignoredCount(for: ignoredKind)))
         }
 
-        // User-reported difficulty pattern — emerges when the user
-        // has tapped "Too hard" / "Too easy" on at least
-        // `feedbackCalloutMinSamples` recent sessions AND one bucket
-        // wins by a clear margin. Surfaces as a reason line so the
-        // user understands today's plan partly reflects what they
-        // told us, not just what the model inferred. Doesn't change
-        // intensity in this sprint (see `feedbackEvents` doc above).
-        if let feedbackSummary = recentFeedback(events: feedbackEvents, now: now),
-           feedbackSummary.sampleSize >= C.feedbackCalloutMinSamples,
-           let majority = feedbackSummary.majority,
-           // Skip the "about right" majority — the engine reaching
-           // agreement with the user is the default state, not
-           // something the reasons list needs to crow about.
-           majority != .aboutRight {
-            reasons.append(feedbackReasonCopy(for: majority))
+        // Feedback reason — names the OUTCOME. When the nudge actually
+        // shifted intensity ("dropped to moderate"), the reason is
+        // concrete; when feedback was heard but the floor/ceiling
+        // prevented a further shift, fall back to the gentler
+        // acknowledgment copy.
+        if let majority = feedbackMajority {
+            if intensity != baseIntensity {
+                reasons.append(feedbackShiftReason(
+                    for: majority,
+                    to: intensity
+                ))
+            } else {
+                reasons.append(feedbackReasonCopy(for: majority))
+            }
         }
 
         // Sleep callout
@@ -552,7 +587,61 @@ enum TodayPlanEngine {
         return FeedbackSummary(sampleSize: inWindow.count, countByFeel: counts)
     }
 
-    /// Copy for the reason line when a feedback majority emerges.
+    /// Apply the user-feedback nudge to a recovery-derived base
+    /// intensity. The contract:
+    ///   - **Rest is sacred.** Recovery's rest call never gets
+    ///     overridden by feedback. If the body says no, we mean it.
+    ///   - **One-bucket cap.** Feedback can shift by exactly one
+    ///     step in either direction. Larger shifts would lean too
+    ///     hard on a single signal type and risk whiplash week-to-
+    ///     week as the user's mood swings.
+    ///   - **Floors and ceilings.** Light can't drop further from
+    ///     feedback (rest is reserved for recovery decisions); hard
+    ///     can't go higher (no intensity above hard).
+    ///   - **About-right is a no-op.** Already filtered by the
+    ///     caller; included here for completeness.
+    static func nudgeIntensity(
+        base: TodayPlan.Intensity,
+        byFeedback feel: WorkoutFeedbackEvent.Feel?
+    ) -> TodayPlan.Intensity {
+        guard base != .rest, let feel else { return base }
+        switch (base, feel) {
+        case (.hard, .tooHard):     return .moderate
+        case (.moderate, .tooHard): return .light
+        case (.light, .tooHard):    return .light       // floor — recovery owns rest
+        case (.light, .tooEasy):    return .moderate
+        case (.moderate, .tooEasy): return .hard
+        case (.hard, .tooEasy):     return .hard        // ceiling
+        case (_, .aboutRight):      return base
+        default:                    return base
+        }
+    }
+
+    /// Reason copy when the feedback nudge actually moved the
+    /// intensity. Names the outcome concretely ("dropped today to
+    /// moderate") so the user understands the engine acted, not just
+    /// noticed. When the floor/ceiling prevented a shift, caller
+    /// falls back to `feedbackReasonCopy` instead.
+    static func feedbackShiftReason(
+        for feel: WorkoutFeedbackEvent.Feel,
+        to intensity: TodayPlan.Intensity
+    ) -> String {
+        let label = intensity.label.lowercased()
+        switch feel {
+        case .tooHard:
+            return String(localized: "Recent sessions felt tough — dropping today to \(label).",
+                          comment: "Reason when recent feedback nudges intensity down; placeholder is the new intensity name lowercased")
+        case .tooEasy:
+            return String(localized: "Recent sessions felt easy — bumping today to \(label).",
+                          comment: "Reason when recent feedback nudges intensity up; placeholder is the new intensity name lowercased")
+        case .aboutRight:
+            // Shouldn't reach here — caller filters aboutRight.
+            return feedbackReasonCopy(for: feel)
+        }
+    }
+
+    /// Copy for the reason line when a feedback majority emerges but
+    /// no intensity shift happened (floor/ceiling case).
     /// "About right" intentionally does NOT produce a reason — the
     /// plan agreeing with the user's experience is the default state
     /// and naming it would feel like padding.
