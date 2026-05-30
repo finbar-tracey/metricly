@@ -26,7 +26,26 @@ struct CardioActiveView: View {
     @State private var completedSession: CardioSession?
     @State private var showCompletion = false
 
+    #if DEBUG
+    // Simulated heart rate so the live HR-zone ring is visible while testing
+    // without an Apple Watch / live HR source (Simulator, iPhone-only runs).
+    @State private var simulatedHR: Double = 132
+    @State private var hrSimTimer: Timer?
+    #endif
+
     private var useKm: Bool { weightUnit.distanceUnit == .km }
+
+    /// Heart rate that drives the zone ring. Real HR when available; in DEBUG
+    /// builds it falls back to a simulated value so the feature is testable
+    /// without a watch. In production with no HR source, the ring stays hidden.
+    private var displayHeartRate: Double? {
+        if let hr = tracker.currentHeartRate { return hr }
+        #if DEBUG
+        return simulatedHR
+        #else
+        return nil
+        #endif
+    }
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -77,6 +96,9 @@ struct CardioActiveView: View {
                 centerOnUser()
                 startCountdown()
             }
+            #if DEBUG
+            startHRSimulation()
+            #endif
         }
         .alert("Stop Workout?", isPresented: $showStopAlert) {
             Button("Finish", role: .destructive) { finishSession() }
@@ -277,7 +299,7 @@ struct CardioActiveView: View {
 
             // Live heart-rate zone ring — appears once a HR signal is
             // flowing. The HR equivalent of the pace-zone colouring.
-            if let hr = tracker.currentHeartRate {
+            if let hr = displayHeartRate {
                 heartRateZoneModule(hr: hr)
             }
 
@@ -429,6 +451,20 @@ struct CardioActiveView: View {
         .padding(.horizontal, 20)
         .transition(.opacity.combined(with: .move(edge: .top)))
     }
+
+    #if DEBUG
+    /// Drives `simulatedHR` so the zone ring sweeps through colours while
+    /// testing without a real HR source. No-op once real HR arrives.
+    private func startHRSimulation() {
+        guard tracker.currentHeartRate == nil else { return }
+        hrSimTimer?.invalidate()
+        let t = Timer(timeInterval: 2.0, repeats: true) { _ in
+            simulatedHR = Double.random(in: 108...178)
+        }
+        RunLoop.main.add(t, forMode: .common)
+        hrSimTimer = t
+    }
+    #endif
 
     // MARK: - Splits table
 
