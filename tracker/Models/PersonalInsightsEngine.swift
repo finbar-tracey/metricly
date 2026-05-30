@@ -70,6 +70,12 @@ enum PersonalInsightsEngine {
         var sleepByDay: [(date: Date, minutes: Double)] = []
         var hrvByDay: [(date: Date, ms: Double)] = []
         var rhrByDay: [(date: Date, bpm: Double)] = []
+        /// Training blocks across the entire history window. Used by
+        /// `blockPhaseVsPerformance` to bucket workouts by which phase
+        /// (accumulate / deload) they fell inside. Empty when the user
+        /// hasn't started using periodisation — the block insight
+        /// silently skips in that case.
+        var trainingBlocks: [TrainingBlock] = []
         /// Wall-clock "now" used for all lookback-window computations.
         /// Defaults to `.now`; tests inject a fixed date so cutoffs are
         /// deterministic. Matches the same convention as `RecoveryEngine`
@@ -89,6 +95,7 @@ enum PersonalInsightsEngine {
         if let i = timeOfDayVsPerformance(inputs) { insights.append(i) }
         if let i = trainingFrequencyTrend(inputs) { insights.append(i) }
         if let i = trainingFrequency(inputs)     { insights.append(i) }
+        if let i = blockPhaseVsPerformance(inputs) { insights.append(i) }
 
         return insights.sorted { $0.weight > $1.weight }
     }
@@ -691,6 +698,115 @@ enum PersonalInsightsEngine {
         if perWeek >= 3 { return "consistent training" }
         if perWeek >= 2 { return "steady habit" }
         return "building the habit"
+    }
+
+    // MARK: - Insight: Training block phase × performance
+
+    /// Compares the user's top-exercise estimated 1RM across accumulate
+    /// blocks vs deload blocks. The whole point of periodisation is
+    /// that the accumulate weeks should produce higher strength
+    /// expressions than the deload weeks (deload = planned recovery,
+    /// you're meant to leave reps in the tank); this insight answers
+    /// "is your periodisation actually doing that for you?" so the
+    /// user can adjust block length / frequency rather than running
+    /// blocks on faith.
+    ///
+    /// Skips when there isn't periodisation history (`trainingBlocks`
+    /// empty) or when either bucket has fewer than 3 sessions of the
+    /// dominant exercise — small samples produce a noisy comparison
+    /// and we'd rather stay silent than mislead.
+    ///
+    /// The bucket is determined by which block CONTAINS each workout's
+    /// date. Workouts in a gap between blocks (rare — usually only
+    /// during onboarding before the first block, or briefly between
+    /// blocks if the user delays starting the next one) are dropped
+    /// from the comparison entirely; they're neither accumulating nor
+    /// deloading, so attributing them to a phase would be wrong.
+    static func blockPhaseVsPerformance(_ inputs: Inputs) -> Insight? {
+        guard !inputs.trainingBlocks.isEmpty else { return nil }
+        let C = EngineConstants.PersonalInsights.self
+
+        let workouts = finishedWorkouts(in: inputs, withinDays: C.wideLookbackDays)
+        guard let topName = topExerciseName(in: workouts, minHits: C.minTopExerciseHits)
+        else { return nil }
+
+        // Per-session e1RM for the top exercise, restricted to working
+        // sets with non-zero weight — same eligibility rule as the
+        // sleep / bodyweight / time-of-day insights.
+        let perSession: [(date: Date, e1rm: Double)] = workouts.compactMap { w in
+            let sets = w.exercises
+                .filter { $0.name.lowercased() == topName }
+                .flatMap(\.sets)
+                .filter { !$0.isWarmUp && $0.weight > 0 }
+            guard let max = sets.map(estimated1RM(of:)).max() else { return nil }
+            return (w.date, max)
+        }
+        guard perSession.count >= C.minTopExerciseHits else { return nil }
+
+        // Bucket by which block contains each workout date.
+        var accumulateGroup: [Double] = []
+        var deloadGroup: [Double] = []
+        for s in perSession {
+            guard let block = TrainingBlockEngine.currentBlock(
+                in: inputs.trainingBlocks, at: s.date
+            ) else { continue }
+            switch block.phase {
+            case .accumulate: accumulateGroup.append(s.e1rm)
+            case .deload:     deloadGroup.append(s.e1rm)
+            }
+        }
+        guard accumulateGroup.count >= 3, deloadGroup.count >= 3 else { return nil }
+
+        let avgAcc = accumulateGroup.reduce(0, +) / Double(accumulateGroup.count)
+        let avgDel = deloadGroup.reduce(0, +) / Double(deloadGroup.count)
+        guard avgDel > 0 else { return nil }
+        let pct = (avgAcc - avgDel) / avgDel * 100
+        guard abs(pct) >= C.minEffectPct else { return nil }
+
+        let displayName = workouts
+            .flatMap(\.exercises)
+            .first { $0.name.lowercased() == topName }?.name ?? topName.capitalized
+
+        let totalN = accumulateGroup.count + deloadGroup.count
+        let strength: Insight.Strength = {
+            if abs(pct) >= 10 && totalN >= 12 { return .strong }
+            if abs(pct) >= 6 { return .moderate }
+            return .weak
+        }()
+
+        // Two narratives — the expected case (accumulate > deload, the
+        // periodisation is working) and the inverse (deload > accumulate,
+        // worth surfacing because it suggests the accumulate is too
+        // long or the deload too aggressive). Both stay observational.
+        let title: String
+        let msg: String
+        if pct >= 0 {
+            title = "Your blocks are working"
+            msg = String(
+                format: "Your %@ averages %.0f%% higher during accumulation weeks than deload weeks — the planned recovery is letting you push harder when it matters.",
+                displayName.lowercased(), abs(pct)
+            )
+        } else {
+            title = "Accumulation is wearing you down"
+            msg = String(
+                format: "Your %@ averages %.0f%% higher during deload weeks than accumulation weeks. Consider shortening your accumulate phase or extending the deload.",
+                displayName.lowercased(), abs(pct)
+            )
+        }
+        let detail = "Based on \(accumulateGroup.count) accumulation + \(deloadGroup.count) deload sessions"
+
+        return Insight(
+            category: .performance,
+            title: title,
+            message: msg,
+            detail: detail,
+            strength: strength,
+            // Same icon as the iPhone training-block chip's accumulate
+            // glyph — visual continuity between the periodisation
+            // surfaces.
+            icon: "calendar.badge.clock",
+            weight: 0.9 * Double(totalN) + abs(pct)
+        )
     }
 
     // MARK: - Helpers
