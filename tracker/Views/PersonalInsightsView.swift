@@ -89,7 +89,16 @@ struct PersonalInsightsView: View {
         return VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 12) {
                 ZStack {
-                    Circle().fill(tint.opacity(0.15)).frame(width: 44, height: 44)
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                colors: [tint.opacity(0.28), tint.opacity(0.12)],
+                                startPoint: .topLeading, endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 44, height: 44)
+                        .overlay(Circle().stroke(tint.opacity(0.30), lineWidth: 0.5))
+                        .shadow(color: tint.opacity(0.25), radius: 5, y: 3)
                     Image(systemName: "checkmark.seal.fill")
                         .font(.system(.title3))
                         .foregroundStyle(tint)
@@ -148,19 +157,36 @@ struct PersonalInsightsView: View {
     }
 
     private var headerCard: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(String(
-                localized: "Personal patterns",
-                comment: "Title of the Insights tab header card"
-            ))
-                .font(.system(size: 18, weight: .bold, design: .rounded))
-            Text(String(
-                localized: "Trends spotted in your training, sleep and recovery data over the last 90 days. These are observations, not medical advice.",
-                comment: "Subtitle disclaimer under the Insights tab header card"
-            ))
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
+        HStack(alignment: .top, spacing: 12) {
+            ZStack {
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            colors: [Color.indigo.opacity(0.28), Color.indigo.opacity(0.12)],
+                            startPoint: .topLeading, endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 44, height: 44)
+                    .overlay(Circle().stroke(Color.indigo.opacity(0.30), lineWidth: 0.5))
+                    .shadow(color: Color.indigo.opacity(0.25), radius: 5, y: 3)
+                Image(systemName: "sparkles")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(.indigo)
+            }
+            VStack(alignment: .leading, spacing: 4) {
+                Text(String(
+                    localized: "Personal patterns",
+                    comment: "Title of the Insights tab header card"
+                ))
+                    .font(.system(size: 18, weight: .bold, design: .rounded))
+                Text(String(
+                    localized: "Trends spotted in your training, sleep and recovery data over the last 90 days. These are observations, not medical advice.",
+                    comment: "Subtitle disclaimer under the Insights tab header card"
+                ))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .appCard()

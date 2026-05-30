@@ -10,10 +10,17 @@ struct InsightCardView: View {
             HStack(spacing: 10) {
                 ZStack {
                     Circle()
-                        .fill(categoryColor.opacity(0.16))
-                        .frame(width: 36, height: 36)
+                        .fill(
+                            LinearGradient(
+                                colors: [categoryColor.opacity(0.28), categoryColor.opacity(0.12)],
+                                startPoint: .topLeading, endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 40, height: 40)
+                        .overlay(Circle().stroke(categoryColor.opacity(0.30), lineWidth: 0.5))
+                        .shadow(color: categoryColor.opacity(0.25), radius: 5, y: 3)
                     Image(systemName: insight.icon)
-                        .font(.system(size: 16, weight: .semibold))
+                        .font(.system(size: 17, weight: .semibold))
                         .foregroundStyle(categoryColor)
                 }
                 Text(insight.title)
@@ -34,7 +41,22 @@ struct InsightCardView: View {
                     .foregroundStyle(.secondary)
             }
         }
-        .appCard()
+        .padding(16)
+        .background(
+            ZStack {
+                Color(.secondarySystemGroupedBackground)
+                LinearGradient(
+                    colors: [categoryColor.opacity(0.10), .clear],
+                    startPoint: .topLeading, endPoint: .center
+                )
+            }
+            .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardRadius, style: .continuous))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: AppTheme.cardRadius, style: .continuous)
+                .stroke(categoryColor.opacity(0.20), lineWidth: 0.5)
+        )
+        .shadow(color: .black.opacity(0.10), radius: 14, x: 0, y: 5)
     }
 
     private var categoryColor: Color {
@@ -59,7 +81,14 @@ struct InsightCardView: View {
         return Text(insight.strength.label)
             .font(.caption2.weight(.bold))
             .foregroundStyle(color)
-            .padding(.horizontal, 8).padding(.vertical, 3)
-            .background(color.opacity(0.14), in: Capsule())
+            .padding(.horizontal, 9).padding(.vertical, 3)
+            .background(
+                LinearGradient(
+                    colors: [color.opacity(0.20), color.opacity(0.10)],
+                    startPoint: .topLeading, endPoint: .bottomTrailing
+                ),
+                in: Capsule()
+            )
+            .overlay(Capsule().stroke(color.opacity(0.22), lineWidth: 0.5))
     }
 }
