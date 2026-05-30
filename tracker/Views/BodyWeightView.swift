@@ -183,7 +183,15 @@ struct BodyWeightView: View {
     private func statTile(_ title: String, value: String, icon: String, color: Color) -> some View {
         HStack(spacing: 10) {
             ZStack {
-                RoundedRectangle(cornerRadius: 8).fill(color.opacity(0.12)).frame(width: 34, height: 34)
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [color.opacity(0.26), color.opacity(0.12)],
+                            startPoint: .topLeading, endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 34, height: 34)
+                    .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(color.opacity(0.28), lineWidth: 0.5))
                 Image(systemName: icon).font(.system(size: 13, weight: .semibold)).foregroundStyle(color)
             }
             VStack(alignment: .leading, spacing: 2) {
@@ -201,48 +209,59 @@ struct BodyWeightView: View {
 
     private var chartCard: some View {
         VStack(alignment: .leading, spacing: 14) {
-            SectionHeader(title: "Trend", icon: "chart.line.uptrend.xyaxis", color: .orange)
-            Chart(chartEntries) { entry in
-                AreaMark(
-                    x: .value("Date", entry.date, unit: .day),
-                    y: .value("Weight", weightUnit.display(entry.weight))
-                )
-                .interpolationMethod(.catmullRom)
-                .foregroundStyle(
-                    LinearGradient(
-                        colors: [
-                            Color.orange.opacity(0.55),
-                            Color.orange.opacity(0.25),
-                            Color.orange.opacity(0.02)
-                        ],
-                        startPoint: .top,
-                        endPoint: .bottom
+            HStack {
+                SectionHeader(title: "Trend", icon: "chart.line.uptrend.xyaxis", color: .orange)
+                Spacer()
+                trendLegend
+            }
+            Chart {
+                // Light area under the trend for depth.
+                ForEach(trend) { point in
+                    AreaMark(
+                        x: .value("Date", point.date, unit: .day),
+                        y: .value("Weight", point.value)
                     )
-                )
-
-                LineMark(
-                    x: .value("Date", entry.date, unit: .day),
-                    y: .value("Weight", weightUnit.display(entry.weight))
-                )
-                .interpolationMethod(.catmullRom)
-                .lineStyle(StrokeStyle(lineWidth: 2.5, lineCap: .round, lineJoin: .round))
-                .foregroundStyle(
-                    LinearGradient(
-                        colors: [Color.orange, AppTheme.Signal.actionOrange],
-                        startPoint: .leading,
-                        endPoint: .trailing
+                    .interpolationMethod(.catmullRom)
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [
+                                Color.orange.opacity(0.40),
+                                Color.orange.opacity(0.16),
+                                Color.orange.opacity(0.02)
+                            ],
+                            startPoint: .top, endPoint: .bottom
+                        )
                     )
-                )
-                .shadow(color: Color.orange.opacity(0.30), radius: 5, y: 2)
+                }
 
-                PointMark(
-                    x: .value("Date", entry.date, unit: .day),
-                    y: .value("Weight", weightUnit.display(entry.weight))
-                )
-                .symbolSize(36)
-                .foregroundStyle(Color.orange)
-                .annotation(position: .overlay) {
-                    Circle().fill(.white).frame(width: 4, height: 4)
+                // Raw weigh-ins — the actual data points, kept light so the
+                // day-to-day noise reads as scatter behind the trend.
+                ForEach(chartEntries) { entry in
+                    PointMark(
+                        x: .value("Date", entry.date, unit: .day),
+                        y: .value("Weight", weightUnit.display(entry.weight))
+                    )
+                    .symbolSize(20)
+                    .foregroundStyle(Color.orange.opacity(0.35))
+                }
+
+                // 7-point moving average — the smoothed trend that cuts
+                // through daily fluctuation (water, food, time of day).
+                ForEach(trend) { point in
+                    LineMark(
+                        x: .value("Date", point.date, unit: .day),
+                        y: .value("Weight", point.value),
+                        series: .value("Series", "trend")
+                    )
+                    .interpolationMethod(.catmullRom)
+                    .lineStyle(StrokeStyle(lineWidth: 2.5, lineCap: .round, lineJoin: .round))
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [Color.orange, AppTheme.Signal.actionOrange],
+                            startPoint: .leading, endPoint: .trailing
+                        )
+                    )
+                    .shadow(color: Color.orange.opacity(0.30), radius: 5, y: 2)
                 }
             }
             .chartYAxisLabel(weightUnit.label)
@@ -304,6 +323,42 @@ struct BodyWeightView: View {
     // MARK: - Computed
 
     private var chartEntries: [BodyWeightEntry] { Array(entries.suffix(90).reversed()) }
+
+    private struct TrendPoint: Identifiable {
+        let id: Date
+        var date: Date { id }
+        let value: Double
+    }
+
+    /// 7-point trailing moving average of the charted weigh-ins, in display
+    /// units. Smooths out the daily noise (hydration, food, time of day) so
+    /// the line shows where weight is actually heading, not where it bounced.
+    private var trend: [TrendPoint] {
+        let pts = chartEntries
+        guard pts.count >= 2 else {
+            return pts.map { TrendPoint(id: $0.date, value: weightUnit.display($0.weight)) }
+        }
+        return pts.indices.map { i in
+            let lo = Swift.max(0, i - 6)
+            let window = pts[lo...i]
+            let avg = window.map { weightUnit.display($0.weight) }.reduce(0, +) / Double(window.count)
+            return TrendPoint(id: pts[i].date, value: avg)
+        }
+    }
+
+    /// Tiny legend distinguishing the raw weigh-in scatter from the trend line.
+    private var trendLegend: some View {
+        HStack(spacing: 10) {
+            HStack(spacing: 4) {
+                Circle().fill(Color.orange.opacity(0.35)).frame(width: 6, height: 6)
+                Text("Weigh-ins").font(.system(size: 10, weight: .medium)).foregroundStyle(.secondary)
+            }
+            HStack(spacing: 4) {
+                Capsule().fill(Color.orange).frame(width: 12, height: 3)
+                Text("7-day trend").font(.system(size: 10, weight: .medium)).foregroundStyle(.secondary)
+            }
+        }
+    }
 
     private var chartYDomain: ClosedRange<Double> {
         let weights = chartEntries.map { weightUnit.display($0.weight) }
