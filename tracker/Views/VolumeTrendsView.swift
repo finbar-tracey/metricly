@@ -183,7 +183,15 @@ struct VolumeTrendsView: View {
                     let (group, volume) = pair
                     HStack(spacing: 14) {
                         ZStack {
-                            RoundedRectangle(cornerRadius: 8).fill(Color.blue.opacity(0.12)).frame(width: 34, height: 34)
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .fill(
+                                    LinearGradient(
+                                        colors: [Color.blue.opacity(0.26), Color.blue.opacity(0.12)],
+                                        startPoint: .topLeading, endPoint: .bottomTrailing
+                                    )
+                                )
+                                .frame(width: 34, height: 34)
+                                .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(Color.blue.opacity(0.28), lineWidth: 0.5))
                             MuscleIconView(group: group, color: Color.blue)
                                 .frame(width: 14, height: 14)
                         }

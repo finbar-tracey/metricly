@@ -54,11 +54,22 @@ struct MuscleGroupSummaryView: View {
                             Text(period.rawValue)
                                 .font(.caption.bold())
                                 .padding(.horizontal, 14).padding(.vertical, 8)
-                                .background(selectedPeriod == period ? Color.accentColor : Color(.secondarySystemFill),
-                                            in: Capsule())
+                                .background {
+                                    if selectedPeriod == period {
+                                        Capsule().fill(
+                                            LinearGradient(
+                                                colors: [Color.accentColor, Color.accentColor.opacity(0.72)],
+                                                startPoint: .topLeading, endPoint: .bottomTrailing
+                                            )
+                                        )
+                                        .shadow(color: Color.accentColor.opacity(0.40), radius: 6, y: 3)
+                                    } else {
+                                        Capsule().fill(Color(.secondarySystemFill))
+                                    }
+                                }
                                 .foregroundStyle(selectedPeriod == period ? Color.white : Color.primary)
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.pressableCard)
                     }
                 }
             }
@@ -215,7 +226,15 @@ struct MuscleGroupSummaryView: View {
     private var emptyStateCard: some View {
         VStack(spacing: 20) {
             ZStack {
-                Circle().fill(Color.accentColor.opacity(0.12)).frame(width: 70, height: 70)
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            colors: [Color.accentColor.opacity(0.26), Color.accentColor.opacity(0.12)],
+                            startPoint: .topLeading, endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 70, height: 70)
+                    .overlay(Circle().stroke(Color.accentColor.opacity(0.28), lineWidth: 0.5))
                 Image(systemName: "figure.strengthtraining.traditional")
                     .font(.system(size: 28, weight: .semibold)).foregroundStyle(Color.accentColor)
             }
