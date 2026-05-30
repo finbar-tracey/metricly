@@ -71,6 +71,8 @@ struct AchievementsView: View {
     // Unlock celebration
     @AppStorage("achievements.celebrated") private var celebratedRaw = ""
     @AppStorage("achievements.celebrationInit") private var celebrationBaselined = false
+    /// User's master switch for celebration moments (Settings → Workout).
+    @AppStorage("celebrationsEnabled") private var celebrationsEnabled = true
     @State private var celebrationQueue: [Achievement] = []
     @State private var celebrating: Achievement?
 
@@ -169,7 +171,10 @@ struct AchievementsView: View {
         }
         let newly = allAchievements.filter { $0.isUnlocked && !celebratedIDs.contains($0.id) }
         guard !newly.isEmpty else { return }
+        // Mark as celebrated either way so a muted unlock doesn't re-fire
+        // its overlay later if the user turns celebrations back on.
         celebratedRaw = celebratedIDs.union(unlockedIDs).sorted().joined(separator: ",")
+        guard celebrationsEnabled else { return }
         celebrationQueue = newly
         advanceCelebration()
     }

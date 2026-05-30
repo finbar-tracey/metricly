@@ -35,6 +35,10 @@ struct SettingsView: View {
     @State private var showingPDFExport = false
     @State private var pdfURL: URL?
     @Environment(\.requestReview) private var requestReview
+    /// Master switch for the PR / goal-hit / achievement-unlock celebration
+    /// moments. Defaults on; muting skips the banners and their haptics while
+    /// still recording the underlying PR / goal / unlock.
+    @AppStorage("celebrationsEnabled") private var celebrationsEnabled = true
 
     private var settings: UserSettings {
         settingsArray.first ?? UserSettings()
@@ -102,6 +106,10 @@ struct SettingsView: View {
                     ))
                 }
                 HStack(spacing: 12) {
+                    settingsIcon("party.popper.fill", color: .pink)
+                    Toggle("Celebrations", isOn: $celebrationsEnabled)
+                }
+                HStack(spacing: 12) {
                     settingsIcon("target", color: .red)
                     Stepper(
                         "Weekly Goal: \(settings.weeklyGoal == 0 ? "Off" : "\(settings.weeklyGoal)x")",
@@ -115,7 +123,7 @@ struct SettingsView: View {
             } header: {
                 Text("Workout")
             } footer: {
-                Text("Focus reminder prompts you to enable a Fitness Focus when starting a workout.")
+                Text("Focus reminder prompts you to enable a Fitness Focus when starting a workout. Celebrations show full-screen banners for new PRs, goals hit, and achievements unlocked.")
             }
 
             // MARK: - Heart Rate Zones
