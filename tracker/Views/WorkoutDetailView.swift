@@ -34,6 +34,8 @@ struct WorkoutDetailView: View {
     /// suggestions live alongside it).
     @State private var dismissedSubstitutions: Set<PersistentIdentifier> = []
     @Query private var settingsArray: [UserSettings]
+    @Query(sort: \TrainingBlock.startDate, order: .reverse)
+    private var trainingBlocks: [TrainingBlock]
     @Environment(\.dismiss) private var dismiss
 
     private var settings: UserSettings {
@@ -77,7 +79,11 @@ struct WorkoutDetailView: View {
                     // Preview is computed every render — cheap, and it
                     // updates automatically as the user logs sets so the
                     // Apply button vanishes once it's no longer useful.
-                    let preview = TodayPlanApply.preview(plan: plan, on: workout)
+                    let preview = TodayPlanApply.preview(
+                        plan: plan,
+                        on: workout,
+                        currentBlock: TrainingBlockEngine.currentBlock(in: trainingBlocks)
+                    )
                     Section {
                         TodayPlanAdjustmentsBanner(
                             plan: plan,
@@ -704,11 +710,17 @@ struct WorkoutDetailView: View {
 
     /// "Apply" tapped on the Today's-Plan banner. Performs the same
     /// edits previewed in the confirmation dialog (delete overworked-
-    /// group exercises that have no logged sets, drop one trailing
-    /// blank working set per remaining exercise when intensity is
-    /// light) then auto-dismisses the banner.
+    /// group exercises that have no logged sets, drop one or two
+    /// trailing blank working sets per remaining exercise depending
+    /// on whether the user is mid-deload) then auto-dismisses the
+    /// banner.
     private func applyPlanAdjustments(_ plan: TodayPlan) {
-        _ = TodayPlanApply.apply(plan: plan, to: workout, in: modelContext)
+        _ = TodayPlanApply.apply(
+            plan: plan,
+            to: workout,
+            in: modelContext,
+            currentBlock: TrainingBlockEngine.currentBlock(in: trainingBlocks)
+        )
         modelContext.saveOrLog()
         withAnimation { planAdjustmentsDismissed = true }
     }

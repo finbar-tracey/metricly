@@ -11,8 +11,10 @@
 //
 
 import XCTest
+import SwiftData
 @testable import tracker
 
+@MainActor
 final class TodayPlanApplyTests: XCTestCase {
 
     // MARK: - avoidGroups removal
@@ -105,6 +107,111 @@ final class TodayPlanApplyTests: XCTestCase {
         XCTAssertTrue(preview.summary.contains("aligns"))
     }
 
+    // MARK: - Block-aware deeper trim
+    //
+    // During a deload week, the trim depth doubles from 1 → 2 sets per
+    // exercise — the deload's whole point is meaningful volume cut, not
+    // a marginal one. The block context is opt-in via the `currentBlock`
+    // parameter so non-deload callers (and the v1.7 default-arg
+    // overload) behave exactly as before.
+
+    func testDeloadBlockTrimsTwoSetsPerExercise() {
+        let workout = makeWorkout()
+        _ = addExercise(to: workout, name: "Row", category: .back, workingSets: 4, logged: false)
+        let plan = makePlan(intensity: .light)
+        let deload = makeBlock(phase: .deload)
+
+        let preview = TodayPlanApply.preview(plan: plan, on: workout, currentBlock: deload)
+        XCTAssertEqual(preview.trimSetsPerExercise, 2,
+                       "Deload week deepens the trim to 2 sets per exercise")
+        XCTAssertEqual(preview.exercisesToTrim.map(\.name), ["Row"])
+    }
+
+    func testAccumulateBlockKeepsSingleTrim() {
+        let workout = makeWorkout()
+        _ = addExercise(to: workout, name: "Row", category: .back, workingSets: 4, logged: false)
+        let plan = makePlan(intensity: .light)
+        let accumulate = makeBlock(phase: .accumulate)
+
+        let preview = TodayPlanApply.preview(plan: plan, on: workout, currentBlock: accumulate)
+        XCTAssertEqual(preview.trimSetsPerExercise, 1,
+                       "Accumulate week leaves the trim at the v1.7 single-set default")
+    }
+
+    func testNoBlockKeepsSingleTrim() {
+        let workout = makeWorkout()
+        _ = addExercise(to: workout, name: "Row", category: .back, workingSets: 4, logged: false)
+        let plan = makePlan(intensity: .light)
+
+        let preview = TodayPlanApply.preview(plan: plan, on: workout)
+        XCTAssertEqual(preview.trimSetsPerExercise, 1,
+                       "Default (nil block) keeps v1.7 single-set behaviour")
+    }
+
+    func testDeloadSummaryStringReadsTwoSets() {
+        let workout = makeWorkout()
+        _ = addExercise(to: workout, name: "Row", category: .back, workingSets: 4, logged: false)
+        let plan = makePlan(intensity: .light)
+        let deload = makeBlock(phase: .deload)
+
+        let preview = TodayPlanApply.preview(plan: plan, on: workout, currentBlock: deload)
+        XCTAssertTrue(preview.summary.contains("drop 2 sets"),
+                      "Summary must reflect the deeper trim. Got: \(preview.summary)")
+    }
+
+    func testApplyDuringDeloadActuallyRemovesTwoSets() throws {
+        let context = try makeContext()
+        let workout = Workout(name: "Push", date: .now)
+        context.insert(workout)
+
+        let ex = Exercise(name: "Row", workout: workout, category: .back)
+        ex.order = 0
+        context.insert(ex)
+        workout.exercises.append(ex)
+        for _ in 0..<4 {
+            let s = ExerciseSet(reps: 0, weight: 0, isWarmUp: false, exercise: ex)
+            ex.sets.append(s)
+            context.insert(s)
+        }
+
+        let plan = makePlan(intensity: .light)
+        let deload = makeBlock(phase: .deload)
+        TodayPlanApply.apply(plan: plan, to: workout, in: context, currentBlock: deload)
+        try context.save()
+
+        XCTAssertEqual(ex.sets.count, 2,
+                       "Started with 4 blank working sets; deload trim of 2 → 2 remaining")
+    }
+
+    func testDeloadTrimFloorsAtTwoRemainingSets() throws {
+        // Three working sets going in. Deload wants to drop 2, but the
+        // trimCandidate guard refuses to leave fewer than 2 working
+        // sets behind — so only ONE set gets removed even in deload
+        // mode. That's the same safety rail as non-deload, just
+        // hit earlier.
+        let context = try makeContext()
+        let workout = Workout(name: "Push", date: .now)
+        context.insert(workout)
+
+        let ex = Exercise(name: "Row", workout: workout, category: .back)
+        ex.order = 0
+        context.insert(ex)
+        workout.exercises.append(ex)
+        for _ in 0..<3 {
+            let s = ExerciseSet(reps: 0, weight: 0, isWarmUp: false, exercise: ex)
+            ex.sets.append(s)
+            context.insert(s)
+        }
+
+        let plan = makePlan(intensity: .light)
+        let deload = makeBlock(phase: .deload)
+        TodayPlanApply.apply(plan: plan, to: workout, in: context, currentBlock: deload)
+        try context.save()
+
+        XCTAssertEqual(ex.sets.count, 2,
+                       "Floor: trim refuses to leave fewer than 2 working sets — stops after 1 even in deload")
+    }
+
     // MARK: - Helpers
 
     private func makeWorkout(finished: Bool = false) -> Workout {
@@ -151,5 +258,28 @@ final class TodayPlanApplyTests: XCTestCase {
             avoidGroups: avoidGroups,
             generatedAt: .now
         )
+    }
+
+    private func makeBlock(phase: TrainingBlock.Phase) -> TrainingBlock {
+        // A 4-week block starting 7 days ago — solidly mid-block so any
+        // contains() check would return true if it were used. The
+        // block-aware trim only inspects `phase`, but keeping the dates
+        // sane defends against future contains-gated logic landing on
+        // top of this.
+        TrainingBlock(
+            startDate: Calendar.current.date(byAdding: .day, value: -7, to: .now) ?? .now,
+            weekCount: 4,
+            phase: phase
+        )
+    }
+
+    @MainActor
+    private func makeContext() throws -> ModelContext {
+        let config = ModelConfiguration(isStoredInMemoryOnly: true)
+        let container = try ModelContainer(
+            for: Workout.self, Exercise.self, ExerciseSet.self,
+            configurations: config
+        )
+        return ModelContext(container)
     }
 }

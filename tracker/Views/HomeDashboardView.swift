@@ -596,7 +596,15 @@ struct HomeDashboardView: View {
         if adaptive != nil,
            !workout.exercises.isEmpty,
            todayPlan.intensity != .rest {
-            TodayPlanApply.apply(plan: todayPlan, to: workout, in: modelContext)
+            // Pass the active block so deload weeks trim 2 sets per
+            // exercise instead of 1 — the deload's whole point is a
+            // meaningful volume cut, not a marginal one.
+            TodayPlanApply.apply(
+                plan: todayPlan,
+                to: workout,
+                in: modelContext,
+                currentBlock: TrainingBlockEngine.currentBlock(in: trainingBlocks)
+            )
         }
 
         modelContext.saveOrLog()
