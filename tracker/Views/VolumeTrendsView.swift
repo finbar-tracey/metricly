@@ -154,17 +154,17 @@ struct VolumeTrendsView: View {
                 .chartYAxisLabel(unit.label)
                 .chartXAxis {
                     AxisMarks(values: .automatic(desiredCount: 5)) { _ in
-                        AxisGridLine().foregroundStyle(.secondary.opacity(0.12))
+                        AxisGridLine().foregroundStyle(AppTheme.chartGrid)
                         AxisValueLabel().font(.caption2).foregroundStyle(.secondary)
                     }
                 }
                 .chartYAxis {
                     AxisMarks(position: .leading) { _ in
-                        AxisGridLine().foregroundStyle(.secondary.opacity(0.12))
+                        AxisGridLine().foregroundStyle(AppTheme.chartGrid)
                         AxisValueLabel().font(.caption2).foregroundStyle(.secondary)
                     }
                 }
-                .frame(height: 220).padding(.vertical, 4)
+                .frame(height: 220).padding(.vertical, 12)
             }
         }
         .appCard()

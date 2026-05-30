@@ -25,6 +25,11 @@ enum AppTheme {
     /// sections onto one value matching `appCard`.
     static let cardHairline = Color.white.opacity(0.08)
 
+    /// Chart gridlines — subtle and tokenized. Replaces the heavier
+    /// per-chart 0.12–0.15 gridline opacities that read as gray clutter
+    /// behind the data.
+    static let chartGrid = Color.secondary.opacity(0.09)
+
     // Signal palette — semantic colors per metric type.
     enum Signal {
         static let recovery     = Color(red: 0.20, green: 0.78, blue: 0.45)

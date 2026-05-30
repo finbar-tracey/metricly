@@ -249,17 +249,17 @@ struct BodyWeightView: View {
             .chartYScale(domain: chartYDomain)
             .chartXAxis {
                 AxisMarks(values: .automatic(desiredCount: 5)) { _ in
-                    AxisGridLine().foregroundStyle(.secondary.opacity(0.15))
+                    AxisGridLine().foregroundStyle(AppTheme.chartGrid)
                     AxisValueLabel().font(.caption2).foregroundStyle(.secondary)
                 }
             }
             .chartYAxis {
                 AxisMarks(position: .leading) { _ in
-                    AxisGridLine().foregroundStyle(.secondary.opacity(0.15))
+                    AxisGridLine().foregroundStyle(AppTheme.chartGrid)
                     AxisValueLabel().font(.caption2).foregroundStyle(.secondary)
                 }
             }
-            .frame(height: 220).padding(.vertical, 4)
+            .frame(height: 220).padding(.vertical, 12)
             .accessibilityElement(children: .combine)
             .accessibilityLabel("Body weight trend, \(chartEntries.count) entries")
         }
