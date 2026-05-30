@@ -27,6 +27,12 @@ struct WorkoutDetailView: View {
     @State private var showFocusEndReminder = false
     @State private var planAdjustments: TodayPlan?
     @State private var planAdjustmentsDismissed = false
+    /// Exercises the user has dismissed substitution suggestions for
+    /// in this view. PersistentModelID keys survive the @Query
+    /// re-issuing the list on each set logged. Cleared when the user
+    /// dismisses the whole adjustments banner (the substitution
+    /// suggestions live alongside it).
+    @State private var dismissedSubstitutions: Set<PersistentIdentifier> = []
     @Query private var settingsArray: [UserSettings]
     @Environment(\.dismiss) private var dismiss
 
@@ -81,6 +87,27 @@ struct WorkoutDetailView: View {
                         )
                         .listRowBackground(Color.clear)
                         .listRowInsets(.init(top: 0, leading: 16, bottom: 8, trailing: 16))
+                    }
+                }
+
+                // MARK: - Suggested substitutions
+                // Soft alternative to the avoid-group removal in the
+                // banner above — for unlogged exercises on fatigued
+                // muscles, offer a less-fatiguing swap instead of
+                // dropping them entirely. The user can Swap (rename in
+                // place + clear sets) or Keep (dismiss the
+                // suggestion).
+                if let plan = planAdjustments,
+                   !planAdjustmentsDismissed,
+                   !workout.isFinished {
+                    let suggestions = TodayPlanApply.substitutionsFor(plan: plan, on: workout)
+                        .filter { !dismissedSubstitutions.contains($0.exercise.persistentModelID) }
+                    if !suggestions.isEmpty {
+                        Section {
+                            substitutionsCard(suggestions)
+                                .listRowBackground(Color.clear)
+                                .listRowInsets(.init(top: 0, leading: 16, bottom: 8, trailing: 16))
+                        }
                     }
                 }
             }
@@ -684,6 +711,105 @@ struct WorkoutDetailView: View {
         _ = TodayPlanApply.apply(plan: plan, to: workout, in: modelContext)
         modelContext.saveOrLog()
         withAnimation { planAdjustmentsDismissed = true }
+    }
+
+    // MARK: - Substitutions card view
+
+    /// One card per substitution suggestion — soft alternative to the
+    /// avoid-group removal in the existing adjustments banner. The
+    /// user picks Swap (commits the rename via
+    /// `TodayPlanApply.applySubstitution`) or Keep (dismisses just
+    /// this suggestion; others stay visible).
+    private func substitutionsCard(_ suggestions: [TodayPlanApply.SubstitutionSuggestion]) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 6) {
+                Image(systemName: "arrow.triangle.2.circlepath")
+                    .font(.caption.bold())
+                    .foregroundStyle(AppTheme.Signal.caution)
+                Text(String(
+                    localized: "Suggested swaps",
+                    comment: "Section header above the substitution suggestions"
+                ))
+                .font(.caption.weight(.bold))
+                .foregroundStyle(.secondary)
+                .textCase(.uppercase)
+                .tracking(0.6)
+            }
+
+            VStack(spacing: 10) {
+                ForEach(suggestions, id: \.exercise.persistentModelID) { suggestion in
+                    substitutionRow(suggestion)
+                }
+            }
+        }
+        .padding(16)
+        .background(Color(.secondarySystemGroupedBackground))
+        .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardRadius))
+    }
+
+    private func substitutionRow(_ suggestion: TodayPlanApply.SubstitutionSuggestion) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .top, spacing: 10) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(suggestion.exercise.name)
+                        .font(.subheadline.weight(.semibold))
+                        .strikethrough()
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                    HStack(spacing: 6) {
+                        Image(systemName: "arrow.right")
+                            .font(.caption2.bold())
+                            .foregroundStyle(.tertiary)
+                        Text(suggestion.suggestedName)
+                            .font(.subheadline.weight(.semibold))
+                            .lineLimit(1)
+                    }
+                }
+                Spacer(minLength: 0)
+            }
+            HStack(spacing: 8) {
+                Button {
+                    HapticsManager.success()
+                    withAnimation {
+                        TodayPlanApply.applySubstitution(suggestion, in: modelContext)
+                        modelContext.saveOrLog()
+                        // No need to dismiss — once the rename
+                        // commits, the next render's
+                        // `substitutionsFor` won't match this
+                        // (now-renamed) exercise to the original key.
+                    }
+                } label: {
+                    Text(String(localized: "Swap", comment: "Action accepting the substitution suggestion"))
+                        .font(.subheadline.weight(.semibold))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 8)
+                        .background(AppTheme.Signal.caution)
+                        .foregroundStyle(.white)
+                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                }
+                .buttonStyle(.plain)
+
+                Button {
+                    withAnimation {
+                        // Discard the (inserted, member) tuple Set.insert
+                        // returns so the closure's inferred type is Void.
+                        _ = dismissedSubstitutions.insert(suggestion.exercise.persistentModelID)
+                    }
+                } label: {
+                    Text(String(localized: "Keep", comment: "Action dismissing a single substitution suggestion"))
+                        .font(.subheadline.weight(.semibold))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 8)
+                        .background(Color(.tertiarySystemGroupedBackground))
+                        .foregroundStyle(.primary)
+                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(12)
+        .background(Color(.tertiarySystemGroupedBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 
     // MARK: - Live Activity

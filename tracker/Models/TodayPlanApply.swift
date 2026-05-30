@@ -110,6 +110,84 @@ enum TodayPlanApply {
         return preview
     }
 
+    // MARK: - Exercise substitutions
+    //
+    // When a muscle group is fatigued the engine's *existing* response
+    // is to remove the exercise (if unlogged) or leave it alone (if
+    // the user has already started). Substitutions are a softer
+    // middle option: offer a less-fatiguing alternative in the same
+    // target muscle, let the user choose to swap rather than skip.
+    //
+    // Scope: only unlogged exercises whose category is in either the
+    // plan's `goEasyOnGroups` (still partially fatigued) or
+    // `avoidGroups` (trained too frequently this week). Logged work
+    // never gets a swap suggestion — the user already committed to
+    // the movement.
+
+    /// One suggested swap. Pure value — the actual mutation (rename +
+    /// clear sets + save) lives in the caller so the UI controls when
+    /// the swap commits.
+    struct SubstitutionSuggestion: Equatable {
+        let exercise: Exercise
+        let suggestedName: String
+    }
+
+    /// Compute substitution suggestions for the given workout. Each
+    /// returned suggestion targets an unlogged exercise whose category
+    /// is on the engine's "go easy on" or "avoid" list AND has a
+    /// curated swap in `ExerciseSubstitutions`. Order matches the
+    /// workout's exercise order so the UI can render them in the same
+    /// sequence the user already sees.
+    ///
+    /// Returns an empty array (not nil) when there's nothing to
+    /// suggest — keeps the caller's binding shape simple.
+    static func substitutionsFor(plan: TodayPlan, on workout: Workout) -> [SubstitutionSuggestion] {
+        guard !workout.isFinished, !workout.isTemplate else { return [] }
+        let groupSet = Set(plan.goEasyOnGroups + plan.avoidGroups)
+        guard !groupSet.isEmpty else { return [] }
+
+        let sorted = workout.exercises.sorted { $0.order < $1.order }
+        // Names already in this workout — we never suggest a swap to
+        // something the user is already doing.
+        let existingNames = sorted.map(\.name)
+
+        return sorted.compactMap { ex -> SubstitutionSuggestion? in
+            guard let cat = ex.category, groupSet.contains(cat) else { return nil }
+            guard !exerciseHasLoggedSets(ex) else { return nil }
+            guard let suggestion = ExerciseSubstitutions.suggestion(
+                for: ex.name,
+                alreadyInWorkout: existingNames
+            ) else { return nil }
+            return SubstitutionSuggestion(exercise: ex, suggestedName: suggestion)
+        }
+    }
+
+    /// Commit a substitution: rename the exercise to the suggested
+    /// name, clear any (necessarily blank, by the filter above) sets,
+    /// and update the inferred category via `MuscleGroup.inferred`
+    /// so recovery math reflects the new movement. Mirrors the
+    /// "remove from parent array before delete" discipline from
+    /// `apply(plan:to:in:)`.
+    static func applySubstitution(
+        _ suggestion: SubstitutionSuggestion,
+        in context: ModelContext
+    ) {
+        let ex = suggestion.exercise
+        // Clear any blank trailing sets (should be all of them by the
+        // substitution-eligibility filter, but defend against future
+        // callers running this on partially-logged exercises).
+        for set in ex.sets where set.reps == 0 && set.weight == 0 && !set.isCardio {
+            ex.sets.removeAll { $0.persistentModelID == set.persistentModelID }
+            context.delete(set)
+        }
+        ex.name = suggestion.suggestedName
+        // Re-infer category from the new name; falls back to the
+        // existing category when the inference returns nil.
+        if let inferred = MuscleGroup.inferred(fromName: suggestion.suggestedName) {
+            ex.categoryRaw = inferred.rawValue
+        }
+    }
+
     // MARK: - Internals
 
     private static func exerciseHasLoggedSets(_ ex: Exercise) -> Bool {
