@@ -214,6 +214,7 @@ struct WeeklyMonthlyReportView: View {
                 heroCard
                 trainingSummaryCard
 
+                if cardioCount > 0 { cardioCard }
                 if prsHitCount > 0 { prsCard }
                 if !muscleGroupSetCounts.isEmpty { muscleGroupsCard }
                 if periodBodyWeightEntries.count >= 2 { bodyWeightCard }
@@ -347,6 +348,76 @@ struct WeeklyMonthlyReportView: View {
             }
             .appCard()
         }
+    }
+
+    // MARK: - Cardio Card
+
+    private var periodCardioSessions: [CardioSession] {
+        let r = currentPeriodRange
+        return cardioSessions.filter { $0.date >= r.start && $0.date < r.end }
+    }
+    private var cardioCount: Int { periodCardioSessions.count }
+    private var cardioDistanceKm: Double { periodCardioSessions.reduce(0) { $0 + $1.distanceMeters } / 1000 }
+    private var cardioDuration: TimeInterval { periodCardioSessions.reduce(0) { $0 + $1.durationSeconds } }
+    private var formattedCardioDuration: String {
+        let m = Int(cardioDuration) / 60
+        let h = m / 60, mm = m % 60
+        return h > 0 ? "\(h)h \(mm)m" : "\(mm)m"
+    }
+
+    /// Time in each HR zone across the period's cardio, bucketed by each
+    /// split's average heart rate (max-HR-aware). Empty when no split has HR.
+    private var cardioZoneBreakdown: [(zone: HRZone, seconds: Double)] {
+        var totals: [HRZone: Double] = [:]
+        for s in periodCardioSessions {
+            for split in s.splits {
+                guard let hr = split.avgHeartRate else { continue }
+                totals[HRZone.zone(for: hr, maxHR: settingsArray.first?.resolvedMaxHR), default: 0] += split.durationSeconds
+            }
+        }
+        let order: [HRZone] = [.easy, .aerobic, .tempo, .threshold, .max]
+        return order.compactMap { z in
+            let s = totals[z] ?? 0
+            return s > 0 ? (zone: z, seconds: s) : nil
+        }
+    }
+
+    @ViewBuilder
+    private var cardioCard: some View {
+        let zb = cardioZoneBreakdown
+        let zTotal = zb.reduce(0) { $0 + $1.seconds }
+        let dom = zb.max(by: { $0.seconds < $1.seconds })?.zone
+        VStack(alignment: .leading, spacing: 14) {
+            SectionHeader(title: "Cardio", icon: "figure.run", color: AppTheme.Signal.runOrange)
+            LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
+                statTile(icon: "figure.run", value: "\(cardioCount)", label: "Sessions", color: AppTheme.Signal.runOrange)
+                statTile(icon: "ruler", value: weightUnit.distanceUnit.format(cardioDistanceKm), label: "Distance", color: .teal)
+                statTile(icon: "clock.fill", value: formattedCardioDuration, label: "Time", color: .green)
+                if let dom {
+                    statTile(icon: "heart.fill", value: "Z\(dom.number)", label: "Top Zone", color: dom.color)
+                }
+            }
+            if zTotal > 0 {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("TIME IN ZONES")
+                        .font(.system(size: 10, weight: .bold, design: .rounded))
+                        .tracking(0.5)
+                        .foregroundStyle(.secondary)
+                    GeometryReader { geo in
+                        HStack(spacing: 2) {
+                            ForEach(zb, id: \.zone) { item in
+                                Capsule()
+                                    .fill(item.zone.color)
+                                    .frame(width: max(4, geo.size.width * CGFloat(item.seconds / zTotal) - 2))
+                            }
+                        }
+                    }
+                    .frame(height: 10)
+                }
+                .padding(.top, 2)
+            }
+        }
+        .appCard()
     }
 
     private func statTile(icon: String, value: String, label: String, color: Color, change: Double? = nil) -> some View {
