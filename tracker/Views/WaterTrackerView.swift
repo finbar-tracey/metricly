@@ -214,14 +214,7 @@ struct WaterTrackerView: View {
                     ForEach(WaterEntry.presets, id: \.label) { preset in
                         Button { addEntry(ml: preset.ml) } label: {
                             VStack(spacing: 6) {
-                                ZStack {
-                                    Circle()
-                                        .fill(Color.cyan.opacity(0.12))
-                                        .frame(width: 40, height: 40)
-                                    Image(systemName: preset.icon)
-                                        .font(.system(size: 17, weight: .semibold))
-                                        .foregroundStyle(.cyan)
-                                }
+                                gradientDisc(preset.icon, color: .cyan, size: 40, glyph: 17)
                                 Text(preset.label)
                                     .font(.caption2.weight(.medium))
                                 Text("\(Int(preset.ml)) ml")
@@ -233,20 +226,13 @@ struct WaterTrackerView: View {
                             .background(Color(.secondarySystemGroupedBackground))
                             .clipShape(RoundedRectangle(cornerRadius: 14))
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.pressableCard)
                     }
                 }
             }
 
             HStack(spacing: 12) {
-                ZStack {
-                    Circle()
-                        .fill(Color.cyan.opacity(0.10))
-                        .frame(width: 36, height: 36)
-                    Image(systemName: "pencil")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(.cyan)
-                }
+                gradientDisc("pencil", color: .cyan, size: 36, glyph: 13)
                 TextField("Custom amount", text: $customMl)
                     .keyboardType(.numberPad)
                     .focused($isMlFocused)
@@ -311,18 +297,31 @@ struct WaterTrackerView: View {
         .frame(maxWidth: .infinity)
     }
 
+    /// Shared gradient icon disc — the app-wide treatment (gradient fill +
+    /// hairline stroke) used in place of the old flat `color.opacity(…)`
+    /// circles across this screen's quick-add / streak / log surfaces.
+    private func gradientDisc(_ icon: String, color: Color, size: CGFloat, glyph: CGFloat) -> some View {
+        ZStack {
+            Circle()
+                .fill(
+                    LinearGradient(
+                        colors: [color.opacity(0.26), color.opacity(0.12)],
+                        startPoint: .topLeading, endPoint: .bottomTrailing
+                    )
+                )
+                .frame(width: size, height: size)
+                .overlay(Circle().stroke(color.opacity(0.28), lineWidth: 0.5))
+            Image(systemName: icon)
+                .font(.system(size: glyph, weight: .semibold))
+                .foregroundStyle(color)
+        }
+    }
+
     // MARK: - Streak Card
 
     private var streakCard: some View {
         HStack(spacing: 14) {
-            ZStack {
-                Circle()
-                    .fill(Color.cyan.opacity(0.15))
-                    .frame(width: 50, height: 50)
-                Image(systemName: hydrationStreak >= 7 ? "drop.circle.fill" : "drop.fill")
-                    .font(.title2)
-                    .foregroundStyle(.cyan)
-            }
+            gradientDisc(hydrationStreak >= 7 ? "drop.circle.fill" : "drop.fill", color: .cyan, size: 50, glyph: 21)
             VStack(alignment: .leading, spacing: 3) {
                 if hydrationStreak > 0 {
                     Text("\(hydrationStreak)-day hydration streak!")
@@ -350,13 +349,17 @@ struct WaterTrackerView: View {
             HStack(spacing: 8) {
                 ForEach(timeOfDayBreakdown) { block in
                     VStack(spacing: 6) {
-                        ZStack {
-                            Circle()
-                                .fill(block.ml > 0 ? block.color.opacity(0.12) : Color(.systemFill))
-                                .frame(width: 36, height: 36)
-                            Image(systemName: block.icon)
-                                .font(.system(size: 14, weight: .semibold))
-                                .foregroundStyle(block.ml > 0 ? block.color : .secondary)
+                        if block.ml > 0 {
+                            gradientDisc(block.icon, color: block.color, size: 36, glyph: 14)
+                        } else {
+                            ZStack {
+                                Circle()
+                                    .fill(Color(.systemFill))
+                                    .frame(width: 36, height: 36)
+                                Image(systemName: block.icon)
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .foregroundStyle(.secondary)
+                            }
                         }
                         Text("\(Int(block.ml))")
                             .font(.system(size: 13, weight: .bold, design: .rounded))
@@ -448,12 +451,7 @@ struct WaterTrackerView: View {
             VStack(spacing: 0) {
                 ForEach(Array(todayEntries.enumerated()), id: \.element.id) { idx, entry in
                     HStack(spacing: 12) {
-                        ZStack {
-                            Circle().fill(Color.cyan.opacity(0.12)).frame(width: 32, height: 32)
-                            Image(systemName: "drop.fill")
-                                .font(.system(size: 12, weight: .semibold))
-                                .foregroundStyle(.cyan)
-                        }
+                        gradientDisc("drop.fill", color: .cyan, size: 32, glyph: 12)
                         VStack(alignment: .leading, spacing: 2) {
                             Text("\(Int(entry.milliliters)) ml")
                                 .font(.subheadline.weight(.semibold))
