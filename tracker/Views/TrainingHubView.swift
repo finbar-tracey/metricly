@@ -10,6 +10,10 @@ struct TrainingHubView: View {
     @State private var showingAddWorkout = false
 
     private var finishedWorkouts: [Workout] { workouts.filter { $0.endTime != nil } }
+    /// Most-recent workout that's been started but not finished, if any —
+    /// drives the "Resume workout" banner so an in-progress session is one
+    /// tap away from the Training tab (mirrors Home's continue CTA).
+    private var inProgressWorkout: Workout? { workouts.first { $0.endTime == nil } }
     private var currentStreak: Int { Workout.currentStreak(from: workouts, cardioSessions: cardioSessions) }
     private var uniqueExerciseCount: Int {
         Set(finishedWorkouts.flatMap { $0.exercises.map { $0.name.lowercased() } }).count
@@ -32,6 +36,15 @@ struct TrainingHubView: View {
                     .listRowBackground(Color.clear)
                     .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 8, trailing: 16))
                     .listRowSeparator(.hidden)
+            }
+
+            // ── Resume in-progress workout ───────────────────────────────
+            if let active = inProgressWorkout {
+                Section {
+                    NavigationLink(value: active) {
+                        resumeRow(active)
+                    }
+                }
             }
 
             // ── Workouts ─────────────────────────────────────────────────
@@ -179,17 +192,23 @@ struct TrainingHubView: View {
     private func cardioHeroRow() -> some View {
         HStack(spacing: 14) {
             ZStack {
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(Color.orange.opacity(0.14))
-                    .frame(width: 40, height: 40)
+                RoundedRectangle(cornerRadius: 13, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [.orange, AppTheme.Signal.actionOrange],
+                            startPoint: .topLeading, endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 46, height: 46)
+                    .shadow(color: .orange.opacity(0.42), radius: 8, x: 0, y: 4)
                 Image(systemName: "figure.run")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(.orange)
+                    .font(.system(size: 19, weight: .bold))
+                    .foregroundStyle(.white)
             }
 
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 3) {
                 Text("Run & Cardio")
-                    .font(.body)
+                    .font(.system(size: 16, weight: .semibold, design: .rounded))
                 if let last = lastSession {
                     Text(lastSessionSummary(last))
                         .font(.caption)
@@ -216,6 +235,46 @@ struct TrainingHubView: View {
             }
         }
         .padding(.vertical, 4)
+    }
+
+    /// Banner row for resuming a started-but-unfinished workout. Uses
+    /// the orange gradient tile (matching the shared hub-row language)
+    /// plus an "IN PROGRESS" pill so it reads as live, not a directory link.
+    private func resumeRow(_ workout: Workout) -> some View {
+        HStack(spacing: 14) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 13, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [.orange, AppTheme.Signal.actionOrange],
+                            startPoint: .topLeading, endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 46, height: 46)
+                    .shadow(color: .orange.opacity(0.42), radius: 8, x: 0, y: 4)
+                Image(systemName: "play.fill")
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundStyle(.white)
+            }
+            VStack(alignment: .leading, spacing: 3) {
+                Text("Resume Workout")
+                    .font(.system(size: 16, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.primary)
+                Text(workout.name)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+            Spacer()
+            Text("IN PROGRESS")
+                .font(.system(size: 9, weight: .bold))
+                .tracking(0.4)
+                .foregroundStyle(.orange)
+                .padding(.horizontal, 8).padding(.vertical, 4)
+                .background(Color.orange.opacity(0.14), in: Capsule())
+                .overlay(Capsule().stroke(Color.orange.opacity(0.25), lineWidth: 0.5))
+        }
+        .padding(.vertical, 5)
     }
 
     private func lastSessionSummary(_ s: CardioSession) -> String {
