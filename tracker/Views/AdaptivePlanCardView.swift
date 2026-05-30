@@ -38,8 +38,15 @@ struct AdaptivePlanCardView: View {
         HStack(spacing: 12) {
             ZStack {
                 Circle()
-                    .fill(intensityColor.opacity(0.14))
+                    .fill(
+                        LinearGradient(
+                            colors: [intensityColor.opacity(0.28), intensityColor.opacity(0.12)],
+                            startPoint: .topLeading, endPoint: .bottomTrailing
+                        )
+                    )
                     .frame(width: 46, height: 46)
+                    .overlay(Circle().stroke(intensityColor.opacity(0.30), lineWidth: 0.5))
+                    .shadow(color: intensityColor.opacity(0.25), radius: 6, y: 3)
                 Image(systemName: intensityIcon)
                     .font(.system(size: 20, weight: .semibold))
                     .foregroundStyle(intensityColor)
@@ -104,8 +111,15 @@ struct AdaptivePlanCardView: View {
             }
         }
         .padding(10)
+        .padding(.leading, 4)
         .background(intensityColor.opacity(0.08),
                     in: RoundedRectangle(cornerRadius: 10))
+        .overlay(alignment: .leading) {
+            RoundedRectangle(cornerRadius: 2)
+                .fill(intensityColor.opacity(0.55))
+                .frame(width: 3)
+                .padding(.vertical, 8)
+        }
     }
 
     private var footer: some View {
@@ -130,10 +144,17 @@ struct AdaptivePlanCardView: View {
                         .font(.caption.weight(.bold))
                 }
                 .foregroundStyle(.white)
-                .padding(.horizontal, 16).padding(.vertical, 8)
-                .background(intensityColor, in: Capsule())
+                .padding(.horizontal, 18).padding(.vertical, 9)
+                .background(
+                    LinearGradient(
+                        colors: [intensityColor, intensityColor.opacity(0.8)],
+                        startPoint: .topLeading, endPoint: .bottomTrailing
+                    ),
+                    in: Capsule()
+                )
+                .shadow(color: intensityColor.opacity(0.45), radius: 8, y: 4)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressableCard)
         } else {
             EmptyView()
         }
@@ -160,11 +181,22 @@ struct AdaptivePlanCardView: View {
     }
 
     private var intensityPill: some View {
-        Text(plan.intensity.label.uppercased())
-            .font(.caption2.weight(.bold))
-            .foregroundStyle(intensityColor)
-            .padding(.horizontal, 10).padding(.vertical, 4)
-            .background(intensityColor.opacity(0.14), in: Capsule())
+        HStack(spacing: 4) {
+            Image(systemName: intensityIcon)
+                .font(.system(size: 9, weight: .bold))
+            Text(plan.intensity.label.uppercased())
+                .font(.caption2.weight(.bold))
+        }
+        .foregroundStyle(intensityColor)
+        .padding(.horizontal, 10).padding(.vertical, 5)
+        .background(
+            LinearGradient(
+                colors: [intensityColor.opacity(0.20), intensityColor.opacity(0.10)],
+                startPoint: .topLeading, endPoint: .bottomTrailing
+            ),
+            in: Capsule()
+        )
+        .overlay(Capsule().stroke(intensityColor.opacity(0.25), lineWidth: 0.5))
     }
 
     private var confidenceBadge: some View {
