@@ -44,7 +44,7 @@ struct HomeTrainingBlockChip: View {
             Button(action: onTapActive) {
                 activeChip(for: block)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressableCard)
             .accessibilityHint("Opens block details")
         } else {
             startCTA
@@ -54,34 +54,48 @@ struct HomeTrainingBlockChip: View {
     // MARK: - Active
 
     private func activeChip(for block: TrainingBlock) -> some View {
-        HStack(spacing: 12) {
-            ZStack {
-                Circle()
-                    .fill(palette(for: block.phase).opacity(0.16))
-                    .frame(width: 36, height: 36)
-                Image(systemName: block.phase.icon)
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundStyle(palette(for: block.phase))
+        let accent = palette(for: block.phase)
+        return VStack(spacing: 9) {
+            HStack(spacing: 12) {
+                ZStack {
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                colors: [accent.opacity(0.28), accent.opacity(0.12)],
+                                startPoint: .topLeading, endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 36, height: 36)
+                        .overlay(Circle().stroke(accent.opacity(0.30), lineWidth: 0.5))
+                    Image(systemName: block.phase.icon)
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(accent)
+                }
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(progressLabel(for: block))
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(.primary)
+                    Text(block.phase.label)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .textCase(.uppercase)
+                }
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(.tertiary)
             }
-            VStack(alignment: .leading, spacing: 2) {
-                Text(progressLabel(for: block))
-                    .font(.subheadline.weight(.bold))
-                    .foregroundStyle(.primary)
-                Text(block.phase.label)
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
-                    .textCase(.uppercase)
-            }
-            Spacer()
-            Image(systemName: "chevron.right")
-                .font(.caption2.weight(.semibold))
-                .foregroundStyle(.tertiary)
+            GradientProgressBar(value: weekFraction(for: block), color: accent, height: 4)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
         .background(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .fill(Color(.secondarySystemGroupedBackground))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(accent.opacity(0.18), lineWidth: 0.5)
         )
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(block.phase.label) block, \(progressLabel(for: block))")
@@ -94,8 +108,14 @@ struct HomeTrainingBlockChip: View {
             HStack(spacing: 12) {
                 ZStack {
                     Circle()
-                        .fill(AppTheme.Signal.focus.opacity(0.14))
+                        .fill(
+                            LinearGradient(
+                                colors: [AppTheme.Signal.focus.opacity(0.28), AppTheme.Signal.focus.opacity(0.12)],
+                                startPoint: .topLeading, endPoint: .bottomTrailing
+                            )
+                        )
                         .frame(width: 36, height: 36)
+                        .overlay(Circle().stroke(AppTheme.Signal.focus.opacity(0.30), lineWidth: 0.5))
                     Image(systemName: "calendar.badge.plus")
                         .font(.system(size: 14, weight: .bold))
                         .foregroundStyle(AppTheme.Signal.focus)
@@ -122,8 +142,12 @@ struct HomeTrainingBlockChip: View {
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
                     .fill(Color(.secondarySystemGroupedBackground))
             )
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(AppTheme.Signal.focus.opacity(0.18), lineWidth: 0.5)
+            )
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressableCard)
         .accessibilityHint("Inserts a training block starting today")
     }
 
@@ -151,6 +175,15 @@ struct HomeTrainingBlockChip: View {
 
     private func progressLabel(for block: TrainingBlock) -> String {
         TrainingBlockEngine.progressLabel(for: block) ?? block.phase.label
+    }
+
+    /// Fraction of the block completed by week, for the progress bar.
+    /// `currentWeek / weekCount`, clamped to a valid week so a block
+    /// run past its planned length still reads as full rather than >1.
+    private func weekFraction(for block: TrainingBlock) -> Double {
+        let elapsedDays = Calendar.current.dateComponents([.day], from: block.startDate, to: .now).day ?? 0
+        let currentWeek = min(block.weekCount, max(1, elapsedDays / 7 + 1))
+        return Double(currentWeek) / Double(max(1, block.weekCount))
     }
 
     /// Phase → accent color for the leading glyph. Recovery green for

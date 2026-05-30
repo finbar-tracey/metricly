@@ -17,9 +17,20 @@ struct HomeSyncStatusPill: View {
 
         return Button { showingDetail = true } label: {
             HStack(spacing: 10) {
-                Image(systemName: "exclamationmark.icloud.fill")
-                    .font(.subheadline.bold())
-                    .foregroundStyle(tint)
+                ZStack {
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                colors: [tint.opacity(0.28), tint.opacity(0.12)],
+                                startPoint: .topLeading, endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 30, height: 30)
+                        .overlay(Circle().stroke(tint.opacity(0.30), lineWidth: 0.5))
+                    Image(systemName: "exclamationmark.icloud.fill")
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundStyle(tint)
+                }
                 VStack(alignment: .leading, spacing: 1) {
                     Text(title)
                         .font(.subheadline.weight(.semibold))
@@ -41,7 +52,7 @@ struct HomeSyncStatusPill: View {
                     .strokeBorder(tint.opacity(0.25), lineWidth: 1)
             )
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressableCard)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(title). \(subtitle)")
         .accessibilityHint("Opens sync status details")
