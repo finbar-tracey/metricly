@@ -86,6 +86,56 @@ struct CardioCompletionView: View {
         cardioSessionPRs(session: session, allSessions: allSessions, useKm: useKm)
     }
 
+    // MARK: - HR effort summary
+
+    private var hrZoneBreakdown: [(zone: HRZone, seconds: Double)] {
+        var totals: [HRZone: Double] = [:]
+        for split in session.splits {
+            guard let hr = split.avgHeartRate else { continue }
+            totals[HRZone.zone(for: hr, maxHR: settingsArray.first?.resolvedMaxHR), default: 0] += split.durationSeconds
+        }
+        let order: [HRZone] = [.easy, .aerobic, .tempo, .threshold, .max]
+        return order.compactMap { z in
+            let s = totals[z] ?? 0
+            return s > 0 ? (zone: z, seconds: s) : nil
+        }
+    }
+
+    /// Compact "how hard you worked" summary — a stacked zone bar plus the
+    /// dominant zone. Shown only when splits carry heart rate.
+    @ViewBuilder
+    private var hrEffortBar: some View {
+        let breakdown = hrZoneBreakdown
+        let total = breakdown.reduce(0) { $0 + $1.seconds }
+        if total > 0, let dom = breakdown.max(by: { $0.seconds < $1.seconds })?.zone {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 6) {
+                    Image(systemName: "heart.fill").font(.caption2.bold())
+                    Text("Mostly Zone \(dom.number) · \(dom.rawValue)")
+                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                }
+                .foregroundStyle(.white.opacity(0.92))
+                GeometryReader { geo in
+                    HStack(spacing: 2) {
+                        ForEach(breakdown, id: \.zone) { item in
+                            Capsule()
+                                .fill(item.zone.color)
+                                .frame(width: max(4, geo.size.width * CGFloat(item.seconds / total) - 2))
+                        }
+                    }
+                }
+                .frame(height: 10)
+            }
+            .padding(14)
+            .background(.ultraThinMaterial.opacity(0.55), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(.white.opacity(0.20), lineWidth: 0.5)
+            )
+            .padding(.horizontal, 24)
+        }
+    }
+
     var body: some View {
         ZStack {
             // Background gradient matching activity type
@@ -181,6 +231,11 @@ struct CardioCompletionView: View {
                     }
                     .opacity(appeared ? 1 : 0)
                     .animation(.easeOut(duration: 0.4).delay(0.4), value: appeared)
+
+                    // HR effort distribution — compact stacked zone bar
+                    hrEffortBar
+                        .opacity(appeared ? 1 : 0)
+                        .animation(.easeOut(duration: 0.4).delay(0.46), value: appeared)
 
                     // Strava status pill — only shown when an upload is in
                     // flight or has completed. Idle state stays invisible
