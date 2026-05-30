@@ -83,38 +83,55 @@ struct ImportSuccessSheet: View {
     // MARK: - Headline stats
 
     private var headlineStats: some View {
-        HStack(spacing: 0) {
-            statCol(label: String(localized: "Workouts",
-                                  comment: "Headline-stat label for the workout count"),
-                    value: "\(analysis.workoutCount)")
-            Divider().frame(height: 44)
-            statCol(label: String(localized: "Exercises",
-                                  comment: "Headline-stat label for the unique exercise count"),
-                    value: "\(analysis.exerciseCount)")
-            Divider().frame(height: 44)
-            statCol(label: String(localized: "Sets",
-                                  comment: "Headline-stat label for the total set count"),
-                    value: "\(analysis.totalSetCount)")
-            if analysis.prCount > 0 {
-                Divider().frame(height: 44)
-                statCol(label: String(localized: "Active PRs",
-                                      comment: "Headline-stat label for the count of recently-set personal records"),
-                        value: "\(analysis.prCount)")
+        // Recovery-gradient hero card (not a flat appCard): the import is
+        // a celebratory moment, so the counts get the same premium hero
+        // treatment as the readiness surfaces — big white numbers on the
+        // green→teal gradient, hairline dividers between.
+        HeroCard(palette: AppTheme.Gradients.recovery) {
+            HStack(spacing: 0) {
+                statCol(label: String(localized: "Workouts",
+                                      comment: "Headline-stat label for the workout count"),
+                        value: "\(analysis.workoutCount)")
+                heroDivider
+                statCol(label: String(localized: "Exercises",
+                                      comment: "Headline-stat label for the unique exercise count"),
+                        value: "\(analysis.exerciseCount)")
+                heroDivider
+                statCol(label: String(localized: "Sets",
+                                      comment: "Headline-stat label for the total set count"),
+                        value: "\(analysis.totalSetCount)")
+                if analysis.prCount > 0 {
+                    heroDivider
+                    statCol(label: String(localized: "Active PRs",
+                                          comment: "Headline-stat label for the count of recently-set personal records"),
+                            value: "\(analysis.prCount)")
+                }
             }
+            .padding(.vertical, 24)
+            .padding(.horizontal, 12)
+            .frame(maxWidth: .infinity)
         }
-        .padding(.vertical, 14)
-        .appCard()
+    }
+
+    /// Hairline separator between hero stat columns. A system `Divider`
+    /// is invisible against the recovery gradient, so draw an explicit
+    /// white-opacity rule instead.
+    private var heroDivider: some View {
+        Rectangle()
+            .fill(Color.white.opacity(0.25))
+            .frame(width: 1, height: 40)
     }
 
     private func statCol(label: String, value: String) -> some View {
         VStack(spacing: 4) {
             Text(value)
-                .font(.title.weight(.black).monospacedDigit())
+                .font(.system(size: 30, weight: .black, design: .rounded).monospacedDigit())
+                .foregroundStyle(.white)
                 .lineLimit(1)
-                .minimumScaleFactor(0.7)
+                .minimumScaleFactor(0.6)
             Text(label)
                 .font(.caption2.weight(.semibold))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.white.opacity(0.72))
                 .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity)

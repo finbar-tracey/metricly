@@ -386,7 +386,7 @@ struct OnboardingView: View {
             VStack(spacing: 24) {
                 ZStack(alignment: .bottom) {
                     LinearGradient(
-                        colors: [.red, Color(red: 0.9, green: 0.2, blue: 0.3)],
+                        colors: AppTheme.Gradients.strain,
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
