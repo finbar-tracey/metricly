@@ -213,7 +213,7 @@ struct HeartRateDetailView: View {
             .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .stroke(Color.white.opacity(0.05), lineWidth: 0.5)
+                    .stroke(AppTheme.cardHairline, lineWidth: 0.5)
             )
         }
         .appCard()
@@ -273,13 +273,13 @@ struct HeartRateDetailView: View {
                 .chartYScale(domain: restingChartDomain)
                 .chartXAxis {
                     AxisMarks(values: .automatic(desiredCount: 5)) { _ in
-                        AxisGridLine().foregroundStyle(.secondary.opacity(0.12))
+                        AxisGridLine().foregroundStyle(AppTheme.chartGrid)
                         AxisValueLabel().font(.caption2).foregroundStyle(.secondary)
                     }
                 }
                 .chartYAxis {
                     AxisMarks(position: .leading) { _ in
-                        AxisGridLine().foregroundStyle(.secondary.opacity(0.12))
+                        AxisGridLine().foregroundStyle(AppTheme.chartGrid)
                         AxisValueLabel().font(.caption2).foregroundStyle(.secondary)
                     }
                 }
@@ -355,13 +355,13 @@ struct HeartRateDetailView: View {
             .chartYScale(domain: rangeChartDomain)
             .chartXAxis {
                 AxisMarks(values: .automatic(desiredCount: 5)) { _ in
-                    AxisGridLine().foregroundStyle(.secondary.opacity(0.12))
+                    AxisGridLine().foregroundStyle(AppTheme.chartGrid)
                     AxisValueLabel().font(.caption2).foregroundStyle(.secondary)
                 }
             }
             .chartYAxis {
                 AxisMarks(position: .leading) { _ in
-                    AxisGridLine().foregroundStyle(.secondary.opacity(0.12))
+                    AxisGridLine().foregroundStyle(AppTheme.chartGrid)
                     AxisValueLabel().font(.caption2).foregroundStyle(.secondary)
                 }
             }
@@ -443,13 +443,13 @@ struct HeartRateDetailView: View {
             .chartYScale(domain: hrvChartDomain)
             .chartXAxis {
                 AxisMarks(values: .automatic(desiredCount: 5)) { _ in
-                    AxisGridLine().foregroundStyle(.secondary.opacity(0.12))
+                    AxisGridLine().foregroundStyle(AppTheme.chartGrid)
                     AxisValueLabel().font(.caption2).foregroundStyle(.secondary)
                 }
             }
             .chartYAxis {
                 AxisMarks(position: .leading) { _ in
-                    AxisGridLine().foregroundStyle(.secondary.opacity(0.12))
+                    AxisGridLine().foregroundStyle(AppTheme.chartGrid)
                     AxisValueLabel().font(.caption2).foregroundStyle(.secondary)
                 }
             }

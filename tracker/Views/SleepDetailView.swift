@@ -283,17 +283,17 @@ struct SleepDetailView: View {
                 .chartYAxisLabel("hours")
                 .chartXAxis {
                     AxisMarks(values: .automatic(desiredCount: 5)) { _ in
-                        AxisGridLine().foregroundStyle(.secondary.opacity(0.12))
+                        AxisGridLine().foregroundStyle(AppTheme.chartGrid)
                         AxisValueLabel().font(.caption2).foregroundStyle(.secondary)
                     }
                 }
                 .chartYAxis {
                     AxisMarks(position: .leading) { _ in
-                        AxisGridLine().foregroundStyle(.secondary.opacity(0.12))
+                        AxisGridLine().foregroundStyle(AppTheme.chartGrid)
                         AxisValueLabel().font(.caption2).foregroundStyle(.secondary)
                     }
                 }
-                .frame(height: 220).padding(.vertical, 4)
+                .frame(height: 220).padding(.vertical, 12)
             } else if !isLoading {
                 Text("No sleep data available.")
                     .foregroundStyle(.secondary).frame(maxWidth: .infinity, minHeight: 80)

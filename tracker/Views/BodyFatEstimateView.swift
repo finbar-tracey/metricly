@@ -293,17 +293,17 @@ struct BodyFatEstimateView: View {
             .chartYScale(domain: chartYDomain)
             .chartXAxis {
                 AxisMarks(values: .automatic(desiredCount: 5)) { _ in
-                    AxisGridLine().foregroundStyle(.secondary.opacity(0.12))
+                    AxisGridLine().foregroundStyle(AppTheme.chartGrid)
                     AxisValueLabel().font(.caption2).foregroundStyle(.secondary)
                 }
             }
             .chartYAxis {
                 AxisMarks(position: .leading) { _ in
-                    AxisGridLine().foregroundStyle(.secondary.opacity(0.12))
+                    AxisGridLine().foregroundStyle(AppTheme.chartGrid)
                     AxisValueLabel().font(.caption2).foregroundStyle(.secondary)
                 }
             }
-            .frame(height: 200).padding(.vertical, 4)
+            .frame(height: 200).padding(.vertical, 12)
         }
         .appCard()
     }
@@ -371,7 +371,7 @@ struct BodyFatEstimateView: View {
             .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .stroke(Color.white.opacity(0.05), lineWidth: 0.5)
+                    .stroke(AppTheme.cardHairline, lineWidth: 0.5)
             )
 
             Text("Based on the American Council on Exercise (ACE) body fat categories.")
@@ -413,7 +413,7 @@ struct BodyFatEstimateView: View {
             .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .stroke(Color.white.opacity(0.05), lineWidth: 0.5)
+                    .stroke(AppTheme.cardHairline, lineWidth: 0.5)
             )
 
             Text("Update measurements in the Measurements tab for a new estimate.")
