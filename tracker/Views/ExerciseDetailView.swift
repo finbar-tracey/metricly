@@ -35,6 +35,7 @@ struct ExerciseDetailView: View {
     @State private var hasPreFilled = false
     @State private var showPRBanner = false
     @State private var prScale = 1.0
+    @State private var prWeight: Double = 0
     @State private var lastAddedSet: ExerciseSet?
     @State private var showUndo = false
     @State private var undoWorkItem: DispatchWorkItem?
@@ -126,24 +127,53 @@ struct ExerciseDetailView: View {
         .background(Color(.systemGroupedBackground))
         .overlay(alignment: .top) {
             if showPRBanner {
-                HStack(spacing: 6) {
-                    Image(systemName: "trophy.fill")
-                    Text("New Personal Record!")
-                    Image(systemName: "trophy.fill")
+                VStack(spacing: 8) {
+                    ZStack {
+                        Circle()
+                            .fill(
+                                LinearGradient(
+                                    colors: [AppTheme.Signal.amber, Color(red: 0.85, green: 0.42, blue: 0.10)],
+                                    startPoint: .topLeading, endPoint: .bottomTrailing
+                                )
+                            )
+                            .frame(width: 52, height: 52)
+                            .shadow(color: AppTheme.Signal.amber.opacity(0.55), radius: 12, y: 4)
+                        Image(systemName: "trophy.fill")
+                            .font(.system(size: 24, weight: .bold))
+                            .foregroundStyle(.white)
+                    }
+                    Text("NEW PERSONAL RECORD")
+                        .font(.system(size: 11, weight: .black, design: .rounded))
+                        .tracking(1)
+                        .foregroundStyle(.white.opacity(0.9))
+                    Text(exercise.name)
+                        .font(.system(size: 14, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.white.opacity(0.92))
+                        .lineLimit(1)
+                    Text(weightUnit.format(prWeight))
+                        .font(.system(size: 30, weight: .black, design: .rounded))
+                        .monospacedDigit()
+                        .foregroundStyle(.white)
                 }
-                .font(.subheadline.bold())
-                .foregroundStyle(.black)
-                .padding(.horizontal, 20)
-                .padding(.vertical, 10)
-                .background(.yellow.gradient, in: .capsule)
-                .shadow(color: .yellow.opacity(0.4), radius: 12, y: 4)
+                .padding(.horizontal, 30)
+                .padding(.vertical, 18)
+                .background(
+                    LinearGradient(colors: AppTheme.Gradients.caution, startPoint: .topLeading, endPoint: .bottomTrailing),
+                    in: RoundedRectangle(cornerRadius: AppTheme.heroRadius, style: .continuous)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppTheme.heroRadius, style: .continuous)
+                        .stroke(.white.opacity(0.25), lineWidth: 0.5)
+                )
+                .shadow(color: .black.opacity(0.28), radius: 24, y: 10)
                 .scaleEffect(prScale)
-                .padding(.top, 8)
+                .padding(.top, 12)
                 .transition(.asymmetric(
                     insertion: .move(edge: .top).combined(with: .scale(scale: 0.5)).combined(with: .opacity),
                     removal: .move(edge: .top).combined(with: .opacity)
                 ))
-                .accessibilityLabel("New personal record achieved")
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("New personal record! \(exercise.name), \(weightUnit.format(prWeight))")
             }
         }
         .navigationTitle(exercise.name)
@@ -1294,6 +1324,7 @@ struct ExerciseDetailView: View {
         // Only celebrate if this is the first set in the session to exceed the historical best
         let alreadyBeaten = exercise.sets.dropLast().contains { !$0.isWarmUp && $0.weight > historicalBestWeight }
         if !isWarmUp && historicalBestWeight > 0 && weight > historicalBestWeight && !alreadyBeaten {
+            prWeight = weight
             withAnimation(.spring(duration: 0.5, bounce: 0.3)) {
                 showPRBanner = true
                 prScale = 1.15
