@@ -82,10 +82,13 @@ struct ErrorBanner: View {
             }
         }()
 
-        return HStack(spacing: 10) {
-            Image(systemName: icon)
-                .font(.subheadline.bold())
-                .foregroundStyle(tint)
+        return HStack(spacing: 11) {
+            ZStack {
+                Circle().fill(tint).frame(width: 26, height: 26)
+                Image(systemName: icon)
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(.white)
+            }
             Text(err.message)
                 .font(.subheadline.weight(.medium))
                 .foregroundStyle(.primary)
@@ -101,13 +104,19 @@ struct ErrorBanner: View {
             .buttonStyle(.plain)
             .accessibilityLabel("Dismiss")
         }
-        .padding(.horizontal, 14)
+        .padding(.horizontal, 12)
         .padding(.vertical, 10)
-        .background(tint.opacity(0.14), in: RoundedRectangle(cornerRadius: 12))
+        .background {
+            ZStack {
+                RoundedRectangle(cornerRadius: 14, style: .continuous).fill(.regularMaterial)
+                RoundedRectangle(cornerRadius: 14, style: .continuous).fill(tint.opacity(0.12))
+            }
+        }
         .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .strokeBorder(tint.opacity(0.28), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .strokeBorder(tint.opacity(0.30), lineWidth: 1)
         )
+        .shadow(color: .black.opacity(0.12), radius: 12, x: 0, y: 4)
         .padding(.horizontal, 12)
         .padding(.top, 6)
         .onTapGesture { AppErrorBus.shared.dismiss() }
