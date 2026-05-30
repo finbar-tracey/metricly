@@ -38,6 +38,50 @@ enum PaceZone: String {
     }
 }
 
+// MARK: - HRZone
+
+/// Heart-rate intensity zone. Uses absolute BPM bands rather than
+/// %-of-max-HR because the app stores no age / max-HR to derive them
+/// from — the same "typical amateur ranges" approach `PaceZone` takes.
+enum HRZone: String {
+    case easy      = "Easy"
+    case aerobic   = "Aerobic"
+    case tempo     = "Tempo"
+    case threshold = "Threshold"
+    case max       = "Max"
+
+    var color: Color {
+        switch self {
+        case .max:       return Color(red: 0.85, green: 0.10, blue: 0.10)  // red
+        case .threshold: return Color(red: 0.95, green: 0.45, blue: 0.10)  // deep orange
+        case .tempo:     return Color(red: 0.95, green: 0.70, blue: 0.10)  // amber
+        case .aerobic:   return Color(red: 0.20, green: 0.70, blue: 0.30)  // green
+        case .easy:      return Color(red: 0.20, green: 0.60, blue: 0.90)  // blue
+        }
+    }
+
+    /// Zone number 1 (easy) … 5 (max), for the segmented zone bar.
+    var number: Int {
+        switch self {
+        case .easy: return 1
+        case .aerobic: return 2
+        case .tempo: return 3
+        case .threshold: return 4
+        case .max: return 5
+        }
+    }
+
+    static func zone(for bpm: Double) -> HRZone {
+        switch bpm {
+        case 170...:    return .max
+        case 152..<170: return .threshold
+        case 138..<152: return .tempo
+        case 120..<138: return .aerobic
+        default:        return .easy
+        }
+    }
+}
+
 // MARK: - CardioType
 
 enum CardioType: String, CaseIterable, Identifiable, Codable {

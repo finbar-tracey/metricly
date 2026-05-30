@@ -275,6 +275,12 @@ struct CardioActiveView: View {
             }
             .padding(.vertical, 4)
 
+            // Live heart-rate zone ring — appears once a HR signal is
+            // flowing. The HR equivalent of the pace-zone colouring.
+            if let hr = tracker.currentHeartRate {
+                heartRateZoneModule(hr: hr)
+            }
+
             // Secondary stats row
             HStack(spacing: 20) {
                 secondaryStat(
@@ -288,14 +294,6 @@ struct CardioActiveView: View {
                     value: String(format: "%.0f m", tracker.elevationGainMeters),
                     label: "Elevation"
                 )
-                if let hr = tracker.currentHeartRate {
-                    secondaryStat(
-                        icon: "heart.fill",
-                        value: "\(Int(hr)) bpm",
-                        label: "Heart Rate",
-                        color: .red
-                    )
-                }
                 secondaryStat(
                     icon: "flag.checkered",
                     value: "\(tracker.splits.count)",
@@ -369,6 +367,67 @@ struct CardioActiveView: View {
                 .font(.system(size: 9, weight: .medium))
                 .foregroundStyle(.secondary)
         }
+    }
+
+    // MARK: - Live HR zone module
+
+    /// Zone-coloured ring with the current BPM, the zone name, and a
+    /// 5-segment zone bar. Surfaces intensity at a glance mid-run — the
+    /// HR equivalent of the pace-zone colouring already used above.
+    private func heartRateZoneModule(hr: Double) -> some View {
+        let zone = HRZone.zone(for: hr)
+        // ~90–185 bpm display range so the ring fills (and reddens) as the
+        // session gets harder.
+        let fill = max(0.0, min(1.0, (hr - 90) / 95.0))
+        let order: [HRZone] = [.easy, .aerobic, .tempo, .threshold, .max]
+        return HStack(spacing: 16) {
+            ZStack {
+                Circle()
+                    .stroke(Color.primary.opacity(0.08), lineWidth: 8)
+                    .frame(width: 76, height: 76)
+                Circle()
+                    .trim(from: 0, to: fill)
+                    .stroke(zone.color, style: StrokeStyle(lineWidth: 8, lineCap: .round))
+                    .rotationEffect(.degrees(-90))
+                    .frame(width: 76, height: 76)
+                    .shadow(color: zone.color.opacity(0.5), radius: 5, y: 1)
+                    .animation(.easeOut(duration: 0.5), value: hr)
+                VStack(spacing: -1) {
+                    Text("\(Int(hr))")
+                        .font(.system(size: 24, weight: .black, design: .rounded))
+                        .monospacedDigit()
+                        .contentTransition(.numericText())
+                    Text("BPM")
+                        .font(.system(size: 8, weight: .bold, design: .rounded))
+                        .foregroundStyle(.secondary)
+                        .tracking(0.6)
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 9) {
+                HStack(spacing: 6) {
+                    Image(systemName: "heart.fill")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(zone.color)
+                        .symbolEffect(.pulse, options: .repeating)
+                    Text("Zone \(zone.number) · \(zone.rawValue)")
+                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .foregroundStyle(zone.color)
+                        .contentTransition(.opacity)
+                }
+                HStack(spacing: 4) {
+                    ForEach(order, id: \.self) { z in
+                        Capsule()
+                            .fill(z.number <= zone.number ? z.color : Color.primary.opacity(0.10))
+                            .frame(height: 6)
+                            .animation(.easeOut(duration: 0.3), value: zone)
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(.horizontal, 20)
+        .transition(.opacity.combined(with: .move(edge: .top)))
     }
 
     // MARK: - Splits table
