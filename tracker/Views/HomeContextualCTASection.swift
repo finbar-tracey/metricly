@@ -18,7 +18,16 @@ struct HomeContextualCTASection: View {
             NavigationLink(value: workout) {
                 HStack(spacing: 14) {
                     ZStack {
-                        Circle().fill(Color.orange.opacity(0.16)).frame(width: 50, height: 50)
+                        Circle()
+                            .fill(
+                                LinearGradient(
+                                    colors: [Color.orange.opacity(0.28), Color.orange.opacity(0.12)],
+                                    startPoint: .topLeading, endPoint: .bottomTrailing
+                                )
+                            )
+                            .frame(width: 50, height: 50)
+                            .overlay(Circle().stroke(Color.orange.opacity(0.30), lineWidth: 0.5))
+                            .shadow(color: Color.orange.opacity(0.25), radius: 6, y: 3)
                         Image(systemName: "play.fill")
                             .font(.system(size: 20, weight: .semibold)).foregroundStyle(.orange)
                     }
@@ -48,7 +57,16 @@ struct HomeContextualCTASection: View {
         case .greatSession(let sets, let volumeKg):
             HStack(spacing: 14) {
                 ZStack {
-                    Circle().fill(Color.yellow.opacity(0.12)).frame(width: 50, height: 50)
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                colors: [Color.yellow.opacity(0.30), Color.orange.opacity(0.16)],
+                                startPoint: .topLeading, endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 50, height: 50)
+                        .overlay(Circle().stroke(Color.orange.opacity(0.30), lineWidth: 0.5))
+                        .shadow(color: Color.orange.opacity(0.28), radius: 6, y: 3)
                     Image(systemName: "star.fill")
                         .font(.system(size: 20, weight: .semibold)).foregroundStyle(.yellow)
                 }
@@ -59,8 +77,31 @@ struct HomeContextualCTASection: View {
                         .font(.caption).foregroundStyle(.secondary)
                 }
                 Spacer()
+                Image(systemName: "checkmark.seal.fill")
+                    .font(.system(size: 22))
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [.yellow, .orange],
+                            startPoint: .topLeading, endPoint: .bottomTrailing
+                        )
+                    )
             }
-            .appCard()
+            .padding(16)
+            .background(
+                ZStack {
+                    Color(.secondarySystemGroupedBackground)
+                    LinearGradient(
+                        colors: [Color.orange.opacity(0.10), .clear],
+                        startPoint: .topLeading, endPoint: .center
+                    )
+                }
+                .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardRadius, style: .continuous))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: AppTheme.cardRadius, style: .continuous)
+                    .stroke(Color.orange.opacity(0.22), lineWidth: 0.5)
+            )
+            .shadow(color: .black.opacity(0.10), radius: 14, x: 0, y: 5)
         }
     }
 }
