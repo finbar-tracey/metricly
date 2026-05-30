@@ -848,7 +848,10 @@ struct WeeklyMonthlyReportView: View {
             muscleGroupSetCounts: muscleGroupSetCounts,
             bodyWeightStart: bodyWeightStart, bodyWeightEnd: bodyWeightEnd, bodyWeightChange: bodyWeightChange,
             avgSteps: avgSteps, avgSleepMinutes: avgSleepMinutes, avgRestingHR: avgRestingHR, avgHRV: avgHRV,
-            currentStreak: currentStreak, weightUnit: weightUnit
+            currentStreak: currentStreak,
+            cardioCount: cardioCount,
+            cardioDistanceText: weightUnit.distanceUnit.format(cardioDistanceKm),
+            weightUnit: weightUnit
         )
         let renderer = ImageRenderer(content:
             shareCard.frame(width: 380).padding(16).background(Color(.systemGroupedBackground))
@@ -887,17 +890,25 @@ struct ReportShareCardView: View {
     let avgRestingHR: Double?
     let avgHRV: Double?
     let currentStreak: Int
+    let cardioCount: Int
+    let cardioDistanceText: String
     let weightUnit: WeightUnit
 
     var body: some View {
         VStack(spacing: 0) {
             VStack(spacing: 6) {
                 Text(vibeEmoji).font(.system(size: 36))
-                Text(selectedPeriod == .week ? "Weekly Report" : "Monthly Report").font(.title2.bold())
-                Text(periodLabel).font(.subheadline).foregroundStyle(.secondary)
+                Text(selectedPeriod == .week ? "Weekly Report" : "Monthly Report")
+                    .font(.system(size: 22, weight: .black, design: .rounded))
+                    .foregroundStyle(.white)
+                Text(periodLabel)
+                    .font(.subheadline)
+                    .foregroundStyle(.white.opacity(0.82))
             }
             .padding(20).frame(maxWidth: .infinity)
-            .background(Color.accentColor.opacity(0.1))
+            .background(
+                LinearGradient(colors: AppTheme.Gradients.calm, startPoint: .topLeading, endPoint: .bottomTrailing)
+            )
 
             HStack(spacing: 0) {
                 shareStatItem(value: "\(workoutCount)", label: "Workouts")
@@ -911,6 +922,17 @@ struct ReportShareCardView: View {
             .padding(.vertical, 12)
 
             Divider()
+
+            if cardioCount > 0 {
+                HStack(spacing: 8) {
+                    Image(systemName: "figure.run").foregroundStyle(AppTheme.Signal.runOrange)
+                    Text("\(cardioCount) cardio session\(cardioCount == 1 ? "" : "s")").font(.subheadline.bold())
+                    Text(cardioDistanceText).font(.caption).foregroundStyle(.secondary)
+                    Spacer()
+                }
+                .padding(.horizontal, 20).padding(.vertical, 10)
+                Divider()
+            }
 
             if prsHitCount > 0 {
                 HStack(spacing: 8) {
