@@ -83,6 +83,8 @@ struct StreakCalendarView: View {
             LazyVStack(spacing: AppTheme.sectionSpacing) {
                 heroCard
 
+                nextMilestoneCard
+
                 if currentStreak >= 7 && !restDayDismissed {
                     restDayCard
                 }
@@ -99,6 +101,41 @@ struct StreakCalendarView: View {
         }
         .background(Color(.systemGroupedBackground))
         .navigationTitle("Streak")
+    }
+
+    // MARK: - Next Milestone
+
+    /// Forward-looking nudge: days to the next streak milestone, plus how
+    /// far from beating the all-time best. Hidden when there's no active
+    /// streak to build on.
+    @ViewBuilder
+    private var nextMilestoneCard: some View {
+        let milestones = [7, 14, 30, 50, 75, 100, 150, 200, 365]
+        if currentStreak >= 1, let next = milestones.first(where: { $0 > currentStreak }) {
+            VStack(alignment: .leading, spacing: 12) {
+                SectionHeader(title: "Next Milestone", icon: "flag.checkered", color: .orange)
+                HStack(alignment: .firstTextBaseline) {
+                    Text("\(next)-Day Streak")
+                        .font(.system(size: 16, weight: .bold, design: .rounded))
+                    Spacer()
+                    Text("\(next - currentStreak) to go")
+                        .font(.subheadline.bold())
+                        .foregroundStyle(.orange)
+                        .monospacedDigit()
+                }
+                GradientProgressBar(value: Double(currentStreak) / Double(next), color: .orange, height: 8)
+                if longestStreak > currentStreak {
+                    Text("\(longestStreak - currentStreak) more to beat your best of \(longestStreak).")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } else if currentStreak == longestStreak {
+                    Text("You're at your all-time best — keep it going!")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .appCard()
+        }
     }
 
     // MARK: - Hero Card
