@@ -40,7 +40,7 @@ struct CardioActiveView: View {
                 controlsRow
             }
             .background(.ultraThinMaterial)
-            .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: AppTheme.heroRadius, style: .continuous))
             .padding(.horizontal, 8)
             .padding(.bottom, 8)
 
@@ -489,10 +489,10 @@ struct CardioActiveView: View {
             }
             .frame(maxHeight: 200)
         }
-        .background(Color(.tertiarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .background(Color(.tertiarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: AppTheme.miniCardRadius, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(Color.white.opacity(0.06), lineWidth: 0.5)
+            RoundedRectangle(cornerRadius: AppTheme.miniCardRadius, style: .continuous)
+                .stroke(AppTheme.cardHairline, lineWidth: 0.5)
         )
         .padding(.horizontal, 12)
     }

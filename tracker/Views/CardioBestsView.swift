@@ -309,10 +309,10 @@ struct CardioBestsView: View {
                 ))
                 : AnyShapeStyle(Color(.secondarySystemGroupedBackground))
         )
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: AppTheme.miniCardRadius, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(achieved ? group.color.opacity(0.20) : Color.white.opacity(0.05), lineWidth: 0.5)
+            RoundedRectangle(cornerRadius: AppTheme.miniCardRadius, style: .continuous)
+                .stroke(achieved ? group.color.opacity(0.20) : AppTheme.cardHairline, lineWidth: 0.5)
         )
     }
 
@@ -472,10 +472,10 @@ struct CardioBestsView: View {
                     endPoint: .bottomTrailing
                 ))
         )
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: AppTheme.miniCardRadius, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(primary == "—" ? Color.white.opacity(0.05) : color.opacity(0.18), lineWidth: 0.5)
+            RoundedRectangle(cornerRadius: AppTheme.miniCardRadius, style: .continuous)
+                .stroke(primary == "—" ? AppTheme.cardHairline : color.opacity(0.18), lineWidth: 0.5)
         )
     }
 
@@ -600,7 +600,7 @@ struct CardioBestsView: View {
             .chartYScale(domain: .automatic(includesZero: false))
             .chartYAxis {
                 AxisMarks(values: .automatic(desiredCount: 4)) { val in
-                    AxisGridLine().foregroundStyle(Color(.separator).opacity(0.5))
+                    AxisGridLine().foregroundStyle(AppTheme.chartGrid)
                     AxisValueLabel {
                         if let sec = val.as(Double.self) {
                             Text(formatPaceShort(sec))
@@ -612,7 +612,7 @@ struct CardioBestsView: View {
             }
             .chartXAxis {
                 AxisMarks(values: .automatic(desiredCount: 4)) { _ in
-                    AxisGridLine().foregroundStyle(Color(.separator).opacity(0.5))
+                    AxisGridLine().foregroundStyle(AppTheme.chartGrid)
                     AxisValueLabel(format: .dateTime.month(.abbreviated).year())
                         .font(.caption2)
                 }
