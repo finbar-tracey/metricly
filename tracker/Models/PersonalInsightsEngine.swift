@@ -71,11 +71,18 @@ enum PersonalInsightsEngine {
         var hrvByDay: [(date: Date, ms: Double)] = []
         var rhrByDay: [(date: Date, bpm: Double)] = []
         /// Training blocks across the entire history window. Used by
-        /// `blockPhaseVsPerformance` to bucket workouts by which phase
-        /// (accumulate / deload) they fell inside. Empty when the user
-        /// hasn't started using periodisation — the block insight
-        /// silently skips in that case.
+        /// `blockPhaseVsPerformance` and `blockPhaseVsSoreness` to
+        /// bucket data by which phase (accumulate / deload) the date
+        /// fell inside. Empty when the user hasn't started using
+        /// periodisation — both block insights silently skip in that
+        /// case.
         var trainingBlocks: [TrainingBlock] = []
+        /// User-reported soreness rows (0-4 scale). Fed into
+        /// `blockPhaseVsSoreness` to check whether deload weeks
+        /// actually reduce reported soreness relative to accumulate
+        /// weeks — the physiological complement to the strength-
+        /// expression check in `blockPhaseVsPerformance`.
+        var sorenessReports: [SorenessEntry] = []
         /// Wall-clock "now" used for all lookback-window computations.
         /// Defaults to `.now`; tests inject a fixed date so cutoffs are
         /// deterministic. Matches the same convention as `RecoveryEngine`
@@ -96,6 +103,7 @@ enum PersonalInsightsEngine {
         if let i = trainingFrequencyTrend(inputs) { insights.append(i) }
         if let i = trainingFrequency(inputs)     { insights.append(i) }
         if let i = blockPhaseVsPerformance(inputs) { insights.append(i) }
+        if let i = blockPhaseVsSoreness(inputs)    { insights.append(i) }
 
         return insights.sorted { $0.weight > $1.weight }
     }
@@ -806,6 +814,105 @@ enum PersonalInsightsEngine {
             // surfaces.
             icon: "calendar.badge.clock",
             weight: 0.9 * Double(totalN) + abs(pct)
+        )
+    }
+
+    // MARK: - Insight: Training block phase × soreness
+
+    /// Compares average user-reported soreness during accumulate
+    /// weeks vs deload weeks. The physiological complement to
+    /// `blockPhaseVsPerformance`:
+    ///
+    ///   - That insight answers "are blocks producing higher strength
+    ///     expression?" (output metric).
+    ///   - This one answers "are deloads actually reducing physical
+    ///     stress?" (input metric).
+    ///
+    /// You can have one without the other — a deload week can ease
+    /// soreness without bumping next-block strength (recovery without
+    /// supercompensation), or bump strength without easing soreness
+    /// (overshoot you got away with). Surfacing both lets the user
+    /// diagnose which lever to adjust.
+    ///
+    /// **Threshold note.** The effect floor here is 0.5 levels on a
+    /// 0-4 scale (12.5% absolute) — looser than the percentage-based
+    /// strength threshold because soreness is self-reported with
+    /// known biased noise and we'd rather catch a meaningful pattern
+    /// at moderate confidence than wait for a strong one. Strength
+    /// tier still requires both ≥0.7 levels AND total ≥12 reports.
+    static func blockPhaseVsSoreness(_ inputs: Inputs) -> Insight? {
+        guard !inputs.trainingBlocks.isEmpty else { return nil }
+        guard !inputs.sorenessReports.isEmpty else { return nil }
+        let C = EngineConstants.PersonalInsights.self
+
+        // Same lookback window as the strength insight so the two read
+        // together coherently — "over the last 90 days, here's the
+        // strength picture; here's the soreness picture."
+        let cutoff = Calendar.current.date(byAdding: .day, value: -C.wideLookbackDays, to: inputs.now)
+            ?? .distantPast
+        let recentReports = inputs.sorenessReports.filter { $0.date >= cutoff && $0.date <= inputs.now }
+        guard !recentReports.isEmpty else { return nil }
+
+        // Bucket by which block contains the report's date. Gap reports
+        // (between blocks) drop out for the same reason gap workouts
+        // do in the strength insight — they're neither phase.
+        var accumulateLevels: [Int] = []
+        var deloadLevels: [Int] = []
+        for report in recentReports {
+            guard let block = TrainingBlockEngine.currentBlock(
+                in: inputs.trainingBlocks, at: report.date
+            ) else { continue }
+            switch block.phase {
+            case .accumulate: accumulateLevels.append(report.level)
+            case .deload:     deloadLevels.append(report.level)
+            }
+        }
+        guard accumulateLevels.count >= 3, deloadLevels.count >= 3 else { return nil }
+
+        let avgAcc = Double(accumulateLevels.reduce(0, +)) / Double(accumulateLevels.count)
+        let avgDel = Double(deloadLevels.reduce(0, +)) / Double(deloadLevels.count)
+        let delta = avgAcc - avgDel   // positive when deload is LESS sore (the good case)
+        guard abs(delta) >= 0.5 else { return nil }
+
+        let totalN = accumulateLevels.count + deloadLevels.count
+        let strength: Insight.Strength = {
+            if abs(delta) >= 0.7 && totalN >= 12 { return .strong }
+            if abs(delta) >= 0.5 { return .moderate }
+            return .weak
+        }()
+
+        let title: String
+        let msg: String
+        if delta > 0 {
+            // Deload weeks register LESS sore than accumulate weeks —
+            // the periodisation is doing what it's supposed to.
+            title = "Deload weeks ease your soreness"
+            msg = String(
+                format: "Your reported soreness averages %.1f points lower during deload weeks (%.1f / 4) than accumulation weeks (%.1f / 4). The planned recovery is doing its job.",
+                abs(delta), avgDel, avgAcc
+            )
+        } else {
+            // Deload weeks are NOT easing soreness — recovery isn't
+            // happening even though the volume cut is.
+            title = "Deload weeks aren't easing soreness"
+            msg = String(
+                format: "Your reported soreness during deload weeks (%.1f / 4) is no lower than accumulation weeks (%.1f / 4). Consider lengthening your deload or cutting volume more aggressively.",
+                avgDel, avgAcc
+            )
+        }
+        let detail = "Based on \(accumulateLevels.count) accumulation + \(deloadLevels.count) deload reports"
+
+        return Insight(
+            category: .recovery,
+            title: title,
+            message: msg,
+            detail: detail,
+            strength: strength,
+            // Matches the soreness self-report card on the onboarding
+            // adaptive page — visual continuity for "this is about
+            // how you feel, not numbers on a bar."
+            icon: "figure.cooldown",
+            weight: 0.8 * Double(totalN) + 10 * abs(delta)
         )
     }
 

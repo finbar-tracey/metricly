@@ -16,6 +16,8 @@ struct PersonalInsightsView: View {
     private var bodyWeights: [BodyWeightEntry]
     @Query(sort: \TrainingBlock.startDate, order: .reverse)
     private var trainingBlocks: [TrainingBlock]
+    @Query(sort: \SorenessEntry.date, order: .reverse)
+    private var sorenessReports: [SorenessEntry]
     @Query(sort: \PlanComplianceEvent.day, order: .reverse)
     private var complianceEvents: [PlanComplianceEvent]
     @Query private var settingsArray: [UserSettings]
@@ -234,7 +236,8 @@ struct PersonalInsightsView: View {
             cardioSessions: cardioSessions,
             caffeine: caffeineEntries,
             bodyWeights: bodyWeights,
-            trainingBlocks: trainingBlocks
+            trainingBlocks: trainingBlocks,
+            sorenessReports: sorenessReports
         )
 
         if healthKitEnabled {
