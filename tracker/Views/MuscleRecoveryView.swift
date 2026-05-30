@@ -361,7 +361,15 @@ struct MuscleRecoveryView: View {
         let tint = sorenessTint(for: report.level)
         return HStack(spacing: 12) {
             ZStack {
-                Circle().fill(tint.opacity(0.15)).frame(width: 36, height: 36)
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            colors: [tint.opacity(0.26), tint.opacity(0.12)],
+                            startPoint: .topLeading, endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 36, height: 36)
+                    .overlay(Circle().stroke(tint.opacity(0.28), lineWidth: 0.5))
                 Image(systemName: level.sfSymbol)
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(tint)
@@ -389,6 +397,13 @@ struct MuscleRecoveryView: View {
 
     // MARK: - Muscle Groups Card
 
+    /// Per-muscle freshness sorted most-recovered first, matching the
+    /// Home muscle-readiness section so the ranking reads the same on
+    /// both surfaces (train from the top, protect the bottom).
+    private var sortedMuscleResults: [MuscleFatigueResult] {
+        recoveryResult.muscleResults.sorted { $0.freshness > $1.freshness }
+    }
+
     private var muscleGroupsCard: some View {
         GroupedListCard(
             title: String(localized: "By Muscle Group",
@@ -396,9 +411,9 @@ struct MuscleRecoveryView: View {
             icon: "figure.strengthtraining.traditional",
             color: .accentColor
         ) {
-            ForEach(Array(recoveryResult.muscleResults.enumerated()), id: \.element.id) { idx, result in
+            ForEach(Array(sortedMuscleResults.enumerated()), id: \.element.id) { idx, result in
                 muscleRow(result)
-                if idx < recoveryResult.muscleResults.count - 1 {
+                if idx < sortedMuscleResults.count - 1 {
                     Divider().padding(.leading, 62)
                 }
             }
@@ -500,8 +515,14 @@ struct MuscleRecoveryView: View {
                         HStack(spacing: 9) {
                             ZStack {
                                 Circle()
-                                    .fill(Color.green.opacity(0.16))
+                                    .fill(
+                                        LinearGradient(
+                                            colors: [Color.green.opacity(0.30), Color.green.opacity(0.14)],
+                                            startPoint: .topLeading, endPoint: .bottomTrailing
+                                        )
+                                    )
                                     .frame(width: 28, height: 28)
+                                    .overlay(Circle().stroke(Color.green.opacity(0.30), lineWidth: 0.5))
                                 MuscleIconView(group: result.group, color: .green)
                                     .frame(width: 14, height: 14)
                             }
