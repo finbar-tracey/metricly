@@ -29,10 +29,10 @@ struct SleepDetailView: View {
                     ProgressView()
                         .frame(maxWidth: .infinity, minHeight: 200)
                 } else if todaySleep.totalMinutes == 0 && !isLoading {
-                    ContentUnavailableView(
-                        "No Sleep Data",
-                        systemImage: "bed.double.fill",
-                        description: Text("No sleep data recorded for last night.")
+                    EmptyStateView(
+                        icon: "bed.double.fill",
+                        title: "No Sleep Data",
+                        subtitle: "No sleep data recorded for last night."
                     )
                     .padding(.top, 60)
                 } else {

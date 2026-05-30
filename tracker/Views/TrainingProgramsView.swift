@@ -25,11 +25,12 @@ struct TrainingProgramsView: View {
         .background(Color(.systemGroupedBackground))
         .overlay {
             if programs.isEmpty {
-                ContentUnavailableView {
-                    Label("No Programs", systemImage: "calendar.badge.clock")
-                } description: {
-                    Text("Create a training program to structure your workouts across multiple weeks.")
-                }
+                EmptyStateView(
+                    icon: "calendar.badge.clock",
+                    title: "No Programs",
+                    subtitle: "Create a training program to structure your workouts across multiple weeks.",
+                    action: .init(label: "New Program") { showingNewProgram = true }
+                )
             }
         }
         .navigationTitle("Training Programs")
@@ -324,11 +325,11 @@ struct ProgramDayDetailView: View {
     var body: some View {
         List {
             if sortedExercises.isEmpty {
-                ContentUnavailableView {
-                    Label("No Exercises", systemImage: "figure.run")
-                } description: {
-                    Text("Add exercises to this training day.")
-                }
+                EmptyStateView(
+                    icon: "figure.run",
+                    title: "No Exercises",
+                    subtitle: "Add exercises to this training day."
+                )
                 .listRowBackground(Color.clear)
             }
 

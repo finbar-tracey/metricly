@@ -53,10 +53,10 @@ struct CardioHistoryView: View {
 
             // Session list
             if filtered.isEmpty {
-                ContentUnavailableView(
-                    filterType.map { "No \($0.rawValue) Sessions" } ?? "No Sessions",
-                    systemImage: filterType?.icon ?? "figure.run",
-                    description: Text(filterType == nil ? "Start a session to see it here." : "Try a different filter.")
+                EmptyStateView(
+                    icon: filterType?.icon ?? "figure.run",
+                    title: filterType.map { "No \($0.rawValue) Sessions" } ?? "No Sessions",
+                    subtitle: filterType == nil ? "Start a session to see it here." : "Try a different filter."
                 )
                 .listRowBackground(Color.clear)
             } else {
