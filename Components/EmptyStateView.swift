@@ -35,17 +35,30 @@ struct EmptyStateView: View {
     var body: some View {
         VStack(spacing: 16) {
             ZStack {
+                // Soft outer halo + gradient inner disc with a white glyph —
+                // matches the app's gradient-icon language instead of a flat
+                // tinted circle.
                 Circle()
-                    .fill(Color.accentColor.opacity(0.12))
-                    .frame(width: 64, height: 64)
+                    .fill(Color.accentColor.opacity(0.10))
+                    .frame(width: 84, height: 84)
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            colors: [Color.accentColor, Color.accentColor.opacity(0.72)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 60, height: 60)
+                    .shadow(color: Color.accentColor.opacity(0.35), radius: 8, y: 4)
                 Image(systemName: icon)
-                    .font(.system(size: 26, weight: .semibold))
-                    .foregroundStyle(Color.accentColor)
+                    .font(.system(size: 26, weight: .bold))
+                    .foregroundStyle(.white)
             }
 
             VStack(spacing: 6) {
                 Text(title)
-                    .font(.headline)
+                    .font(.system(.headline, design: .rounded).weight(.bold))
                     .multilineTextAlignment(.center)
                 if let subtitle {
                     Text(subtitle)
@@ -70,7 +83,7 @@ struct EmptyStateView: View {
             }
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 28)
+        .padding(.vertical, 32)
         .padding(.horizontal, 24)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(title). \(subtitle ?? "")")

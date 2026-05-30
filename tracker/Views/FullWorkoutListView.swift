@@ -237,19 +237,12 @@ struct FullWorkoutListView: View {
         .background(Color(.systemGroupedBackground))
         .overlay {
             if workouts.isEmpty {
-                ContentUnavailableView {
-                    Label("No Workouts Yet", systemImage: "dumbbell.fill")
-                } description: {
-                    Text("Tap the + button to log your first workout.")
-                } actions: {
-                    Button {
-                        showingAddWorkout = true
-                    } label: {
-                        Text("Start Workout")
-                            .font(.subheadline.bold())
-                    }
-                    .buttonStyle(.borderedProminent)
-                }
+                EmptyStateView(
+                    icon: "dumbbell.fill",
+                    title: "No Workouts Yet",
+                    subtitle: "Log your first workout to start tracking your progress.",
+                    action: .init(label: "Start Workout") { showingAddWorkout = true }
+                )
             } else if filteredWorkouts.isEmpty && !searchText.isEmpty {
                 ContentUnavailableView.search(text: searchText)
             }

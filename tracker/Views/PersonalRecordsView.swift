@@ -61,11 +61,12 @@ struct PersonalRecordsView: View {
     var body: some View {
         Group {
             if records.isEmpty {
-                ContentUnavailableView {
-                    Label("No Records Yet", systemImage: "trophy")
-                } description: {
-                    Text("Complete workouts with tracked weights to see your personal records here.")
-                }
+                EmptyStateView(
+                    icon: "trophy.fill",
+                    title: "No Records Yet",
+                    subtitle: "Complete workouts with tracked weights to see your personal records here."
+                )
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 ScrollView {
                     LazyVStack(spacing: AppTheme.sectionSpacing) {
