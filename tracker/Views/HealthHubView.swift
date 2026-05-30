@@ -1,8 +1,33 @@
 import SwiftUI
+import SwiftData
 
 struct HealthHubView: View {
+    @Query(sort: \BodyWeightEntry.date, order: .reverse) private var bodyWeights: [BodyWeightEntry]
+    @Query(sort: \WaterEntry.date, order: .reverse) private var waterEntries: [WaterEntry]
+    @Environment(\.weightUnit) private var weightUnit
+
+    private var latestWeightText: String {
+        guard let w = bodyWeights.first?.weight else { return "—" }
+        return weightUnit.formatShort(w)
+    }
+
+    private var waterTodayText: String {
+        let start = Calendar.current.startOfDay(for: .now)
+        let ml = waterEntries.filter { $0.date >= start }.reduce(0) { $0 + $1.milliliters }
+        if ml <= 0 { return "—" }
+        return ml >= 1000 ? String(format: "%.1f L", ml / 1000) : "\(Int(ml)) ml"
+    }
+
     var body: some View {
         List {
+            // ── Hero ──────────────────────────────────────────────────────
+            Section {
+                healthHeroCard
+                    .listRowBackground(Color.clear)
+                    .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 8, trailing: 16))
+                    .listRowSeparator(.hidden)
+            }
+
             Section("Health") {
                 NavigationLink { HealthDashboardView() } label: {
                     hubRow(icon: "heart.text.square", color: .red, title: "Health Dashboard", subtitle: "Steps, heart rate, sleep & more")
@@ -36,5 +61,48 @@ struct HealthHubView: View {
         .scrollContentBackground(.hidden)
         .tabBackground(tint: .red, height: 280, intensity: 0.18)
         .navigationTitle("Health")
+    }
+
+    // MARK: - Hero
+
+    /// Gives the Health tab the same hero treatment as the other tabs —
+    /// a warm rose gradient (harmonising with the red tab tint) carrying
+    /// the body-composition glance: latest weight, water today, weigh-ins.
+    /// All from SwiftData, so no HealthKit fetch is needed on the hub.
+    private var healthHeroCard: some View {
+        HeroCard(palette: [
+            Color(red: 0.93, green: 0.36, blue: 0.45),
+            Color(red: 0.82, green: 0.30, blue: 0.52),
+            Color(red: 0.62, green: 0.28, blue: 0.62)
+        ]) {
+            VStack(alignment: .leading, spacing: 14) {
+                HStack(spacing: 6) {
+                    Image(systemName: "heart.text.square.fill")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(.white.opacity(0.85))
+                    Text("Health")
+                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                        .foregroundStyle(.white.opacity(0.85))
+                        .tracking(0.5)
+                        .textCase(.uppercase)
+                }
+
+                HStack(spacing: 0) {
+                    HeroStatCol(value: latestWeightText, label: "Weight", icon: "scalemass.fill")
+                    Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 40)
+                    HeroStatCol(value: waterTodayText, label: "Water today", icon: "drop.fill")
+                    Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 40)
+                    HeroStatCol(value: "\(bodyWeights.count)", label: "Weigh-ins", icon: "calendar")
+                }
+                .padding(.vertical, 12)
+                .background(.ultraThinMaterial.opacity(0.55), in: RoundedRectangle(cornerRadius: AppTheme.miniCardRadius, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppTheme.miniCardRadius, style: .continuous)
+                        .stroke(.white.opacity(0.18), lineWidth: 0.5)
+                )
+            }
+            .padding(20)
+        }
+        .frame(minHeight: 130)
     }
 }
