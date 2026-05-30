@@ -171,9 +171,13 @@ struct PlateCalculatorView: View {
 
             HStack {
                 if abs(actualWeight - targetKg) > 0.01 {
+                    let delta = actualWeight - targetKg
+                    let deltaText = delta > 0
+                        ? "\(unit.format(abs(delta))) over"
+                        : "\(unit.format(abs(delta))) short"
                     HStack(spacing: 5) {
                         Image(systemName: "info.circle.fill").foregroundStyle(.orange)
-                        Text("Closest loadable weight").font(.caption).foregroundStyle(.secondary)
+                        Text("Closest loadable · \(deltaText)").font(.caption).foregroundStyle(.secondary)
                     }
                 }
                 Spacer()
@@ -258,68 +262,88 @@ struct PlateCalculatorView: View {
             let sideWidth = (totalWidth - barWidth) / 2
             let maxPlateWeight = availablePlatesKg.first ?? 25
 
-            HStack(spacing: 0) {
-                HStack(spacing: 3) {
-                    Spacer(minLength: 0)
-                    ForEach(Array(platesPerSide.reversed().enumerated()), id: \.offset) { _, plate in
-                        let heightRatio = max(0.3, plate / maxPlateWeight)
-                        let plateColor = plateColors[plate] ?? .gray
-                        RoundedRectangle(cornerRadius: 4, style: .continuous)
-                            .fill(
-                                LinearGradient(
-                                    colors: [plateColor, plateColor.opacity(0.78)],
-                                    startPoint: .top,
-                                    endPoint: .bottom
-                                )
-                            )
-                            .overlay {
-                                RoundedRectangle(cornerRadius: 4, style: .continuous)
-                                    .stroke(.white.opacity(0.30), lineWidth: 0.5)
-                            }
-                            .shadow(color: plateColor.opacity(0.45), radius: 4, y: 2)
-                            .frame(width: max(8, sideWidth / CGFloat(max(platesPerSide.count, 1)) - 3),
-                                   height: geo.size.height * heightRatio)
-                    }
-                }
-                .frame(width: sideWidth)
-
-                RoundedRectangle(cornerRadius: 5, style: .continuous)
+            ZStack {
+                // Bar sleeve running the full width so the plates read as
+                // mounted on the bar, not floating beside it.
+                RoundedRectangle(cornerRadius: 3, style: .continuous)
                     .fill(
                         LinearGradient(
-                            colors: [Color(.systemGray2), Color(.systemGray3), Color(.systemGray2)],
-                            startPoint: .top,
-                            endPoint: .bottom
+                            colors: [Color(.systemGray3), Color(.systemGray2), Color(.systemGray3)],
+                            startPoint: .top, endPoint: .bottom
                         )
                     )
-                    .frame(width: barWidth, height: 16)
-                    .shadow(color: .black.opacity(0.18), radius: 3, y: 1)
+                    .frame(height: 8)
+                    .shadow(color: .black.opacity(0.12), radius: 2, y: 1)
 
-                HStack(spacing: 3) {
-                    ForEach(Array(platesPerSide.enumerated()), id: \.offset) { _, plate in
-                        let heightRatio = max(0.3, plate / maxPlateWeight)
-                        let plateColor = plateColors[plate] ?? .gray
-                        RoundedRectangle(cornerRadius: 4, style: .continuous)
-                            .fill(
-                                LinearGradient(
-                                    colors: [plateColor, plateColor.opacity(0.78)],
-                                    startPoint: .top,
-                                    endPoint: .bottom
-                                )
-                            )
-                            .overlay {
-                                RoundedRectangle(cornerRadius: 4, style: .continuous)
-                                    .stroke(.white.opacity(0.30), lineWidth: 0.5)
-                            }
-                            .shadow(color: plateColor.opacity(0.45), radius: 4, y: 2)
-                            .frame(width: max(8, sideWidth / CGFloat(max(platesPerSide.count, 1)) - 3),
-                                   height: geo.size.height * heightRatio)
+                HStack(spacing: 0) {
+                    HStack(spacing: 3) {
+                        Spacer(minLength: 0)
+                        ForEach(Array(platesPerSide.reversed().enumerated()), id: \.offset) { _, plate in
+                            plateView(plate, sideWidth: sideWidth, maxHeight: geo.size.height, maxPlateWeight: maxPlateWeight)
+                        }
+                        collar(maxHeight: geo.size.height)
                     }
-                    Spacer(minLength: 0)
+                    .frame(width: sideWidth)
+
+                    RoundedRectangle(cornerRadius: 5, style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: [Color(.systemGray2), Color(.systemGray3), Color(.systemGray2)],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
+                        .frame(width: barWidth, height: 16)
+                        .shadow(color: .black.opacity(0.18), radius: 3, y: 1)
+
+                    HStack(spacing: 3) {
+                        collar(maxHeight: geo.size.height)
+                        ForEach(Array(platesPerSide.enumerated()), id: \.offset) { _, plate in
+                            plateView(plate, sideWidth: sideWidth, maxHeight: geo.size.height, maxPlateWeight: maxPlateWeight)
+                        }
+                        Spacer(minLength: 0)
+                    }
+                    .frame(width: sideWidth)
                 }
-                .frame(width: sideWidth)
             }
             .frame(maxHeight: .infinity, alignment: .center)
         }
+    }
+
+    /// One color-coded plate in the barbell visualization. Height scales
+    /// with plate weight (heavier = taller, like real plates).
+    private func plateView(_ plate: Double, sideWidth: CGFloat, maxHeight: CGFloat, maxPlateWeight: Double) -> some View {
+        let heightRatio = max(0.3, plate / maxPlateWeight)
+        let plateColor = plateColors[plate] ?? .gray
+        return RoundedRectangle(cornerRadius: 4, style: .continuous)
+            .fill(
+                LinearGradient(
+                    colors: [plateColor, plateColor.opacity(0.78)],
+                    startPoint: .top, endPoint: .bottom
+                )
+            )
+            .overlay {
+                RoundedRectangle(cornerRadius: 4, style: .continuous)
+                    .stroke(.white.opacity(0.30), lineWidth: 0.5)
+            }
+            .shadow(color: plateColor.opacity(0.45), radius: 4, y: 2)
+            .frame(width: max(8, sideWidth / CGFloat(max(platesPerSide.count, 1)) - 3),
+                   height: maxHeight * heightRatio)
+    }
+
+    /// The collar/shoulder that sits between the plates and the grip — a
+    /// small machined band, for barbell realism.
+    private func collar(maxHeight: CGFloat) -> some View {
+        RoundedRectangle(cornerRadius: 2, style: .continuous)
+            .fill(
+                LinearGradient(
+                    colors: [Color(.systemGray), Color(.systemGray2)],
+                    startPoint: .top, endPoint: .bottom
+                )
+            )
+            .frame(width: 6, height: maxHeight * 0.46)
+            .shadow(color: .black.opacity(0.15), radius: 2, y: 1)
+            .padding(.horizontal, 1)
     }
 
     private var quickWeights: [Double] { [40, 60, 80, 100, 120, 140, 160, 180] }
