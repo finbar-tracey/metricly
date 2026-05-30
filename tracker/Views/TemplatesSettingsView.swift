@@ -35,9 +35,13 @@ struct TemplatesSettingsView: View {
 
             Section {
                 if templates.isEmpty {
-                    Text("No templates yet. Create one or grab a starter from the marketplace.")
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
+                    EmptyStateView(
+                        icon: "doc.on.doc",
+                        title: "No Templates Yet",
+                        subtitle: "Create one or grab a starter from the marketplace.",
+                        action: .init(label: "Create Template") { addTemplate() }
+                    )
+                    .listRowBackground(Color.clear)
                 } else {
                     ForEach(templates) { template in
                         NavigationLink(value: template) {

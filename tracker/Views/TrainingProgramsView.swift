@@ -88,7 +88,7 @@ struct TrainingProgramsView: View {
                                 .font(.caption.bold())
                                 .foregroundStyle(.white)
                                 .padding(.horizontal, 10).padding(.vertical, 4)
-                                .background(.ultraThinMaterial.opacity(0.7), in: Capsule())
+                                .background(.white.opacity(0.18), in: Capsule())
                                 .overlay(Capsule().stroke(.white.opacity(0.22), lineWidth: 0.5))
                         } else {
                             Text("Rest day")
@@ -99,6 +99,12 @@ struct TrainingProgramsView: View {
 
                     GradientProgressBar(value: program.progress, color: .white, height: 8)
                 }
+                .padding(14)
+                .background(.ultraThinMaterial.opacity(0.55), in: RoundedRectangle(cornerRadius: AppTheme.miniCardRadius, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppTheme.miniCardRadius, style: .continuous)
+                        .stroke(.white.opacity(0.18), lineWidth: 0.5)
+                )
 
                 Button {
                     UIImpactFeedbackGenerator(style: .medium).impactOccurred()
