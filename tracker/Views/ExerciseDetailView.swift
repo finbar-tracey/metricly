@@ -39,6 +39,8 @@ struct ExerciseDetailView: View {
     @State private var showGoalBanner = false
     @State private var goalScale = 1.0
     @State private var goalTarget: Double = 0
+    /// User's master switch for celebration moments (Settings → Workout).
+    @AppStorage("celebrationsEnabled") private var celebrationsEnabled = true
     @State private var lastAddedSet: ExerciseSet?
     @State private var showUndo = false
     @State private var undoWorkItem: DispatchWorkItem?
@@ -1386,9 +1388,18 @@ struct ExerciseDetailView: View {
             && $0.achievedDate == nil
             && weight >= $0.targetWeight
         }
+        // Record the goal as achieved regardless — muting celebrations hides
+        // the banner, it doesn't un-hit the goal.
         if let goal {
             goal.achievedDate = .now
             goalTarget = goal.targetWeight
+        }
+
+        // The visible celebration (banner + haptics) is gated on the
+        // user's Celebrations setting; the PR/goal is still recorded above.
+        guard celebrationsEnabled else { return }
+
+        if goal != nil {
             withAnimation(.spring(duration: 0.5, bounce: 0.3)) {
                 showGoalBanner = true
                 goalScale = 1.15
