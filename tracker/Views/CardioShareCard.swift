@@ -42,7 +42,7 @@ struct CardioShareCard: View {
                 HStack(spacing: 10) {
                     ZStack {
                         Circle()
-                            .fill(.ultraThinMaterial.opacity(0.7))
+                            .fill(Color.white.opacity(0.18))
                             .frame(width: 52, height: 52)
                             .overlay(Circle().stroke(.white.opacity(0.25), lineWidth: 0.5))
                         Image(systemName: session.type.icon)
@@ -66,7 +66,7 @@ struct CardioShareCard: View {
                         .tracking(0.6)
                         .foregroundStyle(.white)
                         .padding(.horizontal, 9).padding(.vertical, 5)
-                        .background(.ultraThinMaterial.opacity(0.7), in: Capsule())
+                        .background(Color.white.opacity(0.18), in: Capsule())
                         .overlay(Capsule().stroke(.white.opacity(0.25), lineWidth: 0.5))
                 }
 

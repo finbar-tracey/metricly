@@ -25,67 +25,66 @@ struct WorkoutShareCardView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Header
-            VStack(spacing: 8) {
-                HStack {
+            // Gradient hero header — bold, branded, white-on-gradient to
+            // match the app's hero language (ImageRenderer-safe: solid
+            // colours / gradients only, no materials).
+            VStack(alignment: .leading, spacing: 14) {
+                HStack(alignment: .top, spacing: 12) {
                     Image(systemName: "figure.strengthtraining.traditional")
-                        .font(.title2)
-                    Text(workout.name)
                         .font(.title2.bold())
-                    Spacer()
+                        .foregroundStyle(.white.opacity(0.9))
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(workout.name)
+                            .font(.system(size: 24, weight: .black, design: .rounded))
+                            .foregroundStyle(.white)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
+                        HStack(spacing: 10) {
+                            Label {
+                                Text(workout.date, format: .dateTime.weekday(.wide).month().day())
+                            } icon: {
+                                Image(systemName: "calendar")
+                            }
+                            if let duration = workout.formattedDuration {
+                                Label(duration, systemImage: "clock")
+                            }
+                        }
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(.white.opacity(0.82))
+                    }
+                    Spacer(minLength: 8)
                     if let rating = workout.rating, rating > 0 {
                         HStack(spacing: 2) {
                             ForEach(1...rating, id: \.self) { _ in
-                                Image(systemName: "star.fill")
-                                    .font(.caption)
+                                Image(systemName: "star.fill").font(.caption2)
                             }
                         }
-                        .foregroundStyle(.yellow)
+                        .foregroundStyle(.white)
                     }
                 }
 
-                HStack(spacing: 12) {
-                    Label {
-                        Text(workout.date, format: .dateTime.weekday(.wide).month().day())
-                    } icon: {
-                        Image(systemName: "calendar")
-                    }
-                    .font(.subheadline)
-
-                    if let duration = workout.formattedDuration {
-                        Label(duration, systemImage: "clock")
-                            .font(.subheadline)
-                    }
-                    Spacer()
+                HStack(spacing: 0) {
+                    statItem(value: "\(workout.exercises.count)", label: "Exercises")
+                    Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 32)
+                    statItem(value: "\(totalSets)", label: "Sets")
+                    Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 32)
+                    statItem(value: weightUnit.formatShort(totalVolume), label: "Volume")
                 }
-                .foregroundStyle(.secondary)
+                .padding(.vertical, 12)
+                .background(Color.white.opacity(0.15), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .stroke(.white.opacity(0.20), lineWidth: 0.5)
+                )
             }
             .padding(20)
             .background(
                 LinearGradient(
-                    colors: [Color.accentColor.opacity(0.18), Color.accentColor.opacity(0.06)],
+                    colors: [Color.accentColor, Color.accentColor.opacity(0.80)],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
             )
-            .overlay(alignment: .bottom) {
-                Rectangle()
-                    .fill(Color.accentColor.opacity(0.18))
-                    .frame(height: 0.5)
-            }
-
-            // Stats bar
-            HStack(spacing: 0) {
-                statItem(value: "\(workout.exercises.count)", label: "Exercises")
-                Divider().frame(height: 36)
-                statItem(value: "\(totalSets)", label: "Sets")
-                Divider().frame(height: 36)
-                statItem(value: weightUnit.formatShort(totalVolume), label: "Volume")
-            }
-            .padding(.vertical, 12)
-            .background(Color(.systemBackground))
-
-            Divider()
 
             // Exercises list
             VStack(alignment: .leading, spacing: 10) {
@@ -148,16 +147,20 @@ struct WorkoutShareCardView: View {
                 .padding(.vertical, 12)
             }
 
-            // Footer
+            // Footer — branded (this card gets posted publicly)
             Divider()
-            HStack {
+            HStack(spacing: 5) {
                 Image(systemName: "dumbbell.fill")
-                    .font(.caption)
-                Text("Metricly")
                     .font(.caption.bold())
+                    .foregroundStyle(Color.accentColor)
+                Text("Metricly")
+                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                    .foregroundStyle(.primary)
                 Spacer()
+                Text("Trained with Metricly")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
             }
-            .foregroundStyle(.secondary)
             .padding(.horizontal, 20)
             .padding(.vertical, 12)
         }
@@ -171,12 +174,14 @@ struct WorkoutShareCardView: View {
     }
 
     private func statItem(value: String, label: String) -> some View {
-        VStack(spacing: 2) {
+        VStack(spacing: 3) {
             Text(value)
-                .font(.headline.monospacedDigit())
+                .font(.system(size: 18, weight: .black, design: .rounded))
+                .monospacedDigit()
+                .foregroundStyle(.white)
             Text(label)
-                .font(.caption2)
-                .foregroundStyle(.secondary)
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(.white.opacity(0.72))
         }
         .frame(maxWidth: .infinity)
     }
