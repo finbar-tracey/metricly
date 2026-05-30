@@ -272,14 +272,21 @@ struct CardioSessionDetailView: View {
                     Spacer()
                 }
 
-                // Stats — sit on the gradient directly
+                // Stats — frosted inner panel, consistent with every other
+                // tab hero (Training / Health / completion / All Workouts).
                 HStack(spacing: 0) {
                     HeroStatCol(value: session.formattedDistance(useKm: useKm), label: "Distance")
-                    Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 28)
+                    Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 32)
                     HeroStatCol(value: session.formattedDuration, label: "Duration")
-                    Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 28)
+                    Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 32)
                     HeroStatCol(value: session.formattedPace(useKm: useKm), label: "Avg Pace")
                 }
+                .padding(.vertical, 12)
+                .background(.ultraThinMaterial.opacity(0.55), in: RoundedRectangle(cornerRadius: AppTheme.miniCardRadius, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppTheme.miniCardRadius, style: .continuous)
+                        .stroke(.white.opacity(0.18), lineWidth: 0.5)
+                )
             }
             .padding(14)
         }
@@ -364,7 +371,8 @@ struct CardioSessionDetailView: View {
                     statTile("Elevation",   value: String(format: "%.0f m", session.elevationGainMeters), icon: "arrow.up.right", color: .teal)
                 }
                 if let hr = session.avgHeartRate {
-                    statTile("Avg HR",      value: "\(Int(hr)) bpm",                   icon: "heart.fill",            color: .red)
+                    let hrZone = HRZone.zone(for: hr, maxHR: settingsArray.first?.resolvedMaxHR)
+                    statTile("Avg HR",      value: "\(Int(hr)) bpm",                   icon: "heart.fill",            color: hrZone.color)
                 }
                 let cal = session.caloriesBurned ?? session.estimatedCalories()
                 if cal > 0 {
