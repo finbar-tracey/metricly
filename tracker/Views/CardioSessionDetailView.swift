@@ -118,12 +118,73 @@ struct CardioSessionDetailView: View {
         }
     }
 
+    // MARK: - HR zones
+
+    /// Time spent in each HR zone, bucketed at split granularity: each
+    /// split's duration is assigned to the zone of its average heart rate.
+    /// An approximation (not per-second), but honest and useful. Empty when
+    /// no split carries a heart rate.
+    private var hrZoneBreakdown: [(zone: HRZone, seconds: Double)] {
+        var totals: [HRZone: Double] = [:]
+        for split in session.splits {
+            guard let hr = split.avgHeartRate else { continue }
+            totals[HRZone.zone(for: hr), default: 0] += split.durationSeconds
+        }
+        let order: [HRZone] = [.max, .threshold, .tempo, .aerobic, .easy]
+        return order.compactMap { z in
+            let s = totals[z] ?? 0
+            return s > 0 ? (zone: z, seconds: s) : nil
+        }
+    }
+
+    private var hrZonesCard: some View {
+        let total = hrZoneBreakdown.reduce(0) { $0 + $1.seconds }
+        return VStack(alignment: .leading, spacing: 14) {
+            SectionHeader(title: "Heart Rate Zones", icon: "heart.fill", color: .red)
+            VStack(spacing: 11) {
+                ForEach(hrZoneBreakdown, id: \.zone) { item in
+                    let pct = total > 0 ? item.seconds / total : 0
+                    HStack(spacing: 12) {
+                        Text("Z\(item.zone.number)")
+                            .font(.system(size: 13, weight: .bold, design: .rounded))
+                            .foregroundStyle(item.zone.color)
+                            .frame(width: 26, alignment: .leading)
+                        Text(item.zone.rawValue)
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(.secondary)
+                            .frame(width: 66, alignment: .leading)
+                        GeometryReader { geo in
+                            ZStack(alignment: .leading) {
+                                Capsule().fill(item.zone.color.opacity(0.16)).frame(height: 8)
+                                Capsule().fill(item.zone.color)
+                                    .frame(width: max(6, geo.size.width * pct), height: 8)
+                            }
+                        }
+                        .frame(height: 8)
+                        Text(formatZoneTime(item.seconds))
+                            .font(.system(size: 12, weight: .semibold, design: .rounded))
+                            .monospacedDigit()
+                            .foregroundStyle(.secondary)
+                            .frame(width: 46, alignment: .trailing)
+                    }
+                }
+            }
+        }
+        .appCard()
+    }
+
+    private func formatZoneTime(_ seconds: Double) -> String {
+        let s = Int(seconds)
+        return String(format: "%d:%02d", s / 60, s % 60)
+    }
+
     var body: some View {
         ScrollView {
             LazyVStack(spacing: AppTheme.sectionSpacing) {
                 heroCard
                 if !session.routePoints.isEmpty { mapCard }
                 statsCard
+                if !hrZoneBreakdown.isEmpty { hrZonesCard }
                 if shouldShowStravaPill {
                     stravaStatusPill
                 }
