@@ -68,6 +68,12 @@ struct AchievementsView: View {
     @State private var externalWorkouts: [ExternalWorkout] = []
     @State private var isLoading = true
 
+    // Unlock celebration
+    @AppStorage("achievements.celebrated") private var celebratedRaw = ""
+    @AppStorage("achievements.celebrationInit") private var celebrationBaselined = false
+    @State private var celebrationQueue: [Achievement] = []
+    @State private var celebrating: Achievement?
+
     // The @Query predicate already filters endTime != nil — no second pass needed.
     private var finishedWorkouts: [Workout] { workouts }
 
@@ -86,7 +92,99 @@ struct AchievementsView: View {
         .background(Color(.systemGroupedBackground))
         .navigationTitle("Achievements")
         .navigationBarTitleDisplayMode(.inline)
-        .task { await loadHealthData() }
+        .overlay { celebrationOverlay }
+        .task {
+            await loadHealthData()
+            checkForNewUnlocks()
+        }
+    }
+
+    // MARK: - Unlock celebration
+
+    private var celebratedIDs: Set<String> {
+        Set(celebratedRaw.split(separator: ",").map(String.init))
+    }
+
+    @ViewBuilder
+    private var celebrationOverlay: some View {
+        if let a = celebrating {
+            ZStack {
+                Color.black.opacity(0.35)
+                    .ignoresSafeArea()
+                    .onTapGesture { advanceCelebration() }
+                VStack(spacing: 8) {
+                    ZStack {
+                        Circle().fill(.white.opacity(0.20)).frame(width: 58, height: 58)
+                        Image(systemName: a.icon)
+                            .font(.system(size: 26, weight: .bold))
+                            .foregroundStyle(.white)
+                    }
+                    Text("ACHIEVEMENT UNLOCKED")
+                        .font(.system(size: 11, weight: .black, design: .rounded))
+                        .tracking(1)
+                        .foregroundStyle(.white.opacity(0.9))
+                    Text(a.name)
+                        .font(.system(size: 19, weight: .black, design: .rounded))
+                        .foregroundStyle(.white)
+                        .multilineTextAlignment(.center)
+                    Text("\(a.tier.rawValue) · \(a.category.rawValue)")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(.white.opacity(0.78))
+                    Text(a.description)
+                        .font(.caption)
+                        .foregroundStyle(.white.opacity(0.82))
+                        .multilineTextAlignment(.center)
+                        .lineLimit(2)
+                }
+                .padding(.horizontal, 28).padding(.vertical, 22)
+                .frame(maxWidth: 300)
+                .background(
+                    LinearGradient(
+                        colors: [a.category.color, a.category.color.opacity(0.72)],
+                        startPoint: .topLeading, endPoint: .bottomTrailing
+                    ),
+                    in: RoundedRectangle(cornerRadius: AppTheme.heroRadius, style: .continuous)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppTheme.heroRadius, style: .continuous)
+                        .stroke(.white.opacity(0.25), lineWidth: 0.5)
+                )
+                .shadow(color: .black.opacity(0.30), radius: 24, y: 10)
+                .onTapGesture { advanceCelebration() }
+                .transition(.scale(scale: 0.7).combined(with: .opacity))
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("Achievement unlocked: \(a.name), \(a.description)")
+            }
+        }
+    }
+
+    private func checkForNewUnlocks() {
+        let unlockedIDs = Set(allAchievements.filter { $0.isUnlocked }.map(\.id))
+        // First ever load: baseline already-unlocked achievements so we don't
+        // spam a celebration for every pre-existing one.
+        if !celebrationBaselined {
+            celebratedRaw = unlockedIDs.sorted().joined(separator: ",")
+            celebrationBaselined = true
+            return
+        }
+        let newly = allAchievements.filter { $0.isUnlocked && !celebratedIDs.contains($0.id) }
+        guard !newly.isEmpty else { return }
+        celebratedRaw = celebratedIDs.union(unlockedIDs).sorted().joined(separator: ",")
+        celebrationQueue = newly
+        advanceCelebration()
+    }
+
+    private func advanceCelebration() {
+        guard !celebrationQueue.isEmpty else {
+            withAnimation(.easeOut(duration: 0.35)) { celebrating = nil }
+            return
+        }
+        let next = celebrationQueue.removeFirst()
+        withAnimation(.spring(response: 0.5, dampingFraction: 0.62)) { celebrating = next }
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.5) {
+            if celebrating?.id == next.id { advanceCelebration() }
+        }
     }
 
     // MARK: - Hero Card
