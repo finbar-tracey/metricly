@@ -38,8 +38,7 @@ struct OnboardingView: View {
             healthPage.tag(4)
             getStartedPage.tag(5)
         }
-        .tabViewStyle(.page(indexDisplayMode: .always))
-        .indexViewStyle(.page(backgroundDisplayMode: .always))
+        .tabViewStyle(.page(indexDisplayMode: .never))
         .interactiveDismissDisabled()
         // Onboarding is a chrome surface with hand-tuned hero compositions —
         // fixed-size SF Symbol glyphs (.system(size: 52)) inside fixed-size
@@ -50,6 +49,10 @@ struct OnboardingView: View {
         // xxLarge is two steps up from default — and the user can still
         // use AX sizes everywhere else in the app.
         .dynamicTypeSize(...DynamicTypeSize.xxLarge)
+        .overlay(alignment: .top) {
+            progressBar
+                .padding(.top, 60)
+        }
         .overlay(alignment: .topTrailing) {
             if currentPage > 0 && currentPage < 5 {
                 Button {
@@ -123,7 +126,7 @@ struct OnboardingView: View {
 
     private var featuresPage: some View {
         ZStack {
-            Color(.systemGroupedBackground).ignoresSafeArea()
+            interiorBackground(.teal)
 
             VStack(spacing: 24) {
                 Spacer().frame(height: 20)
@@ -181,8 +184,14 @@ struct OnboardingView: View {
         HStack(spacing: 14) {
             ZStack {
                 Circle()
-                    .fill(color.opacity(0.16))
+                    .fill(
+                        LinearGradient(
+                            colors: [color.opacity(0.26), color.opacity(0.12)],
+                            startPoint: .topLeading, endPoint: .bottomTrailing
+                        )
+                    )
                     .frame(width: 44, height: 44)
+                    .overlay(Circle().stroke(color.opacity(0.28), lineWidth: 0.5))
                 VStack(spacing: -2) {
                     Image(systemName: icon)
                         .font(.system(size: 16, weight: .semibold))
@@ -224,7 +233,7 @@ struct OnboardingView: View {
 
     private var adaptivePage: some View {
         ZStack {
-            Color(.systemGroupedBackground).ignoresSafeArea()
+            interiorBackground(.purple)
 
             VStack(spacing: 24) {
                 Spacer().frame(height: 20)
@@ -284,14 +293,7 @@ struct OnboardingView: View {
     /// not sequential steps.
     private func adaptiveStep(icon: String, color: Color, title: String, subtitle: String) -> some View {
         HStack(spacing: 14) {
-            ZStack {
-                Circle()
-                    .fill(color.opacity(0.16))
-                    .frame(width: 44, height: 44)
-                Image(systemName: icon)
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(color)
-            }
+            gradientIconDisc(icon, color: color)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
@@ -312,7 +314,7 @@ struct OnboardingView: View {
 
     private var profilePage: some View {
         ZStack {
-            Color(.systemGroupedBackground).ignoresSafeArea()
+            interiorBackground(.accentColor)
 
             VStack(spacing: 24) {
                 Spacer()
@@ -675,6 +677,66 @@ struct OnboardingView: View {
 
     // MARK: - Helpers
 
+    /// Custom segmented progress indicator that replaces the default page
+    /// dots. The active segment elongates into a pill; colour adapts to the
+    /// page chrome — white over the gradient bookend / hero pages (0, 4, 5),
+    /// inked over the light interior pages (1, 2, 3).
+    private var progressBar: some View {
+        let onGradient = currentPage == 0 || currentPage == 4 || currentPage == 5
+        return HStack(spacing: 6) {
+            ForEach(0..<6, id: \.self) { i in
+                Capsule()
+                    .fill(
+                        i == currentPage
+                            ? (onGradient ? Color.white : Color.accentColor)
+                            : (onGradient ? Color.white.opacity(0.35) : Color.secondary.opacity(0.28))
+                    )
+                    .frame(width: i == currentPage ? 22 : 7, height: 7)
+            }
+        }
+        .animation(.spring(response: 0.4, dampingFraction: 0.8), value: currentPage)
+    }
+
+    /// Background for the light interior pages — a flat grouped base lifted
+    /// by a faint top wash in the page's accent and a soft decorative orb, so
+    /// the middle of the flow shares the gradient language of the bookends
+    /// instead of dropping to plain grey.
+    private func interiorBackground(_ accent: Color) -> some View {
+        ZStack {
+            Color(.systemGroupedBackground)
+            LinearGradient(
+                colors: [accent.opacity(0.10), .clear],
+                startPoint: .top, endPoint: .center
+            )
+            Circle()
+                .fill(accent.opacity(0.06))
+                .frame(width: 300)
+                .blur(radius: 12)
+                .offset(x: 130, y: -210)
+        }
+        .ignoresSafeArea()
+    }
+
+    /// Gradient-filled icon disc shared by the step / benefit rows. Replaces
+    /// the old flat `color.opacity(0.16)` tint with the subtle gradient-disc
+    /// treatment used across the rest of the app (empty states, settings).
+    private func gradientIconDisc(_ icon: String, color: Color, size: CGFloat = 44, glyph: CGFloat = 18) -> some View {
+        ZStack {
+            Circle()
+                .fill(
+                    LinearGradient(
+                        colors: [color.opacity(0.26), color.opacity(0.12)],
+                        startPoint: .topLeading, endPoint: .bottomTrailing
+                    )
+                )
+                .frame(width: size, height: size)
+                .overlay(Circle().stroke(color.opacity(0.28), lineWidth: 0.5))
+            Image(systemName: icon)
+                .font(.system(size: glyph, weight: .semibold))
+                .foregroundStyle(color)
+        }
+    }
+
     private var nextButton: some View {
         Button {
             UIImpactFeedbackGenerator(style: .light).impactOccurred()
@@ -761,10 +823,7 @@ struct OnboardingView: View {
 
     private func profileField<Content: View>(icon: String, color: Color, @ViewBuilder content: () -> Content) -> some View {
         HStack(spacing: 12) {
-            ZStack {
-                Circle().fill(color.opacity(0.12)).frame(width: 34, height: 34)
-                Image(systemName: icon).font(.system(size: 14, weight: .semibold)).foregroundStyle(color)
-            }
+            gradientIconDisc(icon, color: color, size: 34, glyph: 14)
             content()
         }
         .padding(14)
@@ -773,10 +832,7 @@ struct OnboardingView: View {
 
     private func healthBenefitRow(icon: String, color: Color, text: String) -> some View {
         HStack(spacing: 14) {
-            ZStack {
-                Circle().fill(color.opacity(0.12)).frame(width: 38, height: 38)
-                Image(systemName: icon).font(.system(size: 15)).foregroundStyle(color)
-            }
+            gradientIconDisc(icon, color: color, size: 38, glyph: 15)
             Text(text).font(.subheadline)
             Spacer()
             Image(systemName: "checkmark.circle.fill")
