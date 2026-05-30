@@ -111,7 +111,7 @@ struct ExerciseDetailView: View {
                 Section {
                     ForEach(Array(exercise.sets.enumerated()), id: \.offset) { index, exerciseSet in
                         setRow(index: index, exerciseSet: exerciseSet)
-                            .listRowBackground(Color(.secondarySystemGroupedBackground))
+                            .listRowBackground(setRowBackground(for: exerciseSet))
                     }
                     .onDelete(perform: deleteSets)
                 } header: {
@@ -348,6 +348,21 @@ struct ExerciseDetailView: View {
     /// the static reps × weight display). Long-press → full sheet for
     /// warm-up/RPE/duplicate. Cardio sets fall back to the sheet either way
     /// since their inputs (distance/duration) don't fit inline.
+    /// Subtle row tint: warm-ups read orange, a fresh PR reads amber, so the
+    /// two special set types are distinguishable at a glance mid-set without
+    /// dimming the whole row (which made warm-ups muddy).
+    @ViewBuilder
+    private func setRowBackground(for set: ExerciseSet) -> some View {
+        let base = Color(.secondarySystemGroupedBackground)
+        if set.isWarmUp {
+            ZStack { base; AppTheme.Signal.caution.opacity(0.07) }
+        } else if isPR(set) {
+            ZStack { base; AppTheme.Signal.amber.opacity(0.08) }
+        } else {
+            base
+        }
+    }
+
     private func setRow(index: Int, exerciseSet: ExerciseSet) -> some View {
         let isEditing = inlineEditingSetID == exerciseSet.persistentModelID
         return Group {
@@ -389,18 +404,24 @@ struct ExerciseDetailView: View {
             if exerciseSet.isCardio {
                 cardioSetData(exerciseSet)
             } else {
-                HStack(spacing: 5) {
+                // Column-aligned reps / weight so stacked sets line up and
+                // scan fast mid-workout. Weight gets equal prominence with
+                // the rep count instead of reading as faint secondary text.
+                HStack(spacing: 0) {
                     Text("\(exerciseSet.reps)")
                         .font(.system(size: 19, weight: .bold, design: .rounded))
                         .monospacedDigit()
                         .foregroundStyle(exerciseSet.isWarmUp ? .secondary : .primary)
+                        .frame(width: 40, alignment: .trailing)
                     Text("×")
                         .font(.caption2)
                         .foregroundStyle(.tertiary)
+                        .frame(width: 22, alignment: .center)
                     Text(weightUnit.format(exerciseSet.weight))
-                        .font(.system(size: 14, weight: .semibold, design: .rounded))
+                        .font(.system(size: 17, weight: .semibold, design: .rounded))
                         .monospacedDigit()
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(exerciseSet.isWarmUp ? .secondary : .primary)
+                        .frame(minWidth: 80, alignment: .leading)
                 }
             }
 
@@ -416,12 +437,11 @@ struct ExerciseDetailView: View {
             if isPRSet {
                 Image(systemName: "trophy.fill")
                     .font(.system(size: 11, weight: .bold))
-                    .foregroundStyle(Color(red: 1.00, green: 0.78, blue: 0.20))
+                    .foregroundStyle(AppTheme.Signal.amber)
                     .accessibilityLabel("Personal record")
             }
         }
-        .padding(.vertical, 3)
-        .opacity(exerciseSet.isWarmUp ? 0.78 : 1.0)
+        .padding(.vertical, 5)
         .contentShape(Rectangle())
         .onTapGesture {
             // Cardio sets jump straight to the full sheet — distance/duration
@@ -482,7 +502,7 @@ struct ExerciseDetailView: View {
                         exerciseSet.weight = weightUnit.toKg(newDisplay)
                     }
                     Text(weightUnit.format(exerciseSet.weight))
-                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+                        .font(.system(size: 16, weight: .semibold, design: .rounded))
                         .monospacedDigit()
                         .frame(minWidth: 64)
                     inlineStepButton(systemName: "plus.circle.fill") {
@@ -584,12 +604,12 @@ struct ExerciseDetailView: View {
             action()
         } label: {
             Image(systemName: systemName)
-                .font(.title3)
+                .font(.title2)
                 .foregroundStyle(Color.accentColor)
         }
         .buttonStyle(.plain)
         // Generous tap target so sweaty thumbs still hit it
-        .frame(minWidth: 28, minHeight: 28)
+        .frame(minWidth: 34, minHeight: 34)
         .contentShape(Rectangle())
     }
 
@@ -684,7 +704,7 @@ struct ExerciseDetailView: View {
             if prWeight > 0 {
                 statPill(
                     icon: "trophy.fill",
-                    iconColor: Color(red: 1.00, green: 0.78, blue: 0.20),
+                    iconColor: AppTheme.Signal.amber,
                     label: "PR",
                     value: weightUnit.formatShort(prWeight)
                 )
@@ -822,7 +842,7 @@ struct ExerciseDetailView: View {
                         newWeight = max(0, newWeight - weightIncrement)
                     }
                     Text(weightUnit.format(newWeight))
-                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+                        .font(.system(size: 16, weight: .semibold, design: .rounded))
                         .monospacedDigit()
                         .frame(minWidth: 64)
                         .contentShape(Rectangle())
@@ -1038,11 +1058,11 @@ struct ExerciseDetailView: View {
                     adjustRest(-15)
                 } label: {
                     Text("−15s")
-                        .font(.system(size: 13, weight: .bold, design: .rounded))
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 7)
-                        .background(.ultraThinMaterial, in: .capsule)
-                        .overlay(Capsule().stroke(.white.opacity(0.06), lineWidth: 0.5))
+                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 11)
+                        .background(.thinMaterial, in: .capsule)
+                        .overlay(Capsule().stroke(.white.opacity(0.12), lineWidth: 0.5))
                 }
                 .buttonStyle(.pressableCard)
                 .accessibilityLabel("Subtract 15 seconds")
@@ -1051,11 +1071,11 @@ struct ExerciseDetailView: View {
                     adjustRest(15)
                 } label: {
                     Text("+15s")
-                        .font(.system(size: 13, weight: .bold, design: .rounded))
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 7)
-                        .background(.ultraThinMaterial, in: .capsule)
-                        .overlay(Capsule().stroke(.white.opacity(0.06), lineWidth: 0.5))
+                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 11)
+                        .background(.thinMaterial, in: .capsule)
+                        .overlay(Capsule().stroke(.white.opacity(0.12), lineWidth: 0.5))
                 }
                 .buttonStyle(.pressableCard)
                 .accessibilityLabel("Add 15 seconds")
@@ -1077,11 +1097,11 @@ struct ExerciseDetailView: View {
                     stopTimer()
                 } label: {
                     Text("Skip")
-                        .font(.system(size: 13, weight: .bold, design: .rounded))
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 7)
-                        .background(.ultraThinMaterial, in: .capsule)
-                        .overlay(Capsule().stroke(.white.opacity(0.06), lineWidth: 0.5))
+                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 11)
+                        .background(.thinMaterial, in: .capsule)
+                        .overlay(Capsule().stroke(.white.opacity(0.12), lineWidth: 0.5))
                 }
                 .buttonStyle(.pressableCard)
                 .accessibilityLabel("Skip rest timer")
@@ -1089,7 +1109,7 @@ struct ExerciseDetailView: View {
 
         }
         .padding()
-        .background(.regularMaterial)
+        .background(.thickMaterial)
     }
 
     private var undoBar: some View {
@@ -1373,4 +1393,35 @@ struct ExerciseDetailView: View {
 }
 
 struct PlateCalcDestination: Hashable {}
+
+#if DEBUG
+#Preview("Logging — set rows") {
+    let container = try! ModelContainer(
+        for: MetriclySchema.schema,
+        configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+    )
+    let ctx = container.mainContext
+
+    // Prior session establishes a beatable best (80 kg) so the PR row tints.
+    let pastWorkout = Workout(name: "Push", date: .now.addingTimeInterval(-7 * 86400))
+    ctx.insert(pastWorkout)
+    let pastEx = Exercise(name: "Bench Press", workout: pastWorkout, category: .chest)
+    ctx.insert(pastEx)
+    pastEx.sets = [ExerciseSet(reps: 8, weight: 80, exercise: pastEx)]
+
+    // Current session: a warm-up plus two working sets — the second a PR (> 80).
+    let workout = Workout(name: "Push")
+    ctx.insert(workout)
+    let exercise = Exercise(name: "Bench Press", workout: workout, category: .chest)
+    ctx.insert(exercise)
+    exercise.sets = [
+        ExerciseSet(reps: 10, weight: 40, isWarmUp: true, exercise: exercise),
+        ExerciseSet(reps: 8, weight: 80, rpe: 8, exercise: exercise),
+        ExerciseSet(reps: 6, weight: 85, rpe: 9, exercise: exercise),
+    ]
+
+    return NavigationStack { ExerciseDetailView(exercise: exercise) }
+        .modelContainer(container)
+}
+#endif
 
