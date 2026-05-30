@@ -121,31 +121,51 @@ struct HomeHeroSection: View {
 
     /// The three signals that feed the readiness score. Each falls back
     /// to "—" when its metric is unavailable so the layout stays stable.
+    /// Each column deep-links into its health detail — HRV and Resting HR
+    /// share the heart-rate detail (it charts both), Sleep opens the sleep
+    /// detail — so the number that drives readiness is one tap from its
+    /// trend. Matches the week strip's `pressableCard` feedback.
     private var signalStrip: some View {
         HStack(spacing: 0) {
-            signalCol(value: hrv.map { "\(Int($0)) ms" } ?? "—", label: "HRV")
+            signalCol(value: hrv.map { "\(Int($0)) ms" } ?? "—", label: "HRV") {
+                HeartRateDetailView()
+            }
             signalDivider
-            signalCol(value: sleepMinutes > 0 ? formattedSleep(sleepMinutes) : "—", label: "Sleep")
+            signalCol(value: sleepMinutes > 0 ? formattedSleep(sleepMinutes) : "—", label: "Sleep") {
+                SleepDetailView()
+            }
             signalDivider
-            signalCol(value: restingHR.map { "\(Int($0))" } ?? "—", label: "Resting HR")
+            signalCol(value: restingHR.map { "\(Int($0))" } ?? "—", label: "Resting HR") {
+                HeartRateDetailView()
+            }
         }
     }
 
-    private func signalCol(value: String, label: String) -> some View {
-        VStack(spacing: 3) {
-            Text(value)
-                .font(.system(size: 16, weight: .bold, design: .rounded))
-                .foregroundStyle(.white)
-                .monospacedDigit()
-                .lineLimit(1)
-                .minimumScaleFactor(0.7)
-            Text(label)
-                .font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(.white.opacity(0.62))
-                .tracking(0.4)
-                .textCase(.uppercase)
+    private func signalCol<Destination: View>(value: String, label: String, @ViewBuilder destination: @escaping () -> Destination) -> some View {
+        NavigationLink {
+            destination()
+        } label: {
+            VStack(spacing: 3) {
+                Text(value)
+                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .foregroundStyle(.white)
+                    .monospacedDigit()
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                HStack(spacing: 2) {
+                    Text(label)
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(.white.opacity(0.62))
+                        .tracking(0.4)
+                        .textCase(.uppercase)
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 7, weight: .bold))
+                        .foregroundStyle(.white.opacity(0.4))
+                }
+            }
+            .frame(maxWidth: .infinity)
         }
-        .frame(maxWidth: .infinity)
+        .buttonStyle(.pressableCard)
     }
 
     private var signalDivider: some View {
