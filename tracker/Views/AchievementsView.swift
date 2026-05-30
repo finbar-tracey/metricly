@@ -75,6 +75,7 @@ struct AchievementsView: View {
         ScrollView {
             LazyVStack(spacing: AppTheme.sectionSpacing) {
                 heroCard
+                almostThereCard
                 categoryPickerCard
                 achievementTiersCards
             }
@@ -289,6 +290,65 @@ struct AchievementsView: View {
             }
         }
         .opacity(achievement.isUnlocked ? 1.0 : 0.65)
+        .padding(.horizontal, 16).padding(.vertical, 12)
+    }
+
+    // MARK: - Almost There
+
+    /// The locked achievements closest to unlocking — a forward-looking,
+    /// motivational nudge above the static tier list. Hidden when nothing
+    /// has measurable progress yet.
+    @ViewBuilder
+    private var almostThereCard: some View {
+        let nextUp = Array(
+            allAchievements
+                .filter { !$0.isUnlocked && ($0.progress ?? 0) > 0.01 }
+                .sorted { ($0.progress ?? 0) > ($1.progress ?? 0) }
+                .prefix(3)
+        )
+        if !nextUp.isEmpty {
+            VStack(alignment: .leading, spacing: 14) {
+                SectionHeader(title: "Almost There", icon: "target", color: .orange)
+                VStack(spacing: 0) {
+                    ForEach(Array(nextUp.enumerated()), id: \.element.id) { idx, a in
+                        nextUpRow(a)
+                        if idx < nextUp.count - 1 {
+                            Divider().padding(.leading, 56)
+                        }
+                    }
+                }
+                .background(Color(.tertiarySystemGroupedBackground))
+                .clipShape(RoundedRectangle(cornerRadius: AppTheme.tileRadius, style: .continuous))
+            }
+            .appCard()
+        }
+    }
+
+    private func nextUpRow(_ a: Achievement) -> some View {
+        let progress = a.progress ?? 0
+        return HStack(spacing: 14) {
+            ZStack {
+                Circle().fill(a.category.color.opacity(0.16)).frame(width: 44, height: 44)
+                Image(systemName: a.icon)
+                    .font(.title3)
+                    .foregroundStyle(a.category.color)
+            }
+            VStack(alignment: .leading, spacing: 5) {
+                HStack(spacing: 6) {
+                    Text(a.name)
+                        .font(.subheadline.weight(.semibold))
+                    Spacer()
+                    Text("\(Int(progress * 100))%")
+                        .font(.caption.bold().monospacedDigit())
+                        .foregroundStyle(a.category.color)
+                }
+                GradientProgressBar(value: progress, color: a.category.color, height: 6)
+                Text(a.description)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+        }
         .padding(.horizontal, 16).padding(.vertical, 12)
     }
 
