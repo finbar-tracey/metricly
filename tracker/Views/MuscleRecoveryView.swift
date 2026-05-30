@@ -39,9 +39,6 @@ struct MuscleRecoveryView: View {
         ScrollView {
             LazyVStack(spacing: AppTheme.sectionSpacing) {
                 heroCard
-                if healthDataLoaded && (latestHRV != nil || lastNightSleep > 0 || todayRestingHR != nil) {
-                    healthFactorsCard
-                }
                 if !externalWorkouts.isEmpty {
                     externalActivityCard
                 }
@@ -146,6 +143,13 @@ struct MuscleRecoveryView: View {
                              comment: "Hero subtitle shown when HealthKit data is not yet loaded"))
                     .font(.caption)
                     .foregroundStyle(.white.opacity(0.78))
+
+                if healthDataLoaded && !availableSignals.isEmpty {
+                    Rectangle()
+                        .fill(.white.opacity(0.16))
+                        .frame(height: 1)
+                    heroSignalStrip
+                }
             }
             .padding(20)
         }
@@ -160,58 +164,63 @@ struct MuscleRecoveryView: View {
         ))
     }
 
-    // MARK: - Health Factors Card
+    // MARK: - Hero Signal Strip
 
-    private var healthFactorsCard: some View {
-        GroupedListCard(
-            title: String(localized: "Health Factors",
-                          comment: "Section header above the HRV / RHR / Sleep traffic-light row"),
-            icon: "waveform.path.ecg",
-            color: .purple
-        ) {
-            if let hrv = latestHRV {
-                healthRow(icon: "waveform.path.ecg", color: .purple, label: "HRV",
-                          value: "\(Int(hrv)) ms", indicator: hrvIndicator)
-                Divider().padding(.leading, 16)
-            }
-            if let rhr = todayRestingHR {
-                healthRow(icon: "heart.fill", color: .red, label: "Resting HR",
-                          value: "\(Int(rhr)) bpm", indicator: rhrIndicator)
-                if lastNightSleep > 0 { Divider().padding(.leading, 16) }
-            }
-            if lastNightSleep > 0 {
-                let h = Int(lastNightSleep) / 60, m = Int(lastNightSleep) % 60
-                healthRow(icon: "bed.double.fill", color: .indigo, label: "Sleep",
-                          value: "\(h)h \(m)m", indicator: sleepIndicator)
-            }
+    /// The HRV / Resting HR / Sleep signals that feed the readiness
+    /// score, surfaced inline in the hero (mirroring the Home hero) so
+    /// the number is explainable at a glance. Each value carries its
+    /// traffic-light dot. This replaced the separate "Health Factors"
+    /// card, which duplicated the same three metrics one card below the
+    /// hero — the strip folds that card's signal into the hero itself.
+    private var availableSignals: [HeroSignal] {
+        var out: [HeroSignal] = []
+        if let hrv = latestHRV {
+            out.append(HeroSignal(value: "\(Int(hrv)) ms", label: "HRV", dot: AnyView(hrvIndicator)))
         }
+        if let rhr = todayRestingHR {
+            out.append(HeroSignal(value: "\(Int(rhr)) bpm", label: "Resting HR", dot: AnyView(rhrIndicator)))
+        }
+        if lastNightSleep > 0 {
+            let h = Int(lastNightSleep) / 60, m = Int(lastNightSleep) % 60
+            out.append(HeroSignal(value: "\(h)h \(m)m", label: "Sleep", dot: AnyView(sleepIndicator)))
+        }
+        return out
     }
 
-    private func healthRow(icon: String, color: Color, label: String, value: String, indicator: some View) -> some View {
-        HStack(spacing: 12) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            colors: [color, color.opacity(0.72)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .frame(width: 38, height: 38)
-                    .shadow(color: color.opacity(0.40), radius: 5, y: 2)
-                Image(systemName: icon)
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundStyle(.white)
+    private struct HeroSignal: Identifiable {
+        let id = UUID()
+        let value: String
+        let label: String
+        let dot: AnyView
+    }
+
+    private var heroSignalStrip: some View {
+        HStack(spacing: 0) {
+            ForEach(Array(availableSignals.enumerated()), id: \.element.id) { index, sig in
+                if index > 0 {
+                    Rectangle()
+                        .fill(.white.opacity(0.22))
+                        .frame(width: 1, height: 30)
+                }
+                VStack(spacing: 4) {
+                    Text(sig.value)
+                        .font(.system(size: 16, weight: .bold, design: .rounded))
+                        .foregroundStyle(.white)
+                        .monospacedDigit()
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                    HStack(spacing: 4) {
+                        sig.dot
+                        Text(sig.label)
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundStyle(.white.opacity(0.62))
+                            .tracking(0.4)
+                            .textCase(.uppercase)
+                    }
+                }
+                .frame(maxWidth: .infinity)
             }
-            Text(label).font(.system(size: 15, weight: .semibold, design: .rounded))
-            Spacer()
-            Text(value)
-                .font(.subheadline.bold().monospacedDigit())
-                .foregroundStyle(color)
-            indicator
         }
-        .padding(.horizontal, 16).padding(.vertical, 12)
     }
 
     // MARK: - Health Indicators
