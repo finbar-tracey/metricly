@@ -172,7 +172,11 @@ struct CardioCompletionView: View {
                             miniStat(icon: "arrow.up.right", value: String(format: "%.0f m", session.elevationGainMeters), label: "gain", color: .white.opacity(0.8))
                         }
                         if let hr = session.avgHeartRate {
-                            miniStat(icon: "heart.fill", value: "\(Int(hr))", label: "bpm", color: .red.opacity(0.9))
+                            // Surface the average-effort HR zone, mirroring the
+                            // live zone ring on the active session.
+                            let zone = HRZone.zone(for: hr)
+                            miniStat(icon: "heart.fill", value: "\(Int(hr))",
+                                     label: "Z\(zone.number) · \(zone.rawValue)", color: zone.color)
                         }
                     }
                     .opacity(appeared ? 1 : 0)
