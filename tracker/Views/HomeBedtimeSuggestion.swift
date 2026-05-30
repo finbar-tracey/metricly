@@ -58,7 +58,7 @@ struct HomeBedtimeSuggestion: View {
             .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardRadius, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: AppTheme.cardRadius, style: .continuous)
-                    .stroke(Color.white.opacity(0.06), lineWidth: 0.5)
+                    .stroke(AppTheme.cardHairline, lineWidth: 0.5)
             )
             .shadow(color: .black.opacity(0.10), radius: 16, x: 0, y: 5)
         }

@@ -318,20 +318,13 @@ struct HomeDashboardView: View {
                     healthKitEnabled: healthKitEnabled,
                     healthDataLoaded: healthDataLoaded,
                     recovery: recoveryResult,
-                    // Pass the adaptive plan so the hero's suggestion
-                    // chip reads from the same source as the adaptive
-                    // card below it. Empty/placeholder plans get
-                    // ignored by the hero (`recommendedName == "—"`),
-                    // so passing the in-memory @State value here is
-                    // safe even before recompute completes on cold
-                    // launch.
-                    todayPlan: todayPlan,
                     hrv: hrv,
+                    sleepMinutes: sleepMinutes,
+                    restingHR: restingHR,
                     currentStreak: currentStreak,
                     allWorkouts: allWorkouts,
                     animateRings: animateRings,
                     gradientColors: heroGradientColors,
-                    onStartWorkout: { showingAddWorkout = true },
                     onWeekDayTapped: { tappedDayWorkout = $0 }
                 )
                 if HomeSyncStatusPill.shouldShow {

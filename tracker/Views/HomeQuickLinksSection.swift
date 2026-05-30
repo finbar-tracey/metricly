@@ -69,10 +69,10 @@ struct HomeQuickLinksSection: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(16)
         .background(Color(.tertiarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: AppTheme.miniCardRadius, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(Color.white.opacity(0.06), lineWidth: 0.5)
+            RoundedRectangle(cornerRadius: AppTheme.miniCardRadius, style: .continuous)
+                .stroke(AppTheme.cardHairline, lineWidth: 0.5)
         )
     }
 }

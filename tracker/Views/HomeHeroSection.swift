@@ -1,9 +1,16 @@
 import SwiftUI
 
-/// The top hero card on the home dashboard. Renders either the recovery
-/// readiness score with HRV ring + suggestion chip, or a streak fallback
+/// The top hero card on the home dashboard. Renders the recovery
+/// readiness score as a large centered ring with the three input
+/// signals (HRV · Sleep · Resting HR) beneath it, or a streak fallback
 /// when HealthKit is off / data hasn't loaded yet. Includes the week
 /// activity strip at the bottom.
+///
+/// Design: ring-centric ("Direction B"). The score is the unmistakable
+/// hero, and the signals that *drive* it are surfaced directly so the
+/// number is explainable rather than opaque. The old suggestion chip
+/// was removed — it duplicated the adaptive plan card immediately below
+/// this hero, which owns "today's recommendation" and its Start CTA.
 ///
 /// Decoration note: uses a custom ZStack instead of the shared `HeroCard`
 /// because the second circle sits on the right (not left) and the
@@ -14,24 +21,13 @@ struct HomeHeroSection: View {
     let healthKitEnabled: Bool
     let healthDataLoaded: Bool
     let recovery: RecoveryResult
-    /// Engine-recommended plan for today. When the adaptive plan has a
-    /// usable recommendation (intensity ≠ rest, name populated), the
-    /// hero's suggestion chip reads from it instead of
-    /// `recovery.suggestedWorkoutType`. Two reasons: (1) the adaptive
-    /// card right below the hero displays the same plan, so reading
-    /// from two different sources causes the hero to say "Train Legs"
-    /// while the card says "Pull Day · Light"; (2) the engine factors
-    /// schedule, history, and compliance — the recovery-only suggestion
-    /// is a strict subset. Pass `nil` while the plan is still
-    /// computing on cold launch; the chip falls back to the
-    /// recovery-only suggestion in that case.
-    let todayPlan: TodayPlan?
     let hrv: Double?
+    let sleepMinutes: Double
+    let restingHR: Double?
     let currentStreak: Int
     let allWorkouts: [Workout]
     let animateRings: Bool
     let gradientColors: [Color]
-    let onStartWorkout: () -> Void
     let onWeekDayTapped: (Workout) -> Void
 
     var body: some View {
@@ -54,11 +50,15 @@ struct HomeHeroSection: View {
                     .foregroundStyle(.white)
 
                 if healthKitEnabled && healthDataLoaded {
-                    readinessRow
-                    suggestionChip
+                    readinessReadout
                 } else {
                     streakFallback
                 }
+
+                // Hairline separating the readout from the week strip.
+                Rectangle()
+                    .fill(.white.opacity(0.16))
+                    .frame(height: 1)
 
                 weekActivityStrip
             }
@@ -67,105 +67,96 @@ struct HomeHeroSection: View {
         .heroCard()
     }
 
-    // MARK: - Readiness row
+    // MARK: - Readiness readout (ring + signals)
 
-    private var readinessRow: some View {
-        HStack(alignment: .top, spacing: 10) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Recovery Readiness")
-                    .font(.system(.caption, design: .rounded).weight(.bold))
-                    .foregroundStyle(.white.opacity(0.78))
-                    .tracking(0.5)
-                    .textCase(.uppercase)
-                HStack(alignment: .lastTextBaseline, spacing: 2) {
+    private var readinessReadout: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            Text("Recovery Readiness")
+                .font(.system(.caption, design: .rounded).weight(.bold))
+                .foregroundStyle(.white.opacity(0.78))
+                .tracking(0.5)
+                .textCase(.uppercase)
+
+            readinessRing
+                .frame(maxWidth: .infinity)
+
+            signalStrip
+        }
+    }
+
+    /// Large centered ring whose arc encodes the readiness score, with
+    /// the percentage and short label stacked inside.
+    private var readinessRing: some View {
+        let progress = CGFloat(recovery.readinessScore)
+        return ZStack {
+            Circle()
+                .stroke(.white.opacity(0.20), lineWidth: 13)
+                .frame(width: 172, height: 172)
+            Circle()
+                .trim(from: 0, to: animateRings ? progress : 0)
+                .stroke(readinessTintColor, style: StrokeStyle(lineWidth: 13, lineCap: .round))
+                .rotationEffect(.degrees(-90))
+                .frame(width: 172, height: 172)
+                .animation(.easeOut(duration: 1.0), value: animateRings)
+                .shadow(color: .black.opacity(0.14), radius: 6, x: 0, y: 3)
+
+            VStack(spacing: 0) {
+                HStack(alignment: .lastTextBaseline, spacing: 1) {
                     AnimatedInt(
                         value: Int(recovery.readinessScore * 100),
-                        font: .system(size: 68, weight: .black, design: .rounded),
+                        font: .system(size: 58, weight: .black, design: .rounded),
                         color: .white
                     )
-                    .shadow(color: .black.opacity(0.18), radius: 8, x: 0, y: 4)
                     Text("%")
-                        .font(.system(size: 26, weight: .heavy, design: .rounded))
+                        .font(.system(size: 23, weight: .heavy, design: .rounded))
                         .foregroundStyle(.white.opacity(0.78))
-                        .padding(.bottom, 6)
+                        .padding(.bottom, 4)
                 }
                 Text(readinessShortLabel)
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(readinessTintColor)
-                Text(RecoveryEngine.readinessLabel(recovery.readinessScore))
-                    .font(.caption).foregroundStyle(.white.opacity(0.65))
-                    .fixedSize(horizontal: false, vertical: true)
-                    .lineLimit(2)
-            }
-            Spacer(minLength: 8)
-            if let hrvValue = hrv {
-                hrvRing(value: hrvValue)
             }
         }
     }
 
-    @ViewBuilder
-    private var suggestionChip: some View {
-        let score = recovery.readinessScore
-
-        // Source-of-truth: the adaptive plan, when available. The
-        // recovery-only fallback (`recovery.suggestedWorkoutType`) is
-        // used only when the adaptive engine hasn't computed yet (cold
-        // launch) or has nothing actionable to say.
-        if let plan = todayPlan,
-           plan.intensity != .rest,
-           !plan.recommendedName.isEmpty,
-           plan.recommendedName != "—" {
-            Button(action: onStartWorkout) {
-                chipContent(icon: "bolt.fill",
-                            label: "Today: \(plan.recommendedName)")
-            }
-            .buttonStyle(.pressableCard)
-        } else if todayPlan?.intensity == .rest {
-            // Engine has actually said "rest today" — surface that
-            // directly instead of falling through to the recovery-only
-            // threshold below (which can disagree if the engine
-            // weighted compliance / schedule against the score alone).
-            NavigationLink { MuscleRecoveryView() } label: {
-                chipContent(icon: "moon.fill", label: "Rest day recommended")
-            }
-            .buttonStyle(.pressableCard)
-        } else if score >= 0.50 {
-            // Pre-plan cold-launch fallback: keep showing *something*
-            // useful rather than a blank hero. Matches the previous
-            // "Great day to train X" behaviour.
-            Button(action: onStartWorkout) {
-                chipContent(
-                    icon: "bolt.fill",
-                    label: "Great day to train \(recovery.suggestedWorkoutType)"
-                )
-            }
-            .buttonStyle(.pressableCard)
-        } else if score < 0.40 {
-            NavigationLink { MuscleRecoveryView() } label: {
-                chipContent(icon: "moon.fill", label: "Rest day recommended")
-            }
-            .buttonStyle(.pressableCard)
+    /// The three signals that feed the readiness score. Each falls back
+    /// to "—" when its metric is unavailable so the layout stays stable.
+    private var signalStrip: some View {
+        HStack(spacing: 0) {
+            signalCol(value: hrv.map { "\(Int($0)) ms" } ?? "—", label: "HRV")
+            signalDivider
+            signalCol(value: sleepMinutes > 0 ? formattedSleep(sleepMinutes) : "—", label: "Sleep")
+            signalDivider
+            signalCol(value: restingHR.map { "\(Int($0))" } ?? "—", label: "Resting HR")
         }
     }
 
-    private func chipContent(icon: String, label: String) -> some View {
-        HStack(spacing: 8) {
-            Image(systemName: icon)
-                .font(.system(size: 11, weight: .semibold))
+    private func signalCol(value: String, label: String) -> some View {
+        VStack(spacing: 3) {
+            Text(value)
+                .font(.system(size: 16, weight: .bold, design: .rounded))
+                .foregroundStyle(.white)
+                .monospacedDigit()
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
             Text(label)
-                .font(.caption.weight(.semibold))
-            Spacer(minLength: 4)
-            Image(systemName: "chevron.right")
                 .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(.white.opacity(0.62))
+                .tracking(0.4)
+                .textCase(.uppercase)
         }
-        .foregroundStyle(.white)
-        .padding(.horizontal, 14).padding(.vertical, 10)
-        .background(.ultraThinMaterial.opacity(0.65), in: RoundedRectangle(cornerRadius: AppTheme.chipRadius))
-        .overlay(
-            RoundedRectangle(cornerRadius: AppTheme.chipRadius)
-                .stroke(.white.opacity(0.22), lineWidth: 0.5)
-        )
+        .frame(maxWidth: .infinity)
+    }
+
+    private var signalDivider: some View {
+        Rectangle()
+            .fill(.white.opacity(0.22))
+            .frame(width: 1, height: 30)
+    }
+
+    private func formattedSleep(_ minutes: Double) -> String {
+        let total = Int(minutes)
+        return String(format: "%dh %02d", total / 60, total % 60)
     }
 
     private var streakFallback: some View {
@@ -205,40 +196,6 @@ struct HomeHeroSection: View {
         if s >= 0.60 { return Color(red: 0.25, green: 0.95, blue: 0.55) }
         if s >= 0.40 { return .yellow }
         return .orange
-    }
-
-    private func hrvRing(value: Double) -> some View {
-        let progress = CGFloat(min(value / 100.0, 1.0))
-        return ZStack {
-            // Background track
-            Circle()
-                .stroke(.white.opacity(0.22), lineWidth: 8)
-                .frame(width: 96, height: 96)
-            // Filled arc
-            Circle()
-                .trim(from: 0, to: animateRings ? progress : 0)
-                .stroke(readinessTintColor, style: StrokeStyle(lineWidth: 8, lineCap: .round))
-                .rotationEffect(.degrees(-90))
-                .frame(width: 96, height: 96)
-                .animation(.easeOut(duration: 1.0), value: animateRings)
-            // Inner content
-            VStack(spacing: 3) {
-                ZStack {
-                    Circle()
-                        .fill(readinessTintColor.opacity(0.20))
-                        .frame(width: 32, height: 32)
-                    Image(systemName: "heart.fill")
-                        .font(.system(size: 16, weight: .bold))
-                        .foregroundStyle(readinessTintColor)
-                }
-                Text("HRV")
-                    .font(.system(size: 9, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.60))
-                Text("\(Int(value)) ms")
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundStyle(.white)
-            }
-        }
     }
 
     // MARK: - Week activity strip
@@ -305,3 +262,24 @@ struct HomeHeroSection: View {
         .padding(.vertical, 4)
     }
 }
+
+#if DEBUG
+#Preview("Hero — Ring (Direction B)") {
+    HomeHeroSection(
+        greeting: "Good morning, Finbar",
+        healthKitEnabled: true,
+        healthDataLoaded: true,
+        recovery: RecoveryResult(readinessScore: 0.72, muscleResults: [], suggestedWorkoutType: "Push"),
+        hrv: 58,
+        sleepMinutes: 440,
+        restingHR: 52,
+        currentStreak: 3,
+        allWorkouts: [],
+        animateRings: true,
+        gradientColors: AppTheme.Gradients.recovery,
+        onWeekDayTapped: { _ in }
+    )
+    .padding()
+    .background(Color.black)
+}
+#endif

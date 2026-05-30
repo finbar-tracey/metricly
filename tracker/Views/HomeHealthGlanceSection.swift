@@ -132,9 +132,9 @@ struct HomeHealthGlanceSection: View {
                 endPoint: .bottomTrailing
             )
         )
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: AppTheme.miniCardRadius, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
+            RoundedRectangle(cornerRadius: AppTheme.miniCardRadius, style: .continuous)
                 .stroke(color.opacity(0.18), lineWidth: 0.5)
         )
     }

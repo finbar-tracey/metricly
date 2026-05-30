@@ -118,10 +118,10 @@ struct HomePlanAndMetricsRow: View {
         .padding(16)
         .frame(maxWidth: .infinity, minHeight: 168, alignment: .topLeading)
         .background(Color(.secondarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: AppTheme.miniCardRadius, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(Color.white.opacity(0.06), lineWidth: 0.5)
+            RoundedRectangle(cornerRadius: AppTheme.miniCardRadius, style: .continuous)
+                .stroke(AppTheme.cardHairline, lineWidth: 0.5)
         )
         .shadow(color: .black.opacity(0.10), radius: 14, x: 0, y: 5)
     }
@@ -184,10 +184,10 @@ struct HomePlanAndMetricsRow: View {
         .padding(16)
         .frame(maxWidth: .infinity, minHeight: 168, alignment: .topLeading)
         .background(Color(.secondarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: AppTheme.miniCardRadius, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(Color.white.opacity(0.06), lineWidth: 0.5)
+            RoundedRectangle(cornerRadius: AppTheme.miniCardRadius, style: .continuous)
+                .stroke(AppTheme.cardHairline, lineWidth: 0.5)
         )
         .shadow(color: .black.opacity(0.10), radius: 14, x: 0, y: 5)
     }

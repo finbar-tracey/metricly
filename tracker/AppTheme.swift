@@ -7,6 +7,10 @@ enum AppTheme {
     // Radii
     static let heroRadius: CGFloat = 28
     static let cardRadius: CGFloat = 20
+    /// Mini-card / tile-card tier — the smaller paired tiles on Home
+    /// (plan & metrics row, health glance, quick links). Sits between
+    /// `cardRadius` and `tileRadius`; was a hardcoded `16` in five files.
+    static let miniCardRadius: CGFloat = 16
     static let tileRadius: CGFloat = 14
     static let chipRadius: CGFloat = 10
 
@@ -14,6 +18,12 @@ enum AppTheme {
     static let sectionSpacing: CGFloat = 28
     static let cardPadding: CGFloat = 18
     static let tilePadding: CGFloat = 14
+
+    // Borders
+    /// Hairline stroke on card / tile surfaces. Standardizes the
+    /// 0.05–0.08 border-opacity spread that had drifted across the Home
+    /// sections onto one value matching `appCard`.
+    static let cardHairline = Color.white.opacity(0.08)
 
     // Signal palette — semantic colors per metric type.
     enum Signal {
