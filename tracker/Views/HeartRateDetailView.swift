@@ -31,7 +31,7 @@ struct HeartRateDetailView: View {
         ScrollView {
             LazyVStack(spacing: AppTheme.sectionSpacing) {
                 if isLoading && todayStats == nil {
-                    ProgressView()
+                    LoadingStateView("Loading heart rate…")
                         .frame(maxWidth: .infinity, minHeight: 200)
                 } else {
                     heroCard

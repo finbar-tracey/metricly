@@ -35,7 +35,7 @@ struct StepsDetailView: View {
         ScrollView {
             LazyVStack(spacing: AppTheme.sectionSpacing) {
                 if isLoading && todaySteps == 0 {
-                    ProgressView()
+                    LoadingStateView("Loading steps…")
                         .frame(maxWidth: .infinity, minHeight: 200)
                 } else {
                     heroCard

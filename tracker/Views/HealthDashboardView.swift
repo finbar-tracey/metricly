@@ -40,7 +40,7 @@ struct HealthDashboardView: View {
         ScrollView {
             LazyVStack(spacing: AppTheme.sectionSpacing) {
                 if isLoading {
-                    ProgressView()
+                    LoadingStateView("Loading health data…")
                         .frame(maxWidth: .infinity, minHeight: 120)
                 } else {
                     summaryGrid

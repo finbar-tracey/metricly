@@ -26,7 +26,7 @@ struct SleepDetailView: View {
         ScrollView {
             LazyVStack(spacing: AppTheme.sectionSpacing) {
                 if isLoading && todaySleep.totalMinutes == 0 {
-                    ProgressView()
+                    LoadingStateView("Loading sleep…")
                         .frame(maxWidth: .infinity, minHeight: 200)
                 } else if todaySleep.totalMinutes == 0 && !isLoading {
                     EmptyStateView(

@@ -204,17 +204,12 @@ struct PersonalInsightsView: View {
     }
 
     private var loadingState: some View {
-        VStack(spacing: 14) {
-            ProgressView()
-            Text(String(
-                localized: "Looking for patterns…",
-                comment: "Status text while the insights engine is computing"
-            ))
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        }
+        LoadingStateView(String(
+            localized: "Looking for patterns…",
+            comment: "Status text while the insights engine is computing"
+        ))
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 60)
+        .padding(.vertical, 28)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(String(
             localized: "Looking for patterns",

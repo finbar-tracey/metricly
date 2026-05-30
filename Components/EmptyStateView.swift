@@ -89,3 +89,36 @@ struct EmptyStateView: View {
         .accessibilityLabel("\(title). \(subtitle ?? "")")
     }
 }
+
+/// Loading-state sibling of `EmptyStateView` — a tinted, larger spinner plus
+/// an optional message, centred and consistently spaced, so loading and empty
+/// surfaces feel like one family instead of a bare default `ProgressView`.
+///
+/// Use for full-screen / section data loads. Small inline spinners (a row or
+/// button mid-action) should stay a plain `ProgressView`.
+struct LoadingStateView: View {
+    let message: String?
+
+    init(_ message: String? = nil) {
+        self.message = message
+    }
+
+    var body: some View {
+        VStack(spacing: 16) {
+            ProgressView()
+                .controlSize(.large)
+                .tint(Color.accentColor)
+            if let message {
+                Text(message)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 32)
+        .padding(.horizontal, 24)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(message ?? "Loading")
+    }
+}
