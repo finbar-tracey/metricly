@@ -232,7 +232,7 @@ struct OnboardingView: View {
                 VStack(spacing: 6) {
                     Text(String(localized: "It gets smarter as you go", comment: "Onboarding adaptive-coach page title"))
                         .font(.title.bold())
-                    Text(String(localized: "Three signals reshape today's plan.", comment: "Onboarding adaptive-coach page subtitle"))
+                    Text(String(localized: "Four signals reshape today's plan.", comment: "Onboarding adaptive-coach page subtitle"))
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
@@ -249,6 +249,19 @@ struct OnboardingView: View {
                         color: .green,
                         title: String(localized: "It watches whether you listen", comment: "Onboarding card title — trust calibration"),
                         subtitle: String(localized: "If you reliably train through suggested rest days, the engine notices and adjusts its confidence — and how loudly it suggests rest next time.", comment: "Onboarding card subtitle — trust calibration")
+                    )
+                    // Training blocks card. Sits as the third item
+                    // because it's the longest-arc signal — multi-week
+                    // periodisation — and the user encounters it
+                    // immediately on Home (the "Start a training
+                    // block" CTA). Patterns / insights come last
+                    // because they need ~90 days of data and are the
+                    // slowest-to-arrive surface.
+                    adaptiveStep(
+                        icon: "calendar.badge.clock",
+                        color: AppTheme.Signal.strain,
+                        title: String(localized: "Multi-week training blocks", comment: "Onboarding card title — training blocks"),
+                        subtitle: String(localized: "Run a 4-week build / 1-week deload rhythm. Metricly caps intensity during deload weeks so cumulative fatigue clears, and shows whether your blocks are actually paying off.", comment: "Onboarding card subtitle — training blocks")
                     )
                     adaptiveStep(
                         icon: "chart.line.uptrend.xyaxis",
