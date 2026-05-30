@@ -223,12 +223,19 @@ struct StravaSettingsSection: View {
     // MARK: - Helpers
 
     private func settingsIcon(_ name: String, color: Color) -> some View {
+        // Matches SettingsView.settingsIcon so the Strava rows are visually
+        // identical to the rest of Settings (was 28×28 / radius 7 / 13pt).
         ZStack {
-            RoundedRectangle(cornerRadius: 7)
-                .fill(color.gradient)
-                .frame(width: 28, height: 28)
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(LinearGradient(
+                    colors: [color, color.opacity(0.72)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                ))
+                .frame(width: 30, height: 30)
+                .shadow(color: color.opacity(0.40), radius: 4, y: 2)
             Image(systemName: name)
-                .font(.system(size: 13, weight: .semibold))
+                .font(.system(size: 14, weight: .bold))
                 .foregroundStyle(.white)
         }
     }

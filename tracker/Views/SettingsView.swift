@@ -49,22 +49,27 @@ struct SettingsView: View {
                     HStack(spacing: 14) {
                         ZStack {
                             Circle()
-                                .fill(Color.accentColor.opacity(0.18))
-                                .frame(width: 48, height: 48)
+                                .fill(LinearGradient(
+                                    colors: [Color.accentColor, Color.accentColor.opacity(0.72)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                ))
+                                .frame(width: 54, height: 54)
+                                .shadow(color: Color.accentColor.opacity(0.35), radius: 6, y: 3)
                             Image(systemName: "person.fill")
-                                .font(.system(size: 20, weight: .semibold))
-                                .foregroundStyle(Color.accentColor)
+                                .font(.system(size: 24, weight: .semibold))
+                                .foregroundStyle(.white)
                         }
-                        VStack(alignment: .leading, spacing: 2) {
+                        VStack(alignment: .leading, spacing: 3) {
                             Text(settings.userName.isEmpty ? "Your Name" : settings.userName)
-                                .font(.system(size: 17, weight: .semibold, design: .rounded))
+                                .font(.system(size: 18, weight: .bold, design: .rounded))
                                 .foregroundStyle(settings.userName.isEmpty ? .secondary : .primary)
                             Text(profileSubtitle)
-                                .font(.caption)
+                                .font(.subheadline)
                                 .foregroundStyle(.secondary)
                         }
                     }
-                    .padding(.vertical, 4)
+                    .padding(.vertical, 6)
                 }
             }
 
