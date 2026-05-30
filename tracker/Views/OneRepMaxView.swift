@@ -114,11 +114,22 @@ struct OneRepMaxView: View {
                                     .font(.caption.bold())
                                     .lineLimit(1)
                                     .padding(.horizontal, 14).padding(.vertical, 8)
-                                    .background(selectedExercise == name ? Color.blue : Color(.secondarySystemFill),
-                                                in: Capsule())
+                                    .background {
+                                        if selectedExercise == name {
+                                            Capsule().fill(
+                                                LinearGradient(
+                                                    colors: [.blue, AppTheme.Signal.calm],
+                                                    startPoint: .topLeading, endPoint: .bottomTrailing
+                                                )
+                                            )
+                                            .shadow(color: .blue.opacity(0.40), radius: 6, y: 3)
+                                        } else {
+                                            Capsule().fill(Color(.secondarySystemFill))
+                                        }
+                                    }
                                     .foregroundStyle(selectedExercise == name ? Color.white : Color.primary)
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(.pressableCard)
                         }
                     }
                 }
@@ -198,10 +209,24 @@ struct OneRepMaxView: View {
         VStack(alignment: .leading, spacing: 14) {
             SectionHeader(title: "Estimated 1RM Trend", icon: "chart.line.uptrend.xyaxis", color: .blue)
             Chart(e1rmHistory, id: \.0) { point in
-                LineMark(x: .value("Date", point.0), y: .value("E1RM", unit.display(point.1)))
-                    .foregroundStyle(Color.blue).interpolationMethod(.catmullRom)
                 AreaMark(x: .value("Date", point.0), y: .value("E1RM", unit.display(point.1)))
-                    .foregroundStyle(Color.blue.opacity(0.12).gradient).interpolationMethod(.catmullRom)
+                    .interpolationMethod(.catmullRom)
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [Color.blue.opacity(0.40), Color.blue.opacity(0.16), Color.blue.opacity(0.02)],
+                            startPoint: .top, endPoint: .bottom
+                        )
+                    )
+                LineMark(x: .value("Date", point.0), y: .value("E1RM", unit.display(point.1)))
+                    .interpolationMethod(.catmullRom)
+                    .lineStyle(StrokeStyle(lineWidth: 2.5, lineCap: .round, lineJoin: .round))
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [Color.blue, AppTheme.Signal.calm],
+                            startPoint: .leading, endPoint: .trailing
+                        )
+                    )
+                    .shadow(color: Color.blue.opacity(0.30), radius: 5, y: 2)
                 PointMark(x: .value("Date", point.0), y: .value("E1RM", unit.display(point.1)))
                     .foregroundStyle(Color.blue).symbolSize(25)
             }
@@ -226,11 +251,22 @@ struct OneRepMaxView: View {
                         Text(f.rawValue)
                             .font(.subheadline.bold())
                             .frame(maxWidth: .infinity).padding(.vertical, 10)
-                            .background(formula == f ? Color.blue : Color(.secondarySystemFill),
-                                        in: RoundedRectangle(cornerRadius: 10))
+                            .background {
+                                if formula == f {
+                                    RoundedRectangle(cornerRadius: 10, style: .continuous).fill(
+                                        LinearGradient(
+                                            colors: [.blue, AppTheme.Signal.calm],
+                                            startPoint: .topLeading, endPoint: .bottomTrailing
+                                        )
+                                    )
+                                    .shadow(color: .blue.opacity(0.35), radius: 6, y: 3)
+                                } else {
+                                    RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Color(.secondarySystemFill))
+                                }
+                            }
                             .foregroundStyle(formula == f ? Color.white : Color.primary)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressableCard)
                 }
             }
 
@@ -300,7 +336,15 @@ struct OneRepMaxView: View {
     private var emptyExerciseCard: some View {
         VStack(spacing: 16) {
             ZStack {
-                Circle().fill(Color.blue.opacity(0.12)).frame(width: 60, height: 60)
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            colors: [Color.blue.opacity(0.26), Color.blue.opacity(0.12)],
+                            startPoint: .topLeading, endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 60, height: 60)
+                    .overlay(Circle().stroke(Color.blue.opacity(0.28), lineWidth: 0.5))
                 Image(systemName: "chart.line.uptrend.xyaxis")
                     .font(.system(size: 24, weight: .semibold)).foregroundStyle(.blue)
             }
@@ -314,7 +358,15 @@ struct OneRepMaxView: View {
     private var noDataCard: some View {
         VStack(spacing: 16) {
             ZStack {
-                Circle().fill(Color.blue.opacity(0.12)).frame(width: 70, height: 70)
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            colors: [Color.blue.opacity(0.26), Color.blue.opacity(0.12)],
+                            startPoint: .topLeading, endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 70, height: 70)
+                    .overlay(Circle().stroke(Color.blue.opacity(0.28), lineWidth: 0.5))
                 Image(systemName: "dumbbell.fill")
                     .font(.system(size: 28, weight: .semibold)).foregroundStyle(.blue)
             }
