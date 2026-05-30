@@ -36,6 +36,9 @@ struct ExerciseDetailView: View {
     @State private var showPRBanner = false
     @State private var prScale = 1.0
     @State private var prWeight: Double = 0
+    @State private var showGoalBanner = false
+    @State private var goalScale = 1.0
+    @State private var goalTarget: Double = 0
     @State private var lastAddedSet: ExerciseSet?
     @State private var showUndo = false
     @State private var undoWorkItem: DispatchWorkItem?
@@ -174,6 +177,56 @@ struct ExerciseDetailView: View {
                 ))
                 .accessibilityElement(children: .combine)
                 .accessibilityLabel("New personal record! \(exercise.name), \(weightUnit.format(prWeight))")
+            }
+        }
+        .overlay(alignment: .top) {
+            if showGoalBanner {
+                VStack(spacing: 8) {
+                    ZStack {
+                        Circle()
+                            .fill(
+                                LinearGradient(
+                                    colors: [AppTheme.Signal.recovery, AppTheme.Signal.recoveryDeep],
+                                    startPoint: .topLeading, endPoint: .bottomTrailing
+                                )
+                            )
+                            .frame(width: 52, height: 52)
+                            .shadow(color: AppTheme.Signal.recovery.opacity(0.55), radius: 12, y: 4)
+                        Image(systemName: "target")
+                            .font(.system(size: 24, weight: .bold))
+                            .foregroundStyle(.white)
+                    }
+                    Text("GOAL ACHIEVED")
+                        .font(.system(size: 11, weight: .black, design: .rounded))
+                        .tracking(1)
+                        .foregroundStyle(.white.opacity(0.9))
+                    Text(exercise.name)
+                        .font(.system(size: 14, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.white.opacity(0.92))
+                        .lineLimit(1)
+                    Text("\(weightUnit.format(goalTarget)) reached!")
+                        .font(.system(size: 22, weight: .black, design: .rounded))
+                        .foregroundStyle(.white)
+                }
+                .padding(.horizontal, 30)
+                .padding(.vertical, 18)
+                .background(
+                    LinearGradient(colors: AppTheme.Gradients.recovery, startPoint: .topLeading, endPoint: .bottomTrailing),
+                    in: RoundedRectangle(cornerRadius: AppTheme.heroRadius, style: .continuous)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppTheme.heroRadius, style: .continuous)
+                        .stroke(.white.opacity(0.25), lineWidth: 0.5)
+                )
+                .shadow(color: .black.opacity(0.28), radius: 24, y: 10)
+                .scaleEffect(goalScale)
+                .padding(.top, 12)
+                .transition(.asymmetric(
+                    insertion: .move(edge: .top).combined(with: .scale(scale: 0.5)).combined(with: .opacity),
+                    removal: .move(edge: .top).combined(with: .opacity)
+                ))
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("Goal achieved! \(exercise.name), \(weightUnit.format(goalTarget))")
             }
         }
         .navigationTitle(exercise.name)
@@ -1323,36 +1376,46 @@ struct ExerciseDetailView: View {
     private func checkForPR(weight: Double, isWarmUp: Bool) {
         // Only celebrate if this is the first set in the session to exceed the historical best
         let alreadyBeaten = exercise.sets.dropLast().contains { !$0.isWarmUp && $0.weight > historicalBestWeight }
-        if !isWarmUp && historicalBestWeight > 0 && weight > historicalBestWeight && !alreadyBeaten {
-            prWeight = weight
+        guard !isWarmUp && historicalBestWeight > 0 && weight > historicalBestWeight && !alreadyBeaten else { return }
+
+        prWeight = weight
+        // A deliberate Lift Goal being hit is the bigger moment — its
+        // celebration supersedes the generic PR banner.
+        let goal = liftGoals.first {
+            $0.exerciseName.lowercased() == exercise.name.lowercased()
+            && $0.achievedDate == nil
+            && weight >= $0.targetWeight
+        }
+        if let goal {
+            goal.achievedDate = .now
+            goalTarget = goal.targetWeight
+            withAnimation(.spring(duration: 0.5, bounce: 0.3)) {
+                showGoalBanner = true
+                goalScale = 1.15
+            }
+        } else {
             withAnimation(.spring(duration: 0.5, bounce: 0.3)) {
                 showPRBanner = true
                 prScale = 1.15
             }
-            // Double haptic burst for celebration
-            UINotificationFeedbackGenerator().notificationOccurred(.success)
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                UIImpactFeedbackGenerator(style: .heavy).impactOccurred()
-            }
-            // Pulse back to normal
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                withAnimation(.spring(duration: 0.3)) {
-                    prScale = 1.0
-                }
-            }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
-                withAnimation(.easeOut(duration: 0.4)) {
-                    showPRBanner = false
-                }
-            }
+        }
 
-            // Check if this PR achieves a lift goal
-            if let goal = liftGoals.first(where: {
-                $0.exerciseName.lowercased() == exercise.name.lowercased()
-                && $0.achievedDate == nil
-                && weight >= $0.targetWeight
-            }) {
-                goal.achievedDate = .now
+        // Double haptic burst for celebration
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+            UIImpactFeedbackGenerator(style: .heavy).impactOccurred()
+        }
+        // Pulse back to normal
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            withAnimation(.spring(duration: 0.3)) {
+                prScale = 1.0
+                goalScale = 1.0
+            }
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
+            withAnimation(.easeOut(duration: 0.4)) {
+                showPRBanner = false
+                showGoalBanner = false
             }
         }
     }
