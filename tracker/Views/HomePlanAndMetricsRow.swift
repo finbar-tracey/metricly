@@ -11,8 +11,7 @@ struct HomePlanAndMetricsRow: View {
     let todayTotalVolumeKg: Double
     let weightUnit: WeightUnit
     let healthDataLoaded: Bool
-    let sleepMinutes: Double
-    let restingHR: Double?
+    let todaySteps: Double
     let activeCalories: Double
     let todayWaterMl: Double
     let waterProgress: Double
@@ -142,16 +141,16 @@ struct HomePlanAndMetricsRow: View {
             }
 
             if healthDataLoaded {
+                // Activity metrics here — the hero's signal strip already
+                // owns the recovery signals (HRV · Sleep · Resting HR),
+                // so repeating Sleep / Resting HR here would duplicate the
+                // fold. Steps, Calories, Hydration, and weekly training
+                // complement the hero instead of echoing it.
                 VStack(spacing: 0) {
-                    miniMetricRow(icon: "moon.zzz.fill", color: .indigo, label: "Sleep",
-                                  value: HealthFormatters.formatSleepShort(sleepMinutes),
-                                  status: sleepMinutes >= 420 ? "Good" : "Fair",
-                                  good: sleepMinutes >= 420)
-                    Divider().padding(.vertical, 5)
-                    miniMetricRow(icon: "heart.fill", color: .red, label: "Resting HR",
-                                  value: restingHR.map { "\(Int($0)) bpm" } ?? "—",
-                                  status: restingHR.map { $0 < 70 ? "Good" : "Fair" } ?? "",
-                                  good: restingHR.map { $0 < 70 } ?? false)
+                    miniMetricRow(icon: "figure.walk", color: .green, label: "Steps",
+                                  value: Int(todaySteps).formatted(),
+                                  status: todaySteps >= 10000 ? "Goal hit" : "of 10k",
+                                  good: todaySteps >= 10000)
                     Divider().padding(.vertical, 5)
                     miniMetricRow(icon: "flame.fill", color: .orange, label: "Calories",
                                   value: "\(Int(activeCalories))",
@@ -162,6 +161,11 @@ struct HomePlanAndMetricsRow: View {
                                   value: todayWaterMl >= 1000 ? String(format: "%.1f L", todayWaterMl / 1000) : "\(Int(todayWaterMl)) ml",
                                   status: waterProgress >= 0.7 ? "Good" : "Low",
                                   good: waterProgress >= 0.7)
+                    Divider().padding(.vertical, 5)
+                    miniMetricRow(icon: "dumbbell.fill", color: .accentColor, label: "This week",
+                                  value: "\(activitiesThisWeek)",
+                                  status: weeklyGoal > 0 ? "/ \(weeklyGoal) goal" : "workouts",
+                                  good: weeklyGoal > 0 ? activitiesThisWeek >= weeklyGoal : true)
                 }
             } else {
                 VStack(spacing: 0) {

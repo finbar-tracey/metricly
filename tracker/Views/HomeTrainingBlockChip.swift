@@ -34,10 +34,18 @@ struct HomeTrainingBlockChip: View {
     /// this view doesn't take a context dependency. Parent passes a
     /// closure capturing its own context.
     let onStartBlock: (TrainingBlock) -> Void
+    /// Tap callback for the active-state chip — usually presents
+    /// `TrainingBlockDetailView`. Defaults to a no-op so previews
+    /// and tests don't need to wire it.
+    var onTapActive: () -> Void = {}
 
     var body: some View {
         if let block = activeBlock {
-            activeChip(for: block)
+            Button(action: onTapActive) {
+                activeChip(for: block)
+            }
+            .buttonStyle(.plain)
+            .accessibilityHint("Opens block details")
         } else {
             startCTA
         }
@@ -58,12 +66,16 @@ struct HomeTrainingBlockChip: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(progressLabel(for: block))
                     .font(.subheadline.weight(.bold))
+                    .foregroundStyle(.primary)
                 Text(block.phase.label)
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.secondary)
                     .textCase(.uppercase)
             }
             Spacer()
+            Image(systemName: "chevron.right")
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(.tertiary)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 12)

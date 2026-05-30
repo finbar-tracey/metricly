@@ -31,6 +31,12 @@ struct HomeDashboardView: View {
     @State private var externalWorkouts: [ExternalWorkout] = []
     @State private var animateRings = false
     @State private var showingAddWorkout = false
+    /// The training block whose detail sheet is open, or nil. Driving
+    /// presentation off a value (not a Bool) lets the sheet capture
+    /// the block reference directly, which simplifies the case where
+    /// the active block changes mid-sheet (rare but possible if the
+    /// user starts another block).
+    @State private var blockForDetailSheet: TrainingBlock?
     @State private var showingPlanDetail = false
     @State private var topInsight: Insight?
     @State private var repeatConfirmation = false
@@ -237,6 +243,17 @@ struct HomeDashboardView: View {
         .sheet(isPresented: $showingAddWorkout) {
             AddWorkoutSheet().environment(\.weightUnit, weightUnit)
         }
+        .sheet(item: $blockForDetailSheet) { block in
+            TrainingBlockDetailView(
+                block: block,
+                allBlocks: trainingBlocks
+            )
+            // After the sheet dismisses, recompute the plan — the
+            // user may have ended the block early or started the
+            // next one, both of which change today's intensity /
+            // reasons.
+            .onDisappear { recomputeRecoveryAndPlan() }
+        }
         .navigationDestination(item: $tappedDayWorkout) { workout in
             WorkoutDetailView(workout: workout)
         }
@@ -350,6 +367,9 @@ struct HomeDashboardView: View {
                         // line + (if deload) intensity cap take
                         // effect immediately, not on the next refresh.
                         recomputeRecoveryAndPlan()
+                    },
+                    onTapActive: {
+                        blockForDetailSheet = TrainingBlockEngine.currentBlock(in: trainingBlocks)
                     }
                 )
                 adaptivePlanCard
@@ -377,8 +397,7 @@ struct HomeDashboardView: View {
                     todayTotalVolumeKg: todayTotalVolumeKg,
                     weightUnit: weightUnit,
                     healthDataLoaded: healthKitEnabled && healthDataLoaded,
-                    sleepMinutes: sleepMinutes,
-                    restingHR: restingHR,
+                    todaySteps: todaySteps,
                     activeCalories: activeCalories,
                     todayWaterMl: todayWaterMl,
                     waterProgress: waterProgress,

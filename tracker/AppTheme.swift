@@ -103,7 +103,7 @@ extension View {
             .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardRadius, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: AppTheme.cardRadius, style: .continuous)
-                    .stroke(Color.white.opacity(0.08), lineWidth: 0.5)
+                    .stroke(AppTheme.cardHairline, lineWidth: 0.5)
             )
             .shadow(color: .black.opacity(0.12), radius: 22, x: 0, y: 8)
     }
