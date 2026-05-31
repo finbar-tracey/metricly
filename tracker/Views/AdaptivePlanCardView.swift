@@ -189,14 +189,7 @@ struct AdaptivePlanCardView: View {
         }
         .foregroundStyle(intensityColor)
         .padding(.horizontal, 10).padding(.vertical, 5)
-        .background(
-            LinearGradient(
-                colors: [intensityColor.opacity(0.20), intensityColor.opacity(0.10)],
-                startPoint: .topLeading, endPoint: .bottomTrailing
-            ),
-            in: Capsule()
-        )
-        .overlay(Capsule().stroke(intensityColor.opacity(0.25), lineWidth: 0.5))
+        .gradientCapsule(intensityColor)
     }
 
     private var confidenceBadge: some View {

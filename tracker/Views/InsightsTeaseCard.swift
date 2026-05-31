@@ -30,14 +30,7 @@ struct InsightsTeaseCard: View {
                 }
                 .foregroundStyle(accent)
                 .padding(.horizontal, 9).padding(.vertical, 4)
-                .background(
-                    LinearGradient(
-                        colors: [accent.opacity(0.20), accent.opacity(0.10)],
-                        startPoint: .topLeading, endPoint: .bottomTrailing
-                    ),
-                    in: Capsule()
-                )
-                .overlay(Capsule().stroke(accent.opacity(0.25), lineWidth: 0.5))
+                .gradientCapsule(accent)
                 Spacer()
                 Image(systemName: "chevron.right")
                     .font(.caption2.weight(.semibold))

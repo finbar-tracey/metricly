@@ -67,13 +67,6 @@ struct InsightCardView: View {
             .font(.caption2.weight(.bold))
             .foregroundStyle(color)
             .padding(.horizontal, 9).padding(.vertical, 3)
-            .background(
-                LinearGradient(
-                    colors: [color.opacity(0.20), color.opacity(0.10)],
-                    startPoint: .topLeading, endPoint: .bottomTrailing
-                ),
-                in: Capsule()
-            )
-            .overlay(Capsule().stroke(color.opacity(0.22), lineWidth: 0.5))
+            .gradientCapsule(color)
     }
 }

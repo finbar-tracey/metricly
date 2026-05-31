@@ -293,16 +293,9 @@ struct AchievementsView: View {
     }
 
     private func filterChip(label: String, icon: String, color: Color, isSelected: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HStack(spacing: 5) {
-                Image(systemName: icon).font(.caption2)
-                Text(label).font(.caption.bold())
-            }
-            .padding(.horizontal, 12).padding(.vertical, 7)
-            .background(isSelected ? color : Color(.secondarySystemFill), in: Capsule())
-            .foregroundStyle(isSelected ? .white : .primary)
-        }
-        .buttonStyle(.plain)
+        // Routes through the shared FilterChip — also upgrades these chips
+        // from the old solid-selected style to the app-standard gradient one.
+        FilterChip(label: label, icon: icon, color: color, isSelected: isSelected, action: action)
     }
 
     // MARK: - Achievement Tier Cards

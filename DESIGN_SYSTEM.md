@@ -35,8 +35,8 @@ in a dark-mode pass).
 | ContextualCTA | 115:110 | `tracker/Views/HomeContextualCTASection.swift` | `HomeContextualCTASection` | ✅ shared |
 | GradientDisc | 114:22 | `tracker/DesignSystemKit.swift` | `GradientDisc` / `gradientDisc(_:)` | ✅ **extracted** (colorScheme-aware) |
 | TintedCallout | 114:87 | `tracker/DesignSystemKit.swift` | `.tintedCallout(_:)` | ✅ **extracted** (colorScheme-aware) |
-| BadgePill | 114:39 | inline in TopInsightCardView / InsightCardView / etc. | — | ⚠️ **no shared symbol — extract** |
-| FilterChip | 114:47 | inline in ExerciseLibraryView / AchievementsView / Insights tabs | `filterChip` (varies) | ⚠️ **varies per screen — unify** |
+| BadgePill | 114:39 | `tracker/DesignSystemKit.swift` | `.gradientCapsule(_:)` | ✅ **extracted** (colorScheme-aware) |
+| FilterChip | 114:47 | `tracker/DesignSystemKit.swift` | `FilterChip` | ✅ **extracted** (Library + Achievements route through it) |
 
 ## Parallel SwiftUI extraction (the ⚠️ rows) — post-release task
 
@@ -46,13 +46,16 @@ Extracting the ⚠️ components keeps design↔code 1:1 and removes real duplic
    `DesignSystemKit.swift`; the 3 private helpers removed. colorScheme-aware. *(done)*
 2. ✅ **`.tintedCallout(_ color:)`** modifier in `DesignSystemKit.swift`; inline chrome
    removed from InsightCardView / TopInsightCardView / InsightsTeaseCard. colorScheme-aware. *(done)*
-3. ⚠️ **`BadgePill`** view — gradient capsule (`color@0.20→0.10`) + icon + label. *(pending)*
-4. ⚠️ **`FilterChip`** view — unify the per-screen filter-chip implementations. *(pending)*
+3. ✅ **`.gradientCapsule(_ color:)`** modifier (BadgePill chrome) in `DesignSystemKit.swift`;
+   migrated insight strength/pattern badges + AdaptivePlan intensity pill. colorScheme-aware. *(done)*
+4. ✅ **`FilterChip`** view in `DesignSystemKit.swift`; ExerciseLibrary + Achievements route
+   through it (Achievements upgraded from solid- to gradient-selected for consistency). *(done)*
+
+**All 4 shared components extracted — the Figma library is now 1:1 with code.**
 
 **Dark mode** is wired: Appearance toggle (Light/Dark/System) in Settings → root
-`.preferredColorScheme`. The two extracted components nudge their opacities up on dark;
-the caffeine decay chart lightens brown→amber on dark. Remaining: extract BadgePill /
-FilterChip with the same colorScheme treatment.
+`.preferredColorScheme`. All extracted components are colorScheme-aware (opacities step up
+on dark); the caffeine decay chart lightens brown→amber on dark.
 
 Recipe constants (match the Figma components): disc gradient `color@0.26→0.12` + stroke
 `@0.30`; callout wash `@0.10→clear` + border `@0.20`; badge `@0.20→0.10` + stroke `@0.25`.

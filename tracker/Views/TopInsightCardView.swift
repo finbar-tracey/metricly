@@ -21,14 +21,7 @@ struct TopInsightCardView: View {
                 }
                 .foregroundStyle(categoryColor)
                 .padding(.horizontal, 9).padding(.vertical, 4)
-                .background(
-                    LinearGradient(
-                        colors: [categoryColor.opacity(0.20), categoryColor.opacity(0.10)],
-                        startPoint: .topLeading, endPoint: .bottomTrailing
-                    ),
-                    in: Capsule()
-                )
-                .overlay(Capsule().stroke(categoryColor.opacity(0.25), lineWidth: 0.5))
+                .gradientCapsule(categoryColor)
                 Spacer()
                 Image(systemName: "chevron.right")
                     .font(.caption2.weight(.semibold))

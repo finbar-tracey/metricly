@@ -133,35 +133,12 @@ struct ExerciseLibraryView: View {
     }
 
     private func filterChip(title: String, color: Color, icon: String, group: MuscleGroup?) -> some View {
-        let isSelected = selectedGroup == group
-        return Button {
+        FilterChip(label: title, icon: icon, color: color, isSelected: selectedGroup == group) {
             UIImpactFeedbackGenerator(style: .light).impactOccurred()
             withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
-                selectedGroup = isSelected ? nil : group
+                selectedGroup = (selectedGroup == group) ? nil : group
             }
-        } label: {
-            HStack(spacing: 5) {
-                Image(systemName: icon).font(.system(size: 11, weight: .bold))
-                Text(title).font(.system(size: 13, weight: .semibold, design: .rounded))
-            }
-            .padding(.horizontal, 12).padding(.vertical, 7)
-            .background {
-                if isSelected {
-                    Capsule()
-                        .fill(
-                            LinearGradient(
-                                colors: [color, color.opacity(0.72)],
-                                startPoint: .topLeading, endPoint: .bottomTrailing
-                            )
-                        )
-                        .shadow(color: color.opacity(0.40), radius: 6, y: 3)
-                } else {
-                    Capsule().fill(color.opacity(0.12))
-                }
-            }
-            .foregroundStyle(isSelected ? .white : color)
         }
-        .buttonStyle(.pressableCard)
     }
 
     private func exerciseRow(_ exercise: ExerciseInfo, group: MuscleGroup) -> some View {

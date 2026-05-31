@@ -195,6 +195,84 @@ extension View {
     }
 }
 
+// MARK: - GradientCapsule (BadgePill chrome)
+// The gradient-capsule background + hairline used by every tinted badge
+// pill (insight strength badge, "PATTERN SPOTTED", intensity pill, …).
+// Extracted from ~6 inline copies; leaves each badge's content as-is and
+// just supplies the repeated chrome. colorScheme-aware.
+//
+// SAFE: pure static fill + stroke.
+
+struct GradientCapsule: ViewModifier {
+    let color: Color
+    @Environment(\.colorScheme) private var scheme
+
+    func body(content: Content) -> some View {
+        let hi = scheme == .dark ? 0.26 : 0.20
+        let lo = scheme == .dark ? 0.14 : 0.10
+        let strokeO = scheme == .dark ? 0.30 : 0.24
+        content
+            .background(
+                LinearGradient(
+                    colors: [color.opacity(hi), color.opacity(lo)],
+                    startPoint: .topLeading, endPoint: .bottomTrailing
+                ),
+                in: Capsule()
+            )
+            .overlay(Capsule().stroke(color.opacity(strokeO), lineWidth: 0.5))
+    }
+}
+
+extension View {
+    /// Tinted gradient-capsule chrome for badge pills (`[color@0.20→0.10]` + hairline).
+    func gradientCapsule(_ color: Color) -> some View {
+        modifier(GradientCapsule(color: color))
+    }
+}
+
+// MARK: - FilterChip
+// Shared selectable chip — selected = gradient fill + colored shadow + white
+// label; unselected = tinted fill + colored label. colorScheme-aware via the
+// shared chrome. For NEW chip rows + the muscle/category filters.
+//
+// SAFE: pure static fills; press feedback via .pressableCard at the call site.
+
+struct FilterChip: View {
+    let label: String
+    var icon: String? = nil
+    var color: Color
+    let isSelected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 5) {
+                if let icon {
+                    Image(systemName: icon).font(.system(size: 11, weight: .bold))
+                }
+                Text(label).font(.system(size: 13, weight: .semibold, design: .rounded))
+            }
+            .padding(.horizontal, 12).padding(.vertical, 7)
+            .background {
+                if isSelected {
+                    Capsule()
+                        .fill(
+                            LinearGradient(
+                                colors: [color, color.opacity(0.72)],
+                                startPoint: .topLeading, endPoint: .bottomTrailing
+                            )
+                        )
+                        .shadow(color: color.opacity(0.40), radius: 6, y: 3)
+                } else {
+                    Capsule().fill(color.opacity(0.12))
+                }
+            }
+            .foregroundStyle(isSelected ? .white : color)
+        }
+        .buttonStyle(.pressableCard)
+    }
+}
+
 // MARK: - TabBackground
 // Soft top-fading gradient that gives each tab its own color identity.
 // Layered above the system grouped background.
