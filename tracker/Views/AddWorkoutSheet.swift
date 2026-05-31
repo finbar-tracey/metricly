@@ -4,6 +4,7 @@ import SwiftData
 struct AddWorkoutSheet: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.appServices) private var appServices
     @Query(filter: #Predicate<Workout> { $0.isTemplate }, sort: \Workout.name)
     private var templates: [Workout]
     @Query private var settingsArray: [UserSettings]
@@ -299,7 +300,7 @@ struct AddWorkoutSheet: View {
         }
         // Publish to the Watch so its complications + start screen show
         // "In Progress · <name>" while this session is live on the phone.
-        PhoneConnectivityManager.shared.publishActiveWorkout(
+        appServices.phoneConnectivity.publishActiveWorkout(
             name: workout.name,
             startedAt: workout.date
         )

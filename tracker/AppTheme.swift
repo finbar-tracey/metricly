@@ -83,6 +83,11 @@ enum AppTheme {
             Color(red: 0.40, green: 0.40, blue: 0.92),
             Color(red: 0.55, green: 0.35, blue: 0.95)
         ]
+        static let sleep: [Color] = [
+            Color(red: 0.30, green: 0.20, blue: 0.55),
+            Color(red: 0.42, green: 0.30, blue: 0.78),
+            Color(red: 0.30, green: 0.40, blue: 0.85)
+        ]
     }
 
     // Motion — named springs you reuse instead of inventing per-call.
@@ -252,14 +257,3 @@ extension ModelContext {
     }
 }
 
-// MARK: - Notification names
-
-extension Notification.Name {
-    /// Posted by AppDelegate when the user taps a workout reminder notification.
-    /// ContentView observes this to switch to the Training tab.
-    static let openTrainingTab = Notification.Name("openTrainingTab")
-
-    /// Posted by Home when the user taps the top-insight card. ContentView
-    /// observes this to switch to the Insights tab.
-    static let openInsightsTab = Notification.Name("openInsightsTab")
-}

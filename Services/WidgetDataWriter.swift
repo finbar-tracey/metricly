@@ -25,9 +25,13 @@ struct WidgetDataWriter {
         weeklyGoal: Int? = nil,
         workoutsThisWeek: Int? = nil,
         weeklyCardioGoalKm: Double? = nil,
-        todayScheduledName: String? = nil
+        todayScheduledName: String? = nil,
+        readinessScore: Double? = nil,
+        readinessPlanName: String? = nil
     ) {
         var snapshot = readMainSnapshot() ?? WidgetSnapshot()
+        if let v = readinessScore     { snapshot.readinessScore = v }
+        if let v = readinessPlanName  { snapshot.readinessPlanName = v }
         if let v = streakDays         { snapshot.streakDays = v }
         if let v = todayWorkoutName   { snapshot.todayWorkoutName = v }
         if let v = weeklyCardioKm     { snapshot.weeklyCardioKm = v }

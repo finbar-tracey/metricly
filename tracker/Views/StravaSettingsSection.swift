@@ -10,12 +10,21 @@ import SwiftData
 /// `UserSettings` so it can be read from the cardio-finish flow without a
 /// SwiftData fetch in the hot path.
 struct StravaSettingsSection: View {
-    @StateObject private var service = StravaService.shared
+    @ObservedObject private var service: StravaService
     @AppStorage("strava.autoShareCardio") private var autoShareCardio: Bool = true
+
+    init(service: StravaService) {
+        _service = ObservedObject(wrappedValue: service)
+    }
+
+    init() {
+        self.init(service: AppServices.shared.strava)
+    }
     @State private var showingDisconnectConfirm = false
     @State private var isSyncing = false
     @State private var lastSyncResult: StravaImportService.Result?
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.appServices) private var appServices
     @Query private var existingSessions: [CardioSession]
 
     var body: some View {
@@ -176,7 +185,7 @@ struct StravaSettingsSection: View {
             )
             lastSyncResult = result
             if result.imported == 0 && result.skippedExisting == 0 {
-                AppErrorBus.shared.report(
+                appServices.appErrorBus.report(
                     message: String(localized: "Nothing new on Strava to import.", comment: "Toast when a Strava sync finds zero new and zero existing matches"),
                     kind: .info
                 )
@@ -186,7 +195,7 @@ struct StravaSettingsSection: View {
             // limit, generic) live in `StravaErrorPresenter` so they're
             // unit-testable without standing up the view + bus.
             let p = StravaErrorPresenter.present(error)
-            AppErrorBus.shared.report(message: p.message, kind: p.kind)
+            appServices.appErrorBus.report(message: p.message, kind: p.kind)
         }
     }
 

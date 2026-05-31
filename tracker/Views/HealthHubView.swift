@@ -12,22 +12,19 @@ struct HealthHubView: View {
         return weightUnit.formatShort(w)
     }
 
-    /// Today's total water intake in millilitres.
-    private var waterTodayMl: Double {
-        let start = Calendar.current.startOfDay(for: .now)
-        return waterEntries.filter { $0.date >= start }.reduce(0) { $0 + $1.milliliters }
+    private var hydration: HydrationSummary {
+        HydrationSummary.make(
+            entries: waterEntries,
+            goalMl: settingsArray.first?.dailyWaterGoalMl ?? 2500
+        )
     }
-
-    private var waterGoalMl: Double { Double(settingsArray.first?.dailyWaterGoalMl ?? 2500) }
-
-    private var waterProgress: Double { waterGoalMl > 0 ? min(1, waterTodayMl / waterGoalMl) : 0 }
 
     private func mlShort(_ ml: Double) -> String {
         ml >= 1000 ? String(format: "%.1f L", ml / 1000) : "\(Int(ml)) ml"
     }
 
     private var waterTodayText: String {
-        waterTodayMl <= 0 ? "—" : mlShort(waterTodayMl)
+        hydration.todayMl <= 0 ? "—" : mlShort(hydration.todayMl)
     }
 
     /// Signed change between the two most recent weigh-ins, e.g. "+0.3 kg"
@@ -126,6 +123,8 @@ struct HealthHubView: View {
             .padding(20)
         }
         .frame(minHeight: 130)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Health summary")
     }
 
     /// Live hydration gauge in the hero — today's intake against the
@@ -143,7 +142,7 @@ struct HealthHubView: View {
                     .tracking(0.5)
                     .foregroundStyle(.white.opacity(0.78))
                 Spacer()
-                Text("\(mlShort(waterTodayMl)) / \(mlShort(waterGoalMl))")
+                Text("\(mlShort(hydration.todayMl)) / \(mlShort(hydration.goalMl))")
                     .font(.system(size: 12, weight: .bold, design: .rounded))
                     .foregroundStyle(.white)
                     .monospacedDigit()
@@ -153,7 +152,7 @@ struct HealthHubView: View {
                     Capsule().fill(.white.opacity(0.22))
                     Capsule()
                         .fill(.white)
-                        .frame(width: max(6, geo.size.width * waterProgress))
+                        .frame(width: max(6, geo.size.width * hydration.progress))
                         .shadow(color: .black.opacity(0.12), radius: 3, y: 1)
                 }
             }

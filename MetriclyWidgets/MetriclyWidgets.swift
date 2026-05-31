@@ -49,7 +49,8 @@ struct MetriclyProvider: TimelineProvider {
     func placeholder(in context: Context) -> MetriclyEntry {
         MetriclyEntry(date: .now, snapshot: WidgetSnapshot(
             streakDays: 12, todayWorkoutName: "Leg Day",
-            weeklyCardioKm: 14.2, weeklyGoal: 4, workoutsThisWeek: 3
+            weeklyCardioKm: 14.2, weeklyGoal: 4, workoutsThisWeek: 3,
+            readinessScore: 0.72, readinessPlanName: "Push Day A"
         ))
     }
     func getSnapshot(in context: Context, completion: @escaping (MetriclyEntry) -> Void) {
@@ -378,5 +379,134 @@ struct MetriclyLargeWidget: Widget {
         .configurationDisplayName("Metricly Full")
         .description("Streak, today's workout, weekly goal and cardio.")
         .supportedFamilies([.systemLarge])
+    }
+}
+
+// MARK: - Readiness Widget (home, small)
+//
+// Surfaces recovery readiness — the app's core differentiator — on the home
+// screen. Native widget chrome (system background), readiness ring + today's
+// plan. Data comes from the Home recovery engine via `WidgetSnapshot.readinessScore`.
+
+/// Readiness → ring/label tint, mirroring the Home hero thresholds.
+func readinessTint(_ score: Double?) -> Color {
+    guard let s = score else { return .gray }
+    if s >= 0.60 { return .green }
+    if s >= 0.40 { return .yellow }
+    return .orange
+}
+
+struct ReadinessWidgetView: View {
+    let entry: MetriclyEntry
+    private var snap: WidgetSnapshot { entry.snapshot }
+
+    var body: some View {
+        let score = snap.readinessScore
+        let tint = readinessTint(score)
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 5) {
+                Image(systemName: "bolt.heart.fill")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(tint)
+                Text("READINESS")
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundStyle(.secondary)
+                    .kerning(0.6)
+                Spacer()
+            }
+
+            Spacer(minLength: 4)
+
+            if let s = score {
+                ZStack {
+                    Circle().stroke(tint.opacity(0.18), lineWidth: 8)
+                    Circle()
+                        .trim(from: 0, to: max(0, min(1, s)))
+                        .stroke(tint, style: StrokeStyle(lineWidth: 8, lineCap: .round))
+                        .rotationEffect(.degrees(-90))
+                    HStack(alignment: .firstTextBaseline, spacing: 0) {
+                        Text("\(Int(s * 100))")
+                            .font(.system(size: 30, weight: .black, design: .rounded))
+                            .foregroundStyle(.primary)
+                        Text("%")
+                            .font(.system(size: 15, weight: .heavy, design: .rounded))
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .frame(height: 92)
+                .frame(maxWidth: .infinity)
+            } else {
+                VStack(spacing: 4) {
+                    Image(systemName: "bolt.heart")
+                        .font(.system(size: 26))
+                        .foregroundStyle(.secondary)
+                    Text("Open Metricly")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(.secondary)
+                }
+                .frame(height: 92)
+                .frame(maxWidth: .infinity)
+            }
+
+            Spacer(minLength: 4)
+
+            Text(planLine)
+                .font(.system(size: 12, weight: .semibold, design: .rounded))
+                .foregroundStyle(score == nil ? .secondary : .primary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+        }
+        .padding(14)
+        .containerBackground(for: .widget) {
+            Color(.secondarySystemGroupedBackground)
+        }
+        .staleOverlay(snap.isStale)
+    }
+
+    private var planLine: String {
+        if let plan = snap.readinessPlanName, !plan.isEmpty { return plan }
+        return snap.readinessLabel
+    }
+}
+
+struct ReadinessWidget: Widget {
+    let kind = "ReadinessWidget"
+    var body: some WidgetConfiguration {
+        StaticConfiguration(kind: kind, provider: MetriclyProvider()) { entry in
+            ReadinessWidgetView(entry: entry)
+        }
+        .configurationDisplayName("Readiness")
+        .description("Your recovery readiness and today's plan.")
+        .supportedFamilies([.systemSmall])
+    }
+}
+
+// MARK: - Readiness Widget (lock screen, circular)
+
+struct ReadinessLockCircularView: View {
+    let snap: WidgetSnapshot
+    var body: some View {
+        Gauge(value: snap.readinessScore ?? 0, in: 0...1) {
+            Image(systemName: "bolt.heart.fill")
+        } currentValueLabel: {
+            Text(snap.readinessScore != nil ? "\(Int((snap.readinessScore ?? 0) * 100))" : "—")
+                .font(.system(size: 15, weight: .black, design: .rounded))
+        }
+        .gaugeStyle(.accessoryCircular)
+        .tint(readinessTint(snap.readinessScore))
+    }
+}
+
+struct ReadinessCircularWidget: Widget {
+    let kind = "ReadinessCircular"
+    var body: some WidgetConfiguration {
+        StaticConfiguration(kind: kind, provider: MetriclyProvider()) { entry in
+            ReadinessLockCircularView(snap: entry.snapshot)
+                .staleOverlay(entry.snapshot.isStale)
+                .containerBackground(.background, for: .widget)
+        }
+        .configurationDisplayName("Readiness")
+        .description("Recovery readiness on your lock screen.")
+        .supportedFamilies([.accessoryCircular])
     }
 }

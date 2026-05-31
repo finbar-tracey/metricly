@@ -1,0 +1,17 @@
+---
+description: Swift and SwiftUI conventions for Metricly
+globs: "**/*.swift"
+alwaysApply: false
+---
+
+# Metricly Swift/SwiftUI
+
+- iOS/watchOS app: SwiftUI, SwiftData + CloudKit, HealthKit, WatchConnectivity, WidgetKit.
+- Layout: `tracker/Models`, `tracker/Views`, `Services/`, `Components/`, `Helpers/`.
+- Put business logic in `*Engine.swift` or `*Apply.swift`; keep views thin.
+- **Apply Adjustments** must never mutate logged sets (`TodayPlanApply`).
+- Appearance: single source `UserSettings.appearanceMode` via `AppearanceMode`.
+- Widget/Watch snapshots: prefer `MetriclySyncCoordinator` / `WidgetDataWriter` / `TodayPlanStore` — avoid scattered App Group writes.
+- Reuse `AppTheme`, `DesignSystemKit`, `HubRow`, `HeroCard` before new styling.
+- Prefer `@Observable` view models over growing `@State` in god views; avoid new `.shared` singletons without reason.
+- Tests: `xcodebuild test -scheme tracker -destination 'platform=iOS Simulator,name=iPhone 17' -testPlan tracker`

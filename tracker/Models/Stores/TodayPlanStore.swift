@@ -73,6 +73,13 @@ enum TodayPlanStore {
         }
     }
 
+    /// Clears persisted plan slots — for unit tests only.
+    static func resetForTests() {
+        guard let defaults = UserDefaults(suiteName: suiteName) else { return }
+        defaults.removeObject(forKey: currentKey)
+        defaults.removeObject(forKey: historyKey)
+    }
+
     // MARK: - Private
 
     private static func appendToHistory(_ plan: TodayPlan, defaults: UserDefaults) {

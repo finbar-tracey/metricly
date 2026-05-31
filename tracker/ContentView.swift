@@ -2,123 +2,49 @@ import SwiftUI
 import SwiftData
 
 struct ContentView: View {
-    @Environment(\.modelContext) private var modelContext
+    @Environment(\.modelContext) var modelContext
+    @Environment(\.appServices) var appServices
     @Query(filter: #Predicate<Workout> { !$0.isTemplate }, sort: \Workout.date, order: .reverse)
-    private var workouts: [Workout]
-    @Query(sort: \CardioSession.date, order: .reverse) private var cardioSessions: [CardioSession]
-    @Query private var settingsArray: [UserSettings]
-    @Query private var complianceEvents: [PlanComplianceEvent]
-    @State private var workoutToDelete: Workout?
-    @State private var showingOnboarding = false
+    var workouts: [Workout]
+    @Query(sort: \CardioSession.date, order: .reverse) var cardioSessions: [CardioSession]
+    @Query var settingsArray: [UserSettings]
+    @Query var complianceEvents: [PlanComplianceEvent]
+    @State var workoutToDelete: Workout?
+    @State var showingOnboarding = false
     /// Workout currently being resumed in the cross-tab pill's sheet. Driven
     /// by the safeAreaInset pill so users can jump back to an open workout
     /// from anywhere in the app.
-    @State private var resumingWorkout: Workout?
+    @State var resumingWorkout: Workout?
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.scenePhase) private var scenePhase
 
     // iPad
-    @State private var selectedSidebarItem: SidebarItem? = .home
+    @State var selectedSidebarItem: SidebarItem? = .home
 
     // iPhone
-    @State private var selectedTab: AppTab = .home
+    @State var selectedTab: AppTab = .home
+    @State var showingSettings = false
+    @State var showingSearch = false
 
-    enum AppTab: Hashable {
-        case home, training, health, more
-    }
-
-    enum SidebarItem: String, Hashable, CaseIterable {
-        // Home
-        case home = "Home"
-        // Track
-        case workouts = "Workouts"
-        case programs = "Programs"
-        case schedule = "Schedule"
-        case calendar = "Calendar"
-        case cardio = "Cardio"
-        case activityLog = "Activity Log"
-        // Progress
-        case achievements = "Achievements"
-        case streak = "Streak"
-        case personalRecords = "Personal Records"
-        case progressPhotos = "Progress Photos"
-        case measurements = "Measurements"
-        case bodyWeight = "Body Weight"
-        case bodyFat = "Body Fat %"
-        case liftGoals = "Lift Goals"
-        // Health
-        case health = "Health"
-        case water = "Water"
-        case caffeine = "Caffeine"
-        case creatine = "Creatine"
-        // Analyze
-        case insights = "Insights"
-        case exerciseLibrary = "Exercise Library"
-        case comparison = "Compare"
-        case smartSuggestions = "Smart Suggestions"
-        // Tools
-        case plateCalculator = "Plate Calculator"
-        case oneRepMax = "1RM Calculator"
-        case workoutTimers = "Workout Timers"
-        // Settings
-        case settings = "Settings"
-
-        var icon: String {
-            switch self {
-            case .home:             return "house"
-            case .workouts:         return "dumbbell"
-            case .programs:         return "calendar.badge.clock"
-            case .schedule:         return "calendar.badge.checkmark"
-            case .calendar:         return "calendar"
-            case .cardio:           return "figure.run"
-            case .activityLog:      return "list.bullet.rectangle"
-            case .achievements:     return "medal"
-            case .streak:           return "flame"
-            case .personalRecords:  return "trophy"
-            case .progressPhotos:   return "camera"
-            case .measurements:     return "ruler"
-            case .bodyWeight:       return "scalemass"
-            case .liftGoals:        return "target"
-            case .insights:         return "chart.bar"
-            case .exerciseLibrary:  return "books.vertical"
-            case .comparison:       return "arrow.left.arrow.right"
-            case .smartSuggestions: return "lightbulb"
-            case .plateCalculator:  return "circle.grid.cross"
-            case .oneRepMax:        return "function"
-            case .workoutTimers:    return "timer"
-            case .caffeine:         return "cup.and.saucer.fill"
-            case .bodyFat:          return "percent"
-            case .health:           return "heart.text.square"
-            case .water:            return "drop.fill"
-            case .creatine:         return "pill.fill"
-            case .settings:         return "gearshape"
-            }
-        }
-    }
-
-    private var settings: UserSettings {
+    var settings: UserSettings {
         settingsArray.first ?? UserSettings()
     }
 
-    private var weightUnit: WeightUnit {
+    var weightUnit: WeightUnit {
         (settingsArray.first?.useKilograms ?? true) ? .kg : .lbs
     }
 
-    private var accentColor: Color {
+    var accentColor: Color {
         (settingsArray.first?.accentColor ?? .blue).color
     }
 
-    private var resolvedColorScheme: ColorScheme? {
-        switch settingsArray.first?.appearanceMode ?? "system" {
-        case "light": return .light
-        case "dark": return .dark
-        default: return nil
-        }
+    var resolvedColorScheme: ColorScheme? {
+        AppearanceMode.colorScheme(for: settingsArray.first?.appearanceMode ?? "system")
     }
 
     /// The most recently created workout that hasn't been finished. Used to
     /// drive the cross-tab "in progress" indicator and the resume action.
-    private var inProgressWorkout: Workout? {
+    var inProgressWorkout: Workout? {
         workouts.first(where: { !$0.isFinished && !$0.isTemplate })
     }
 
@@ -157,77 +83,22 @@ struct ContentView: View {
         }
         .tint(accentColor)
         .environment(\.weightUnit, weightUnit)
+        .environment(\.appServices, AppServices.shared)
         .preferredColorScheme(resolvedColorScheme)
         .fullScreenCover(isPresented: $showingOnboarding) {
             OnboardingView {
                 settings.hasSeenOnboarding = true
             }
         }
-        .onAppear {
-            if !settings.hasSeenOnboarding {
-                showingOnboarding = true
-            }
-            // Schedule streak nudges based on saved reminder days
-            let reminderDays = settings.reminderDays
-            if !reminderDays.isEmpty {
-                ReminderManager.scheduleStreakNudges(days: reminderDays)
-            }
-            // Fill in any missing compliance events for the last ~7 days
-            // so the engine's confidence model can see how the user's
-            // been responding to its suggestions.
-            ComplianceBackfill.run(
-                workouts: workouts,
-                cardioSessions: cardioSessions,
-                existingEvents: complianceEvents,
-                in: modelContext
-            )
-            // Inactivity nudge — 3 days after last logged activity
-            let lastWorkout = workouts.first?.date
-            let lastCardio  = cardioSessions.first?.date
-            if let lastActive = [lastWorkout, lastCardio].compactMap({ $0 }).max() {
-                ReminderManager.scheduleInactivityNudge(lastActivityDate: lastActive)
-            }
-            // Push today's scheduled workout name to the Today's Plan widget
-            let weekday = Calendar.current.component(.weekday, from: Date())
-            let scheduled = settings.weeklyPlan[weekday] ?? ""
-            let weekStart = Calendar.current.dateInterval(of: .weekOfYear, for: .now)?.start ?? .distantPast
-            let activitiesThisWeek = workouts.filter { $0.date >= weekStart }.count
-                                   + cardioSessions.filter { $0.date >= weekStart }.count
-            let weeklyCardioKm = cardioSessions
-                .filter { $0.date >= weekStart }
-                .reduce(0.0) { $0 + $1.distanceMeters } / 1000
-            WidgetDataWriter.update(
-                streakDays: Workout.currentStreak(from: workouts, cardioSessions: cardioSessions),
-                todayWorkoutName: workouts.first(where: { Calendar.current.isDateInToday($0.date) })?.name ?? "",
-                weeklyCardioKm: weeklyCardioKm,
-                weeklyGoal: settings.weeklyGoal,
-                workoutsThisWeek: activitiesThisWeek,
-                weeklyCardioGoalKm: settings.weeklyCardioDistanceGoalKm,
-                todayScheduledName: scheduled
-            )
-        }
+        .onAppear(perform: performInitialSetup)
         .onChange(of: scenePhase) { _, newPhase in
             guard newPhase == .active else { return }
-            // Drop the HealthKit cache so the next read is fresh — user
-            // may have completed a workout on the Watch while we were
-            // backgrounded, and we don't want to render yesterday's
-            // resting HR for the next 5 minutes.
-            HealthDataCache.shared.invalidateAll()
-            let lastWorkout = workouts.first?.date
-            let lastCardio  = cardioSessions.first?.date
-            if let lastActive = [lastWorkout, lastCardio].compactMap({ $0 }).max() {
-                ReminderManager.scheduleInactivityNudge(lastActivityDate: lastActive)
-            }
+            handleSceneBecameActive()
         }
-        .onReceive(NotificationCenter.default.publisher(for: .openTrainingTab)) { _ in
+        .onChange(of: appServices.router.openTrainingTabSignal) { _, _ in
             withAnimation { selectedTab = .training }
         }
-        .onReceive(NotificationCenter.default.publisher(for: .openInsightsTab)) { _ in
-            // iPad sidebar drills straight into Insights via the selection.
-            // iPhone Insights lives under TrainingHubView, NOT MoreHubView —
-            // routing to .more would land the user on a screen with no
-            // Insights entry point. Send them to .training so the
-            // TrainingHubView's Insights NavigationLink is one tap away.
+        .onChange(of: appServices.router.openInsightsTabSignal) { _, _ in
             withAnimation {
                 selectedSidebarItem = .insights
                 selectedTab = .training
@@ -250,184 +121,7 @@ struct ContentView: View {
             }
         }
     }
-
-    // MARK: - iPad Layout
-
-    private var iPadLayout: some View {
-        NavigationSplitView {
-            List(selection: $selectedSidebarItem) {
-                Section {
-                    Label("Home", systemImage: "house").tag(SidebarItem.home)
-                }
-                Section("Track") {
-                    Label("Workouts",     systemImage: "dumbbell")                  .tag(SidebarItem.workouts)
-                    Label("Programs",     systemImage: "calendar.badge.clock")      .tag(SidebarItem.programs)
-                    Label("Schedule",     systemImage: "calendar.badge.checkmark")  .tag(SidebarItem.schedule)
-                    Label("Calendar",     systemImage: "calendar")                  .tag(SidebarItem.calendar)
-                    Label("Cardio",       systemImage: "figure.run")                .tag(SidebarItem.cardio)
-                    Label("Activity Log", systemImage: "list.bullet.rectangle")     .tag(SidebarItem.activityLog)
-                }
-                Section("Progress") {
-                    Label("Achievements",      systemImage: "medal")               .tag(SidebarItem.achievements)
-                    Label("Streak",            systemImage: "flame")               .tag(SidebarItem.streak)
-                    Label("Personal Records",  systemImage: "trophy")              .tag(SidebarItem.personalRecords)
-                    Label("Progress Photos",   systemImage: "camera")              .tag(SidebarItem.progressPhotos)
-                    Label("Measurements",      systemImage: "ruler")               .tag(SidebarItem.measurements)
-                    Label("Body Weight",       systemImage: "scalemass")           .tag(SidebarItem.bodyWeight)
-                    Label("Body Fat %",        systemImage: "percent")             .tag(SidebarItem.bodyFat)
-                    Label("Lift Goals",        systemImage: "target")              .tag(SidebarItem.liftGoals)
-                }
-                Section("Health") {
-                    Label("Health Dashboard",  systemImage: "heart.text.square")   .tag(SidebarItem.health)
-                    Label("Water",             systemImage: "drop.fill")           .tag(SidebarItem.water)
-                    Label("Caffeine",          systemImage: "cup.and.saucer.fill") .tag(SidebarItem.caffeine)
-                    Label("Creatine",          systemImage: "pill.fill")           .tag(SidebarItem.creatine)
-                }
-                Section("Analyze") {
-                    Label("Insights",          systemImage: "chart.bar")               .tag(SidebarItem.insights)
-                    Label("Exercise Library",  systemImage: "books.vertical")          .tag(SidebarItem.exerciseLibrary)
-                    Label("Compare Workouts",  systemImage: "arrow.left.arrow.right")  .tag(SidebarItem.comparison)
-                    Label("Smart Suggestions", systemImage: "lightbulb")               .tag(SidebarItem.smartSuggestions)
-                }
-                Section("Tools") {
-                    Label("Plate Calculator",  systemImage: "circle.grid.cross") .tag(SidebarItem.plateCalculator)
-                    Label("1RM Calculator",    systemImage: "function")          .tag(SidebarItem.oneRepMax)
-                    Label("Workout Timers",    systemImage: "timer")             .tag(SidebarItem.workoutTimers)
-                }
-                Section {
-                    Label("Settings", systemImage: "gearshape").tag(SidebarItem.settings)
-                }
-            }
-            .navigationTitle("Metricly")
-            .navigationSplitViewColumnWidth(min: 220, ideal: 260, max: 300)
-            .toolbar {
-                ToolbarItem(placement: .primaryAction) {
-                    Button { showingSearch = true } label: {
-                        Image(systemName: "magnifyingglass")
-                    }
-                    .accessibilityLabel("Search")
-                }
-            }
-            .sheet(isPresented: $showingSearch) { GlobalSearchView() }
-        } detail: {
-            NavigationStack {
-                switch selectedSidebarItem {
-                case .home, .none:      HomeDashboardView()
-                case .workouts:         FullWorkoutListView()
-                case .programs:         TrainingProgramsView().navigationTitle("Programs")
-                case .schedule:         WorkoutScheduleView()
-                case .calendar:         WorkoutCalendarView().navigationTitle("Calendar")
-                case .cardio:           CardioHubView()
-                case .activityLog:      ActivityLogView().navigationTitle("Activity Log")
-                case .achievements:     AchievementsView()
-                case .streak:           StreakCalendarView()
-                case .personalRecords:  PersonalRecordsView()
-                case .progressPhotos:   ProgressPhotosView()
-                case .measurements:     BodyMeasurementsView()
-                case .bodyWeight:       BodyWeightView()
-                case .bodyFat:          BodyFatEstimateView()
-                case .liftGoals:        LiftGoalsView()
-                case .health:           HealthDashboardView()
-                case .water:            WaterTrackerView()
-                case .caffeine:         CaffeineTrackerView()
-                case .creatine:         CreatineTrackerView()
-                case .insights:         InsightsView().navigationTitle("Insights")
-                case .exerciseLibrary:  ExerciseLibraryView().navigationTitle("Exercise Library")
-                case .comparison:       WorkoutComparisonView().navigationTitle("Compare Workouts")
-                case .smartSuggestions: SmartSuggestionsView()
-                case .plateCalculator:  PlateCalculatorView()
-                case .oneRepMax:        OneRepMaxView()
-                case .workoutTimers:    WorkoutTimerView()
-                case .settings:         SettingsView().navigationTitle("Settings")
-                }
-            }
-            .navigationDestination(for: Workout.self) { workout in WorkoutDetailView(workout: workout) }
-            .navigationDestination(for: String.self)  { name in ExerciseHistoryView(exerciseName: name) }
-        }
-        .navigationSplitViewStyle(.balanced)
-    }
-
-    // MARK: - iPhone Layout (TabView)
-
-    @State private var showingSettings = false
-    @State private var showingSearch = false
-
-    private var iPhoneLayout: some View {
-        TabView(selection: $selectedTab) {
-            Tab("Home", systemImage: "house", value: .home) {
-                NavigationStack {
-                    HomeDashboardView()
-                        .navigationDestination(for: Workout.self) { workout in
-                            WorkoutDetailView(workout: workout)
-                        }
-                        .navigationDestination(for: String.self) { exerciseName in
-                            ExerciseHistoryView(exerciseName: exerciseName)
-                        }
-                        .toolbar {
-                            ToolbarItem(placement: .topBarLeading) {
-                                Button {
-                                    showingSettings = true
-                                } label: {
-                                    Image(systemName: "gearshape")
-                                }
-                                .accessibilityLabel("Settings")
-                            }
-                            ToolbarItem(placement: .topBarTrailing) {
-                                Button {
-                                    showingSearch = true
-                                } label: {
-                                    Image(systemName: "magnifyingglass")
-                                }
-                                .accessibilityLabel("Search")
-                            }
-                        }
-                        .sheet(isPresented: $showingSearch) {
-                            GlobalSearchView()
-                        }
-                }
-            }
-
-            Tab("Training", systemImage: "figure.strengthtraining.traditional", value: .training) {
-                NavigationStack {
-                    TrainingHubView()
-                        .navigationDestination(for: Workout.self) { workout in
-                            WorkoutDetailView(workout: workout)
-                        }
-                        .navigationDestination(for: String.self) { exerciseName in
-                            ExerciseHistoryView(exerciseName: exerciseName)
-                        }
-                }
-            }
-
-            Tab("Health", systemImage: "heart.text.square", value: .health) {
-                NavigationStack {
-                    HealthHubView()
-                }
-            }
-
-            Tab("More", systemImage: "ellipsis.circle", value: .more) {
-                NavigationStack {
-                    MoreHubView()
-                        .navigationDestination(for: String.self) { exerciseName in
-                            ExerciseHistoryView(exerciseName: exerciseName)
-                        }
-                }
-            }
-        }
-        .sheet(isPresented: $showingSettings) {
-            NavigationStack {
-                SettingsView()
-                    .toolbar {
-                        ToolbarItem(placement: .confirmationAction) {
-                            Button("Done") { showingSettings = false }
-                        }
-                    }
-            }
-        }
-    }
-
 }
-
 
 #Preview {
     ContentView()

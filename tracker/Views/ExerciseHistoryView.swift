@@ -1,6 +1,5 @@
 import SwiftUI
 import SwiftData
-import Charts
 
 struct ExerciseHistoryView: View {
     @Environment(\.weightUnit) private var weightUnit
@@ -11,8 +10,10 @@ struct ExerciseHistoryView: View {
         self.exerciseName = exerciseName
         _allExercises = Query(filter: #Predicate<Exercise> { $0.name == exerciseName })
     }
+
     @State private var showEstimated1RM = false
     @State private var sortOrder: HistorySortOrder = .date
+    @State private var cardioSortOrder: CardioSortOrder = .date
 
     private enum HistorySortOrder: String, CaseIterable {
         case date = "Date"
@@ -25,8 +26,6 @@ struct ExerciseHistoryView: View {
         case distance = "Distance"
         case duration = "Duration"
     }
-
-    @State private var cardioSortOrder: CardioSortOrder = .date
 
     private var history: [Exercise] {
         allExercises
@@ -68,6 +67,16 @@ struct ExerciseHistoryView: View {
         return rec
     }
 
+    private var chartData: [ExerciseHistorySections.ChartPoint] {
+        ExerciseHistorySections.chartData(from: history)
+    }
+
+    private var cardioChartData: [ExerciseHistorySections.CardioChartPoint] {
+        ExerciseHistorySections.cardioChartData(from: history)
+    }
+
+    private var currentEstimated1RM: Double? { chartData.last?.estimated1RM }
+
     var body: some View {
         List {
             ExerciseGuideSectionView(exerciseName: exerciseName)
@@ -78,30 +87,53 @@ struct ExerciseHistoryView: View {
 
             if let best = bestSet {
                 Section {
-                    bestSetCard(best)
-                        .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
+                    ExerciseHistorySections.bestSetCard(
+                        best: best,
+                        isCardioExercise: isCardioExercise,
+                        weightUnit: weightUnit,
+                        distanceUnit: distanceUnit,
+                        estimated1RM: currentEstimated1RM
+                    )
+                    .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
                 }
             }
 
             if isCardioExercise {
                 if cardioChartData.count >= 2 {
                     Section {
-                        cardioProgressionChart
-                            .frame(height: 200).padding(.vertical, 8)
+                        ExerciseHistorySections.cardioProgressionChart(
+                            cardioChartData: cardioChartData,
+                            distanceUnit: distanceUnit,
+                            chartYDomain: ExerciseHistorySections.cardioChartYDomain(
+                                cardioChartData: cardioChartData,
+                                distanceUnit: distanceUnit
+                            )
+                        )
+                        .frame(height: 200).padding(.vertical, 8)
                     } header: { Text("Progression") }
                 }
             } else {
                 if chartData.count >= 2 {
                     Section {
                         HStack(spacing: 6) {
-                            chartToggle("Max Weight", value: false)
-                            chartToggle("Est. 1RM", value: true)
+                            ExerciseHistorySections.chartToggle("Max Weight", value: false, showEstimated1RM: $showEstimated1RM)
+                            ExerciseHistorySections.chartToggle("Est. 1RM", value: true, showEstimated1RM: $showEstimated1RM)
                             Spacer()
                         }
                         .listRowSeparator(.hidden)
-                        progressionChart.frame(height: 200).padding(.vertical, 8)
+                        ExerciseHistorySections.progressionChart(
+                            chartData: chartData,
+                            showEstimated1RM: showEstimated1RM,
+                            weightUnit: weightUnit,
+                            chartYDomain: ExerciseHistorySections.chartYDomain(
+                                chartData: chartData,
+                                showEstimated1RM: showEstimated1RM,
+                                weightUnit: weightUnit
+                            )
+                        )
+                        .frame(height: 200).padding(.vertical, 8)
                     } header: { Text("Progression") }
                 }
             }
@@ -117,9 +149,9 @@ struct ExerciseHistoryView: View {
                                     .font(.subheadline.weight(.semibold))
                             }
                             if isCardioExercise {
-                                cardioSessionSets(exercise.sets)
+                                ExerciseHistorySections.cardioSessionSets(exercise.sets, distanceUnit: distanceUnit)
                             } else {
-                                strengthSessionSets(exercise.sets)
+                                ExerciseHistorySections.strengthSessionSets(exercise.sets, weightUnit: weightUnit)
                             }
                         }
                         .padding(.vertical, 4)
@@ -153,220 +185,5 @@ struct ExerciseHistoryView: View {
         .navigationDestination(for: FormGuideDestination.self) { dest in
             ExerciseGuideView(exerciseName: dest.exerciseName)
         }
-    }
-
-    // MARK: - Best Set Card
-
-    private func bestSetCard(_ best: ExerciseSet) -> some View {
-        ZStack(alignment: .leading) {
-            LinearGradient(
-                colors: [
-                    AppTheme.Signal.amber,
-                    Color(red: 0.85, green: 0.42, blue: 0.10),
-                    Color(red: 0.65, green: 0.28, blue: 0.30)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            // Top sheen
-            LinearGradient(
-                colors: [.white.opacity(0.18), .clear],
-                startPoint: .top, endPoint: .center
-            )
-            .blendMode(.plusLighter)
-            Circle().fill(.white.opacity(0.10)).frame(width: 140).blur(radius: 10).offset(x: 230, y: 0)
-
-            HStack(spacing: 14) {
-                ZStack {
-                    Circle()
-                        .fill(.ultraThinMaterial.opacity(0.7))
-                        .frame(width: 52, height: 52)
-                        .overlay(Circle().stroke(.white.opacity(0.25), lineWidth: 0.5))
-                    Image(systemName: "trophy.fill")
-                        .font(.system(size: 22, weight: .bold))
-                        .foregroundStyle(.white)
-                }
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("Personal Best")
-                        .font(.system(size: 12, weight: .bold, design: .rounded))
-                        .foregroundStyle(.white.opacity(0.82))
-                        .tracking(0.5)
-                        .textCase(.uppercase)
-                    if isCardioExercise {
-                        Text([best.formattedDistance(unit: distanceUnit), best.formattedDuration]
-                            .compactMap { $0 }.joined(separator: " in "))
-                            .font(.system(size: 20, weight: .bold, design: .rounded))
-                            .foregroundStyle(.white)
-                            .shadow(color: .black.opacity(0.18), radius: 4, y: 2)
-                    } else {
-                        Text("\(best.reps) reps @ \(weightUnit.format(best.weight))")
-                            .font(.system(size: 20, weight: .bold, design: .rounded))
-                            .foregroundStyle(.white)
-                            .shadow(color: .black.opacity(0.18), radius: 4, y: 2)
-                        if let e1rm = currentEstimated1RM, e1rm > 0 {
-                            Text("Est. 1RM: \(weightUnit.format(e1rm))")
-                                .font(.caption.weight(.semibold))
-                                .foregroundStyle(.white.opacity(0.85))
-                        }
-                    }
-                }
-                Spacer()
-            }
-            .padding(18)
-        }
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .shadow(color: .black.opacity(0.18), radius: 16, y: 6)
-        .accessibilityElement(children: .combine)
-    }
-
-    private func chartToggle(_ title: String, value: Bool) -> some View {
-        Button {
-            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-            withAnimation(.spring(response: 0.42, dampingFraction: 0.78)) { showEstimated1RM = value }
-        } label: {
-            Text(title)
-                .font(.system(size: 13, weight: .bold, design: .rounded))
-                .padding(.horizontal, 14).padding(.vertical, 8)
-                .background {
-                    if showEstimated1RM == value {
-                        Capsule().fill(
-                            LinearGradient(
-                                colors: [Color.accentColor, Color.accentColor.opacity(0.72)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .shadow(color: Color.accentColor.opacity(0.40), radius: 6, y: 3)
-                    } else {
-                        Capsule().fill(Color(.secondarySystemFill))
-                    }
-                }
-                .foregroundStyle(showEstimated1RM == value ? .white : .primary)
-        }
-        .buttonStyle(.pressableCard)
-    }
-
-    // MARK: - Session Sets
-
-    private func cardioSessionSets(_ sets: [ExerciseSet]) -> some View {
-        HStack(spacing: 12) {
-            ForEach(Array(sets.enumerated()), id: \.offset) { index, s in
-                VStack(spacing: 2) {
-                    if let dist = s.formattedDistance(unit: distanceUnit) { Text(dist).font(.headline) }
-                    if let dur = s.formattedDuration { Text(dur).font(.caption).foregroundStyle(.secondary) }
-                }
-                .frame(minWidth: 54).padding(.vertical, 4).padding(.horizontal, 6)
-                .background(.fill, in: .rect(cornerRadius: 8))
-                .accessibilityElement(children: .combine)
-                .accessibilityLabel("Entry \(index + 1): \([s.formattedDistance(unit: distanceUnit), s.formattedDuration].compactMap { $0 }.joined(separator: " in "))")
-            }
-        }
-    }
-
-    private func strengthSessionSets(_ sets: [ExerciseSet]) -> some View {
-        HStack(spacing: 12) {
-            ForEach(Array(sets.enumerated()), id: \.offset) { index, s in
-                VStack {
-                    Text("\(s.reps)").font(.headline)
-                    Text(weightUnit.formatShort(s.weight)).font(.caption).foregroundStyle(.secondary)
-                }
-                .frame(minWidth: 44).padding(.vertical, 4).padding(.horizontal, 6)
-                .background(.fill, in: .rect(cornerRadius: 8))
-                .accessibilityElement(children: .combine)
-                .accessibilityLabel("Set \(index + 1): \(s.reps) reps at \(weightUnit.format(s.weight))")
-            }
-        }
-    }
-
-    // MARK: - Strength Progression Chart
-
-    private struct ChartPoint: Identifiable {
-        let id = UUID()
-        let date: Date
-        let maxWeight: Double
-        let estimated1RM: Double
-    }
-
-    private func estimated1RM(weight: Double, reps: Int) -> Double {
-        guard reps > 0 else { return weight }
-        if reps == 1 { return weight }
-        return weight * (1.0 + Double(reps) / 30.0)
-    }
-
-    private var chartData: [ChartPoint] {
-        history.reversed().compactMap { exercise in
-            guard let date = exercise.workout?.date else { return nil }
-            let workingSets = exercise.sets.filter { !$0.isWarmUp }
-            let maxW = workingSets.map(\.weight).max() ?? 0
-            guard maxW > 0 else { return nil }
-            let best1RM = workingSets.map { estimated1RM(weight: $0.weight, reps: $0.reps) }.max() ?? maxW
-            return ChartPoint(date: date, maxWeight: maxW, estimated1RM: best1RM)
-        }
-    }
-
-    private var currentEstimated1RM: Double? { chartData.last?.estimated1RM }
-
-    private var progressionChart: some View {
-        Chart(chartData) { point in
-            let value = showEstimated1RM ? point.estimated1RM : point.maxWeight
-            LineMark(x: .value("Date", point.date, unit: .day),
-                     y: .value("Weight", weightUnit.display(value)))
-                .interpolationMethod(.catmullRom)
-                .foregroundStyle(showEstimated1RM ? Color.purple : Color.accentColor)
-            PointMark(x: .value("Date", point.date, unit: .day),
-                      y: .value("Weight", weightUnit.display(value)))
-                .symbolSize(30)
-                .foregroundStyle(showEstimated1RM ? Color.purple : Color.accentColor)
-        }
-        .chartYAxisLabel(weightUnit.label)
-        .chartYScale(domain: chartYDomain)
-        .animation(.easeInOut(duration: 0.3), value: showEstimated1RM)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(showEstimated1RM ? "Estimated 1RM" : "Weight") progression, \(chartData.count) sessions")
-    }
-
-    private var chartYDomain: ClosedRange<Double> {
-        let weights = chartData.map { weightUnit.display(showEstimated1RM ? $0.estimated1RM : $0.maxWeight) }
-        guard let minVal = weights.min(), let maxVal = weights.max() else { return 0...100 }
-        let padding = Swift.max(1, (maxVal - minVal) * 0.15)
-        return (minVal - padding)...(maxVal + padding)
-    }
-
-    // MARK: - Cardio Progression Chart
-
-    private struct CardioChartPoint: Identifiable {
-        let id = UUID()
-        let date: Date
-        let maxDistance: Double
-    }
-
-    private var cardioChartData: [CardioChartPoint] {
-        history.reversed().compactMap { exercise in
-            guard let date = exercise.workout?.date else { return nil }
-            let maxDist = exercise.sets.compactMap(\.distance).max() ?? 0
-            guard maxDist > 0 else { return nil }
-            return CardioChartPoint(date: date, maxDistance: maxDist)
-        }
-    }
-
-    private var cardioProgressionChart: some View {
-        Chart(cardioChartData) { point in
-            let value = distanceUnit.display(point.maxDistance)
-            LineMark(x: .value("Date", point.date, unit: .day), y: .value("Distance", value))
-                .interpolationMethod(.catmullRom).foregroundStyle(Color.green)
-            PointMark(x: .value("Date", point.date, unit: .day), y: .value("Distance", value))
-                .symbolSize(30).foregroundStyle(Color.green)
-        }
-        .chartYAxisLabel(distanceUnit.label)
-        .chartYScale(domain: cardioChartYDomain)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("Distance progression, \(cardioChartData.count) sessions")
-    }
-
-    private var cardioChartYDomain: ClosedRange<Double> {
-        let distances = cardioChartData.map { distanceUnit.display($0.maxDistance) }
-        guard let minVal = distances.min(), let maxVal = distances.max() else { return 0...10 }
-        let padding = Swift.max(0.5, (maxVal - minVal) * 0.15)
-        return (minVal - padding)...(maxVal + padding)
     }
 }

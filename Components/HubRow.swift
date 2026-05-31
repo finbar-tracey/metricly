@@ -28,4 +28,6 @@ func hubRow(icon: String, color: Color, title: String, subtitle: String) -> some
         }
     }
     .padding(.vertical, 5)
+    .accessibilityElement(children: .combine)
+    .accessibilityLabel("\(title), \(subtitle)")
 }

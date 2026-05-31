@@ -147,7 +147,23 @@ final class SyncStatusManager {
     /// Human-friendly "last synced X ago" string. Returns "Never" if no
     /// successful sync has been recorded.
     var formattedLastSync: String {
-        guard let date = lastSuccessfulSync else { return "Never" }
+        Self.formatLastSync(since: lastSuccessfulSync)
+    }
+
+    static func formatLastSync(since date: Date?) -> String {
+        guard let date else { return "Never" }
         return date.formatted(.relative(presentation: .named, unitsStyle: .abbreviated))
+    }
+
+    // MARK: - Test seams
+
+    func recordSuccessfulSyncForTesting(at date: Date = .now) {
+        lastSuccessfulSync = date
+        lastError = nil
+        UserDefaults(suiteName: suiteName)?.set(date.timeIntervalSince1970, forKey: lastSyncKey)
+    }
+
+    func setSyncingForTesting(_ syncing: Bool) {
+        isSyncing = syncing
     }
 }

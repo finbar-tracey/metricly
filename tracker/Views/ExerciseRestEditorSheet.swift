@@ -14,6 +14,7 @@ struct ExerciseRestEditorSheet: View {
 
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.appServices) private var appServices
     @Query private var allExercises: [Exercise]
 
     @State private var useCustom: Bool
@@ -89,7 +90,7 @@ struct ExerciseRestEditorSheet: View {
         }
 
         try? modelContext.save()
-        PhoneConnectivityManager.shared.pushRestOverrides(map)
+        appServices.phoneConnectivity.pushRestOverrides(map)
         onSave()
         dismiss()
     }

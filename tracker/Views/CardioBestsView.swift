@@ -1,6 +1,5 @@
 import SwiftUI
 import SwiftData
-import Charts
 
 // MARK: - CardioBestsView
 
@@ -69,7 +68,8 @@ struct CardioBestsView: View {
         let session: CardioSession
     }
 
-    // MARK: - Constants
+    struct WeekRecord { let km: Double; let weekStart: Date; let sessionCount: Int }
+    struct MonthRecord { let km: Double; let monthStart: Date }
 
     static let benchmarks: [Benchmark] = [
         Benchmark(name: "1 km",     meters: 1_000,    icon: "flag.fill"),
@@ -80,12 +80,8 @@ struct CardioBestsView: View {
         Benchmark(name: "Marathon", meters: 42_195,   icon: "trophy.fill"),
     ]
 
-    // MARK: - State
-
     @State private var group: ActivityGroup = .runs
     @State private var chartBenchmark: Benchmark? = nil
-
-    // MARK: - Derived data
 
     private var useKm: Bool { weightUnit.distanceUnit == .km }
     private var distUnit: DistanceUnit { weightUnit.distanceUnit }
@@ -95,8 +91,6 @@ struct CardioBestsView: View {
         return allSessions.filter { types.contains($0.cardioType) }
     }
 
-    /// Best time for a given distance, using avg pace × target distance.
-    /// Only considers sessions that covered at least 97% of the target (GPS tolerance).
     private func bestFor(_ bm: Benchmark) -> BenchmarkResult? {
         let threshold = bm.meters * 0.97
         return sessions
@@ -112,22 +106,19 @@ struct CardioBestsView: View {
             }
     }
 
-    // All-time records
     private var longestSession:       CardioSession? { sessions.max(by: { $0.distanceMeters  < $1.distanceMeters  }) }
     private var fastestPaceSession:   CardioSession? { sessions.filter { $0.distanceMeters > 500 && $0.avgPaceSecPerKm > 0 }.min(by: { $0.avgPaceSecPerKm < $1.avgPaceSecPerKm }) }
     private var longestDuration:      CardioSession? { sessions.max(by: { $0.durationSeconds < $1.durationSeconds }) }
     private var mostElevation:        CardioSession? { sessions.filter { $0.elevationGainMeters > 0 }.max(by: { $0.elevationGainMeters < $1.elevationGainMeters }) }
     private var mostCaloriesSession:  CardioSession? { sessions.filter { ($0.caloriesBurned ?? 0) > 0 }.max(by: { ($0.caloriesBurned ?? 0) < ($1.caloriesBurned ?? 0) }) }
-    /// Lowest average heart rate on a run ≥ 5 km — a proxy for aerobic fitness (lower = fitter).
     private var bestAerobicSession:   CardioSession? { sessions.filter { $0.distanceMeters >= 5000 && ($0.avgHeartRate ?? 0) > 40 }.min(by: { ($0.avgHeartRate ?? 999) < ($1.avgHeartRate ?? 999) }) }
 
-    /// Fastest individual km or mile split across all sessions.
     private var fastestSplit: (paceSecPerUnit: Double, session: CardioSession)? {
         var best: (Double, CardioSession)? = nil
         for s in sessions {
             let fastest = s.splits
                 .map { useKm ? $0.paceSecondsPerKm : $0.paceSecondsPerMile }
-                .filter { $0 > 30 && $0 < 3600 }   // sanity bounds: 30 s/km – 60 min/km
+                .filter { $0 > 30 && $0 < 3600 }
                 .min() ?? .greatestFiniteMagnitude
             if fastest < .greatestFiniteMagnitude, best.map({ fastest < $0.0 }) ?? true {
                 best = (fastest, s)
@@ -135,10 +126,6 @@ struct CardioBestsView: View {
         }
         return best.map { ($0.0, $0.1) }
     }
-
-    // Volume records
-    struct WeekRecord { let km: Double; let weekStart: Date; let sessionCount: Int }
-    struct MonthRecord { let km: Double; let monthStart: Date }
 
     private var bestWeek: WeekRecord? {
         var totals: [Date: (km: Double, count: Int)] = [:]
@@ -172,7 +159,6 @@ struct CardioBestsView: View {
         return MonthRecord(km: best.value, monthStart: best.key)
     }
 
-    /// Count of sessions (≥ 2 km) where the second half was faster than the first — good pacing discipline.
     private var negativeSplitCount: Int {
         sessions.filter { s in
             guard s.distanceMeters >= 2000, !s.splits.isEmpty else { return false }
@@ -185,10 +171,10 @@ struct CardioBestsView: View {
         }.count
     }
 
-    // Pace trend for the selected (or first available) benchmark
     private var activeBenchmark: Benchmark? {
         chartBenchmark ?? Self.benchmarks.first { bm in sessions.contains { $0.distanceMeters >= bm.meters * 0.97 } }
     }
+
     private var trendPoints: [PaceTrendPoint] {
         guard let bm = activeBenchmark else { return [] }
         return sessions
@@ -197,12 +183,9 @@ struct CardioBestsView: View {
             .sorted { $0.date < $1.date }
     }
 
-    // MARK: - Body
-
     var body: some View {
         ScrollView {
             LazyVStack(spacing: AppTheme.sectionSpacing) {
-                // Activity type picker
                 HStack {
                     CapsuleSegmentPicker(
                         options: ActivityGroup.allCases,
@@ -214,13 +197,50 @@ struct CardioBestsView: View {
                 .onChange(of: group) { _, _ in chartBenchmark = nil }
 
                 if sessions.isEmpty {
-                    emptyState
+                    CardioBestsRecordsSection.emptyState(group: group)
                 } else {
-                    bestsHero
-                    benchmarksSection
-                    allTimeSection
-                    volumeSection
-                    if trendPoints.count >= 2 { trendSection }
+                    CardioBestsSummarySection.bestsHero(
+                        group: group,
+                        longestSession: longestSession,
+                        fastestPaceSession: fastestPaceSession,
+                        sessionCount: sessions.count,
+                        useKm: useKm
+                    )
+                    CardioBestsSummarySection.benchmarksSection(
+                        group: group,
+                        items: Self.benchmarks.map { ($0, bestFor($0)) },
+                        useKm: useKm
+                    )
+                    CardioBestsRecordsSection.allTimeSection(
+                        group: group,
+                        longestSession: longestSession,
+                        fastestPaceSession: fastestPaceSession,
+                        fastestSplit: fastestSplit,
+                        longestDuration: longestDuration,
+                        mostElevation: mostElevation,
+                        mostCaloriesSession: mostCaloriesSession,
+                        bestAerobicSession: bestAerobicSession,
+                        useKm: useKm
+                    )
+                    CardioBestsRecordsSection.volumeSection(
+                        group: group,
+                        bestWeek: bestWeek,
+                        bestMonth: bestMonth,
+                        busiestWeek: busiestWeek,
+                        negativeSplitCount: negativeSplitCount,
+                        distUnit: distUnit
+                    )
+                    if trendPoints.count >= 2 {
+                        CardioBestsRecordsSection.trendSection(
+                            group: group,
+                            benchmarks: Self.benchmarks,
+                            sessions: sessions,
+                            activeBenchmark: activeBenchmark,
+                            trendPoints: trendPoints,
+                            chartBenchmark: $chartBenchmark,
+                            useKm: useKm
+                        )
+                    }
                 }
             }
             .padding(.horizontal)
@@ -230,506 +250,5 @@ struct CardioBestsView: View {
         .background(Color(.systemGroupedBackground))
         .navigationTitle("Personal Bests")
         .navigationBarTitleDisplayMode(.large)
-    }
-
-    // MARK: - Summary hero
-
-    /// Headline records for the selected activity — gives Personal Bests the
-    /// same hero treatment as the rest of the app instead of opening cold on
-    /// the distance grid.
-    private var bestsHero: some View {
-        HeroCard(palette: [group.color, group.color.opacity(0.72), group.color.opacity(0.55)]) {
-            VStack(alignment: .leading, spacing: 14) {
-                HStack(spacing: 6) {
-                    Image(systemName: "trophy.fill")
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundStyle(.white.opacity(0.85))
-                    Text("\(group.rawValue) · Personal Bests")
-                        .font(.system(size: 12, weight: .bold, design: .rounded))
-                        .foregroundStyle(.white.opacity(0.85))
-                        .tracking(0.5)
-                        .textCase(.uppercase)
-                }
-                HStack(spacing: 0) {
-                    HeroStatCol(value: longestSession?.formattedDistance(useKm: useKm) ?? "—", label: "Longest")
-                    Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 40)
-                    HeroStatCol(value: fastestPaceSession.map { formatPaceShort($0.avgPaceSecPerKm) } ?? "—", label: "Best Pace")
-                    Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 40)
-                    HeroStatCol(value: "\(sessions.count)", label: group.rawValue)
-                }
-                .padding(.vertical, 12)
-                .background(.ultraThinMaterial.opacity(0.55), in: RoundedRectangle(cornerRadius: AppTheme.miniCardRadius, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: AppTheme.miniCardRadius, style: .continuous)
-                        .stroke(.white.opacity(0.18), lineWidth: 0.5)
-                )
-            }
-            .padding(20)
-        }
-        .frame(minHeight: 130)
-    }
-
-    // MARK: - Benchmarks
-
-    private var benchmarksSection: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            SectionHeader(title: "Distance Bests", icon: "flag.checkered", color: group.color)
-
-            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-                ForEach(Self.benchmarks) { bm in
-                    benchmarkCard(bm, result: bestFor(bm))
-                }
-            }
-        }
-        .appCard()
-    }
-
-    @ViewBuilder
-    private func benchmarkCard(_ bm: Benchmark, result: BenchmarkResult?) -> some View {
-        let achieved = result != nil
-        Group {
-            if let r = result {
-                NavigationLink(destination: CardioSessionDetailView(session: r.session)) {
-                    benchmarkCardContent(bm, result: r, achieved: true)
-                }
-                .buttonStyle(.plain)
-            } else {
-                benchmarkCardContent(bm, result: nil, achieved: false)
-            }
-        }
-    }
-
-    private func benchmarkCardContent(_ bm: Benchmark, result: BenchmarkResult?, achieved: Bool) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 6) {
-                Image(systemName: bm.icon)
-                    .font(.system(size: 12, weight: .bold))
-                    .foregroundStyle(achieved ? group.color : .secondary)
-                Text(bm.name.uppercased())
-                    .font(.system(size: 11, weight: .bold, design: .rounded))
-                    .foregroundStyle(achieved ? .primary : .secondary)
-                    .tracking(0.4)
-                Spacer()
-            }
-
-            if let r = result {
-                Text(r.formattedTime)
-                    .font(.system(size: 24, weight: .black, design: .rounded))
-                    .foregroundStyle(group.color)
-                    .monospacedDigit()
-                    .minimumScaleFactor(0.7)
-                    .lineLimit(1)
-                Text(formatPace(r.paceSecPerKm))
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
-                    .monospacedDigit()
-                Text(r.date, format: .dateTime.day().month(.abbreviated).year())
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
-            } else {
-                Text("—")
-                    .font(.system(size: 24, weight: .black, design: .rounded))
-                    .foregroundStyle(.quaternary)
-                Text("No sessions yet")
-                    .font(.caption2)
-                    .foregroundStyle(.quaternary)
-                Spacer()
-            }
-        }
-        .padding(14)
-        .frame(maxWidth: .infinity, minHeight: 110, alignment: .topLeading)
-        .background(
-            achieved
-                ? AnyShapeStyle(LinearGradient(
-                    colors: [group.color.opacity(0.10), Color(.secondarySystemGroupedBackground)],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                ))
-                : AnyShapeStyle(Color(.secondarySystemGroupedBackground))
-        )
-        .clipShape(RoundedRectangle(cornerRadius: AppTheme.miniCardRadius, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: AppTheme.miniCardRadius, style: .continuous)
-                .stroke(achieved ? group.color.opacity(0.20) : AppTheme.cardHairline, lineWidth: 0.5)
-        )
-    }
-
-    // MARK: - All-Time Records
-
-    private var allTimeSection: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            SectionHeader(title: "All-Time Records", icon: "trophy.fill", color: .yellow)
-
-            VStack(spacing: 0) {
-                if let s = longestSession {
-                    recordRow(icon: "ruler",           color: group.color,
-                              label: "Longest Distance", value: s.formattedDistance(useKm: useKm),
-                              sub: s.date.formatted(.dateTime.day().month(.abbreviated).year()),
-                              session: s)
-                }
-                if let s = fastestPaceSession {
-                    Divider().padding(.leading, 54)
-                    recordRow(icon: "speedometer",     color: .purple,
-                              label: "Fastest Avg Pace", value: s.formattedPace(useKm: useKm),
-                              sub: s.formattedDistance(useKm: useKm) + " · " +
-                                   s.date.formatted(.dateTime.day().month(.abbreviated).year()),
-                              session: s)
-                }
-                if let split = fastestSplit {
-                    Divider().padding(.leading, 54)
-                    recordRow(icon: "bolt.fill",       color: .yellow,
-                              label: "Fastest \(useKm ? "km" : "mi") Split",
-                              value: formatPaceShort(split.paceSecPerUnit) + " /\(useKm ? "km" : "mi")",
-                              sub: split.session.date.formatted(.dateTime.day().month(.abbreviated).year()),
-                              session: split.session)
-                }
-                if let s = longestDuration {
-                    Divider().padding(.leading, 54)
-                    recordRow(icon: "clock.fill",      color: .indigo,
-                              label: "Longest Duration", value: s.formattedDuration,
-                              sub: s.date.formatted(.dateTime.day().month(.abbreviated).year()),
-                              session: s)
-                }
-                if let s = mostElevation {
-                    Divider().padding(.leading, 54)
-                    recordRow(icon: "mountain.2.fill", color: .brown,
-                              label: "Most Elevation",   value: String(format: "%.0f m", s.elevationGainMeters),
-                              sub: s.date.formatted(.dateTime.day().month(.abbreviated).year()),
-                              session: s)
-                }
-                if let s = mostCaloriesSession, let cal = s.caloriesBurned {
-                    Divider().padding(.leading, 54)
-                    recordRow(icon: "flame.fill",      color: .red,
-                              label: "Most Calories",    value: String(format: "%.0f kcal", cal),
-                              sub: s.formattedDistance(useKm: useKm) + " · " +
-                                   s.date.formatted(.dateTime.day().month(.abbreviated).year()),
-                              session: s)
-                }
-                if let s = bestAerobicSession, let hr = s.avgHeartRate {
-                    Divider().padding(.leading, 54)
-                    recordRow(icon: "heart.fill",      color: .pink,
-                              label: "Lowest HR Run",    value: "\(Int(hr)) bpm",
-                              sub: "Aerobic efficiency · " + s.formattedDistance(useKm: useKm),
-                              session: s)
-                }
-            }
-            .background(Color(.tertiarySystemGroupedBackground),
-                        in: RoundedRectangle(cornerRadius: 14))
-        }
-        .appCard()
-    }
-
-    // MARK: - Volume Records
-
-    private var volumeSection: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            SectionHeader(title: "Volume Records", icon: "chart.bar.fill", color: group.color)
-
-            VStack(spacing: 12) {
-                // Best week and busiest week side by side
-                HStack(spacing: 12) {
-                    volumeTile(
-                        icon: "calendar.badge.checkmark",
-                        color: group.color,
-                        label: "Best Week",
-                        primary: bestWeek.map { String(format: "%.1f %@", distUnit.display($0.km), distUnit.label) } ?? "—",
-                        secondary: bestWeek.map {
-                            $0.weekStart.formatted(.dateTime.day().month(.abbreviated)) +
-                            " · \($0.sessionCount) session\($0.sessionCount == 1 ? "" : "s")"
-                        } ?? "No data yet"
-                    )
-                    volumeTile(
-                        icon: "calendar",
-                        color: .teal,
-                        label: "Best Month",
-                        primary: bestMonth.map { String(format: "%.1f %@", distUnit.display($0.km), distUnit.label) } ?? "—",
-                        secondary: bestMonth.map {
-                            $0.monthStart.formatted(.dateTime.month(.wide).year())
-                        } ?? "No data yet"
-                    )
-                }
-
-                HStack(spacing: 12) {
-                    volumeTile(
-                        icon: "repeat",
-                        color: .indigo,
-                        label: "Most Sessions / Week",
-                        primary: busiestWeek.map { "\($0.sessionCount)" } ?? "—",
-                        secondary: busiestWeek.map {
-                            $0.weekStart.formatted(.dateTime.day().month(.abbreviated)) +
-                            " · " + String(format: "%.1f %@", distUnit.display($0.km), distUnit.label)
-                        } ?? "No data yet"
-                    )
-                    let negCount = negativeSplitCount
-                    volumeTile(
-                        icon: "arrow.down.right",
-                        color: .green,
-                        label: "Negative Splits",
-                        primary: negCount > 0 ? "\(negCount)" : "—",
-                        secondary: negCount > 0
-                            ? "session\(negCount == 1 ? "" : "s") where 2nd half was faster"
-                            : "Finish faster than you start"
-                    )
-                }
-            }
-        }
-        .appCard()
-    }
-
-    private func volumeTile(icon: String, color: Color, label: String, primary: String, secondary: String) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 6) {
-                Image(systemName: icon)
-                    .font(.system(size: 12, weight: .bold))
-                    .foregroundStyle(color)
-                Text(label.uppercased())
-                    .font(.system(size: 11, weight: .bold, design: .rounded))
-                    .tracking(0.4)
-                    .foregroundStyle(.primary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
-            }
-            Text(primary)
-                .font(.system(size: 22, weight: .black, design: .rounded))
-                .foregroundStyle(primary == "—" ? Color(.quaternaryLabel) : color)
-                .monospacedDigit()
-            Text(secondary)
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-                .lineLimit(2)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .padding(14)
-        .frame(maxWidth: .infinity, minHeight: 100, alignment: .topLeading)
-        .background(
-            primary == "—"
-                ? AnyShapeStyle(Color(.secondarySystemGroupedBackground))
-                : AnyShapeStyle(LinearGradient(
-                    colors: [color.opacity(0.10), Color(.secondarySystemGroupedBackground)],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                ))
-        )
-        .clipShape(RoundedRectangle(cornerRadius: AppTheme.miniCardRadius, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: AppTheme.miniCardRadius, style: .continuous)
-                .stroke(primary == "—" ? AppTheme.cardHairline : color.opacity(0.18), lineWidth: 0.5)
-        )
-    }
-
-    private func recordRow(icon: String, color: Color, label: String,
-                           value: String, sub: String, session: CardioSession) -> some View {
-        NavigationLink(destination: CardioSessionDetailView(session: session)) {
-            HStack(spacing: 14) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 11, style: .continuous)
-                        .fill(
-                            LinearGradient(
-                                colors: [color, color.opacity(0.72)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .frame(width: 40, height: 40)
-                        .shadow(color: color.opacity(0.40), radius: 5, y: 2)
-                    Image(systemName: icon)
-                        .font(.system(size: 15, weight: .bold))
-                        .foregroundStyle(.white)
-                }
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(label)
-                        .font(.system(size: 15, weight: .semibold, design: .rounded))
-                    Text(sub)
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                }
-                Spacer()
-                Text(value)
-                    .font(.system(size: 15, weight: .black, design: .rounded))
-                    .monospacedDigit()
-                    .foregroundStyle(color)
-                Image(systemName: "chevron.right")
-                    .font(.caption2.weight(.semibold)).foregroundStyle(.tertiary)
-            }
-            .padding(.horizontal, 14).padding(.vertical, 13)
-        }
-        .buttonStyle(.pressableCard)
-    }
-
-    // MARK: - Pace Trend
-
-    private var trendSection: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack {
-                SectionHeader(title: "Pace Trend", icon: "chart.line.downtrend.xyaxis",
-                              color: group.color)
-                Spacer()
-                Menu {
-                    ForEach(Self.benchmarks) { bm in
-                        if sessions.contains(where: { $0.distanceMeters >= bm.meters * 0.97 }) {
-                            Button {
-                                chartBenchmark = bm
-                            } label: {
-                                if activeBenchmark?.id == bm.id {
-                                    Label(bm.name, systemImage: "checkmark")
-                                } else {
-                                    Text(bm.name)
-                                }
-                            }
-                        }
-                    }
-                } label: {
-                    HStack(spacing: 3) {
-                        Text(activeBenchmark?.name ?? "")
-                            .font(.caption.weight(.semibold))
-                        Image(systemName: "chevron.up.chevron.down")
-                            .font(.system(size: 9))
-                    }
-                    .foregroundStyle(group.color)
-                    .padding(.horizontal, 10).padding(.vertical, 5)
-                    .background(group.color.opacity(0.1), in: Capsule())
-                }
-            }
-
-            // Chart — lower Y = faster pace = shown at bottom; trend going down = improvement
-            Chart(trendPoints) { point in
-                AreaMark(
-                    x: .value("Date", point.date),
-                    y: .value("Pace", point.paceSecPerKm)
-                )
-                .foregroundStyle(
-                    LinearGradient(
-                        colors: [
-                            group.color.opacity(0.55),
-                            group.color.opacity(0.22),
-                            group.color.opacity(0.02)
-                        ],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                )
-                .interpolationMethod(.catmullRom)
-
-                LineMark(
-                    x: .value("Date", point.date),
-                    y: .value("Pace", point.paceSecPerKm)
-                )
-                .foregroundStyle(
-                    LinearGradient(
-                        colors: [group.color, group.color.opacity(0.72)],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
-                )
-                .interpolationMethod(.catmullRom)
-                .lineStyle(StrokeStyle(lineWidth: 2.5, lineCap: .round, lineJoin: .round))
-                .shadow(color: group.color.opacity(0.30), radius: 5, y: 2)
-
-                PointMark(
-                    x: .value("Date", point.date),
-                    y: .value("Pace", point.paceSecPerKm)
-                )
-                .foregroundStyle(group.color)
-                .symbolSize(36)
-                .annotation(position: .overlay) {
-                    Circle().fill(.white).frame(width: 4, height: 4)
-                }
-            }
-            .chartYScale(domain: .automatic(includesZero: false))
-            .chartYAxis {
-                AxisMarks(values: .automatic(desiredCount: 4)) { val in
-                    AxisGridLine().foregroundStyle(AppTheme.chartGrid)
-                    AxisValueLabel {
-                        if let sec = val.as(Double.self) {
-                            Text(formatPaceShort(sec))
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                }
-            }
-            .chartXAxis {
-                AxisMarks(values: .automatic(desiredCount: 4)) { _ in
-                    AxisGridLine().foregroundStyle(AppTheme.chartGrid)
-                    AxisValueLabel(format: .dateTime.month(.abbreviated).year())
-                        .font(.caption2)
-                }
-            }
-            .frame(height: 180)
-
-            // Improvement summary
-            if let first = trendPoints.first, let last = trendPoints.last,
-               abs(first.paceSecPerKm - last.paceSecPerKm) > 5 {
-                let delta    = first.paceSecPerKm - last.paceSecPerKm
-                let improved = delta > 0
-                let absMin   = Int(abs(delta)) / 60
-                let absSec   = Int(abs(delta)) % 60
-                HStack(spacing: 5) {
-                    Image(systemName: improved ? "arrow.down.right.circle.fill" : "arrow.up.right.circle.fill")
-                    Text(improved
-                         ? "\(absMin):\(String(format: "%02d", absSec)) /\(useKm ? "km" : "mi") faster since your first session"
-                         : "\(absMin):\(String(format: "%02d", absSec)) /\(useKm ? "km" : "mi") slower than your first session")
-                }
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(improved ? .green : .orange)
-            }
-
-            Text("Lower pace = faster. Each point is one session.")
-                .font(.caption2)
-                .foregroundStyle(.tertiary)
-        }
-        .appCard()
-    }
-
-    // MARK: - Empty State
-
-    private var emptyState: some View {
-        VStack(spacing: 18) {
-            ZStack {
-                Circle()
-                    .fill(
-                        LinearGradient(
-                            colors: [group.color.opacity(0.20), group.color.opacity(0.08)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .frame(width: 88, height: 88)
-                    .overlay(Circle().stroke(group.color.opacity(0.20), lineWidth: 1))
-                Image(systemName: group.icon)
-                    .font(.system(size: 32, weight: .bold))
-                    .foregroundStyle(
-                        LinearGradient(
-                            colors: [group.color, group.color.opacity(0.7)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-            }
-            VStack(spacing: 6) {
-                Text("No \(group.rawValue.lowercased()) yet")
-                    .font(.system(size: 20, weight: .bold, design: .rounded))
-                Text("Complete a session to start tracking your personal bests.")
-                    .font(.subheadline).foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-            }
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 44)
-        .appCard()
-    }
-
-    // MARK: - Helpers
-
-    private func formatPace(_ secPerKm: Double) -> String {
-        let pace = useKm ? secPerKm : secPerKm * 1.60934
-        guard pace > 0 else { return "--:--" }
-        return String(format: "%d:%02d /%@", Int(pace) / 60, Int(pace) % 60, useKm ? "km" : "mi")
-    }
-
-    private func formatPaceShort(_ secPerKm: Double) -> String {
-        let pace = useKm ? secPerKm : secPerKm * 1.60934
-        guard pace > 0 else { return "--" }
-        return String(format: "%d:%02d", Int(pace) / 60, Int(pace) % 60)
     }
 }

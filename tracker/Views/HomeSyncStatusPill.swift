@@ -4,10 +4,11 @@ import SwiftUI
 /// failing or the account isn't usable. Tap opens a detail sheet that
 /// links into system iCloud settings.
 struct HomeSyncStatusPill: View {
+    @Environment(\.appServices) private var appServices
     @State private var showingDetail = false
 
     var body: some View {
-        let mgr = SyncStatusManager.shared
+        let mgr = appServices.syncStatus
         let isAccountIssue = !mgr.accountStatus.isHealthy && mgr.accountStatus != .unknown
         let tint: Color = isAccountIssue ? .orange : .yellow
         let title: String = isAccountIssue ? mgr.accountStatus.label : "iCloud sync paused"
@@ -67,7 +68,7 @@ struct HomeSyncStatusPill: View {
     /// True if the pill should be shown — surfaces explicit errors or
     /// non-healthy account states (excluding the transient `.unknown`).
     static var shouldShow: Bool {
-        let mgr = SyncStatusManager.shared
+        let mgr = AppServices.shared.syncStatus
         if mgr.lastError != nil { return true }
         switch mgr.accountStatus {
         case .available, .unknown: return false

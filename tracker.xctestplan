@@ -9,7 +9,7 @@
     }
   ],
   "defaultOptions" : {
-    "codeCoverage" : false,
+    "codeCoverage" : true,
     "targetForVariableExpansion" : {
       "containerPath" : "container:tracker.xcodeproj",
       "identifier" : "82A0C4CD2F58E8E200BD421B",
@@ -22,6 +22,14 @@
         "containerPath" : "container:tracker.xcodeproj",
         "identifier" : "82ED21652FAE534200D1DEFF",
         "name" : "trackerTests"
+      }
+    },
+    {
+      "parallelizable" : true,
+      "target" : {
+        "containerPath" : "container:tracker.xcodeproj",
+        "identifier" : "A1EC0A1E2F9A002200BD421B",
+        "name" : "trackerUITests"
       }
     }
   ],

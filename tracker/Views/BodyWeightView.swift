@@ -1,34 +1,102 @@
 import SwiftUI
 import SwiftData
-import Charts
 
 struct BodyWeightView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.weightUnit) private var weightUnit
+    @Environment(\.appServices) private var appServices
     @Query(sort: \BodyWeightEntry.date, order: .reverse) private var entries: [BodyWeightEntry]
     @Query private var settingsArray: [UserSettings]
 
     @State private var newWeight = ""
     @State private var selectedDate = Date.now
     @State private var entryToDelete: BodyWeightEntry?
+    @State private var timeRange: DetailTimeRange = .month
     @FocusState private var isWeightFocused: Bool
 
+    private var summary: BodyWeightEngine.Summary {
+        BodyWeightEngine.summary(entries: entries)
+    }
+
+    private var chartEntries: [BodyWeightEntry] {
+        BodyWeightEngine.chartEntries(from: entries, maxCount: max(timeRange.dayCount * 2, 90))
+    }
+
+    private var trend: [BodyWeightEngine.TrendPoint] {
+        BodyWeightEngine.movingAverageTrend(chartEntries: chartEntries) { weightUnit.display($0) }
+    }
+
+    private var chartYDomain: ClosedRange<Double> {
+        BodyWeightEngine.chartYDomain(displayWeights: chartEntries.map { weightUnit.display($0.weight) })
+    }
+
     var body: some View {
-        ScrollView {
-            LazyVStack(spacing: AppTheme.sectionSpacing) {
-                if !entries.isEmpty { heroCard }
-                logCard
-                if !entries.isEmpty {
-                    statsCard
-                    chartCard
-                    historyCard
+        Group {
+            if entries.isEmpty {
+                ScrollView {
+                    LazyVStack(spacing: AppTheme.sectionSpacing) {
+                        BodyWeightTrackerSections.logCard(
+                            weightUnit: weightUnit,
+                            newWeight: $newWeight,
+                            selectedDate: $selectedDate,
+                            isWeightFocused: $isWeightFocused,
+                            onLog: addEntry
+                        )
+                    }
+                    .padding(.horizontal)
+                    .padding(.top, 8)
+                    .padding(.bottom, 36)
                 }
+                .background(Color(.systemGroupedBackground))
+            } else {
+                MetricDetailScaffold(
+                    navigationTitle: "Body Weight",
+                    isLoading: false,
+                    isEmpty: false,
+                    loadingMessage: "",
+                    emptyIcon: "scalemass.fill",
+                    emptyTitle: "No Weight Logged",
+                    emptySubtitle: "Log your first weigh-in to see trends.",
+                    timeRange: $timeRange,
+                    segmentColor: .orange,
+                    showRangePicker: true,
+                    hero: {
+                        BodyWeightTrackerSections.heroCard(
+                            entries: entries,
+                            weightUnit: weightUnit,
+                            summary: summary,
+                            formatChange: formatChange
+                        )
+                    },
+                    content: {
+                        BodyWeightTrackerSections.logCard(
+                            weightUnit: weightUnit,
+                            newWeight: $newWeight,
+                            selectedDate: $selectedDate,
+                            isWeightFocused: $isWeightFocused,
+                            onLog: addEntry
+                        )
+                        BodyWeightTrackerSections.statsCard(
+                            entries: entries,
+                            weightUnit: weightUnit,
+                            summary: summary,
+                            formatChange: formatChange
+                        )
+                        BodyWeightTrackerSections.trendCard(
+                            chartEntries: chartEntries,
+                            trend: trend,
+                            weightUnit: weightUnit,
+                            yDomain: chartYDomain
+                        )
+                        BodyWeightTrackerSections.historyCard(
+                            entries: entries,
+                            weightUnit: weightUnit,
+                            onDelete: { entryToDelete = $0 }
+                        )
+                    }
+                )
             }
-            .padding(.horizontal)
-            .padding(.top, 8)
-            .padding(.bottom, 36)
         }
-        .background(Color(.systemGroupedBackground))
         .navigationTitle("Body Weight")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -48,352 +116,10 @@ struct BodyWeightView: View {
         }
     }
 
-    // MARK: - Hero Card
-
-    private var heroCard: some View {
-        ZStack(alignment: .topLeading) {
-            LinearGradient(colors: [Color.orange, Color.orange.opacity(0.65)],
-                           startPoint: .topLeading, endPoint: .bottomTrailing)
-            Circle().fill(.white.opacity(0.07)).frame(width: 200).offset(x: 160, y: -60)
-
-            VStack(alignment: .leading, spacing: 18) {
-                HStack(alignment: .center, spacing: 14) {
-                    ZStack {
-                        Circle().fill(.white.opacity(0.20)).frame(width: 52, height: 52)
-                        Image(systemName: "scalemass.fill")
-                            .font(.system(size: 22, weight: .semibold)).foregroundStyle(.white)
-                    }
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text("Current Weight")
-                            .font(.caption.weight(.semibold)).foregroundStyle(.white.opacity(0.75))
-                        if let current = entries.first {
-                            Text(weightUnit.format(current.weight))
-                                .font(.system(size: 36, weight: .black, design: .rounded))
-                                .foregroundStyle(.white).monospacedDigit()
-                        }
-                    }
-                    Spacer()
-                    if let change = weightChange {
-                        let isGain = weightUnit.display(change) > 0
-                        HStack(spacing: 4) {
-                            Image(systemName: isGain ? "arrow.up" : "arrow.down").font(.caption.bold())
-                            Text(formatChange(change)).font(.caption.bold())
-                        }
-                        .padding(.horizontal, 10).padding(.vertical, 5)
-                        .background(.white.opacity(0.20), in: Capsule())
-                        .foregroundStyle(.white)
-                    }
-                }
-
-                HStack(spacing: 0) {
-                    HeroStatCol(value: lowestWeight.map { weightUnit.format($0) } ?? "—", label: "Lowest")
-                    Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 28)
-                    HeroStatCol(value: highestWeight.map { weightUnit.format($0) } ?? "—", label: "Highest")
-                    Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 28)
-                    HeroStatCol(value: "\(entries.count)", label: "Entries")
-                }
-            }
-            .padding(20)
-        }
-        .heroCard()
-    }
-
-
-    // MARK: - Log Card
-
-    private var logCard: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            SectionHeader(title: "Log Weight", icon: "plus.circle.fill", color: .orange)
-
-            VStack(spacing: 0) {
-                HStack(spacing: 12) {
-                    TextField("Weight (\(weightUnit.label))", text: $newWeight)
-                        .keyboardType(.decimalPad).focused($isWeightFocused).font(.subheadline)
-                    Spacer()
-                    DatePicker("", selection: $selectedDate, displayedComponents: .date).labelsHidden()
-                }
-                .padding(.horizontal, 16).padding(.vertical, 13)
-
-                Divider().padding(.leading, 16)
-
-                Button {
-                    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                    addEntry()
-                } label: {
-                    Label("Log Weight", systemImage: "plus.circle.fill")
-                        .font(.system(size: 15, weight: .bold, design: .rounded))
-                        .tracking(0.3)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 15)
-                        .background(
-                            Group {
-                                if newWeight.isEmpty {
-                                    Color(.systemFill)
-                                } else {
-                                    LinearGradient(
-                                        colors: [Color.orange, AppTheme.Signal.actionOrange],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    )
-                                }
-                            }
-                        )
-                        .foregroundStyle(newWeight.isEmpty ? Color.secondary : Color.white)
-                        .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardRadius, style: .continuous))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: AppTheme.cardRadius, style: .continuous)
-                                .stroke(Color.white.opacity(newWeight.isEmpty ? 0 : 0.18), lineWidth: 0.5)
-                        )
-                        .shadow(color: newWeight.isEmpty ? .clear : Color.orange.opacity(0.40), radius: 10, y: 4)
-                }
-                .disabled(newWeight.isEmpty)
-                .buttonStyle(.pressableCard)
-                .padding(.horizontal, 16).padding(.vertical, 12)
-            }
-            .background(Color(.tertiarySystemGroupedBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 14))
-        }
-        .appCard()
-    }
-
-    // MARK: - Stats Card
-
-    private var statsCard: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            SectionHeader(title: "Statistics", icon: "chart.bar.fill", color: .orange)
-            LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
-                statTile("Current", value: entries.first.map { weightUnit.format($0.weight) } ?? "—",
-                         icon: "scalemass.fill", color: .orange)
-                statTile("Lowest", value: lowestWeight.map { weightUnit.format($0) } ?? "—",
-                         icon: "arrow.down.circle.fill", color: .green)
-                statTile("Highest", value: highestWeight.map { weightUnit.format($0) } ?? "—",
-                         icon: "arrow.up.circle.fill", color: .red)
-                if let change = weightChange {
-                    let isGain = weightUnit.display(change) > 0
-                    statTile("30d Change", value: formatChange(change),
-                             icon: isGain ? "arrow.up.right" : "arrow.down.right", color: isGain ? .red : .green)
-                } else {
-                    statTile("30d Change", value: "—", icon: "minus.circle", color: .secondary)
-                }
-            }
-        }
-        .appCard()
-    }
-
-    private func statTile(_ title: String, value: String, icon: String, color: Color) -> some View {
-        HStack(spacing: 10) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            colors: [color.opacity(0.26), color.opacity(0.12)],
-                            startPoint: .topLeading, endPoint: .bottomTrailing
-                        )
-                    )
-                    .frame(width: 34, height: 34)
-                    .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(color.opacity(0.28), lineWidth: 0.5))
-                Image(systemName: icon).font(.system(size: 13, weight: .semibold)).foregroundStyle(color)
-            }
-            VStack(alignment: .leading, spacing: 2) {
-                Text(value).font(.subheadline.bold().monospacedDigit())
-                Text(title).font(.caption2).foregroundStyle(.secondary)
-            }
-            Spacer(minLength: 0)
-        }
-        .padding(12)
-        .background(Color(.tertiarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-    }
-
-    // MARK: - Chart Card
-
-    private var chartCard: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack {
-                SectionHeader(title: "Trend", icon: "chart.line.uptrend.xyaxis", color: .orange)
-                Spacer()
-                trendLegend
-            }
-            Chart {
-                // Light area under the trend for depth.
-                ForEach(trend) { point in
-                    AreaMark(
-                        x: .value("Date", point.date, unit: .day),
-                        y: .value("Weight", point.value)
-                    )
-                    .interpolationMethod(.catmullRom)
-                    .foregroundStyle(
-                        LinearGradient(
-                            colors: [
-                                Color.orange.opacity(0.40),
-                                Color.orange.opacity(0.16),
-                                Color.orange.opacity(0.02)
-                            ],
-                            startPoint: .top, endPoint: .bottom
-                        )
-                    )
-                }
-
-                // Raw weigh-ins — the actual data points, kept light so the
-                // day-to-day noise reads as scatter behind the trend.
-                ForEach(chartEntries) { entry in
-                    PointMark(
-                        x: .value("Date", entry.date, unit: .day),
-                        y: .value("Weight", weightUnit.display(entry.weight))
-                    )
-                    .symbolSize(20)
-                    .foregroundStyle(Color.orange.opacity(0.35))
-                }
-
-                // 7-point moving average — the smoothed trend that cuts
-                // through daily fluctuation (water, food, time of day).
-                ForEach(trend) { point in
-                    LineMark(
-                        x: .value("Date", point.date, unit: .day),
-                        y: .value("Weight", point.value),
-                        series: .value("Series", "trend")
-                    )
-                    .interpolationMethod(.catmullRom)
-                    .lineStyle(StrokeStyle(lineWidth: 2.5, lineCap: .round, lineJoin: .round))
-                    .foregroundStyle(
-                        LinearGradient(
-                            colors: [Color.orange, AppTheme.Signal.actionOrange],
-                            startPoint: .leading, endPoint: .trailing
-                        )
-                    )
-                    .shadow(color: Color.orange.opacity(0.30), radius: 5, y: 2)
-                }
-            }
-            .chartYAxisLabel(weightUnit.label)
-            .chartYScale(domain: chartYDomain)
-            .chartXAxis {
-                AxisMarks(values: .automatic(desiredCount: 5)) { _ in
-                    AxisGridLine().foregroundStyle(AppTheme.chartGrid)
-                    AxisValueLabel().font(.caption2).foregroundStyle(.secondary)
-                }
-            }
-            .chartYAxis {
-                AxisMarks(position: .leading) { _ in
-                    AxisGridLine().foregroundStyle(AppTheme.chartGrid)
-                    AxisValueLabel().font(.caption2).foregroundStyle(.secondary)
-                }
-            }
-            .frame(height: 220).padding(.vertical, 12)
-            .accessibilityElement(children: .combine)
-            .accessibilityLabel("Body weight trend, \(chartEntries.count) entries")
-        }
-        .appCard()
-    }
-
-    // MARK: - History Card
-
-    private var historyCard: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            SectionHeader(title: "History", icon: "clock.fill", color: .secondary)
-            VStack(spacing: 0) {
-                ForEach(Array(entries.prefix(30).enumerated()), id: \.element.persistentModelID) { idx, entry in
-                    HStack(spacing: 12) {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(entry.date, format: .dateTime.weekday(.abbreviated).month(.abbreviated).day())
-                                .font(.subheadline)
-                            Text(entry.date, format: .dateTime.year())
-                                .font(.caption2).foregroundStyle(.tertiary)
-                        }
-                        Spacer()
-                        Text(weightUnit.format(entry.weight))
-                            .font(.subheadline.bold().monospacedDigit())
-                        changeIndicator(for: entry)
-                    }
-                    .padding(.horizontal, 16).padding(.vertical, 11)
-                    .accessibilityElement(children: .combine)
-                    .contextMenu {
-                        Button(role: .destructive) { entryToDelete = entry } label: {
-                            Label("Delete", systemImage: "trash")
-                        }
-                    }
-                    if idx < min(entries.count, 30) - 1 { Divider().padding(.leading, 16) }
-                }
-            }
-            .background(Color(.tertiarySystemGroupedBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 14))
-        }
-        .appCard()
-    }
-
-    // MARK: - Computed
-
-    private var chartEntries: [BodyWeightEntry] { Array(entries.suffix(90).reversed()) }
-
-    private struct TrendPoint: Identifiable {
-        let id: Date
-        var date: Date { id }
-        let value: Double
-    }
-
-    /// 7-point trailing moving average of the charted weigh-ins, in display
-    /// units. Smooths out the daily noise (hydration, food, time of day) so
-    /// the line shows where weight is actually heading, not where it bounced.
-    private var trend: [TrendPoint] {
-        let pts = chartEntries
-        guard pts.count >= 2 else {
-            return pts.map { TrendPoint(id: $0.date, value: weightUnit.display($0.weight)) }
-        }
-        return pts.indices.map { i in
-            let lo = Swift.max(0, i - 6)
-            let window = pts[lo...i]
-            let avg = window.map { weightUnit.display($0.weight) }.reduce(0, +) / Double(window.count)
-            return TrendPoint(id: pts[i].date, value: avg)
-        }
-    }
-
-    /// Tiny legend distinguishing the raw weigh-in scatter from the trend line.
-    private var trendLegend: some View {
-        HStack(spacing: 10) {
-            HStack(spacing: 4) {
-                Circle().fill(Color.orange.opacity(0.35)).frame(width: 6, height: 6)
-                Text("Weigh-ins").font(.system(size: 10, weight: .medium)).foregroundStyle(.secondary)
-            }
-            HStack(spacing: 4) {
-                Capsule().fill(Color.orange).frame(width: 12, height: 3)
-                Text("7-day trend").font(.system(size: 10, weight: .medium)).foregroundStyle(.secondary)
-            }
-        }
-    }
-
-    private var chartYDomain: ClosedRange<Double> {
-        let weights = chartEntries.map { weightUnit.display($0.weight) }
-        guard let minVal = weights.min(), let maxVal = weights.max() else { return 0...100 }
-        let padding = Swift.max(1, (maxVal - minVal) * 0.15)
-        return (minVal - padding)...(maxVal + padding)
-    }
-
-    private var lowestWeight: Double? { entries.map(\.weight).min() }
-    private var highestWeight: Double? { entries.map(\.weight).max() }
-
-    private var weightChange: Double? {
-        guard let latest = entries.first else { return nil }
-        let thirtyDaysAgo = Calendar.current.date(byAdding: .day, value: -30, to: .now) ?? .distantPast
-        guard let oldest = entries.last(where: { $0.date <= thirtyDaysAgo }) ?? entries.last,
-              oldest.persistentModelID != latest.persistentModelID else { return nil }
-        return latest.weight - oldest.weight
-    }
-
     private func formatChange(_ changeKg: Double) -> String {
         let value = weightUnit.display(changeKg)
         let sign = value >= 0 ? "+" : ""
         return "\(sign)\(String(format: "%.1f", value)) \(weightUnit.label)"
-    }
-
-    @ViewBuilder
-    private func changeIndicator(for entry: BodyWeightEntry) -> some View {
-        if let index = entries.firstIndex(where: { $0.persistentModelID == entry.persistentModelID }),
-           index + 1 < entries.count {
-            let diff = entry.weight - entries[index + 1].weight
-            if abs(diff) > 0.05 {
-                Image(systemName: diff > 0 ? "arrow.up.right" : "arrow.down.right")
-                    .font(.caption).foregroundStyle(diff > 0 ? .red : .green)
-            }
-        }
     }
 
     private func addEntry() {
@@ -404,12 +130,14 @@ struct BodyWeightView: View {
         if settingsArray.first?.healthKitEnabled == true {
             Task {
                 do {
-                    try await HealthKitManager.shared.saveBodyWeight(weightKg, date: selectedDate)
+                    try await appServices.healthKit.saveBodyWeight(weightKg, date: selectedDate)
                 } catch {
-                    AppErrorBus.shared.report(message: "Couldn't save weight to Apple Health.", kind: .warning)
+                    appServices.appErrorBus.report(message: "Couldn't save weight to Apple Health.", kind: .warning)
                 }
             }
         }
-        newWeight = ""; selectedDate = .now; isWeightFocused = false
+        newWeight = ""
+        selectedDate = .now
+        isWeightFocused = false
     }
 }

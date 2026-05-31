@@ -9,20 +9,12 @@ struct FullWorkoutListView: View {
     @Environment(\.weightUnit) private var weightUnit
 
     @State private var searchText = ""
-    @State private var filterDateRange: DateRange = .all
+    @State private var filterDateRange: FullWorkoutListSections.DateRange = .all
     @State private var filterMuscleGroup: MuscleGroup? = nil
     @State private var filterRating: Int? = nil
     @State private var workoutToDelete: Workout?
     @State private var showingAddWorkout = false
     @State private var repeatConfirmation = false
-
-    enum DateRange: String, CaseIterable {
-        case all = "All Time"
-        case week = "This Week"
-        case month = "This Month"
-        case threeMonths = "3 Months"
-        case year = "This Year"
-    }
 
     private var hasActiveFilters: Bool {
         filterDateRange != .all || filterMuscleGroup != nil || filterRating != nil
@@ -40,7 +32,7 @@ struct FullWorkoutListView: View {
         }
 
         if filterDateRange != .all {
-            let cutoff = cutoffDate(for: filterDateRange)
+            let cutoff = FullWorkoutListSections.cutoffDate(for: filterDateRange)
             result = result.filter { $0.date >= cutoff }
         }
 
@@ -55,17 +47,6 @@ struct FullWorkoutListView: View {
         return result
     }
 
-    private func cutoffDate(for range: DateRange) -> Date {
-        let calendar = Calendar.current
-        switch range {
-        case .all: return .distantPast
-        case .week: return calendar.dateInterval(of: .weekOfYear, for: .now)?.start ?? .now
-        case .month: return calendar.dateInterval(of: .month, for: .now)?.start ?? .now
-        case .threeMonths: return calendar.date(byAdding: .month, value: -3, to: .now) ?? .now
-        case .year: return calendar.date(byAdding: .year, value: -1, to: .now) ?? .now
-        }
-    }
-
     private var thisWeekCount: Int {
         let start = Calendar.current.dateInterval(of: .weekOfYear, for: .now)?.start ?? .now
         return workouts.filter { $0.date >= start }.count
@@ -78,158 +59,33 @@ struct FullWorkoutListView: View {
 
     var body: some View {
         List {
-            // MARK: - Hero
             if !workouts.isEmpty {
-                Section {
-                    workoutHeroCard
-                        .listRowBackground(Color.clear)
-                        .listRowInsets(.init(top: 8, leading: 16, bottom: 8, trailing: 16))
-                }
-            }
-
-            // Filter chips
-            if !workouts.isEmpty {
-                Section {
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 8) {
-                            Menu {
-                                ForEach(DateRange.allCases, id: \.self) { range in
-                                    Button {
-                                        filterDateRange = range
-                                    } label: {
-                                        if filterDateRange == range {
-                                            Label(range.rawValue, systemImage: "checkmark")
-                                        } else {
-                                            Text(range.rawValue)
-                                        }
-                                    }
-                                }
-                            } label: {
-                                filterChipLabel(
-                                    label: filterDateRange == .all ? "Date" : filterDateRange.rawValue,
-                                    isActive: filterDateRange != .all,
-                                    icon: "calendar"
-                                )
-                            }
-
-                            Menu {
-                                Button {
-                                    filterMuscleGroup = nil
-                                } label: {
-                                    if filterMuscleGroup == nil {
-                                        Label("All", systemImage: "checkmark")
-                                    } else {
-                                        Text("All")
-                                    }
-                                }
-                                ForEach(MuscleGroup.allCases) { group in
-                                    Button {
-                                        filterMuscleGroup = group
-                                    } label: {
-                                        if filterMuscleGroup == group {
-                                            Label(group.rawValue, systemImage: "checkmark")
-                                        } else {
-                                            Text(group.rawValue)
-                                        }
-                                    }
-                                }
-                            } label: {
-                                filterChipLabel(
-                                    label: filterMuscleGroup?.rawValue ?? "Muscle",
-                                    isActive: filterMuscleGroup != nil,
-                                    icon: "figure.strengthtraining.traditional"
-                                )
-                            }
-
-                            Menu {
-                                Button {
-                                    filterRating = nil
-                                } label: {
-                                    if filterRating == nil {
-                                        Label("Any", systemImage: "checkmark")
-                                    } else {
-                                        Text("Any")
-                                    }
-                                }
-                                ForEach(1...5, id: \.self) { stars in
-                                    Button {
-                                        filterRating = stars
-                                    } label: {
-                                        if filterRating == stars {
-                                            Label(String(repeating: "★", count: stars), systemImage: "checkmark")
-                                        } else {
-                                            Text(String(repeating: "★", count: stars))
-                                        }
-                                    }
-                                }
-                            } label: {
-                                filterChipLabel(
-                                    label: filterRating.map { "\($0)★" } ?? "Rating",
-                                    isActive: filterRating != nil,
-                                    icon: "star"
-                                )
-                            }
-
-                            if hasActiveFilters {
-                                Button {
-                                    filterDateRange = .all
-                                    filterMuscleGroup = nil
-                                    filterRating = nil
-                                } label: {
-                                    Text("Clear")
-                                        .font(.caption.bold())
-                                        .foregroundStyle(.red)
-                                        .padding(.horizontal, 10)
-                                        .padding(.vertical, 6)
-                                        .background(.red.opacity(0.1), in: Capsule())
-                                }
-                            }
-                        }
-                    }
-                    .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
-                }
+                FullWorkoutListSections.heroSection(
+                    total: workouts.count,
+                    thisWeek: thisWeekCount,
+                    thisMonth: thisMonthCount
+                )
+                FullWorkoutListSections.filterChipsSection(
+                    filterDateRange: $filterDateRange,
+                    filterMuscleGroup: $filterMuscleGroup,
+                    filterRating: $filterRating,
+                    hasActiveFilters: hasActiveFilters,
+                    onClearFilters: clearFilters
+                )
             }
 
             if !filteredWorkouts.isEmpty {
-                Section {
-                    ForEach(filteredWorkouts) { workout in
-                        NavigationLink(value: workout) {
-                            WorkoutCardView(workout: workout)
-                        }
-                    }
-                    .onDelete { offsets in
+                FullWorkoutListSections.workoutListSection(
+                    workouts: filteredWorkouts,
+                    hasActiveFilters: hasActiveFilters,
+                    onDelete: { offsets in
                         if let index = offsets.first {
                             workoutToDelete = filteredWorkouts[index]
                         }
                     }
-                } header: {
-                    HStack {
-                        SectionHeader(
-                            title: hasActiveFilters ? "Filtered Workouts" : "All Workouts",
-                            icon: "dumbbell.fill",
-                            color: .accentColor
-                        )
-                        if hasActiveFilters {
-                            Spacer()
-                            Text("\(filteredWorkouts.count)")
-                                .font(.caption.bold().monospacedDigit())
-                                .foregroundStyle(Color.accentColor)
-                        }
-                    }
-                }
+                )
             } else if hasActiveFilters {
-                ContentUnavailableView {
-                    Label("No Matches", systemImage: "line.3.horizontal.decrease.circle")
-                } description: {
-                    Text("No workouts match your current filters.")
-                } actions: {
-                    Button("Clear Filters") {
-                        filterDateRange = .all
-                        filterMuscleGroup = nil
-                        filterRating = nil
-                    }
-                }
-                .listRowBackground(Color.clear)
+                FullWorkoutListSections.noFilterMatchesRow(onClearFilters: clearFilters)
             }
         }
         .listStyle(.insetGrouped)
@@ -237,12 +93,7 @@ struct FullWorkoutListView: View {
         .background(Color(.systemGroupedBackground))
         .overlay {
             if workouts.isEmpty {
-                EmptyStateView(
-                    icon: "dumbbell.fill",
-                    title: "No Workouts Yet",
-                    subtitle: "Log your first workout to start tracking your progress.",
-                    action: .init(label: "Start Workout") { showingAddWorkout = true }
-                )
+                FullWorkoutListSections.emptyLibraryOverlay { showingAddWorkout = true }
             } else if filteredWorkouts.isEmpty && !searchText.isEmpty {
                 ContentUnavailableView.search(text: searchText)
             }
@@ -280,56 +131,11 @@ struct FullWorkoutListView: View {
         }
     }
 
-    // MARK: - Hero Card
-
-    private var workoutHeroCard: some View {
-        HeroCard(palette: AppTheme.Gradients.calm) {
-            VStack(alignment: .leading, spacing: 14) {
-                HStack(spacing: 6) {
-                    Image(systemName: "dumbbell.fill")
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundStyle(.white.opacity(0.85))
-                    Text("All Workouts")
-                        .font(.system(size: 12, weight: .bold, design: .rounded))
-                        .foregroundStyle(.white.opacity(0.85))
-                        .tracking(0.5)
-                        .textCase(.uppercase)
-                }
-
-                HStack(spacing: 0) {
-                    HeroStatCol(value: "\(workouts.count)", label: "Total", icon: "dumbbell.fill")
-                    Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 40)
-                    HeroStatCol(value: "\(thisWeekCount)", label: "This Week", icon: "calendar")
-                    Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 40)
-                    HeroStatCol(value: "\(thisMonthCount)", label: "This Month", icon: "calendar.badge.clock")
-                }
-                .padding(.vertical, 12)
-                .background(.ultraThinMaterial.opacity(0.55), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .stroke(.white.opacity(0.18), lineWidth: 0.5)
-                )
-            }
-            .padding(20)
-        }
-        .frame(minHeight: 145)
+    private func clearFilters() {
+        filterDateRange = .all
+        filterMuscleGroup = nil
+        filterRating = nil
     }
-
-    // MARK: - Filter Chip Label
-
-    private func filterChipLabel(label: String, isActive: Bool, icon: String) -> some View {
-        HStack(spacing: 4) {
-            Image(systemName: icon)
-                .font(.system(size: 10))
-            Text(label)
-                .font(.caption.weight(.medium))
-        }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
-        .background(isActive ? Color.accentColor : Color(.tertiarySystemFill), in: Capsule())
-        .foregroundStyle(isActive ? .white : .primary)
-    }
-
 }
 
 #Preview {

@@ -7,6 +7,7 @@ import UIKit
 /// into system iCloud settings when the issue is account-level.
 struct SyncStatusDetailSheet: View {
     let manager: SyncStatusManager
+    @Environment(\.appServices) private var appServices
     @Environment(\.dismiss) private var dismiss
     @Environment(\.scenePhase) private var scenePhase
 
@@ -152,8 +153,6 @@ struct SyncStatusDetailSheet: View {
     }
 
     private func openSystemSettings() {
-        if let url = URL(string: UIApplication.openSettingsURLString) {
-            UIApplication.shared.open(url)
-        }
+        Task { await appServices.openSettings() }
     }
 }

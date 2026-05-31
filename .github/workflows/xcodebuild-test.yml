@@ -1,0 +1,72 @@
+name: Xcode Build & Test
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Resolve simulator destination
+        id: sim
+        run: |
+          set -e
+          DEST=$(xcodebuild -showdestinations -scheme tracker 2>/dev/null \
+            | grep "platform:iOS Simulator" \
+            | grep -E "name:iPhone (16|17|15)" \
+            | head -1 \
+            | sed -n 's/.*id:\([^,}]*\).*/\1/p' | tr -d ' ')
+          if [ -z "$DEST" ]; then
+            echo "No named iPhone simulator found; build-only fallback"
+            echo "run_tests=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "destination=id:$DEST" >> "$GITHUB_OUTPUT"
+            echo "run_tests=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Build and test (unit)
+        if: steps.sim.outputs.run_tests == 'true'
+        run: |
+          xcodebuild test \
+            -scheme tracker \
+            -destination "${{ steps.sim.outputs.destination }}" \
+            -only-testing:trackerTests \
+            CODE_SIGNING_ALLOWED=NO
+      - name: Build only (no simulator)
+        if: steps.sim.outputs.run_tests != 'true'
+        run: |
+          xcodebuild build \
+            -scheme tracker \
+            -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO
+
+  ui-tests:
+    runs-on: macos-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - name: Resolve simulator destination
+        id: sim
+        run: |
+          set -e
+          DEST=$(xcodebuild -showdestinations -scheme tracker 2>/dev/null \
+            | grep "platform:iOS Simulator" \
+            | grep -E "name:iPhone (16|17|15)" \
+            | head -1 \
+            | sed -n 's/.*id:\([^,}]*\).*/\1/p' | tr -d ' ')
+          if [ -z "$DEST" ]; then
+            echo "run_tests=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "destination=id:$DEST" >> "$GITHUB_OUTPUT"
+            echo "run_tests=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: UI tests (non-blocking)
+        if: steps.sim.outputs.run_tests == 'true'
+        run: |
+          xcodebuild test \
+            -scheme tracker \
+            -destination "${{ steps.sim.outputs.destination }}" \
+            -only-testing:trackerUITests \
+            CODE_SIGNING_ALLOWED=NO

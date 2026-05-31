@@ -152,8 +152,8 @@ backfill (boundary thresholds + idempotency), trust calibration, the
 schema migration plan (V1→V2→V3 round-trip on a real SQLite file),
 progression advisor, streak math, widget data writer, watch sync
 payloads + message-key contracts, Strava error mapping and import
-service, CSV round-trip, and unit/formatting helpers — ~180 tests
-across 22 files.
+service, CSV round-trip, and unit/formatting helpers — **500+** test
+methods across **36** XCTest files (see `trackerTests/`).
 
 ## License
 

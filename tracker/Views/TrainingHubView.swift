@@ -10,16 +10,12 @@ struct TrainingHubView: View {
     @State private var showingAddWorkout = false
 
     private var finishedWorkouts: [Workout] { workouts.filter { $0.endTime != nil } }
-    /// Most-recent workout that's been started but not finished, if any —
-    /// drives the "Resume workout" banner so an in-progress session is one
-    /// tap away from the Training tab (mirrors Home's continue CTA).
     private var inProgressWorkout: Workout? { workouts.first { $0.endTime == nil } }
     private var currentStreak: Int { Workout.currentStreak(from: workouts, cardioSessions: cardioSessions) }
     private var uniqueExerciseCount: Int {
         Set(finishedWorkouts.flatMap { $0.exercises.map { $0.name.lowercased() } }).count
     }
 
-    // Cardio stats
     private var weeklyCardioKm: Double {
         let start = Calendar.current.dateInterval(of: .weekOfYear, for: .now)?.start ?? .now
         return cardioSessions
@@ -30,24 +26,28 @@ struct TrainingHubView: View {
 
     var body: some View {
         List {
-            // ── Hero card + Start CTA ─────────────────────────────────────
             Section {
-                trainingHeroCard
-                    .listRowBackground(Color.clear)
-                    .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 8, trailing: 16))
-                    .listRowSeparator(.hidden)
+                TrainingHubSections.trainingHeroCard(
+                    finishedWorkoutCount: finishedWorkouts.count,
+                    currentStreak: currentStreak,
+                    uniqueExerciseCount: uniqueExerciseCount,
+                    weeklyCardioKm: weeklyCardioKm,
+                    weightUnit: weightUnit,
+                    onStartWorkout: { showingAddWorkout = true }
+                )
+                .listRowBackground(Color.clear)
+                .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 8, trailing: 16))
+                .listRowSeparator(.hidden)
             }
 
-            // ── Resume in-progress workout ───────────────────────────────
             if let active = inProgressWorkout {
                 Section {
                     NavigationLink(value: active) {
-                        resumeRow(active)
+                        TrainingHubSections.resumeRow(active)
                     }
                 }
             }
 
-            // ── Workouts ─────────────────────────────────────────────────
             Section("Workouts") {
                 NavigationLink { FullWorkoutListView() } label: {
                     hubRow(icon: "dumbbell", color: .blue,
@@ -67,10 +67,13 @@ struct TrainingHubView: View {
                 }
             }
 
-            // ── Cardio & Activity ────────────────────────────────────────
             Section {
                 NavigationLink { CardioHubView() } label: {
-                    cardioHeroRow()
+                    TrainingHubSections.cardioHeroRow(
+                        lastSession: lastSession,
+                        weeklyCardioKm: weeklyCardioKm,
+                        weightUnit: weightUnit
+                    )
                 }
                 NavigationLink { ActivityLogView() } label: {
                     hubRow(icon: "list.bullet.rectangle", color: .mint,
@@ -80,7 +83,6 @@ struct TrainingHubView: View {
                 Text("Cardio & Activity")
             }
 
-            // ── Analyze ──────────────────────────────────────────────────
             Section("Analyze") {
                 NavigationLink { InsightsView() } label: {
                     hubRow(icon: "chart.bar", color: .green,
@@ -96,11 +98,6 @@ struct TrainingHubView: View {
                 }
             }
 
-            // ── Progress ─────────────────────────────────────────────────
-            // Canonical: this section's contents must match the iPad
-            // sidebar's "Progress" section in ContentView. The two have
-            // drifted before (Achievements was in MoreHub on iPhone for
-            // a while). If you add a row here, mirror it there.
             Section("Progress") {
                 NavigationLink { PersonalRecordsView() } label: {
                     hubRow(icon: "trophy", color: .orange,
@@ -127,162 +124,4 @@ struct TrainingHubView: View {
             AddWorkoutSheet()
         }
     }
-
-    // MARK: - Subviews
-
-    /// Calm-gradient hero — gives Training the same hero treatment as the
-    /// other tabs, and carries the primary "Start Workout" CTA the hub was
-    /// missing. Stats: workouts · streak · unique exercises · cardio this week.
-    private var trainingHeroCard: some View {
-        HeroCard(palette: AppTheme.Gradients.calm) {
-            VStack(alignment: .leading, spacing: 14) {
-                HStack(spacing: 6) {
-                    Image(systemName: "figure.strengthtraining.traditional")
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundStyle(.white.opacity(0.85))
-                    Text("Training")
-                        .font(.system(size: 12, weight: .bold, design: .rounded))
-                        .foregroundStyle(.white.opacity(0.85))
-                        .tracking(0.5)
-                        .textCase(.uppercase)
-                }
-
-                HStack(spacing: 0) {
-                    HeroStatCol(value: "\(finishedWorkouts.count)", label: "Workouts",
-                                icon: "figure.strengthtraining.traditional")
-                    Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 40)
-                    HeroStatCol(value: "\(currentStreak)", label: "Streak", icon: "flame.fill")
-                    Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 40)
-                    HeroStatCol(value: "\(uniqueExerciseCount)", label: "Exercises", icon: "dumbbell.fill")
-                    Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 40)
-                    HeroStatCol(value: weeklyCardioKm > 0.05 ? weightUnit.distanceUnit.format(weeklyCardioKm) : "—",
-                                label: "\(weightUnit.distanceUnit.label) this wk", icon: "figure.run")
-                }
-                .padding(.vertical, 12)
-                .background(.ultraThinMaterial.opacity(0.55), in: RoundedRectangle(cornerRadius: AppTheme.miniCardRadius, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: AppTheme.miniCardRadius, style: .continuous)
-                        .stroke(.white.opacity(0.18), lineWidth: 0.5)
-                )
-
-                Button {
-                    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                    showingAddWorkout = true
-                } label: {
-                    HStack(spacing: 8) {
-                        Image(systemName: "plus.circle.fill")
-                            .font(.system(size: 16, weight: .bold))
-                        Text("Start Workout")
-                            .font(.system(size: 16, weight: .bold, design: .rounded))
-                    }
-                    .foregroundStyle(AppTheme.Signal.calm)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-                    .background(.white, in: RoundedRectangle(cornerRadius: AppTheme.cardRadius, style: .continuous))
-                    .shadow(color: .black.opacity(0.15), radius: 8, y: 4)
-                }
-                .buttonStyle(.pressableCard)
-            }
-            .padding(20)
-        }
-        .frame(minHeight: 145)
-    }
-
-    /// A richer row for the primary "Run & Cardio" entry — shows last session inline.
-    private func cardioHeroRow() -> some View {
-        HStack(spacing: 14) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 13, style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            colors: [.orange, AppTheme.Signal.actionOrange],
-                            startPoint: .topLeading, endPoint: .bottomTrailing
-                        )
-                    )
-                    .frame(width: 46, height: 46)
-                    .shadow(color: .orange.opacity(0.42), radius: 8, x: 0, y: 4)
-                Image(systemName: "figure.run")
-                    .font(.system(size: 19, weight: .bold))
-                    .foregroundStyle(.white)
-            }
-
-            VStack(alignment: .leading, spacing: 3) {
-                Text("Run & Cardio")
-                    .font(.system(size: 16, weight: .semibold, design: .rounded))
-                if let last = lastSession {
-                    Text(lastSessionSummary(last))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                } else {
-                    Text("GPS tracking, splits, pace & route")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
-
-            Spacer()
-
-            if weeklyCardioKm > 0.05 {
-                VStack(alignment: .trailing, spacing: 1) {
-                    Text(weightUnit.distanceUnit.format(weeklyCardioKm))
-                        .font(.system(size: 13, weight: .bold, design: .rounded))
-                        .foregroundStyle(.orange)
-                        .monospacedDigit()
-                    Text("this week")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                }
-            }
-        }
-        .padding(.vertical, 4)
-    }
-
-    /// Banner row for resuming a started-but-unfinished workout. Uses
-    /// the orange gradient tile (matching the shared hub-row language)
-    /// plus an "IN PROGRESS" pill so it reads as live, not a directory link.
-    private func resumeRow(_ workout: Workout) -> some View {
-        HStack(spacing: 14) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 13, style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            colors: [.orange, AppTheme.Signal.actionOrange],
-                            startPoint: .topLeading, endPoint: .bottomTrailing
-                        )
-                    )
-                    .frame(width: 46, height: 46)
-                    .shadow(color: .orange.opacity(0.42), radius: 8, x: 0, y: 4)
-                Image(systemName: "play.fill")
-                    .font(.system(size: 18, weight: .bold))
-                    .foregroundStyle(.white)
-            }
-            VStack(alignment: .leading, spacing: 3) {
-                Text("Resume Workout")
-                    .font(.system(size: 16, weight: .semibold, design: .rounded))
-                    .foregroundStyle(.primary)
-                Text(workout.name)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-            }
-            Spacer()
-            Text("IN PROGRESS")
-                .font(.system(size: 9, weight: .bold))
-                .tracking(0.4)
-                .foregroundStyle(.orange)
-                .padding(.horizontal, 8).padding(.vertical, 4)
-                .background(Color.orange.opacity(0.14), in: Capsule())
-                .overlay(Capsule().stroke(Color.orange.opacity(0.25), lineWidth: 0.5))
-        }
-        .padding(.vertical, 5)
-    }
-
-    private func lastSessionSummary(_ s: CardioSession) -> String {
-        let dist = s.distanceMeters > 0
-            ? String(format: "%.2f km", s.distanceMeters / 1000)
-            : s.formattedDuration
-        let ago = s.date.formatted(.relative(presentation: .named, unitsStyle: .abbreviated))
-        return "\(s.type.shortName) · \(dist) · \(ago)"
-    }
 }
-

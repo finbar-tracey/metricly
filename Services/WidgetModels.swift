@@ -36,6 +36,11 @@ nonisolated struct WidgetSnapshot: Codable, Sendable {
     var workoutsThisWeek: Int      = 0
     var weeklyCardioGoalKm: Double = 0
     var todayScheduledName: String = ""
+    /// Recovery readiness, 0...1. Optional so snapshots written before this
+    /// field existed still decode (nil → widget shows an "open app" prompt).
+    var readinessScore: Double?    = nil
+    /// Today's adaptive plan name (e.g. "Push Day A" / "Rest day").
+    var readinessPlanName: String? = nil
     /// Optional — snapshots written before this field existed decode
     /// with nil and won't flag as stale (we just don't know).
     var lastUpdatedAt: Date?       = nil
@@ -43,6 +48,15 @@ nonisolated struct WidgetSnapshot: Codable, Sendable {
     var isStale: Bool {
         guard let updatedAt = lastUpdatedAt else { return false }
         return Date.now.timeIntervalSince(updatedAt) > WidgetStaleness.threshold
+    }
+
+    /// Short readiness status label (mirrors the Home hero).
+    var readinessLabel: String {
+        guard let s = readinessScore else { return "—" }
+        if s >= 0.80 { return "Fully recovered" }
+        if s >= 0.60 { return "Mostly recovered" }
+        if s >= 0.40 { return "Partly recovered" }
+        return "Low readiness"
     }
 }
 

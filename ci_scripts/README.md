@@ -26,8 +26,8 @@ In **App Store Connect → Apps → Metricly → Xcode Cloud**:
 ## What runs in CI
 
 The test plan currently runs every test in the `trackerTests` bundle —
-~59 tests across the engine, schema, intent, soreness, trust-cal, CSV,
-and Strava-import test files. That's a few seconds per run and catches
+500+ test methods across 36+ XCTest files (engines, schema migration,
+import, widget store, watch payloads, Strava, compliance). That's a few seconds per run and catches
 the kind of regression a manual test sweep would miss.
 
 ## Local equivalents

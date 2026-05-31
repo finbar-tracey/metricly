@@ -23,16 +23,6 @@ struct trackerApp: App {
     let modelContainer: ModelContainer?
     let recoveryError: Error?
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
-    /// Light / Dark / System appearance preference (Settings → Appearance).
-    /// "system" → nil → follows the device.
-    @AppStorage("appearance") private var appearance = "system"
-    private var preferredScheme: ColorScheme? {
-        switch appearance {
-        case "light": return .light
-        case "dark":  return .dark
-        default:      return nil
-        }
-    }
 
     init() {
         MetriclyShortcutsProvider.updateAppShortcutParameters()
@@ -105,10 +95,13 @@ struct trackerApp: App {
             if (try? context.fetchCount(descriptor)) == 0 {
                 context.insert(UserSettings())
             }
+            if let settings = try? context.fetch(descriptor).first {
+                AppearanceMode.migrateLegacyAppStorage(into: settings)
+            }
 
             // Boot Watch connectivity — must happen after the container
             // is ready.
-            let phoneManager = PhoneConnectivityManager.shared
+            let phoneManager = AppServices.shared.phoneConnectivity
             phoneManager.modelContext = context
         }
         self.modelContainer = container
@@ -158,7 +151,6 @@ struct trackerApp: App {
         WindowGroup {
             if let modelContainer {
                 ContentView()
-                    .preferredColorScheme(preferredScheme)
                     .onAppear { pushWatchContext() }
                     .modelContainer(modelContainer)
             } else {
@@ -167,35 +159,10 @@ struct trackerApp: App {
         }
     }
 
-    /// Refresh the Watch's view of the world on foreground. Two things
-    /// happen, in order:
-    /// 1. Walk the workout table to self-heal active-workout state. If
-    ///    the user deleted an in-progress workout (or the cached state is
-    ///    stale from a kill+relaunch), this brings the shared defaults in
-    ///    line with reality before the push.
-    /// 2. Build + push the canonical Watch context via the shared
-    ///    `PhoneConnectivityManager.pushWatchContext()` — the same code
-    ///    path the WCSession reply handler uses, so push and reply can't
-    ///    drift apart.
     @MainActor
     private func pushWatchContext() {
-        // Recovery scene has no container; nothing to push.
         guard let modelContainer else { return }
-        let workouts = (try? modelContainer.mainContext.fetch(FetchDescriptor<Workout>())) ?? []
-        let inProgress = workouts.first { !$0.isTemplate && $0.endTime == nil }
-        PhoneConnectivityManager.shared.publishActiveWorkout(
-            name: inProgress?.name,
-            startedAt: inProgress?.date
-        )
-        PhoneConnectivityManager.shared.pushWatchContext()
-        // Reconcile any orphaned Live Activities left over from a previous
-        // force-quit. If there's a real in-progress workout, re-attach the
-        // manager to its existing activity so updates resume; otherwise
-        // end every dangling activity on the lock screen.
-        WorkoutActivityManager.shared.reconcileOnLaunch(
-            activeWorkoutName: inProgress?.name,
-            activeWorkoutStartedAt: inProgress?.date
-        )
+        AppLifecycleCoordinator.refreshWatchAndLiveActivity(modelContainer: modelContainer)
     }
 }
 
@@ -225,7 +192,7 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
 
         // Workout reminder: "Start Workout" button or banner tap → open Training tab
         if category == "workoutReminder" || action == "startWorkout" {
-            NotificationCenter.default.post(name: .openTrainingTab, object: nil)
+            AppRouter.shared.openTrainingTab()
         }
 
         completionHandler()
