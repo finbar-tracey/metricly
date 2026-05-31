@@ -134,6 +134,13 @@ struct HomeDashboardView: View {
         self.recoveryResult = recovery
         self.todayPlan = plan
         TodayPlanStore.save(plan)
+        // Surface readiness on the home/lock-screen Readiness widget. Home is
+        // the authoritative source — it's where the recovery engine runs with
+        // live HealthKit signals.
+        WidgetDataWriter.update(
+            readinessScore: recovery.readinessScore,
+            readinessPlanName: plan.intensity == .rest ? "Rest day" : plan.recommendedName
+        )
     }
 
     private var averageRating: Double? {

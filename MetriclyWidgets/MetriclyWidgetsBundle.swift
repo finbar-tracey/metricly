@@ -5,6 +5,7 @@ import SwiftUI
 struct MetriclyWidgetsBundle: WidgetBundle {
     var body: some Widget {
         // Home screen
+        ReadinessWidget()
         StreakWidget()
         MetriclyWidget()
         MetriclyLargeWidget()
@@ -13,6 +14,7 @@ struct MetriclyWidgetsBundle: WidgetBundle {
         WaterWidget()
         WeeklyRingsWidget()
         // Lock screen & StandBy
+        ReadinessCircularWidget()
         MetriclyLockScreenWidget()
         MetriclyStreakCircularWidget()
         // Live Activity
