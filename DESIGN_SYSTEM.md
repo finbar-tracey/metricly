@@ -33,22 +33,26 @@ in a dark-mode pass).
 | InsightCard | 115:52 | `tracker/Views/InsightCardView.swift` | `InsightCardView` | ✅ shared |
 | AdaptivePlanCard | 115:94 | `tracker/Views/AdaptivePlanCardView.swift` | `AdaptivePlanCardView` | ✅ shared |
 | ContextualCTA | 115:110 | `tracker/Views/HomeContextualCTASection.swift` | `HomeContextualCTASection` | ✅ shared |
-| GradientDisc | 114:22 | `WaterTrackerView` / `CaffeineTrackerView` / `CreatineTrackerView` + ~8 inline copies | `gradientDisc` (private helper) | ⚠️ **duplicated — extract** |
+| GradientDisc | 114:22 | `tracker/DesignSystemKit.swift` | `GradientDisc` / `gradientDisc(_:)` | ✅ **extracted** (colorScheme-aware) |
+| TintedCallout | 114:87 | `tracker/DesignSystemKit.swift` | `.tintedCallout(_:)` | ✅ **extracted** (colorScheme-aware) |
 | BadgePill | 114:39 | inline in TopInsightCardView / InsightCardView / etc. | — | ⚠️ **no shared symbol — extract** |
-| TintedCallout | 114:87 | inline in TopInsightCardView / InsightCardView / InsightsTeaseCard / OnboardingView | — | ⚠️ **extract `.tintedCallout(_:)`** |
 | FilterChip | 114:47 | inline in ExerciseLibraryView / AchievementsView / Insights tabs | `filterChip` (varies) | ⚠️ **varies per screen — unify** |
 
 ## Parallel SwiftUI extraction (the ⚠️ rows) — post-release task
 
-The four ⚠️ components have no single source of truth in code. Extracting them keeps
-design↔code 1:1 and removes real duplication:
+Extracting the ⚠️ components keeps design↔code 1:1 and removes real duplication:
 
-1. **`GradientDisc`** — one shared `View` (or `.gradientDisc(color:size:icon:)` modifier)
-   in `DesignSystemKit.swift`; replace the copied `gradientDisc` helpers + inline ZStacks.
-2. **`.tintedCallout(_ color:)`** modifier — the wash (`color@0.10→clear`) + tinted border
-   (`color@0.20`) chrome; replace the 4 inline copies.
-3. **`BadgePill`** view — gradient capsule (`color@0.20→0.10`) + icon + label.
-4. **`FilterChip`** view — unify the per-screen filter-chip implementations.
+1. ✅ **`GradientDisc`** — shared `View` + `gradientDisc(_:color:size:glyph:)` in
+   `DesignSystemKit.swift`; the 3 private helpers removed. colorScheme-aware. *(done)*
+2. ✅ **`.tintedCallout(_ color:)`** modifier in `DesignSystemKit.swift`; inline chrome
+   removed from InsightCardView / TopInsightCardView / InsightsTeaseCard. colorScheme-aware. *(done)*
+3. ⚠️ **`BadgePill`** view — gradient capsule (`color@0.20→0.10`) + icon + label. *(pending)*
+4. ⚠️ **`FilterChip`** view — unify the per-screen filter-chip implementations. *(pending)*
+
+**Dark mode** is wired: Appearance toggle (Light/Dark/System) in Settings → root
+`.preferredColorScheme`. The two extracted components nudge their opacities up on dark;
+the caffeine decay chart lightens brown→amber on dark. Remaining: extract BadgePill /
+FilterChip with the same colorScheme treatment.
 
 Recipe constants (match the Figma components): disc gradient `color@0.26→0.12` + stroke
 `@0.30`; callout wash `@0.10→clear` + border `@0.20`; badge `@0.20→0.10` + stroke `@0.25`.
