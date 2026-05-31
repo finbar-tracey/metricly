@@ -72,22 +72,7 @@ struct InsightsTeaseCard: View {
                 Spacer()
             }
         }
-        .padding(16)
-        .background(
-            ZStack {
-                Color(.secondarySystemGroupedBackground)
-                LinearGradient(
-                    colors: [accent.opacity(0.10), .clear],
-                    startPoint: .topLeading, endPoint: .center
-                )
-            }
-            .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardRadius, style: .continuous))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: AppTheme.cardRadius, style: .continuous)
-                .stroke(accent.opacity(0.20), lineWidth: 0.5)
-        )
-        .shadow(color: .black.opacity(0.10), radius: 14, x: 0, y: 5)
+        .tintedCallout(accent)
         .contentShape(Rectangle())
         .onTapGesture(perform: onTap)
         .accessibilityElement(children: .combine)

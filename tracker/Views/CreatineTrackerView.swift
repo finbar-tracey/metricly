@@ -256,25 +256,6 @@ struct CreatineTrackerView: View {
         .frame(maxWidth: .infinity)
     }
 
-    /// Shared gradient icon disc — the app-wide gradient-fill + hairline
-    /// treatment, replacing this screen's flat `color.opacity(…)` circles.
-    private func gradientDisc(_ icon: String, color: Color, size: CGFloat, glyph: CGFloat) -> some View {
-        ZStack {
-            Circle()
-                .fill(
-                    LinearGradient(
-                        colors: [color.opacity(0.26), color.opacity(0.12)],
-                        startPoint: .topLeading, endPoint: .bottomTrailing
-                    )
-                )
-                .frame(width: size, height: size)
-                .overlay(Circle().stroke(color.opacity(0.28), lineWidth: 0.5))
-            Image(systemName: icon)
-                .font(.system(size: glyph, weight: .semibold))
-                .foregroundStyle(color)
-        }
-    }
-
     // MARK: - Compliance Card
 
     private var complianceCard: some View {

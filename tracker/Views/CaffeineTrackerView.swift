@@ -4,6 +4,12 @@ import Charts
 
 struct CaffeineTrackerView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.colorScheme) private var colorScheme
+    /// Decay-chart tint. `Color.brown` reads muddy on a dark background, so
+    /// lighten it to a legible amber under dark mode.
+    private var decayTint: Color {
+        colorScheme == .dark ? Color(red: 0.85, green: 0.62, blue: 0.38) : .brown
+    }
     @Query(sort: \CaffeineEntry.date, order: .reverse) private var entries: [CaffeineEntry]
     @Query private var settingsArray: [UserSettings]
 
@@ -434,7 +440,7 @@ struct CaffeineTrackerView: View {
                         .interpolationMethod(.catmullRom)
                         .foregroundStyle(
                             LinearGradient(
-                                colors: [Color.brown.opacity(0.30), Color.brown.opacity(0.02)],
+                                colors: [decayTint.opacity(0.30), decayTint.opacity(0.02)],
                                 startPoint: .top, endPoint: .bottom
                             )
                         )
@@ -443,7 +449,7 @@ struct CaffeineTrackerView: View {
                         .lineStyle(StrokeStyle(lineWidth: 2.5, lineCap: .round))
                         .foregroundStyle(
                             LinearGradient(
-                                colors: [Color(red: 0.82, green: 0.48, blue: 0.20), Color.brown],
+                                colors: [Color(red: 0.82, green: 0.48, blue: 0.20), decayTint],
                                 startPoint: .leading, endPoint: .trailing
                             )
                         )
@@ -453,7 +459,7 @@ struct CaffeineTrackerView: View {
                 if let nowPoint = data.first {
                     PointMark(x: .value("Time", nowPoint.date), y: .value("Caffeine", nowPoint.mg))
                         .symbolSize(130)
-                        .foregroundStyle(Color.brown)
+                        .foregroundStyle(decayTint)
                         .annotation(position: .top, alignment: .center) {
                             Text("\(Int(nowPoint.mg))mg")
                                 .font(.caption2.bold())
@@ -670,25 +676,6 @@ struct CaffeineTrackerView: View {
             Text(title).font(.caption2).foregroundStyle(.tertiary)
         }
         .frame(maxWidth: .infinity)
-    }
-
-    /// Shared gradient icon disc — the app-wide gradient-fill + hairline
-    /// treatment replacing this screen's old flat `color.opacity(…)` circles.
-    private func gradientDisc(_ icon: String, color: Color, size: CGFloat, glyph: CGFloat) -> some View {
-        ZStack {
-            Circle()
-                .fill(
-                    LinearGradient(
-                        colors: [color.opacity(0.26), color.opacity(0.12)],
-                        startPoint: .topLeading, endPoint: .bottomTrailing
-                    )
-                )
-                .frame(width: size, height: size)
-                .overlay(Circle().stroke(color.opacity(0.28), lineWidth: 0.5))
-            Image(systemName: icon)
-                .font(.system(size: glyph, weight: .semibold))
-                .foregroundStyle(color)
-        }
     }
 
     // MARK: - Time of Day Card

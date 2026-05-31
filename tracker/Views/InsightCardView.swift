@@ -41,22 +41,7 @@ struct InsightCardView: View {
                     .foregroundStyle(.secondary)
             }
         }
-        .padding(16)
-        .background(
-            ZStack {
-                Color(.secondarySystemGroupedBackground)
-                LinearGradient(
-                    colors: [categoryColor.opacity(0.10), .clear],
-                    startPoint: .topLeading, endPoint: .center
-                )
-            }
-            .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardRadius, style: .continuous))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: AppTheme.cardRadius, style: .continuous)
-                .stroke(categoryColor.opacity(0.20), lineWidth: 0.5)
-        )
-        .shadow(color: .black.opacity(0.10), radius: 14, x: 0, y: 5)
+        .tintedCallout(categoryColor)
     }
 
     private var categoryColor: Color {

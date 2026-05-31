@@ -23,6 +23,16 @@ struct trackerApp: App {
     let modelContainer: ModelContainer?
     let recoveryError: Error?
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+    /// Light / Dark / System appearance preference (Settings → Appearance).
+    /// "system" → nil → follows the device.
+    @AppStorage("appearance") private var appearance = "system"
+    private var preferredScheme: ColorScheme? {
+        switch appearance {
+        case "light": return .light
+        case "dark":  return .dark
+        default:      return nil
+        }
+    }
 
     init() {
         MetriclyShortcutsProvider.updateAppShortcutParameters()
@@ -148,6 +158,7 @@ struct trackerApp: App {
         WindowGroup {
             if let modelContainer {
                 ContentView()
+                    .preferredColorScheme(preferredScheme)
                     .onAppear { pushWatchContext() }
                     .modelContainer(modelContainer)
             } else {

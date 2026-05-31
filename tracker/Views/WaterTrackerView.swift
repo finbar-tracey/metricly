@@ -297,26 +297,6 @@ struct WaterTrackerView: View {
         .frame(maxWidth: .infinity)
     }
 
-    /// Shared gradient icon disc — the app-wide treatment (gradient fill +
-    /// hairline stroke) used in place of the old flat `color.opacity(…)`
-    /// circles across this screen's quick-add / streak / log surfaces.
-    private func gradientDisc(_ icon: String, color: Color, size: CGFloat, glyph: CGFloat) -> some View {
-        ZStack {
-            Circle()
-                .fill(
-                    LinearGradient(
-                        colors: [color.opacity(0.26), color.opacity(0.12)],
-                        startPoint: .topLeading, endPoint: .bottomTrailing
-                    )
-                )
-                .frame(width: size, height: size)
-                .overlay(Circle().stroke(color.opacity(0.28), lineWidth: 0.5))
-            Image(systemName: icon)
-                .font(.system(size: glyph, weight: .semibold))
-                .foregroundStyle(color)
-        }
-    }
-
     // MARK: - Streak Card
 
     private var streakCard: some View {

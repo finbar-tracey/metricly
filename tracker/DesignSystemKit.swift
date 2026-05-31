@@ -110,6 +110,91 @@ struct HeroCard<Content: View>: View {
     }
 }
 
+// MARK: - GradientDisc
+// The app-wide gradient icon disc — extracted from the copy-pasted
+// `gradientDisc(...)` helpers (water/caffeine/creatine trackers) and the
+// inline ZStacks. One source of truth, and colorScheme-aware: the fill /
+// stroke opacities step up on dark so the disc pops on #1C1C1E.
+//
+// SAFE: pure static gradient + stroke. No timers/animations.
+
+struct GradientDisc: View {
+    let icon: String
+    var color: Color
+    var size: CGFloat = 40
+    var glyph: CGFloat = 17
+    @Environment(\.colorScheme) private var scheme
+
+    var body: some View {
+        let fillHi = scheme == .dark ? 0.30 : 0.26
+        let fillLo = scheme == .dark ? 0.14 : 0.12
+        let strokeO = scheme == .dark ? 0.36 : 0.30
+        ZStack {
+            Circle()
+                .fill(
+                    LinearGradient(
+                        colors: [color.opacity(fillHi), color.opacity(fillLo)],
+                        startPoint: .topLeading, endPoint: .bottomTrailing
+                    )
+                )
+                .frame(width: size, height: size)
+                .overlay(Circle().stroke(color.opacity(strokeO), lineWidth: 0.5))
+            Image(systemName: icon)
+                .font(.system(size: glyph, weight: .semibold))
+                .foregroundStyle(color)
+        }
+    }
+}
+
+/// Drop-in for the old per-view `gradientDisc(_:color:size:glyph:)` helpers.
+/// Returns the shared `GradientDisc` view (colorScheme-aware).
+func gradientDisc(_ icon: String, color: Color, size: CGFloat = 40, glyph: CGFloat = 17) -> GradientDisc {
+    GradientDisc(icon: icon, color: color, size: size, glyph: glyph)
+}
+
+// MARK: - TintedCallout
+// The category-tinted card chrome (wash + tinted border + shadow) used by
+// the insight cards / tease card. Extracted from 3+ inline copies and made
+// colorScheme-aware (wash & border step up on dark, where a 0.10 wash would
+// otherwise vanish on the dark card surface).
+//
+// SAFE: pure static fills. No timers/animations.
+
+struct TintedCallout: ViewModifier {
+    let color: Color
+    var radius: CGFloat = AppTheme.cardRadius
+    @Environment(\.colorScheme) private var scheme
+
+    func body(content: Content) -> some View {
+        let washO = scheme == .dark ? 0.14 : 0.10
+        let borderO = scheme == .dark ? 0.26 : 0.20
+        content
+            .padding(16)
+            .background(
+                ZStack {
+                    Color(.secondarySystemGroupedBackground)
+                    LinearGradient(
+                        colors: [color.opacity(washO), .clear],
+                        startPoint: .topLeading, endPoint: .center
+                    )
+                }
+                .clipShape(RoundedRectangle(cornerRadius: radius, style: .continuous))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: radius, style: .continuous)
+                    .stroke(color.opacity(borderO), lineWidth: 0.5)
+            )
+            .shadow(color: .black.opacity(0.10), radius: 14, x: 0, y: 5)
+    }
+}
+
+extension View {
+    /// Category-tinted callout card chrome (wash + tinted border + shadow).
+    func tintedCallout(_ color: Color, radius: CGFloat = AppTheme.cardRadius) -> some View {
+        modifier(TintedCallout(color: color, radius: radius))
+    }
+}
+
 // MARK: - TabBackground
 // Soft top-fading gradient that gives each tab its own color identity.
 // Layered above the system grouped background.

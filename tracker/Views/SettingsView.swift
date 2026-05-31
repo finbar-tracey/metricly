@@ -39,6 +39,9 @@ struct SettingsView: View {
     /// moments. Defaults on; muting skips the banners and their haptics while
     /// still recording the underlying PR / goal / unlock.
     @AppStorage("celebrationsEnabled") private var celebrationsEnabled = true
+    /// Light / Dark / System appearance — applied at the app root via
+    /// `.preferredColorScheme`. "system" follows the device.
+    @AppStorage("appearance") private var appearance = "system"
 
     private var settings: UserSettings {
         settingsArray.first ?? UserSettings()
@@ -124,6 +127,23 @@ struct SettingsView: View {
                 Text("Workout")
             } footer: {
                 Text("Focus reminder prompts you to enable a Fitness Focus when starting a workout. Celebrations show full-screen banners for new PRs, goals hit, and achievements unlocked.")
+            }
+
+            // MARK: - Appearance
+            Section {
+                HStack(spacing: 12) {
+                    settingsIcon("circle.lefthalf.filled", color: .indigo)
+                    Picker("Appearance", selection: $appearance) {
+                        Text("Light").tag("light")
+                        Text("Dark").tag("dark")
+                        Text("System").tag("system")
+                    }
+                    .pickerStyle(.segmented)
+                }
+            } header: {
+                Text("Appearance")
+            } footer: {
+                Text("Choose Light or Dark, or follow your device with System.")
             }
 
             // MARK: - Heart Rate Zones
