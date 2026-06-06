@@ -27,10 +27,11 @@ enum StravaImportService {
     static func sync(
         existing: [CardioSession],
         in context: ModelContext,
+        strava: StravaService,
         limit: Int = 200,
         after: Date? = nil
     ) async throws -> Result {
-        let activities = try await StravaService.shared.fetchActivities(limit: limit, after: after)
+        let activities = try await strava.fetchActivities(limit: limit, after: after)
         return importActivities(activities, existing: existing, in: context)
     }
 

@@ -184,14 +184,15 @@ final class ImportFormatsTests: XCTestCase {
                        "Only 'warmup' set_type should map to isWarmUp")
     }
 
-    func testHevyParserConvertsDistanceFromKmToMeters() {
-        // distance_km is metric kilometers; our schema stores meters.
+    func testHevyParserKeepsDistanceInKm() {
+        // distance_km is kilometres; ExerciseSet.distance is also km, so the
+        // parser must pass it through unscaled (no km→metres conversion).
         let csv = """
         \(hevyHeader)
         Run,"15 Jan 2024, 06:30",,,Outdoor Run,,,1,normal,0,1,5.2,1800,
         """
         let set = parseHevy(csv).first?.exercises.first?.sets.first
-        XCTAssertEqual(set?.distanceMeters ?? 0, 5200, accuracy: 0.001)
+        XCTAssertEqual(set?.distanceKm ?? 0, 5.2, accuracy: 0.001)
         XCTAssertEqual(set?.durationSeconds, 1800)
     }
 

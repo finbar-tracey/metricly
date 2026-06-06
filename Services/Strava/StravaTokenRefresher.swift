@@ -17,10 +17,9 @@ struct StravaTokenRefresher: Sendable {
             "refresh_token": refreshToken,
             "grant_type": "refresh_token"
         ]
-        request.httpBody = body
-            .map { "\($0.key)=\($0.value.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? $0.value)" }
-            .joined(separator: "&")
-            .data(using: .utf8)
+        // Reuse the shared form encoder — `.urlQueryAllowed` does not escape
+        // `+`/`&`/`=`, which corrupt an x-www-form-urlencoded body.
+        request.httpBody = StravaAPIClient.formEncode(body)
 
         let (data, response) = try await session.data(for: request)
         guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {

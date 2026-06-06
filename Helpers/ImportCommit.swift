@@ -42,7 +42,7 @@ extension ImportHelper {
                         weight: parsedSet.weightKg,
                         isWarmUp: parsedSet.isWarmUp,
                         rpe: parsedSet.rpe,
-                        distance: parsedSet.distanceMeters,
+                        distance: parsedSet.distanceKm,
                         durationSeconds: parsedSet.durationSeconds,
                         exercise: exercise
                     )

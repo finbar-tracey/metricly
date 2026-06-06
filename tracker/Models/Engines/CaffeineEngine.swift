@@ -241,7 +241,8 @@ enum CaffeineEngine {
         now: Date = .now
     ) -> PeakInfo? {
         let recentActive = entries.filter { $0.remainingCaffeine(at: now, halfLifeHours: halfLifeHours) > 1 }
-        guard let latest = recentActive.first else { return nil }
+        // Most recent dose drives the peak — don't assume `entries` is sorted.
+        guard let latest = recentActive.max(by: { $0.date < $1.date }) else { return nil }
         let peakTime = latest.date.addingTimeInterval(45 * 60)
         guard peakTime > now else { return nil }
         let peakMg = recentActive.reduce(0.0) { $0 + $1.remainingCaffeine(at: peakTime, halfLifeHours: halfLifeHours) }

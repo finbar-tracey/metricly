@@ -77,7 +77,7 @@ enum StrongParser {
                 weightKg: weight,
                 rpe: nil,
                 isWarmUp: false,
-                distanceMeters: distance,
+                distanceKm: distance,
                 durationSeconds: durationSecs
             )
 
@@ -205,7 +205,7 @@ enum HevyParser {
             let distance: Double? = {
                 guard let km = ImportHelper.parseDecimal(value(row, at: cDistanceKm)),
                       km > 0 else { return nil }
-                return km * 1000
+                return km   // ExerciseSet.distance is kilometres — store km, not metres
             }()
             let duration: Int? = {
                 guard let s = value(row, at: cDuration),
@@ -225,7 +225,7 @@ enum HevyParser {
                 weightKg: weight,
                 rpe: rpe,
                 isWarmUp: isWarmUp,
-                distanceMeters: distance,
+                distanceKm: distance,
                 durationSeconds: duration
             )
             bucket.exercises[exerciseName]?.sets.append(set)

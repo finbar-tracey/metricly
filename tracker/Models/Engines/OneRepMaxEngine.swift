@@ -14,6 +14,10 @@ enum OneRepMaxEngine {
             case .epley:
                 return weight * (1 + Double(reps) / 30.0)
             case .brzycki:
+                // Brzycki's denominator (37 − reps) hits zero at 37 reps and
+                // turns negative beyond, yielding infinite/negative 1RMs. Past
+                // its valid range, fall back to Epley.
+                guard reps < 37 else { return weight * (1 + Double(reps) / 30.0) }
                 return weight * (36.0 / (37.0 - Double(reps)))
             }
         }

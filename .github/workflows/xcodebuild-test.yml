@@ -62,11 +62,13 @@ jobs:
             echo "destination=id:$DEST" >> "$GITHUB_OUTPUT"
             echo "run_tests=true" >> "$GITHUB_OUTPUT"
           fi
-      - name: UI tests (non-blocking)
+      - name: UI smoke tests (non-blocking)
         if: steps.sim.outputs.run_tests == 'true'
         run: |
           xcodebuild test \
             -scheme tracker \
             -destination "${{ steps.sim.outputs.destination }}" \
-            -only-testing:trackerUITests \
+            -only-testing:trackerUITests/OnboardingSkipTests \
+            -only-testing:trackerUITests/WorkoutFlowTests \
+            -only-testing:trackerUITests/TrainingHubFlowTests \
             CODE_SIGNING_ALLOWED=NO

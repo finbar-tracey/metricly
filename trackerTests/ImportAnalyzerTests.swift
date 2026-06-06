@@ -29,7 +29,7 @@ final class ImportAnalyzerTests: XCTestCase {
                         weightKg: s.weight,
                         rpe: nil,
                         isWarmUp: s.isWarmUp,
-                        distanceMeters: nil,
+                        distanceKm: nil,
                         durationSeconds: nil
                     )
                 }

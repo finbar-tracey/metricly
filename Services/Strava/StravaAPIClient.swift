@@ -143,6 +143,10 @@ enum StravaAPIClient: Sendable {
             page += 1
         }
 
-        return Array(collected.prefix(limit))
+        // Strava's ordering for `after` queries isn't guaranteed newest-first,
+        // so sort explicitly before capping — keep the most recent `limit`.
+        // start_date is ISO-8601 UTC, which sorts chronologically as a string.
+        let newestFirst = collected.sorted { $0.start_date > $1.start_date }
+        return Array(newestFirst.prefix(limit))
     }
 }

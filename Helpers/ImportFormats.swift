@@ -22,7 +22,8 @@ struct ParsedSet: Equatable {
     var weightKg: Double
     var rpe: Int?
     var isWarmUp: Bool
-    var distanceMeters: Double?
+    /// Kilometres — matches `ExerciseSet.distance` (km). Both importers store km.
+    var distanceKm: Double?
     var durationSeconds: Int?
 }
 

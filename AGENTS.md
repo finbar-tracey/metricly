@@ -21,6 +21,17 @@ xcodebuild test -scheme tracker \
 
 Shared schemes: `tracker`, `MetriclyWidgetsExtension`.
 
+### Adding files under `Services/` or `Helpers/`
+
+Unlike `tracker/` (filesystem-synced in Xcode), new Swift files under [`Services/`](Services/) and [`Helpers/`](Helpers/) must be added to [`tracker.xcodeproj/project.pbxproj`](tracker.xcodeproj/project.pbxproj) manually:
+
+1. Create the file on disk (e.g. `Services/Strava/StravaAPIClient.swift`).
+2. Add a `PBXFileReference` and `PBXBuildFile`, group under the correct folder (`Strava`, `HealthKit`, `Helpers`).
+3. Include the build file in the **tracker** target `PBXSourcesBuildPhase` (not only Watch/Widgets unless intended).
+4. Build **tracker** — missing membership shows up as “Cannot find type … in scope” in unrelated views.
+
+**Watch** (`MetriclyWatch/`): same manual step for new section files (e.g. `WatchGym*Sections.swift`).
+
 ## Architecture
 
 - **SwiftData** schema: `Services/MetriclySchema.swift`
@@ -31,7 +42,8 @@ Shared schemes: `tracker`, `MetriclyWidgetsExtension`.
 - **Appearance**: `UserSettings.appearanceMode` only (`AppearanceMode` helper)
 - **Routing**: `AppRouter` via `appServices.router` in `ContentView` and feature views; `AppRouter.shared` only in `trackerApp` bootstrap
 - **DI**: `AppServices` (`router`, `phoneConnectivity`, `strava`, `workoutActivity`, `healthKit`, `healthDataCache`, `appErrorBus`, `syncStatus`, `cardioTracker`, `openURL` / `openSettings`) via `@Environment(\.appServices)`; exceptions: `UIApplication` for keyboard/resign, window scene in cardio share, `AppServices.shared` in app bootstrap and `HomeSyncStatusPill.shouldShow`, `StravaSettingsSection` preview default.
-- **AE–AH (last refactor wave)**: section round 3 (`StreakCalendar*`, `CardioGoals*`, `HeartRateDetail*` splits); coordinators `FullWorkoutListView`, `TrainingProgramsView`, `SmartSuggestionsView` + `SmartSuggestionsEngine`, `WorkoutDetailScreenSections`; maintenance mode — split only when editing files >350 LOC
+- **AE–AH (last refactor wave)**: section round 3 (`StreakCalendar*`, `CardioGoals*`, `HeartRateDetail*` splits); coordinators `FullWorkoutListView`, `TrainingProgramsView`, `SmartSuggestionsView` + `SmartSuggestionsEngine`, `WorkoutDetailScreenSections`
+- **Post-refactor (maintenance)**: split section/service files only when editing a feature and file is **> ~350 LOC**; prefer product work and targeted a11y on hubs (Training, Home hero, finish workout)
 - **App shell**: `ContentView` + `ContentView+*.swift` extensions (tabs, iPad/iPhone layout, lifecycle)
 - **Timers**: `RestTimerController` (rest), `WorkoutDurationTracker` (elapsed workout), `WorkoutIntervalTimerController` (EMOM/AMRAP/Tabata)
 - **Home**: `HomeDashboardQueryContainer` holds all `@Query`; `HomeDashboardScreen` is query-free
@@ -59,7 +71,7 @@ Shared schemes: `tracker`, `MetriclyWidgetsExtension`.
 - **Section modules**: large detail UIs split into hero/chart/card files with thin forwarding enums (e.g. `CaffeineLoggingHeroSections`, `SleepDetailChartTrendSections`); second-pass trims keep implementation files ≤ ~350 LOC
 - **Workout utilities (AA)**: `TrainingHubSections`, `VolumeTrendsSections` + `VolumeTrendsEngine`, `HomeDashboardScreen+Cards` / `+Lifecycle`, `TrainingBlockDetailSections`, `WorkoutTimerSections`, `BodyMeasurementsSections` + `BodyMeasurementsEngine`, `PlateCalculatorSections` + `PlateCalculatorEngine`, `WorkoutCalendarSections` — coordinators under ~200 LOC
 - **HealthKit / connectivity (AC)**: `Services/HealthKit/` (`HealthKitMetricsFetcher`, `HealthKitWorkoutWriter`, `HealthKitCardioWriter`, `HealthKitSleepModels`) + slim `HealthKitManager` facade; `PhoneConnectivityMessageHandler`, `PhoneConnectivityManager+Session` + slim `PhoneConnectivityManager`
-- **Strava (AH)**: `Services/Strava/` (`StravaAPIClient`, `StravaAuth`, `StravaUpload`, `StravaTokenRefresher`) + slim `StravaService` facade at `Services/StravaService.swift`
+- **Strava (AH)**: `Services/Strava/` (`StravaAPIClient`, `StravaAuth`, `StravaTokenRefresher`) + [`StravaService.swift`](Services/StravaService.swift) facade (upload types + `uploadActivity` / `fetchActivities` live here for target visibility)
 - **Import (AH)**: `ImportHelper` (plan + CSV utilities), `ImportCommit` (SwiftData insert), `ImportParsers` (Strong/Hevy), `ImportFormats` (IR + detect)
 - **Watch gym (AH)**: `WatchGymSections`, `WatchGymControlsSections`, `WatchGymSetListSections` + slim `WatchGymView`
 - **MetriclyCore package**: still deferred (post AE–AH re-audit) — gate unchanged: `WatchSyncModels` + `WidgetModels` are multi-target shared DTOs; `WatchModels` documents watch-only App Group keys (no fourth duplicated formatter/DTO body). Revisit when a fourth shared copy appears.

@@ -233,7 +233,6 @@
 		A1EC0A1E2F9A00B700BD421B /* PhoneConnectivityManager+Session.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "PhoneConnectivityManager+Session.swift"; sourceTree = "<group>"; };
 		A1EC0A1E2F9A00C100BD421B /* StravaAPIClient.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = StravaAPIClient.swift; sourceTree = "<group>"; };
 		A1EC0A1E2F9A00C200BD421B /* StravaAuth.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = StravaAuth.swift; sourceTree = "<group>"; };
-		A1EC0A1E2F9A00C300BD421B /* StravaUpload.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = StravaUpload.swift; sourceTree = "<group>"; };
 		A1EC0A1E2F9A00C400BD421B /* ImportCommit.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ImportCommit.swift; sourceTree = "<group>"; };
 		A1EC0A1E2F9A00C500BD421B /* ImportParsers.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ImportParsers.swift; sourceTree = "<group>"; };
 		A1EC0A1E2F9A00C600BD421B /* WatchGymSections.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchGymSections.swift; sourceTree = "<group>"; };
@@ -522,7 +521,6 @@
 			children = (
 				A1EC0A1E2F9A00C100BD421B /* StravaAPIClient.swift */,
 				A1EC0A1E2F9A00C200BD421B /* StravaAuth.swift */,
-				A1EC0A1E2F9A00C300BD421B /* StravaUpload.swift */,
 				A1EC0A1E2F9A001000BD421B /* StravaTokenRefresher.swift */,
 			);
 			path = Strava;

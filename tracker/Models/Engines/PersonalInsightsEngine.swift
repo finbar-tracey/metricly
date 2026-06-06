@@ -320,8 +320,11 @@ enum PersonalInsightsEngine {
         var lateNights: [Double] = []     // minutes of sleep AFTER days with late caffeine
         var earlyNights: [Double] = []    // sleep AFTER days with caffeine but only before cutoff
         for day in caffeineDays {
-            // Sleep that began that evening — record it as the day's value
-            guard let mins = sleepByDay[day] else { continue }
+            // Sleep is keyed by the morning it ends, so the night FOLLOWING
+            // caffeine on `day` is recorded under `day + 1`. Correlating with
+            // `day` would measure the night *before* the coffee was drunk.
+            guard let nextDay = Calendar.current.date(byAdding: .day, value: 1, to: day),
+                  let mins = sleepByDay[Calendar.current.startOfDay(for: nextDay)] else { continue }
             if lateDays.contains(day) { lateNights.append(mins) }
             else { earlyNights.append(mins) }
         }
