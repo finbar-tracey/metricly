@@ -68,8 +68,23 @@ final class SyncStatusManager {
 
     // MARK: - Account status
 
+    /// True when the process is hosted by XCTest. Test-host builds are run with
+    /// `CODE_SIGNING_ALLOWED=NO`, which strips the iCloud entitlement — and
+    /// `CKContainer.default()` then throws an *uncaught Objective-C exception*
+    /// (not a Swift error), aborting the host before tests can connect.
+    private static var isRunningTests: Bool {
+        ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
+            || NSClassFromString("XCTestCase") != nil
+    }
+
     /// Re-query iCloud account status. Call this on app foreground.
     func refreshAccountStatus() async {
+        // Skip CloudKit under XCTest: `CKContainer.default()` throws an ObjC
+        // exception when the iCloud entitlement is absent (unsigned test host).
+        guard !Self.isRunningTests else {
+            await MainActor.run { self.accountStatus = .unknown }
+            return
+        }
         let container = CKContainer.default()
         do {
             let status = try await container.accountStatus()

@@ -15,6 +15,15 @@ enum StravaTokenStore {
     private static let service = "com.metricly.strava.tokens"
     private static let account = "default"
 
+    /// Under XCTest the keychain entitlement is stripped (the test host is built
+    /// with `CODE_SIGNING_ALLOWED=NO`), so `SecItem*` calls fail and round-trips
+    /// can't be verified. Fall back to an in-memory store there so token logic
+    /// stays testable. Never active in a signed production build (XCTest absent).
+    private static let isRunningTests: Bool =
+        ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
+        || NSClassFromString("XCTestCase") != nil
+    private static var inMemoryTokens: Tokens?
+
     struct Tokens: Codable, Equatable, Sendable {
         var accessToken: String
         var refreshToken: String
@@ -32,6 +41,7 @@ enum StravaTokenStore {
     // MARK: - Public API
 
     static func load() -> Tokens? {
+        if isRunningTests { return inMemoryTokens }
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
@@ -47,6 +57,7 @@ enum StravaTokenStore {
 
     /// Atomically upsert the stored tokens. Idempotent.
     static func save(_ tokens: Tokens) {
+        if isRunningTests { inMemoryTokens = tokens; return }
         guard let data = try? JSONEncoder().encode(tokens) else { return }
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
@@ -67,6 +78,7 @@ enum StravaTokenStore {
     }
 
     static func clear() {
+        if isRunningTests { inMemoryTokens = nil; return }
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
