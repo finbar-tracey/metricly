@@ -209,7 +209,7 @@ enum CaffeineLogCardSection {
                     .padding(.horizontal, 16).padding(.vertical, 12)
                 }
                 .background(Color(.tertiarySystemGroupedBackground))
-                .clipShape(RoundedRectangle(cornerRadius: 14))
+                .clipShape(RoundedRectangle(cornerRadius: AppTheme.tileRadius))
             }
             .appCard()
         }
@@ -231,11 +231,11 @@ enum CaffeineLogCardSection {
                             }
                             .frame(width: 70, height: 65)
                             .background(
-                                RoundedRectangle(cornerRadius: 10)
+                                RoundedRectangle(cornerRadius: AppTheme.chipRadius)
                                     .fill(selectedSource == preset.name ? Color.brown.opacity(0.15) : Color(.systemGray6))
                             )
                             .overlay(
-                                RoundedRectangle(cornerRadius: 10)
+                                RoundedRectangle(cornerRadius: AppTheme.chipRadius)
                                     .stroke(selectedSource == preset.name ? Color.brown : .clear, lineWidth: 1.5)
                             )
                         }

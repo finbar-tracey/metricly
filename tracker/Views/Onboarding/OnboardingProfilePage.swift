@@ -93,6 +93,6 @@ struct OnboardingProfilePage: View {
             content()
         }
         .padding(14)
-        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 14))
+        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: AppTheme.tileRadius))
     }
 }

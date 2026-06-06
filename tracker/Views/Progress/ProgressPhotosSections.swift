@@ -52,9 +52,9 @@ enum ProgressPhotosSections {
                                 .font(.caption.bold()).foregroundStyle(.white)
                         }
                         .padding(.horizontal, 11).padding(.vertical, 6)
-                        .background(.ultraThinMaterial.opacity(0.7), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                        .background(.ultraThinMaterial.opacity(0.7), in: RoundedRectangle(cornerRadius: AppTheme.chipRadius, style: .continuous))
                         .overlay(
-                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            RoundedRectangle(cornerRadius: AppTheme.chipRadius, style: .continuous)
                                 .stroke(.white.opacity(0.25), lineWidth: 0.5)
                         )
                     }
@@ -198,9 +198,9 @@ enum ProgressPhotosSections {
                     }
                 }
                 .frame(height: 120)
-                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: AppTheme.tileRadius, style: .continuous))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    RoundedRectangle(cornerRadius: AppTheme.tileRadius, style: .continuous)
                         .stroke(Color.white.opacity(0.10), lineWidth: 0.5)
                 )
                 .shadow(color: .black.opacity(0.18), radius: 8, y: 3)

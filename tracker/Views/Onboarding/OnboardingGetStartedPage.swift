@@ -67,7 +67,7 @@ struct OnboardingGetStartedPage: View {
                         .padding(.vertical, 16)
                         .background(Color.white)
                         .foregroundStyle(Color(red: 0.12, green: 0.68, blue: 0.4))
-                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .clipShape(RoundedRectangle(cornerRadius: AppTheme.miniCardRadius, style: .continuous))
                         .shadow(color: .black.opacity(0.18), radius: 14, y: 6)
                     }
                     .buttonStyle(.pressableCard)

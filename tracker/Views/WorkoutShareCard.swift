@@ -93,7 +93,7 @@ struct WorkoutShareCard: View {
                     shareStatCol(label: "Volume",    value: formattedVolume)
                 }
                 .padding(.vertical, 12)
-                .background(.white.opacity(0.12), in: RoundedRectangle(cornerRadius: 14))
+                .background(.white.opacity(0.12), in: RoundedRectangle(cornerRadius: AppTheme.tileRadius))
 
                 // ── Top exercises ────────────────────────────────────────────
                 let topExercises = Array(workout.exercises

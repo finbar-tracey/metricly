@@ -85,9 +85,9 @@ struct OnboardingHealthPage: View {
                                 )
                             )
                             .foregroundStyle(.white)
-                            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                            .clipShape(RoundedRectangle(cornerRadius: AppTheme.miniCardRadius, style: .continuous))
                             .overlay(
-                                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                RoundedRectangle(cornerRadius: AppTheme.miniCardRadius, style: .continuous)
                                     .stroke(Color.white.opacity(0.20), lineWidth: 0.5)
                             )
                             .shadow(color: AppTheme.Signal.strain.opacity(0.45), radius: 14, y: 6)

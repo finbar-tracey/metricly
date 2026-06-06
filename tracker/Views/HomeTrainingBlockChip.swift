@@ -90,11 +90,11 @@ struct HomeTrainingBlockChip: View {
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
         .background(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
+            RoundedRectangle(cornerRadius: AppTheme.tileRadius, style: .continuous)
                 .fill(Color(.secondarySystemGroupedBackground))
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
+            RoundedRectangle(cornerRadius: AppTheme.tileRadius, style: .continuous)
                 .stroke(accent.opacity(0.18), lineWidth: 0.5)
         )
         .accessibilityElement(children: .combine)
@@ -139,11 +139,11 @@ struct HomeTrainingBlockChip: View {
             .padding(.horizontal, 14)
             .padding(.vertical, 12)
             .background(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                RoundedRectangle(cornerRadius: AppTheme.tileRadius, style: .continuous)
                     .fill(Color(.secondarySystemGroupedBackground))
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                RoundedRectangle(cornerRadius: AppTheme.tileRadius, style: .continuous)
                     .stroke(AppTheme.Signal.focus.opacity(0.18), lineWidth: 0.5)
             )
         }

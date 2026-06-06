@@ -46,7 +46,7 @@ enum WeeklyMonthlyReportCardSections {
                 ForEach(Array(snapshot.prExerciseNames.prefix(5).enumerated()), id: \.offset) { idx, name in
                     HStack(spacing: 12) {
                         ZStack {
-                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            RoundedRectangle(cornerRadius: AppTheme.chipRadius, style: .continuous)
                                 .fill(
                                     LinearGradient(
                                         colors: [Color(red: 1.00, green: 0.85, blue: 0.20), AppTheme.Signal.amber],
@@ -89,9 +89,9 @@ enum WeeklyMonthlyReportCardSections {
                 }
             }
             .background(Color(.tertiarySystemGroupedBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: AppTheme.tileRadius, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                RoundedRectangle(cornerRadius: AppTheme.tileRadius, style: .continuous)
                     .stroke(Color.white.opacity(0.05), lineWidth: 0.5)
             )
         }
@@ -192,9 +192,9 @@ enum WeeklyMonthlyReportCardSections {
                         endPoint: .bottomTrailing
                     )
                 )
-                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: AppTheme.tileRadius, style: .continuous))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    RoundedRectangle(cornerRadius: AppTheme.tileRadius, style: .continuous)
                         .stroke(Color.indigo.opacity(0.14), lineWidth: 0.5)
                 )
             }
@@ -267,9 +267,9 @@ enum WeeklyMonthlyReportCardSections {
                 }
             }
             .background(Color(.tertiarySystemGroupedBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: AppTheme.tileRadius, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                RoundedRectangle(cornerRadius: AppTheme.tileRadius, style: .continuous)
                     .stroke(Color.white.opacity(0.05), lineWidth: 0.5)
             )
         }
@@ -321,7 +321,7 @@ enum WeeklyMonthlyReportCardSections {
     private static func consistencyRow(icon: String, color: Color, label: String, value: String) -> some View {
         HStack(spacing: 12) {
             ZStack {
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                RoundedRectangle(cornerRadius: AppTheme.chipRadius, style: .continuous)
                     .fill(LinearGradient(colors: [color, color.opacity(0.72)], startPoint: .topLeading, endPoint: .bottomTrailing))
                     .frame(width: 38, height: 38)
                     .shadow(color: color.opacity(0.40), radius: 5, y: 2)

@@ -197,7 +197,7 @@ struct CardioHistoryView: View {
     private func sessionRow(_ session: CardioSession) -> some View {
         HStack(spacing: 12) {
             ZStack {
-                RoundedRectangle(cornerRadius: 10).fill(session.type.color.opacity(0.12)).frame(width: 44, height: 44)
+                RoundedRectangle(cornerRadius: AppTheme.chipRadius).fill(session.type.color.opacity(0.12)).frame(width: 44, height: 44)
                 Image(systemName: session.type.icon).font(.system(size: 18)).foregroundStyle(session.type.color)
             }
             VStack(alignment: .leading, spacing: 3) {

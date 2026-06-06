@@ -45,7 +45,7 @@ struct HomeQuickLinksSection: View {
     private func tile(icon: String, color: Color, title: String) -> some View {
         VStack(alignment: .leading, spacing: 14) {
             ZStack {
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                RoundedRectangle(cornerRadius: AppTheme.tileRadius, style: .continuous)
                     .fill(
                         LinearGradient(
                             colors: [color, color.opacity(0.72)],

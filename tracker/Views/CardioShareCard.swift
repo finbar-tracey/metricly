@@ -93,7 +93,7 @@ struct CardioShareCard: View {
                     }
                 }
                 .padding(.vertical, 12)
-                .background(.white.opacity(0.12), in: RoundedRectangle(cornerRadius: 14))
+                .background(.white.opacity(0.12), in: RoundedRectangle(cornerRadius: AppTheme.tileRadius))
             }
             .padding(22)
         }

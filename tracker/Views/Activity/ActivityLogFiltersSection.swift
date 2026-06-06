@@ -80,7 +80,7 @@ enum ActivityLogFiltersSection {
                         } label: {
                             VStack(spacing: 5) {
                                 ZStack {
-                                    RoundedRectangle(cornerRadius: 10)
+                                    RoundedRectangle(cornerRadius: AppTheme.chipRadius)
                                         .fill(colorFor(type).opacity(0.12))
                                         .frame(width: 52, height: 52)
                                     Image(systemName: type.icon)

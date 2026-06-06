@@ -120,6 +120,7 @@ struct TrainingHubView: View {
         .scrollContentBackground(.hidden)
         .tabBackground(tint: AppTheme.Signal.calm, height: 320)
         .navigationTitle("Training")
+        .accessibilityLabel("Training hub")
         .sheet(isPresented: $showingAddWorkout) {
             AddWorkoutSheet()
         }

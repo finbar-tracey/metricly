@@ -49,7 +49,7 @@ enum BodyFatHeroSections {
                 }
             }
             .background(Color(.tertiarySystemGroupedBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .clipShape(RoundedRectangle(cornerRadius: AppTheme.tileRadius))
 
             Text("Log measurements in the Measurements tab.")
                 .font(.caption2).foregroundStyle(.secondary)

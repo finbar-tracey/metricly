@@ -33,9 +33,9 @@ struct ExercisePlanHintView: View {
         }
         .padding(12)
         .background(tone.color.opacity(0.10),
-                    in: RoundedRectangle(cornerRadius: 10))
+                    in: RoundedRectangle(cornerRadius: AppTheme.chipRadius))
         .overlay(
-            RoundedRectangle(cornerRadius: 10)
+            RoundedRectangle(cornerRadius: AppTheme.chipRadius)
                 .strokeBorder(tone.color.opacity(0.25), lineWidth: 1)
         )
     }

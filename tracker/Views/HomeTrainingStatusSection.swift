@@ -86,9 +86,9 @@ struct HomeTrainingStatusSection: View {
                 }
             }
             .background(Color(.tertiarySystemGroupedBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: AppTheme.tileRadius, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                RoundedRectangle(cornerRadius: AppTheme.tileRadius, style: .continuous)
                     .stroke(AppTheme.cardHairline, lineWidth: 0.5)
             )
         }

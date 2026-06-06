@@ -157,7 +157,7 @@ struct ImportSuccessSheet: View {
                 }
             }
             .background(Color(.secondarySystemGroupedBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: AppTheme.tileRadius, style: .continuous))
         }
         .padding(16)
         .appCard()
@@ -268,7 +268,7 @@ struct ImportSuccessSheet: View {
                         .padding(.vertical, 14)
                         .background(Color.accentColor)
                         .foregroundStyle(.white)
-                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        .clipShape(RoundedRectangle(cornerRadius: AppTheme.tileRadius, style: .continuous))
                 }
                 .buttonStyle(.pressableCard)
             }

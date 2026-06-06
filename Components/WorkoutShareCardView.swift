@@ -71,9 +71,9 @@ struct WorkoutShareCardView: View {
                     statItem(value: weightUnit.formatShort(totalVolume), label: "Volume")
                 }
                 .padding(.vertical, 12)
-                .background(Color.white.opacity(0.15), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .background(Color.white.opacity(0.15), in: RoundedRectangle(cornerRadius: AppTheme.tileRadius, style: .continuous))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    RoundedRectangle(cornerRadius: AppTheme.tileRadius, style: .continuous)
                         .stroke(.white.opacity(0.20), lineWidth: 0.5)
                 )
             }
@@ -165,9 +165,9 @@ struct WorkoutShareCardView: View {
             .padding(.vertical, 12)
         }
         .background(Color(.systemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .clipShape(RoundedRectangle(cornerRadius: AppTheme.miniCardRadius))
         .overlay(
-            RoundedRectangle(cornerRadius: 16)
+            RoundedRectangle(cornerRadius: AppTheme.miniCardRadius)
                 .stroke(Color(.separator), lineWidth: 0.5)
         )
         .shadow(color: .black.opacity(0.1), radius: 8, y: 4)

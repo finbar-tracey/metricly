@@ -61,9 +61,9 @@ enum VolumeTrendsSections {
                     HeroStatCol(value: "\(workoutsThisWeek)", label: "Workouts")
                 }
                 .padding(.vertical, 12)
-                .background(.ultraThinMaterial.opacity(0.55), in: RoundedRectangle(cornerRadius: 14))
+                .background(.ultraThinMaterial.opacity(0.55), in: RoundedRectangle(cornerRadius: AppTheme.tileRadius))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 14)
+                    RoundedRectangle(cornerRadius: AppTheme.tileRadius)
                         .stroke(.white.opacity(0.18), lineWidth: 0.5)
                 )
             }
@@ -163,7 +163,7 @@ enum VolumeTrendsSections {
                     let (group, volume) = pair
                     HStack(spacing: 14) {
                         ZStack {
-                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            RoundedRectangle(cornerRadius: AppTheme.chipRadius, style: .continuous)
                                 .fill(
                                     LinearGradient(
                                         colors: [Color.blue.opacity(0.26), Color.blue.opacity(0.12)],
@@ -171,7 +171,7 @@ enum VolumeTrendsSections {
                                     )
                                 )
                                 .frame(width: 34, height: 34)
-                                .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(Color.blue.opacity(0.28), lineWidth: 0.5))
+                                .overlay(RoundedRectangle(cornerRadius: AppTheme.chipRadius, style: .continuous).stroke(Color.blue.opacity(0.28), lineWidth: 0.5))
                             MuscleIconView(group: group, color: Color.blue)
                                 .frame(width: 14, height: 14)
                         }
@@ -190,7 +190,7 @@ enum VolumeTrendsSections {
                 }
             }
             .background(Color(.tertiarySystemGroupedBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .clipShape(RoundedRectangle(cornerRadius: AppTheme.tileRadius))
         }
         .appCard()
     }

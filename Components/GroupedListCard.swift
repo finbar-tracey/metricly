@@ -25,7 +25,7 @@ struct GroupedListCard<Content: View>: View {
                 content()
             }
             .background(Color(.tertiarySystemGroupedBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: AppTheme.tileRadius, style: .continuous))
 
             if let footnote {
                 Text(footnote)

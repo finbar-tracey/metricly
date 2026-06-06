@@ -156,7 +156,7 @@ enum SleepDetailTrendSections {
         }
         .padding(14)
         .background(Color(.tertiarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .clipShape(RoundedRectangle(cornerRadius: AppTheme.tileRadius))
         .accessibilityElement(children: .combine)
     }
 

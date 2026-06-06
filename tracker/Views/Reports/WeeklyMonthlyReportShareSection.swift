@@ -132,8 +132,8 @@ struct ReportShareCardView: View {
             .padding(.horizontal, 20).padding(.vertical, 12)
         }
         .background(Color(.systemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 16))
-        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color(.separator), lineWidth: 0.5))
+        .clipShape(RoundedRectangle(cornerRadius: AppTheme.miniCardRadius))
+        .overlay(RoundedRectangle(cornerRadius: AppTheme.miniCardRadius).stroke(Color(.separator), lineWidth: 0.5))
         .shadow(color: .black.opacity(0.1), radius: 8, y: 4)
     }
 

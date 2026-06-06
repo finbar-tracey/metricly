@@ -127,7 +127,7 @@ enum HeartRateDetailChartSections {
                 statsRow("Data Points", value: "\(dayCount) days")
             }
             .background(Color(.tertiarySystemGroupedBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .clipShape(RoundedRectangle(cornerRadius: AppTheme.tileRadius))
         }
         .appCard()
     }

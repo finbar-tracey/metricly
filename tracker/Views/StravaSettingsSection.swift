@@ -181,7 +181,8 @@ struct StravaSettingsSection: View {
         do {
             let result = try await StravaImportService.sync(
                 existing: existingSessions,
-                in: modelContext
+                in: modelContext,
+                strava: appServices.strava
             )
             lastSyncResult = result
             if result.imported == 0 && result.skippedExisting == 0 {

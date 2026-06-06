@@ -49,6 +49,7 @@ enum PlateCalculatorSections {
                                 .font(.title3).foregroundStyle(.white.opacity(0.85))
                         }
                         .buttonStyle(.pressableCard)
+                        .accessibilityLabel("Decrease bar weight")
 
                         Text(unit.format(barWeight.wrappedValue))
                             .font(.subheadline.bold().monospacedDigit())
@@ -63,6 +64,7 @@ enum PlateCalculatorSections {
                                 .font(.title3).foregroundStyle(.white.opacity(0.85))
                         }
                         .buttonStyle(.pressableCard)
+                        .accessibilityLabel("Increase bar weight")
                     }
                     .padding(.horizontal, 12).padding(.vertical, 6)
                     .background(.ultraThinMaterial.opacity(0.6), in: Capsule())
@@ -123,9 +125,9 @@ enum PlateCalculatorSections {
                 }
             }
             .background(Color(.tertiarySystemGroupedBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: AppTheme.tileRadius, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                RoundedRectangle(cornerRadius: AppTheme.tileRadius, style: .continuous)
                     .stroke(Color.white.opacity(0.05), lineWidth: 0.5)
             )
 
@@ -151,7 +153,7 @@ enum PlateCalculatorSections {
     static func justTheBarCard() -> some View {
         HStack(spacing: 16) {
             ZStack {
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                RoundedRectangle(cornerRadius: AppTheme.tileRadius, style: .continuous)
                     .fill(
                         LinearGradient(
                             colors: [.indigo, Color(red: 0.40, green: 0.30, blue: 0.92)],

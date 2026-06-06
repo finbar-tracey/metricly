@@ -130,9 +130,9 @@ struct PersonalRecordsView: View {
                     }
                 }
                 .padding(.vertical, 10)
-                .background(.ultraThinMaterial.opacity(0.55), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .background(.ultraThinMaterial.opacity(0.55), in: RoundedRectangle(cornerRadius: AppTheme.tileRadius, style: .continuous))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    RoundedRectangle(cornerRadius: AppTheme.tileRadius, style: .continuous)
                         .stroke(.white.opacity(0.18), lineWidth: 0.5)
                 )
             }
@@ -156,7 +156,7 @@ struct PersonalRecordsView: View {
                 }
             }
             .background(Color(.tertiarySystemGroupedBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .clipShape(RoundedRectangle(cornerRadius: AppTheme.tileRadius))
         }
         .appCard()
     }
@@ -229,7 +229,7 @@ struct PersonalRecordsView: View {
                         }
                     }
                     .background(Color(.tertiarySystemGroupedBackground))
-                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                    .clipShape(RoundedRectangle(cornerRadius: AppTheme.tileRadius))
                 }
             }
         }

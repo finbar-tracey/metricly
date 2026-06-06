@@ -85,13 +85,13 @@ enum ActivityLogListSection {
             }
         }
         .background(Color(.tertiarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .clipShape(RoundedRectangle(cornerRadius: AppTheme.tileRadius))
     }
 
     private static func activityRow(_ activity: ManualActivity) -> some View {
         HStack(spacing: 12) {
             ZStack {
-                RoundedRectangle(cornerRadius: 10).fill(colorFor(activity.type).opacity(0.12)).frame(width: 40, height: 40)
+                RoundedRectangle(cornerRadius: AppTheme.chipRadius).fill(colorFor(activity.type).opacity(0.12)).frame(width: 40, height: 40)
                 Image(systemName: activity.type.icon)
                     .font(.system(size: 15, weight: .semibold)).foregroundStyle(colorFor(activity.type))
             }
@@ -114,7 +114,7 @@ enum ActivityLogListSection {
     private static func externalWorkoutRow(_ workout: ExternalWorkout, weightUnit: WeightUnit) -> some View {
         HStack(spacing: 12) {
             ZStack {
-                RoundedRectangle(cornerRadius: 10).fill(Color.teal.opacity(0.12)).frame(width: 40, height: 40)
+                RoundedRectangle(cornerRadius: AppTheme.chipRadius).fill(Color.teal.opacity(0.12)).frame(width: 40, height: 40)
                 Image(systemName: workout.icon)
                     .font(.system(size: 15, weight: .semibold)).foregroundStyle(.teal)
             }

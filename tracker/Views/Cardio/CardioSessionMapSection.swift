@@ -33,7 +33,7 @@ enum CardioSessionMapSection {
             }
             .mapStyle(.standard)
             .frame(height: 240)
-            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .clipShape(RoundedRectangle(cornerRadius: AppTheme.tileRadius))
             .onAppear { zoomToRoute(coords, mapRegion: mapRegion) }
         }
         .appCard()

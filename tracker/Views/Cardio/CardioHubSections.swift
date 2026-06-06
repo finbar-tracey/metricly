@@ -36,9 +36,9 @@ enum CardioHubSections {
                     )
                 }
                 .padding(.vertical, 12)
-                .background(.ultraThinMaterial.opacity(0.55), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .background(.ultraThinMaterial.opacity(0.55), in: RoundedRectangle(cornerRadius: AppTheme.tileRadius, style: .continuous))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    RoundedRectangle(cornerRadius: AppTheme.tileRadius, style: .continuous)
                         .stroke(.white.opacity(0.18), lineWidth: 0.5)
                 )
             }
@@ -108,7 +108,7 @@ enum CardioHubSections {
                     )
                 )
                 .foregroundStyle(.white)
-                .clipShape(RoundedRectangle(cornerRadius: 14))
+                .clipShape(RoundedRectangle(cornerRadius: AppTheme.tileRadius))
                 .shadow(color: selectedType.wrappedValue.color.opacity(0.35), radius: 10, y: 4)
             }
             .buttonStyle(.plain)
@@ -201,7 +201,7 @@ enum CardioHubSections {
                 }
             }
             .background(Color(.tertiarySystemGroupedBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .clipShape(RoundedRectangle(cornerRadius: AppTheme.tileRadius))
         }
         .appCard()
     }
@@ -241,7 +241,7 @@ enum CardioHubSections {
                 } label: {
                     HStack(spacing: 14) {
                         ZStack {
-                            RoundedRectangle(cornerRadius: 10).fill(type.color.opacity(0.12)).frame(width: 40, height: 40)
+                            RoundedRectangle(cornerRadius: AppTheme.chipRadius).fill(type.color.opacity(0.12)).frame(width: 40, height: 40)
                             Image(systemName: type.icon).font(.system(size: 18)).foregroundStyle(type.color)
                         }
                         Text(type.rawValue).font(.subheadline.weight(.semibold))
@@ -287,7 +287,7 @@ enum CardioHubSections {
     private static func sessionRow(_ session: CardioSession, useKm: Bool) -> some View {
         HStack(spacing: 14) {
             ZStack {
-                RoundedRectangle(cornerRadius: 10).fill(session.type.color.opacity(0.12)).frame(width: 44, height: 44)
+                RoundedRectangle(cornerRadius: AppTheme.chipRadius).fill(session.type.color.opacity(0.12)).frame(width: 44, height: 44)
                 Image(systemName: session.type.icon)
                     .font(.system(size: 18, weight: .semibold)).foregroundStyle(session.type.color)
             }

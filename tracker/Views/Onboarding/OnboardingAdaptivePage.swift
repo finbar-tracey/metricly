@@ -72,6 +72,6 @@ struct OnboardingAdaptivePage: View {
             Spacer(minLength: 0)
         }
         .padding(14)
-        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 14))
+        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: AppTheme.tileRadius))
     }
 }

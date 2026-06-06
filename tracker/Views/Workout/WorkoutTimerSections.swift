@@ -29,7 +29,7 @@ enum WorkoutTimerSections {
                         .padding(.vertical, 14)
                         .background {
                             if selectedMode.wrappedValue == mode {
-                                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                RoundedRectangle(cornerRadius: AppTheme.tileRadius, style: .continuous)
                                     .fill(
                                         LinearGradient(
                                             colors: [Color.accentColor, Color.accentColor.opacity(0.72)],
@@ -39,7 +39,7 @@ enum WorkoutTimerSections {
                                     )
                                     .shadow(color: Color.accentColor.opacity(0.45), radius: 8, y: 4)
                             } else {
-                                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                RoundedRectangle(cornerRadius: AppTheme.tileRadius, style: .continuous)
                                     .fill(Color(.secondarySystemFill))
                             }
                         }
@@ -90,9 +90,9 @@ enum WorkoutTimerSections {
                 }
             }
             .background(Color(.tertiarySystemGroupedBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: AppTheme.tileRadius, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                RoundedRectangle(cornerRadius: AppTheme.tileRadius, style: .continuous)
                     .stroke(Color.white.opacity(0.05), lineWidth: 0.5)
             )
         }
@@ -211,6 +211,7 @@ enum WorkoutTimerSections {
                             .foregroundStyle(.secondary)
                     }
                     .buttonStyle(.pressableCard).frame(maxWidth: .infinity)
+                    .accessibilityLabel("Decrease rounds")
 
                     AnimatedInt(
                         value: controller.roundsCompleted,
@@ -228,6 +229,7 @@ enum WorkoutTimerSections {
                             .foregroundStyle(Color.accentColor)
                     }
                     .buttonStyle(.pressableCard).frame(maxWidth: .infinity)
+                    .accessibilityLabel("Increase rounds")
                 }
                 .padding(.vertical, 10)
             } else {

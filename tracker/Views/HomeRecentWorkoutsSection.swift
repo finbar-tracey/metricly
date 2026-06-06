@@ -34,7 +34,7 @@ struct HomeRecentWorkoutsSection: View {
                     }
                 }
                 .background(Color(.tertiarySystemGroupedBackground))
-                .clipShape(RoundedRectangle(cornerRadius: 14))
+                .clipShape(RoundedRectangle(cornerRadius: AppTheme.tileRadius))
 
                 if workouts.count > 5 {
                     NavigationLink { FullWorkoutListView() } label: {
@@ -46,7 +46,7 @@ struct HomeRecentWorkoutsSection: View {
                         }
                         .padding(.horizontal, 16).padding(.vertical, 13)
                         .background(Color(.tertiarySystemGroupedBackground))
-                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                        .clipShape(RoundedRectangle(cornerRadius: AppTheme.tileRadius))
                     }
                     .buttonStyle(.pressableCard)
                 }

@@ -20,7 +20,7 @@ struct EditWorkoutSheet: View {
                 Section {
                     HStack(spacing: 12) {
                         ZStack {
-                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            RoundedRectangle(cornerRadius: AppTheme.chipRadius, style: .continuous)
                                 .fill(
                                     LinearGradient(
                                         colors: [Color.accentColor, Color.accentColor.opacity(0.72)],
@@ -41,7 +41,7 @@ struct EditWorkoutSheet: View {
 
                     HStack(spacing: 12) {
                         ZStack {
-                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            RoundedRectangle(cornerRadius: AppTheme.chipRadius, style: .continuous)
                                 .fill(
                                     LinearGradient(
                                         colors: [Color.red, Color.red.opacity(0.72)],
@@ -66,7 +66,7 @@ struct EditWorkoutSheet: View {
                 Section {
                     HStack(alignment: .top, spacing: 12) {
                         ZStack {
-                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            RoundedRectangle(cornerRadius: AppTheme.chipRadius, style: .continuous)
                                 .fill(
                                     LinearGradient(
                                         colors: [Color.orange, Color.orange.opacity(0.72)],

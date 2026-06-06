@@ -36,6 +36,7 @@ struct TodayPlanAdjustmentsBanner: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("Dismiss")
             }
 
             VStack(alignment: .leading, spacing: 6) {

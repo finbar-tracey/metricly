@@ -144,7 +144,7 @@ struct PhotoDetailView: View {
                         .padding(.horizontal, 16).padding(.vertical, 12)
                     }
                     .background(Color(.tertiarySystemGroupedBackground))
-                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                    .clipShape(RoundedRectangle(cornerRadius: AppTheme.tileRadius))
                 }
                 .appCard()
 
@@ -155,7 +155,7 @@ struct PhotoDetailView: View {
                         .font(.body)
                         .padding(14)
                         .background(Color(.tertiarySystemGroupedBackground))
-                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                        .clipShape(RoundedRectangle(cornerRadius: AppTheme.tileRadius))
                 }
                 .appCard()
 

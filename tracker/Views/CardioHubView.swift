@@ -3,6 +3,7 @@ import SwiftData
 
 struct CardioHubView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.appServices) private var appServices
     @Environment(\.weightUnit) private var weightUnit
     @Query(sort: \CardioSession.date, order: .reverse) private var sessions: [CardioSession]
     @Query private var settingsArray: [UserSettings]
@@ -83,7 +84,7 @@ struct CardioHubView: View {
         }
         .fullScreenCover(isPresented: $navigateToSession) {
             NavigationStack {
-                CardioActiveView(cardioType: selectedType) { session in
+                CardioActiveView(cardioType: selectedType, tracker: appServices.cardioTracker) { session in
                     route = .completed(session.id)
                 }
                 .toolbar(.hidden, for: .navigationBar)

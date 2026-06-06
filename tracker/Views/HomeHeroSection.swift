@@ -65,6 +65,15 @@ struct HomeHeroSection: View {
             .padding(20)
         }
         .heroCard()
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(heroAccessibilityLabel)
+    }
+
+    private var heroAccessibilityLabel: String {
+        if healthKitEnabled && healthDataLoaded {
+            return "\(greeting). Recovery readiness \(Int(recovery.readinessScore * 100)) out of 100."
+        }
+        return "\(greeting). \(currentStreak) day workout streak."
     }
 
     // MARK: - Readiness readout (ring + signals)

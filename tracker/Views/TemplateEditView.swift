@@ -134,7 +134,7 @@ struct TemplateEditView: View {
             Section {
                 HStack(spacing: 10) {
                     ZStack {
-                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        RoundedRectangle(cornerRadius: AppTheme.chipRadius, style: .continuous)
                             .fill(
                                 LinearGradient(
                                     colors: [.green, AppTheme.Signal.actionGreen],
@@ -162,6 +162,7 @@ struct TemplateEditView: View {
                             .foregroundStyle(.green)
                     }
                     .buttonStyle(.pressableCard)
+                    .accessibilityLabel("Add exercise")
                     .disabled(newExerciseName.trimmingCharacters(in: .whitespaces).isEmpty)
                 }
                 .listRowBackground(Color(.secondarySystemGroupedBackground))

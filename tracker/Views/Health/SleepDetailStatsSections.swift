@@ -20,7 +20,7 @@ enum SleepDetailStatsSections {
                 statsRow("Nights Tracked", value: "\(dailySleep.count)")
             }
             .background(Color(.tertiarySystemGroupedBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .clipShape(RoundedRectangle(cornerRadius: AppTheme.tileRadius))
         }
         .appCard()
     }
@@ -60,7 +60,7 @@ enum SleepDetailStatsSections {
                 }
                 .padding(.vertical, 8)
                 .background(Color(.tertiarySystemGroupedBackground))
-                .clipShape(RoundedRectangle(cornerRadius: 14))
+                .clipShape(RoundedRectangle(cornerRadius: AppTheme.tileRadius))
             }
             .appCard()
             .accessibilityElement(children: .combine)

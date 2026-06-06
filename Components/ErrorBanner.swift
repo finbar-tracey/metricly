@@ -108,12 +108,12 @@ struct ErrorBanner: View {
         .padding(.vertical, 10)
         .background {
             ZStack {
-                RoundedRectangle(cornerRadius: 14, style: .continuous).fill(.regularMaterial)
-                RoundedRectangle(cornerRadius: 14, style: .continuous).fill(tint.opacity(0.12))
+                RoundedRectangle(cornerRadius: AppTheme.tileRadius, style: .continuous).fill(.regularMaterial)
+                RoundedRectangle(cornerRadius: AppTheme.tileRadius, style: .continuous).fill(tint.opacity(0.12))
             }
         }
         .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
+            RoundedRectangle(cornerRadius: AppTheme.tileRadius, style: .continuous)
                 .strokeBorder(tint.opacity(0.30), lineWidth: 1)
         )
         .shadow(color: .black.opacity(0.12), radius: 12, x: 0, y: 4)

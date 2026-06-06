@@ -14,7 +14,7 @@ struct HomeBedtimeSuggestion: View {
         return NavigationLink { CaffeineTrackerView() } label: {
             HStack(spacing: 14) {
                 ZStack {
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    RoundedRectangle(cornerRadius: AppTheme.tileRadius, style: .continuous)
                         .fill(
                             LinearGradient(
                                 colors: [color, color.opacity(0.72)],

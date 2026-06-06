@@ -146,7 +146,7 @@ enum CardioSessionDetailSections {
                 }
             }
             .background(Color(.tertiarySystemGroupedBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .clipShape(RoundedRectangle(cornerRadius: AppTheme.tileRadius))
         }
         .appCard()
     }
@@ -160,7 +160,7 @@ enum CardioSessionDetailSections {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(14)
                 .background(Color(.tertiarySystemGroupedBackground))
-                .clipShape(RoundedRectangle(cornerRadius: 14))
+                .clipShape(RoundedRectangle(cornerRadius: AppTheme.tileRadius))
         }
         .appCard()
     }

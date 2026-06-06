@@ -97,6 +97,7 @@ struct ActivityLogView: View {
                     selectedType = .walk
                     showingAddSheet = true
                 } label: { Image(systemName: "plus") }
+                .accessibilityLabel("Add activity")
             }
         }
         .task { await loadExternalWorkouts() }

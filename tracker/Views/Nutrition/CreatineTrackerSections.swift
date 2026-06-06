@@ -243,7 +243,7 @@ enum CreatineTrackerSections {
                     }
                 }
                 .background(Color(.tertiarySystemGroupedBackground))
-                .clipShape(RoundedRectangle(cornerRadius: 14))
+                .clipShape(RoundedRectangle(cornerRadius: AppTheme.tileRadius))
             }
         }
         .appCard()

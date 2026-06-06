@@ -109,7 +109,7 @@ enum BodyWeightTrackerSections {
                 .padding(.horizontal, 16).padding(.vertical, 12)
             }
             .background(Color(.tertiarySystemGroupedBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .clipShape(RoundedRectangle(cornerRadius: AppTheme.tileRadius))
         }
         .appCard()
     }
@@ -144,7 +144,7 @@ enum BodyWeightTrackerSections {
     private static func statTile(_ title: String, value: String, icon: String, color: Color) -> some View {
         HStack(spacing: 10) {
             ZStack {
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                RoundedRectangle(cornerRadius: AppTheme.chipRadius, style: .continuous)
                     .fill(LinearGradient(colors: [color.opacity(0.26), color.opacity(0.12)],
                                          startPoint: .topLeading, endPoint: .bottomTrailing))
                     .frame(width: 34, height: 34)
@@ -250,7 +250,7 @@ enum BodyWeightTrackerSections {
                 }
             }
             .background(Color(.tertiarySystemGroupedBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .clipShape(RoundedRectangle(cornerRadius: AppTheme.tileRadius))
         }
         .appCard()
     }

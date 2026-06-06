@@ -113,7 +113,7 @@ struct AdaptivePlanCardView: View {
         .padding(10)
         .padding(.leading, 4)
         .background(intensityColor.opacity(0.08),
-                    in: RoundedRectangle(cornerRadius: 10))
+                    in: RoundedRectangle(cornerRadius: AppTheme.chipRadius))
         .overlay(alignment: .leading) {
             RoundedRectangle(cornerRadius: 2)
                 .fill(intensityColor.opacity(0.55))

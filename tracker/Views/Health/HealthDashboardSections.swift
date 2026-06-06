@@ -102,7 +102,7 @@ enum HealthDashboardSections {
                 }
             }
             .background(Color(.tertiarySystemGroupedBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .clipShape(RoundedRectangle(cornerRadius: AppTheme.tileRadius))
         }
         .appCard()
     }
@@ -128,9 +128,9 @@ enum HealthDashboardSections {
                 .buttonStyle(.pressableCard)
             }
             .background(Color(.tertiarySystemGroupedBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: AppTheme.tileRadius, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                RoundedRectangle(cornerRadius: AppTheme.tileRadius, style: .continuous)
                     .stroke(AppTheme.cardHairline, lineWidth: 0.5)
             )
         }
@@ -204,7 +204,7 @@ enum HealthDashboardSections {
     private static func vitalsRow(icon: String, color: Color, label: String, value: String) -> some View {
         HStack(spacing: 12) {
             ZStack {
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                RoundedRectangle(cornerRadius: AppTheme.chipRadius, style: .continuous)
                     .fill(
                         LinearGradient(
                             colors: [color, color.opacity(0.72)],

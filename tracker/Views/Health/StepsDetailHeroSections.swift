@@ -122,9 +122,9 @@ enum StepsDetailHeroSections {
                     HeroStatCol(value: "\(pct)%", label: "Goal %", icon: "target")
                 }
                 .padding(.vertical, 12)
-                .background(.ultraThinMaterial.opacity(0.55), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .background(.ultraThinMaterial.opacity(0.55), in: RoundedRectangle(cornerRadius: AppTheme.tileRadius, style: .continuous))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    RoundedRectangle(cornerRadius: AppTheme.tileRadius, style: .continuous)
                         .stroke(.white.opacity(0.18), lineWidth: 0.5)
                 )
             }

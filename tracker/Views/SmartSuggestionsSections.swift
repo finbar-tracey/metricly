@@ -72,7 +72,7 @@ enum SmartSuggestionsSections {
                 ForEach(Array(suggestions.enumerated()), id: \.element.id) { idx, suggestion in
                     HStack(spacing: 14) {
                         ZStack {
-                            RoundedRectangle(cornerRadius: 10)
+                            RoundedRectangle(cornerRadius: AppTheme.chipRadius)
                                 .fill(Color.accentColor.opacity(0.12))
                                 .frame(width: 38, height: 38)
                             MuscleIconView(group: suggestion.group, color: Color.accentColor)
@@ -101,7 +101,7 @@ enum SmartSuggestionsSections {
                 }
             }
             .background(Color(.tertiarySystemGroupedBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .clipShape(RoundedRectangle(cornerRadius: AppTheme.tileRadius))
 
             Button(action: onCreateWorkout) {
                 Label("Create Workout from Suggestions", systemImage: "plus.circle.fill")
@@ -129,7 +129,7 @@ enum SmartSuggestionsSections {
                 infoRow(icon: "chart.bar", color: .blue, text: "Suggestions update as you train more")
             }
             .background(Color(.tertiarySystemGroupedBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .clipShape(RoundedRectangle(cornerRadius: AppTheme.tileRadius))
         }
         .appCard()
     }

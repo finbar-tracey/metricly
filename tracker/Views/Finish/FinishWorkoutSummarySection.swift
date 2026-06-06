@@ -84,6 +84,8 @@ enum FinishWorkoutSummarySection {
             .padding(20)
         }
         .heroCard()
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Workout complete. \(workout.name). Rate your session.")
     }
 
     static func statsCard(workout: Workout, totalSets: Int, totalVolume: Double, weightUnit: WeightUnit) -> some View {

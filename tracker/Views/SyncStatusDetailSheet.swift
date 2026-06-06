@@ -32,7 +32,7 @@ struct SyncStatusDetailSheet: View {
                         .padding(.vertical, 12)
                 }
                 .background(Color(.secondarySystemGroupedBackground),
-                            in: RoundedRectangle(cornerRadius: 14))
+                            in: RoundedRectangle(cornerRadius: AppTheme.tileRadius))
 
                 if shouldShowOpenSettingsButton {
                     Button {

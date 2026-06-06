@@ -136,7 +136,7 @@ struct ImportPreviewSheet: View {
             }
             .padding(.vertical, 6)
             .background(Color(.secondarySystemGroupedBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: AppTheme.tileRadius, style: .continuous))
 
             if let earliest = preview.earliestDate {
                 HStack(spacing: 6) {
@@ -227,7 +227,7 @@ struct ImportPreviewSheet: View {
                 }
             }
             .background(Color(.secondarySystemGroupedBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: AppTheme.tileRadius, style: .continuous))
         }
         .padding(16)
         .appCard()

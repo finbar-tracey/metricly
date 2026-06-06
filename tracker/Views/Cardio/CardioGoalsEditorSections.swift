@@ -16,7 +16,7 @@ enum CardioGoalsEditorSections {
                 Button(action: onEditDistance) {
                     HStack(spacing: 12) {
                         ZStack {
-                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            RoundedRectangle(cornerRadius: AppTheme.chipRadius, style: .continuous)
                                 .fill(
                                     LinearGradient(
                                         colors: [.orange, AppTheme.Signal.actionOrange],
@@ -54,7 +54,7 @@ enum CardioGoalsEditorSections {
                 Button(action: onEditSessions) {
                     HStack(spacing: 12) {
                         ZStack {
-                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            RoundedRectangle(cornerRadius: AppTheme.chipRadius, style: .continuous)
                                 .fill(
                                     LinearGradient(
                                         colors: [.blue, AppTheme.Signal.calm],
@@ -88,9 +88,9 @@ enum CardioGoalsEditorSections {
                 .buttonStyle(.pressableCard)
             }
             .background(Color(.tertiarySystemGroupedBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: AppTheme.tileRadius, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                RoundedRectangle(cornerRadius: AppTheme.tileRadius, style: .continuous)
                     .stroke(AppTheme.cardHairline, lineWidth: 0.5)
             )
         }
@@ -220,9 +220,9 @@ enum CardioGoalsEditorSections {
                     endPoint: .bottomTrailing
                 )
             )
-            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: AppTheme.tileRadius, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                RoundedRectangle(cornerRadius: AppTheme.tileRadius, style: .continuous)
                     .stroke(Color.red.opacity(0.12), lineWidth: 0.5)
             )
         }

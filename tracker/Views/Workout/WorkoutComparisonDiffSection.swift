@@ -30,7 +30,7 @@ enum WorkoutComparisonDiffSection {
                     .padding(16)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .background(Color(.tertiarySystemGroupedBackground))
-                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                    .clipShape(RoundedRectangle(cornerRadius: AppTheme.tileRadius))
             } else {
                 VStack(spacing: 0) {
                     ForEach(Array(matched.enumerated()), id: \.element.name) { idx, match in
@@ -40,7 +40,7 @@ enum WorkoutComparisonDiffSection {
                     }
                 }
                 .background(Color(.tertiarySystemGroupedBackground))
-                .clipShape(RoundedRectangle(cornerRadius: 14))
+                .clipShape(RoundedRectangle(cornerRadius: AppTheme.tileRadius))
             }
         }
         .appCard()

@@ -43,9 +43,9 @@ struct UndoBar: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: AppTheme.miniCardRadius, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
+            RoundedRectangle(cornerRadius: AppTheme.miniCardRadius, style: .continuous)
                 .stroke(.white.opacity(0.06), lineWidth: 0.5)
         )
         .shadow(color: .black.opacity(0.18), radius: 12, y: 5)

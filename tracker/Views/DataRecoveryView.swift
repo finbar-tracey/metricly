@@ -97,7 +97,7 @@ struct DataRecoveryView: View {
                     .padding(.vertical, 14)
                     .background(Color.accentColor)
                     .foregroundStyle(.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .clipShape(RoundedRectangle(cornerRadius: AppTheme.tileRadius, style: .continuous))
             }
 
             Button {
@@ -159,7 +159,7 @@ struct DataRecoveryView: View {
                     .padding(12)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .background(Color(.secondarySystemGroupedBackground))
-                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .clipShape(RoundedRectangle(cornerRadius: AppTheme.chipRadius, style: .continuous))
                     .textSelection(.enabled)
             }
         }

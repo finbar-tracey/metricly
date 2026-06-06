@@ -193,6 +193,7 @@ struct ExerciseNewSetSection: View {
                     .foregroundStyle(Color.accentColor.opacity(0.8))
             }
             .buttonStyle(.pressableCard)
+            .accessibilityLabel("Decrease distance")
             Text(String(format: "%.1f %@", session.newDistance, weightUnit.distanceUnit.label))
                 .font(.system(size: 17, weight: .black, design: .rounded))
                 .monospacedDigit()
@@ -207,6 +208,7 @@ struct ExerciseNewSetSection: View {
                     .foregroundStyle(Color.accentColor)
             }
             .buttonStyle(.pressableCard)
+            .accessibilityLabel("Increase distance")
         }
 
         HStack {

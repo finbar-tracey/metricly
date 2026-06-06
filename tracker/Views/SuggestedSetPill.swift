@@ -51,7 +51,7 @@ struct SuggestedSetPill: View {
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
-        .background(accentColor.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
+        .background(accentColor.opacity(0.08), in: RoundedRectangle(cornerRadius: AppTheme.chipRadius))
     }
 
     // MARK: - Style

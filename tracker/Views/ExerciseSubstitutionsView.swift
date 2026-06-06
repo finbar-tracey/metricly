@@ -56,7 +56,7 @@ struct ExerciseSubstitutionsView: View {
                     .enumerated()), id: \.offset) { idx, exercise in
                     HStack(spacing: 12) {
                         ZStack {
-                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            RoundedRectangle(cornerRadius: AppTheme.chipRadius, style: .continuous)
                                 .fill(
                                     LinearGradient(
                                         colors: [Color.accentColor, Color.accentColor.opacity(0.72)],
@@ -82,9 +82,9 @@ struct ExerciseSubstitutionsView: View {
                 }
             }
             .background(Color(.tertiarySystemGroupedBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: AppTheme.tileRadius, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                RoundedRectangle(cornerRadius: AppTheme.tileRadius, style: .continuous)
                     .stroke(Color.white.opacity(0.05), lineWidth: 0.5)
             )
 

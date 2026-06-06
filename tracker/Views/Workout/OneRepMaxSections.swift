@@ -169,7 +169,7 @@ enum OneRepMaxSections {
                             .frame(maxWidth: .infinity).padding(.vertical, 10)
                             .background {
                                 if formula.wrappedValue == f {
-                                    RoundedRectangle(cornerRadius: 10, style: .continuous).fill(
+                                    RoundedRectangle(cornerRadius: AppTheme.chipRadius, style: .continuous).fill(
                                         LinearGradient(
                                             colors: [.blue, AppTheme.Signal.calm],
                                             startPoint: .topLeading, endPoint: .bottomTrailing
@@ -177,7 +177,7 @@ enum OneRepMaxSections {
                                     )
                                     .shadow(color: .blue.opacity(0.35), radius: 6, y: 3)
                                 } else {
-                                    RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Color(.secondarySystemFill))
+                                    RoundedRectangle(cornerRadius: AppTheme.chipRadius, style: .continuous).fill(Color(.secondarySystemFill))
                                 }
                             }
                             .foregroundStyle(formula.wrappedValue == f ? Color.white : Color.primary)
@@ -231,9 +231,9 @@ enum OneRepMaxSections {
                 }
             }
             .background(Color(.tertiarySystemGroupedBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: AppTheme.tileRadius, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                RoundedRectangle(cornerRadius: AppTheme.tileRadius, style: .continuous)
                     .stroke(AppTheme.cardHairline, lineWidth: 0.5)
             )
         }

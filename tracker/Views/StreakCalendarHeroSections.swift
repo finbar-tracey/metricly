@@ -123,7 +123,7 @@ enum StreakCalendarHeroSections {
     static func restDayCard(currentStreak: Int, onDismiss: @escaping () -> Void) -> some View {
         HStack(spacing: 14) {
             ZStack {
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                RoundedRectangle(cornerRadius: AppTheme.tileRadius, style: .continuous)
                     .fill(
                         LinearGradient(
                             colors: [.indigo, Color(red: 0.40, green: 0.30, blue: 0.85)],
@@ -155,6 +155,7 @@ enum StreakCalendarHeroSections {
                     .foregroundStyle(Color(.tertiaryLabel))
             }
             .buttonStyle(.pressableCard)
+            .accessibilityLabel("Dismiss")
         }
         .appCard()
         .transition(.opacity.combined(with: .move(edge: .top)))

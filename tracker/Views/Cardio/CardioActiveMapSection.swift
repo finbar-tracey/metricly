@@ -116,6 +116,7 @@ extension CardioActiveView {
                     .background(.ultraThinMaterial, in: Circle())
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("Toggle map style")
             .padding(.top, 56)
             .padding(.trailing, 16)
         }

@@ -126,6 +126,7 @@ struct FinishWorkoutSheet: View {
                     } label: {
                         Image(systemName: "square.and.arrow.up")
                     }
+                    .accessibilityLabel("Share workout")
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button(String(localized: "Done",

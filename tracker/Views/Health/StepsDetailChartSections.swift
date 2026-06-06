@@ -317,7 +317,7 @@ enum StepsDetailChartSections {
                 statsRow("Days Tracked", value: "\(dailySteps.filter { $0.steps > 0 }.count)")
             }
             .background(Color(.tertiarySystemGroupedBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .clipShape(RoundedRectangle(cornerRadius: AppTheme.tileRadius))
         }
         .appCard()
     }

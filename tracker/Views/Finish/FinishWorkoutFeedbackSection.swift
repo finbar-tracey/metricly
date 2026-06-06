@@ -34,7 +34,7 @@ enum FinishWorkoutFeedbackSection {
                         sorenessPicker(for: group, sorenessLevels: sorenessLevels)
                     }
                     .padding(.horizontal, 12).padding(.vertical, 6)
-                    .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 10))
+                    .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: AppTheme.chipRadius))
                 }
             }
         }
@@ -137,11 +137,11 @@ enum FinishWorkoutFeedbackSection {
             .frame(maxWidth: .infinity)
             .padding(.vertical, 14)
             .background(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                RoundedRectangle(cornerRadius: AppTheme.tileRadius, style: .continuous)
                     .fill(isSelected ? tint : Color(.secondarySystemGroupedBackground))
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                RoundedRectangle(cornerRadius: AppTheme.tileRadius, style: .continuous)
                     .stroke(isSelected ? tint : Color.secondary.opacity(0.18), lineWidth: 1)
             )
         }

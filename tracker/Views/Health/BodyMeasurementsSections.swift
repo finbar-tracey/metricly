@@ -142,7 +142,7 @@ enum BodyMeasurementsSections {
                 .padding(.horizontal, 16).padding(.vertical, 12)
             }
             .background(Color(.tertiarySystemGroupedBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .clipShape(RoundedRectangle(cornerRadius: AppTheme.tileRadius))
         }
         .appCard()
     }
@@ -237,7 +237,7 @@ enum BodyMeasurementsSections {
                     .font(.subheadline).foregroundStyle(.secondary)
                     .padding(16).frame(maxWidth: .infinity, alignment: .leading)
                     .background(Color(.tertiarySystemGroupedBackground))
-                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                    .clipShape(RoundedRectangle(cornerRadius: AppTheme.tileRadius))
             } else {
                 VStack(spacing: 0) {
                     ForEach(Array(siteEntries.prefix(30).enumerated()), id: \.element.persistentModelID) { idx, entry in
@@ -263,7 +263,7 @@ enum BodyMeasurementsSections {
                     }
                 }
                 .background(Color(.tertiarySystemGroupedBackground))
-                .clipShape(RoundedRectangle(cornerRadius: 14))
+                .clipShape(RoundedRectangle(cornerRadius: AppTheme.tileRadius))
             }
         }
         .appCard()

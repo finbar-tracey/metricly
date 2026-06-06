@@ -74,7 +74,7 @@ struct EditSetSheet: View {
                                         .padding(.vertical, 9)
                                         .background {
                                             if rpe == value {
-                                                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                                RoundedRectangle(cornerRadius: AppTheme.chipRadius, style: .continuous)
                                                     .fill(
                                                         LinearGradient(
                                                             colors: [.purple, AppTheme.Signal.focus],
@@ -84,7 +84,7 @@ struct EditSetSheet: View {
                                                     )
                                                     .shadow(color: .purple.opacity(0.40), radius: 6, y: 3)
                                             } else {
-                                                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                                RoundedRectangle(cornerRadius: AppTheme.chipRadius, style: .continuous)
                                                     .fill(Color(.tertiarySystemFill))
                                             }
                                         }
@@ -153,6 +153,7 @@ struct EditSetSheet: View {
                         .foregroundStyle(Color.accentColor.opacity(0.8))
                 }
                 .buttonStyle(.pressableCard)
+                .accessibilityLabel("Decrease distance")
                 Text(String(format: "%.1f %@", distance, weightUnit.distanceUnit.label))
                     .font(.system(size: 28, weight: .black, design: .rounded))
                     .monospacedDigit()
@@ -168,6 +169,7 @@ struct EditSetSheet: View {
                         .foregroundStyle(Color.accentColor)
                 }
                 .buttonStyle(.pressableCard)
+                .accessibilityLabel("Increase distance")
             }
         }
 
@@ -251,6 +253,7 @@ struct EditSetSheet: View {
                         .foregroundStyle(Color.accentColor.opacity(0.8))
                 }
                 .buttonStyle(.pressableCard)
+                .accessibilityLabel("Decrease weight")
                 Spacer()
                 TextField("Weight", value: $weight, format: .number)
                     .keyboardType(.decimalPad)
@@ -259,7 +262,7 @@ struct EditSetSheet: View {
                     .frame(width: 100)
                     .padding(.vertical, 10)
                     .padding(.horizontal, 12)
-                    .background(Color(.tertiarySystemFill), in: .rect(cornerRadius: 10))
+                    .background(Color(.tertiarySystemFill), in: .rect(cornerRadius: AppTheme.chipRadius))
                     .focused($isWeightFieldFocused)
                     .onChange(of: weight) {
                         if weight < 0 { weight = 0 }
@@ -274,6 +277,7 @@ struct EditSetSheet: View {
                         .foregroundStyle(Color.accentColor)
                 }
                 .buttonStyle(.pressableCard)
+                .accessibilityLabel("Increase weight")
             }
         }
     }

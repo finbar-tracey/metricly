@@ -174,7 +174,7 @@ struct ExerciseGuideView: View {
                 }
             }
             .padding(.horizontal, 4)
-            .background(Color(.tertiarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 14))
+            .background(Color(.tertiarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: AppTheme.tileRadius))
         }
         .appCard()
     }
@@ -208,7 +208,7 @@ struct ExerciseGuideView: View {
                 }
             }
             .padding(.horizontal, 4)
-            .background(Color(.tertiarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 14))
+            .background(Color(.tertiarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: AppTheme.tileRadius))
         }
         .appCard()
     }

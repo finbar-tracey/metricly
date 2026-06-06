@@ -70,7 +70,7 @@ enum CardioBestsPRSection {
                 }
             }
             .background(Color(.tertiarySystemGroupedBackground),
-                        in: RoundedRectangle(cornerRadius: 14))
+                        in: RoundedRectangle(cornerRadius: AppTheme.tileRadius))
         }
         .appCard()
     }

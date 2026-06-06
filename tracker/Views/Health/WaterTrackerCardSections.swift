@@ -94,7 +94,7 @@ enum WaterTrackerCardSections {
                             .frame(width: 72)
                             .padding(.vertical, 10)
                             .background(Color(.secondarySystemGroupedBackground))
-                            .clipShape(RoundedRectangle(cornerRadius: 14))
+                            .clipShape(RoundedRectangle(cornerRadius: AppTheme.tileRadius))
                         }
                         .buttonStyle(.pressableCard)
                     }
@@ -119,11 +119,12 @@ enum WaterTrackerCardSections {
                         .font(.title2)
                         .foregroundStyle(.cyan)
                 }
+                .accessibilityLabel("Add water")
                 .disabled(Double(customMl.wrappedValue) ?? 0 <= 0)
             }
             .padding(14)
             .background(Color(.secondarySystemGroupedBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .clipShape(RoundedRectangle(cornerRadius: AppTheme.tileRadius))
         }
         .appCard()
     }
@@ -210,7 +211,7 @@ enum WaterTrackerCardSections {
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 8)
-                    .background(block.ml > 0 ? block.color.opacity(0.06) : Color.clear, in: RoundedRectangle(cornerRadius: 10))
+                    .background(block.ml > 0 ? block.color.opacity(0.06) : Color.clear, in: RoundedRectangle(cornerRadius: AppTheme.chipRadius))
                 }
             }
         }
@@ -306,7 +307,7 @@ enum WaterTrackerCardSections {
                 }
             }
             .background(Color(.tertiarySystemGroupedBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .clipShape(RoundedRectangle(cornerRadius: AppTheme.tileRadius))
         }
         .appCard()
     }

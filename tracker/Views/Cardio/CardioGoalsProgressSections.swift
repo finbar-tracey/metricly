@@ -46,10 +46,10 @@ enum CardioGoalsProgressSections {
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     ),
-                    in: RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    in: RoundedRectangle(cornerRadius: AppTheme.tileRadius, style: .continuous)
                 )
                 .overlay(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    RoundedRectangle(cornerRadius: AppTheme.tileRadius, style: .continuous)
                         .stroke(Color.orange.opacity(0.20), lineWidth: 0.5)
                 )
             } else {

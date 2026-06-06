@@ -190,7 +190,7 @@ struct LiftGoalsView: View {
                 .padding(.horizontal, 16).padding(.vertical, 12)
             }
             .background(Color(.tertiarySystemGroupedBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .clipShape(RoundedRectangle(cornerRadius: AppTheme.tileRadius))
         }
         .appCard()
     }
@@ -213,7 +213,7 @@ struct LiftGoalsView: View {
                 }
             }
             .background(Color(.tertiarySystemGroupedBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .clipShape(RoundedRectangle(cornerRadius: AppTheme.tileRadius))
         }
         .appCard()
     }
@@ -236,7 +236,7 @@ struct LiftGoalsView: View {
                 }
             }
             .background(Color(.tertiarySystemGroupedBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .clipShape(RoundedRectangle(cornerRadius: AppTheme.tileRadius))
         }
         .appCard()
     }
@@ -249,7 +249,7 @@ struct LiftGoalsView: View {
 
         return HStack(spacing: 14) {
             ZStack {
-                RoundedRectangle(cornerRadius: 10).fill(rowColor.opacity(0.12)).frame(width: 40, height: 40)
+                RoundedRectangle(cornerRadius: AppTheme.chipRadius).fill(rowColor.opacity(0.12)).frame(width: 40, height: 40)
                 Image(systemName: isComplete ? "checkmark.circle.fill" : "target")
                     .font(.system(size: 15, weight: .semibold)).foregroundStyle(rowColor)
             }

@@ -35,9 +35,9 @@ enum WorkoutComparisonSummarySection {
                 .padding(.horizontal, 16).padding(.vertical, 13)
             }
             .background(Color(.tertiarySystemGroupedBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: AppTheme.tileRadius, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                RoundedRectangle(cornerRadius: AppTheme.tileRadius, style: .continuous)
                     .stroke(Color.white.opacity(0.05), lineWidth: 0.5)
             )
         }
@@ -87,9 +87,9 @@ enum WorkoutComparisonSummarySection {
                     heroSideCol(label: right.name, date: right.date, value: formatVolume(rightVol, weightUnit: weightUnit), tag: "B")
                 }
                 .padding(.vertical, 12)
-                .background(.ultraThinMaterial.opacity(0.55), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .background(.ultraThinMaterial.opacity(0.55), in: RoundedRectangle(cornerRadius: AppTheme.tileRadius, style: .continuous))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    RoundedRectangle(cornerRadius: AppTheme.tileRadius, style: .continuous)
                         .stroke(.white.opacity(0.18), lineWidth: 0.5)
                 )
             }
@@ -132,7 +132,7 @@ enum WorkoutComparisonSummarySection {
                 }
             }
             .background(Color(.tertiarySystemGroupedBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .clipShape(RoundedRectangle(cornerRadius: AppTheme.tileRadius))
         }
         .appCard()
     }
@@ -172,7 +172,7 @@ enum WorkoutComparisonSummarySection {
 
     private static func pickerBadge(tag: String, colors: [Color], shadow: Color) -> some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
+            RoundedRectangle(cornerRadius: AppTheme.chipRadius, style: .continuous)
                 .fill(LinearGradient(colors: colors, startPoint: .topLeading, endPoint: .bottomTrailing))
                 .frame(width: 38, height: 38)
                 .shadow(color: shadow.opacity(0.40), radius: 5, y: 2)

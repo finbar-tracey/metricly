@@ -14,7 +14,17 @@ struct CardioActiveView: View {
     let cardioType: CardioType
     let onComplete: (CardioSession) -> Void
 
-    @State var tracker = AppServices.shared.cardioTracker
+    @Bindable var tracker: CardioTracker
+
+    init(
+        cardioType: CardioType,
+        tracker: CardioTracker,
+        onComplete: @escaping (CardioSession) -> Void
+    ) {
+        self.cardioType = cardioType
+        self.tracker = tracker
+        self.onComplete = onComplete
+    }
     @State var showStopAlert = false
     @State var showSplits = false
     @State var cameraPosition: MapCameraPosition = .userLocation(fallback: .automatic)

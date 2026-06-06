@@ -78,9 +78,9 @@ enum HeartRateDetailHeroSections {
                     }
                 }
                 .padding(.vertical, 12)
-                .background(.ultraThinMaterial.opacity(0.55), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .background(.ultraThinMaterial.opacity(0.55), in: RoundedRectangle(cornerRadius: AppTheme.tileRadius, style: .continuous))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    RoundedRectangle(cornerRadius: AppTheme.tileRadius, style: .continuous)
                         .stroke(.white.opacity(0.18), lineWidth: 0.5)
                 )
             }
@@ -121,8 +121,8 @@ enum HeartRateDetailHeroSections {
                 }
             }
             .background(Color(.tertiarySystemGroupedBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(AppTheme.cardHairline, lineWidth: 0.5))
+            .clipShape(RoundedRectangle(cornerRadius: AppTheme.tileRadius, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: AppTheme.tileRadius, style: .continuous).stroke(AppTheme.cardHairline, lineWidth: 0.5))
         }
         .appCard()
     }

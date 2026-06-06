@@ -98,7 +98,7 @@ struct OnboardingFeaturesPage: View {
             Spacer(minLength: 0)
         }
         .padding(14)
-        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 14))
+        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: AppTheme.tileRadius))
     }
 }
 
@@ -158,9 +158,9 @@ enum OnboardingPageStyle {
                 )
             )
             .foregroundStyle(.white)
-            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: AppTheme.miniCardRadius, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                RoundedRectangle(cornerRadius: AppTheme.miniCardRadius, style: .continuous)
                     .stroke(Color.white.opacity(0.20), lineWidth: 0.5)
             )
             .shadow(color: Color.accentColor.opacity(0.45), radius: 14, y: 6)
@@ -195,9 +195,9 @@ enum OnboardingPageStyle {
                 )
             )
             .foregroundStyle(textColor)
-            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: AppTheme.miniCardRadius, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                RoundedRectangle(cornerRadius: AppTheme.miniCardRadius, style: .continuous)
                     .stroke(Color.white.opacity(0.30), lineWidth: 0.5)
             )
             .shadow(color: textColor.opacity(0.18), radius: 14, y: 6)

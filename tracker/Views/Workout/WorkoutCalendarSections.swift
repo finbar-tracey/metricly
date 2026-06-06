@@ -100,7 +100,7 @@ enum WorkoutCalendarSections {
                     }
                 }
                 .background(Color(.tertiarySystemGroupedBackground))
-                .clipShape(RoundedRectangle(cornerRadius: 14))
+                .clipShape(RoundedRectangle(cornerRadius: AppTheme.tileRadius))
             }
         }
         .appCard()
@@ -206,7 +206,7 @@ enum WorkoutCalendarSections {
         } label: {
             ZStack {
                 if isSelected {
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    RoundedRectangle(cornerRadius: AppTheme.chipRadius, style: .continuous)
                         .fill(
                             LinearGradient(
                                 colors: [Color.accentColor, Color.accentColor.opacity(0.78)],
@@ -217,12 +217,12 @@ enum WorkoutCalendarSections {
                         .frame(width: 38, height: 38)
                         .shadow(color: Color.accentColor.opacity(0.50), radius: 6, y: 2)
                 } else {
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    RoundedRectangle(cornerRadius: AppTheme.chipRadius, style: .continuous)
                         .fill(count > 0 ? heatmapColor(count: count) : .clear)
                         .frame(width: 38, height: 38)
                 }
                 if isToday && !isSelected {
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    RoundedRectangle(cornerRadius: AppTheme.chipRadius, style: .continuous)
                         .stroke(Color.accentColor, lineWidth: 2)
                         .frame(width: 38, height: 38)
                 }
@@ -240,7 +240,7 @@ enum WorkoutCalendarSections {
     private static func summaryTile(_ title: String, value: String, icon: String, color: Color) -> some View {
         HStack(spacing: 10) {
             ZStack {
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                RoundedRectangle(cornerRadius: AppTheme.chipRadius, style: .continuous)
                     .fill(
                         LinearGradient(
                             colors: [color, color.opacity(0.72)],
@@ -272,9 +272,9 @@ enum WorkoutCalendarSections {
                 endPoint: .bottomTrailing
             )
         )
-        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: AppTheme.tileRadius, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
+            RoundedRectangle(cornerRadius: AppTheme.tileRadius, style: .continuous)
                 .stroke(color.opacity(0.18), lineWidth: 0.5)
         )
         .frame(maxWidth: .infinity)

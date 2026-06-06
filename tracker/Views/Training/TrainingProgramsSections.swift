@@ -87,7 +87,7 @@ enum TrainingProgramsSections {
                     NavigationLink(value: program) {
                         HStack(spacing: 14) {
                             ZStack {
-                                RoundedRectangle(cornerRadius: 10)
+                                RoundedRectangle(cornerRadius: AppTheme.chipRadius)
                                     .fill(program.isActive ? AnyShapeStyle(Color.accentColor.gradient) : AnyShapeStyle(Color(.systemGray5).gradient))
                                     .frame(width: 40, height: 40)
                                 Image(systemName: "dumbbell.fill")
@@ -131,7 +131,7 @@ enum TrainingProgramsSections {
                 }
             }
             .background(Color(.tertiarySystemGroupedBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .clipShape(RoundedRectangle(cornerRadius: AppTheme.tileRadius))
         }
         .appCard()
     }

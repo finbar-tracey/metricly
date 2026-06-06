@@ -78,7 +78,7 @@ enum ExerciseHistorySections {
             }
             .padding(18)
         }
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: AppTheme.miniCardRadius, style: .continuous))
         .shadow(color: .black.opacity(0.18), radius: 16, y: 6)
         .accessibilityElement(children: .combine)
     }

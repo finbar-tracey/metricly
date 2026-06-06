@@ -36,9 +36,9 @@ enum CardioCompletionActionsSection {
                 .tint(.white)
                 .focused(notesFocused)
                 .padding(14)
-                .background(.ultraThinMaterial.opacity(0.55), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .background(.ultraThinMaterial.opacity(0.55), in: RoundedRectangle(cornerRadius: AppTheme.tileRadius, style: .continuous))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    RoundedRectangle(cornerRadius: AppTheme.tileRadius, style: .continuous)
                         .stroke(.white.opacity(0.20), lineWidth: 0.5)
                 )
         }
@@ -60,7 +60,7 @@ enum CardioCompletionActionsSection {
                     .padding(.vertical, 17)
                     .background(.white)
                     .foregroundStyle(session.type.color)
-                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .clipShape(RoundedRectangle(cornerRadius: AppTheme.miniCardRadius, style: .continuous))
                     .shadow(color: .black.opacity(0.20), radius: 10, y: 5)
             }
             .buttonStyle(.pressableCard)
@@ -83,9 +83,9 @@ enum CardioCompletionActionsSection {
                 .foregroundStyle(.white)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 15)
-                .background(.ultraThinMaterial.opacity(0.65), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .background(.ultraThinMaterial.opacity(0.65), in: RoundedRectangle(cornerRadius: AppTheme.miniCardRadius, style: .continuous))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    RoundedRectangle(cornerRadius: AppTheme.miniCardRadius, style: .continuous)
                         .stroke(.white.opacity(0.22), lineWidth: 0.5)
                 )
             }

@@ -207,7 +207,7 @@ struct TemplateMarketplaceView: View {
                 }
                 .padding(12)
                 .background(Color(.tertiarySystemGroupedBackground))
-                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .clipShape(RoundedRectangle(cornerRadius: AppTheme.chipRadius))
 
                 Button {
                     UIImpactFeedbackGenerator(style: .medium).impactOccurred()

@@ -128,9 +128,9 @@ enum CardioCompletionHeroSection {
                         .shadow(color: .yellow.opacity(0.5), radius: 4)
                 }
                 .padding(.horizontal, 16).padding(.vertical, 12)
-                .background(.ultraThinMaterial.opacity(0.55), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .background(.ultraThinMaterial.opacity(0.55), in: RoundedRectangle(cornerRadius: AppTheme.tileRadius, style: .continuous))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    RoundedRectangle(cornerRadius: AppTheme.tileRadius, style: .continuous)
                         .stroke(.white.opacity(0.20), lineWidth: 0.5)
                 )
             }

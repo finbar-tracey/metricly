@@ -38,6 +38,7 @@ struct WorkoutNotesView: View {
                     } label: {
                         Image(systemName: "pencil")
                     }
+                    .accessibilityLabel("Edit notes")
                 }
             }
         }
@@ -59,9 +60,9 @@ struct WorkoutNotesView: View {
                         endPoint: .bottomTrailing
                     )
                 )
-                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: AppTheme.tileRadius, style: .continuous))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    RoundedRectangle(cornerRadius: AppTheme.tileRadius, style: .continuous)
                         .stroke(Color.accentColor.opacity(0.12), lineWidth: 0.5)
                 )
         }
@@ -90,7 +91,7 @@ struct WorkoutNotesView: View {
                 .scrollContentBackground(.hidden)
                 .padding(12)
                 .background(Color(.tertiarySystemGroupedBackground))
-                .clipShape(RoundedRectangle(cornerRadius: 14))
+                .clipShape(RoundedRectangle(cornerRadius: AppTheme.tileRadius))
 
             if !editText.isEmpty {
                 VStack(alignment: .leading, spacing: 10) {
@@ -100,7 +101,7 @@ struct WorkoutNotesView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(14)
                         .background(Color(.tertiarySystemGroupedBackground))
-                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                        .clipShape(RoundedRectangle(cornerRadius: AppTheme.tileRadius))
                 }
             }
         }
@@ -153,7 +154,7 @@ struct WorkoutNotesView: View {
                 tipRow(syntax: "- item", result: "• item")
             }
             .background(Color(.tertiarySystemGroupedBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .clipShape(RoundedRectangle(cornerRadius: AppTheme.tileRadius))
         }
         .appCard()
     }

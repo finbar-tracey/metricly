@@ -144,7 +144,7 @@ struct ExerciseLibraryView: View {
     private func exerciseRow(_ exercise: ExerciseInfo, group: MuscleGroup) -> some View {
         HStack(spacing: 12) {
             ZStack {
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                RoundedRectangle(cornerRadius: AppTheme.chipRadius, style: .continuous)
                     .fill(
                         LinearGradient(
                             colors: [groupColor(group).opacity(0.26), groupColor(group).opacity(0.12)],
@@ -152,7 +152,7 @@ struct ExerciseLibraryView: View {
                         )
                     )
                     .frame(width: 34, height: 34)
-                    .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(groupColor(group).opacity(0.28), lineWidth: 0.5))
+                    .overlay(RoundedRectangle(cornerRadius: AppTheme.chipRadius, style: .continuous).stroke(groupColor(group).opacity(0.28), lineWidth: 0.5))
                 MuscleIconView(group: group, color: groupColor(group))
                     .frame(width: 18, height: 18)
             }

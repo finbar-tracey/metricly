@@ -109,7 +109,7 @@ struct WorkoutDetailPlanSection: View {
                         .padding(.vertical, 8)
                         .background(AppTheme.Signal.caution)
                         .foregroundStyle(.white)
-                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                        .clipShape(RoundedRectangle(cornerRadius: AppTheme.chipRadius, style: .continuous))
                 }
                 .buttonStyle(.plain)
                 Button {
@@ -121,7 +121,7 @@ struct WorkoutDetailPlanSection: View {
                         .padding(.vertical, 8)
                         .background(Color(.tertiarySystemGroupedBackground))
                         .foregroundStyle(.primary)
-                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                        .clipShape(RoundedRectangle(cornerRadius: AppTheme.chipRadius, style: .continuous))
                 }
                 .buttonStyle(.plain)
             }
