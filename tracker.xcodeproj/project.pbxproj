@@ -12,8 +12,6 @@
 		1EB787865C77762031B1F03C /* HealthKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 62964D20926F033C299E8669 /* HealthKit.framework */; settings = {ATTRIBUTES = (); }; };
 		256F025906207781C4A42241 /* WatchGymView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8542A36BEB6EAFCC197C9226 /* WatchGymView.swift */; };
 		2C483E36543470E6FC3B4E78 /* WidgetModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D4F51462FE8B1D8E7C56A0E /* WidgetModels.swift */; };
-		D5A29A21938233E7A93D0003 /* MetriclyTokens.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5A29A21938233E7A93D0001 /* MetriclyTokens.swift */; };
-		D5A29A21938233E7A93D0004 /* MetriclyTokens.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5A29A21938233E7A93D0001 /* MetriclyTokens.swift */; };
 		2FBFAED8CF597A8948429AB2 /* WatchRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 663DD188085EEE0F6A1E3458 /* WatchRootView.swift */; };
 		35515EA8CD7ABF9D043C5710 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4101AA73A1268A38D07B832B /* WidgetKit.framework */; settings = {ATTRIBUTES = (); }; };
 		424EEF5EC8024FAB25D38FC2 /* WatchWorkoutSessionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C7565ACAA622AD970A48063 /* WatchWorkoutSessionManager.swift */; };
@@ -86,6 +84,8 @@
 		C2AE9414EA97FC26A44B282D /* WidgetModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D4F51462FE8B1D8E7C56A0E /* WidgetModels.swift */; };
 		C65C4106D61E19FD82FEBD27 /* MetriclyWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = FDE4FFC6BE5D207CB3754ED7 /* MetriclyWatch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		D25382435926316D83D43CC7 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 39E4F1D6FA51D7480550839B /* Foundation.framework */; };
+		D5A29A21938233E7A93D0003 /* MetriclyTokens.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5A29A21938233E7A93D0001 /* MetriclyTokens.swift */; };
+		D5A29A21938233E7A93D0004 /* MetriclyTokens.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5A29A21938233E7A93D0001 /* MetriclyTokens.swift */; };
 		E981D6360D6A5E9E3E8562B2 /* StravaImportService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 703FFA80F67EF45A2C03DB9E /* StravaImportService.swift */; };
 		EDB8AE92F24CFC88014E868E /* WatchComplications.swift in Sources */ = {isa = PBXBuildFile; fileRef = 450504C0961911BD593E7516 /* WatchComplications.swift */; };
 		F5E1D7AFB6B9A3642F1A8CE2 /* WatchCardioView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4124FAE731ACA1B9480E005F /* WatchCardioView.swift */; };
@@ -188,7 +188,6 @@
 		6E48B48972259787CEA4E374 /* HealthDataCache.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = HealthDataCache.swift; sourceTree = "<group>"; };
 		703FFA80F67EF45A2C03DB9E /* StravaImportService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = StravaImportService.swift; sourceTree = "<group>"; };
 		7D4F51462FE8B1D8E7C56A0E /* WidgetModels.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WidgetModels.swift; sourceTree = "<group>"; };
-		D5A29A21938233E7A93D0001 /* MetriclyTokens.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MetriclyTokens.swift; sourceTree = "<group>"; };
 		8297692C2FC6441200590CAA /* Secrets.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secrets.xcconfig; sourceTree = "<group>"; };
 		82A0C4CE2F58E8E200BD421B /* tracker.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = tracker.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		82CCBB032F81354000BD46EA /* AppShortcuts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppShortcuts.swift; sourceTree = "<group>"; };
@@ -248,6 +247,7 @@
 		D5A29A21938233E7A93C4D1 /* StravaService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = StravaService.swift; sourceTree = "<group>"; };
 		D5A29A21938233E7A93C4D2 /* StravaTokenStore.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = StravaTokenStore.swift; sourceTree = "<group>"; };
 		D5A29A21938233E7A93C4D3 /* MetriclySchema.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MetriclySchema.swift; sourceTree = "<group>"; };
+		D5A29A21938233E7A93D0001 /* MetriclyTokens.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MetriclyTokens.swift; sourceTree = "<group>"; };
 		E7BFB9689E4590B0397BD07C /* MetriclyWatchComplications.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = MetriclyWatchComplications.entitlements; sourceTree = "<group>"; };
 		EBF0E4BA9016748E21F092B3 /* MetriclyWatch.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = MetriclyWatch.entitlements; sourceTree = "<group>"; };
 		FB7196003915356F98225F20 /* ImportAnalyzer.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ImportAnalyzer.swift; sourceTree = "<group>"; };
@@ -463,14 +463,6 @@
 			path = Services;
 			sourceTree = "<group>";
 		};
-		D5A29A21938233E7A93D0002 /* DesignTokens */ = {
-			isa = PBXGroup;
-			children = (
-				D5A29A21938233E7A93D0001 /* MetriclyTokens.swift */,
-			);
-			path = DesignTokens;
-			sourceTree = "<group>";
-		};
 		82CCBB8F2F8BF6A200BD46EA /* Helpers */ = {
 			isa = PBXGroup;
 			children = (
@@ -536,6 +528,14 @@
 				A1EC0A1E2F9A001000BD421B /* StravaTokenRefresher.swift */,
 			);
 			path = Strava;
+			sourceTree = "<group>";
+		};
+		D5A29A21938233E7A93D0002 /* DesignTokens */ = {
+			isa = PBXGroup;
+			children = (
+				D5A29A21938233E7A93D0001 /* MetriclyTokens.swift */,
+			);
+			path = DesignTokens;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */

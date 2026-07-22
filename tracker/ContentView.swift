@@ -25,6 +25,8 @@ struct ContentView: View {
     @State var selectedTab: AppTab = .home
     @State var showingSettings = false
     @State var showingSearch = false
+    /// Driven by `hidesMetriclyTabBar()` — the live workout takes the bar away.
+    @State var tabBarHidden = false
 
     var settings: UserSettings {
         settingsArray.first ?? UserSettings()
