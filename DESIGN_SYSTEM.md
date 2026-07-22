@@ -21,6 +21,34 @@ Connect* needs an Enterprise Developer seat, so this doc + the per-component Fig
 Variable collection has **Light + Dark** modes (Dark currently mirrors Light — to tune
 in a dark-mode pass).
 
+### Redesign tokens (`design_handoff_app` — dark, signal-glow)
+
+A second, parallel palette introduced by the Home redesign. Not yet in Figma —
+source of truth is `DesignTokens/MetriclyTokens.swift`, which is compiled into
+**both** the app and the widget extension so the brand has one definition.
+
+| Token group | Symbol | Notes |
+|---|---|---|
+| Surfaces (bg, bgInset, surface, surfaceLo, surfaceHi, hairline) | `AppTheme.Dark.*` | "Calm pass" values — one step lighter than the v1 handoff |
+| Text scale (text … text4, ink) | `AppTheme.Dark.*` | `ink` is the near-black used *on* accent fills |
+| Signals (recovery, strain, caution, focus, calm) | `AppTheme.Dark.Signal.*` | Tuned to glow on the deep neutrals; unchanged by the calm pass |
+| Radii (hero 22, card 18, well 12, chip 8, bar 3) | `AppTheme.Dark.Radius.*` | Tighter than the app-wide `AppTheme.*Radius` scale |
+| Cross-target brand colors | `MetriclyBrand.runOrange / alarmRed / workout` | Shared with `MetriclyWidgets` — was 5 duplicated RGB literals |
+| Glow / chrome / entrance motion | `.signalGlow(_:)`, `.darkCard()`, `.darkWell()`, `.growIn()` | `growIn` honours Reduce Motion (skips the animation, keeps the end state) |
+
+Scoped to the **Home tab only** — applied via `.environment(\.colorScheme, .dark)`
+in `homeDashboardChrome`, not `.preferredColorScheme` (which propagates to the
+window, where `ContentView`'s root value wins). Other tabs stay on the adaptive
+palette driven by the Settings appearance toggle.
+
+| Redesign component | SwiftUI source | Design ref |
+|---|---|---|
+| EffortTape (14-day strip) | `tracker/Components/EffortTape.swift` | `tape-v2.jsx` → `TapeEffort` |
+| TodayHero (verdict banner) | `tracker/Components/TodayHero.swift` | `tape-v2.jsx` → `HomeWithTape` |
+| MicroSignalRow (4-up signals) | `tracker/Components/MicroSignalRow.swift` | `tape-v2.jsx` → `MicroSignal` |
+| NextUpCard (session on deck) | `tracker/Components/NextUpCard.swift` | `tape-v2.jsx` → `ExerciseRowV2` |
+| Composition + data mapping | `tracker/Views/HomeTodaySection.swift` | `scenario.jsx` (presentation state, not an engine) |
+
 ## Components (Figma node → SwiftUI)
 
 | Figma component | node | SwiftUI source | symbol | status |

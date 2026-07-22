@@ -35,8 +35,7 @@ struct WorkoutLockScreenView: View {
             ZStack {
                 Circle()
                     .fill(LinearGradient(
-                        colors: [Color(red: 1.0, green: 0.52, blue: 0.15),
-                                 Color(red: 0.88, green: 0.22, blue: 0.10)],
+                        colors: MetriclyBrand.workout,
                         startPoint: .topLeading, endPoint: .bottomTrailing))
                     .frame(width: 46, height: 46)
                 Image(systemName: "flame.fill")
@@ -113,8 +112,7 @@ struct WorkoutDynamicIslandExpandedView: View {
                 ZStack {
                     Circle()
                         .fill(LinearGradient(
-                            colors: [Color(red: 1.0, green: 0.52, blue: 0.15),
-                                     Color(red: 0.88, green: 0.22, blue: 0.10)],
+                            colors: MetriclyBrand.workout,
                             startPoint: .topLeading, endPoint: .bottomTrailing))
                         .frame(width: 34, height: 34)
                     Image(systemName: "flame.fill")

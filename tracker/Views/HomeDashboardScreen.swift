@@ -56,18 +56,6 @@ struct HomeDashboardScreen: View {
         )
     }
 
-    var greeting: String {
-        let hour = Calendar.current.component(.hour, from: .now)
-        let name = settings.userName.isEmpty ? nil : settings.userName
-        let timeGreeting: String
-        switch hour {
-        case 5..<12: timeGreeting = "Good morning"
-        case 12..<17: timeGreeting = "Good afternoon"
-        default: timeGreeting = "Good evening"
-        }
-        return name.map { "\(timeGreeting), \($0)" } ?? timeGreeting
-    }
-
     var body: some View {
         homeDashboardChrome(homeScrollContent)
     }

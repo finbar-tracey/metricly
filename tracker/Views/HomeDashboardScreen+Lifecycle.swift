@@ -3,30 +3,45 @@ import SwiftData
 
 extension HomeDashboardScreen {
 
+    /// The redesigned head of Home. Owns its own horizontal padding (the tape
+    /// runs to 16pt, the cards to 12pt) so it can't sit inside the page gutter
+    /// the sections below use.
+    var homeTodayData: HomeTodayData {
+        HomeTodayData.build(
+            snapshot: snapshot,
+            plan: store.todayPlan,
+            health: liveHealthSignals,
+            sleepMinutes: sleepMinutes,
+            healthDataLoaded: healthKitEnabled && healthDataLoaded,
+            progressionSuggestions: cachedProgressionSuggestions
+        )
+    }
+
     var homeScrollContent: some View {
         ScrollView {
             LazyVStack(spacing: AppTheme.sectionSpacing) {
+                HomeTodaySection(
+                    data: homeTodayData,
+                    plan: store.todayPlan,
+                    onOpenPlanDetail: { homeRoute = .planDetail },
+                    onStart: onQuickStart,
+                    onSelectDay: { tappedDayWorkout = $0 }
+                )
+                .padding(.top, 10)
+
                 HomeDashboardTopSection(
                     snapshot: snapshot,
                     store: store,
-                    greeting: greeting,
                     healthKitEnabled: healthKitEnabled,
                     healthDataLoaded: healthDataLoaded,
-                    hrv: hrv,
-                    sleepMinutes: sleepMinutes,
-                    restingHR: restingHR,
-                    animateRings: animateRings,
-                    heroGradientColors: heroGradientColors,
                     topInsight: topInsight,
                     shouldOfferInsightsTease: shouldOfferInsightsTease,
                     ctaKind: ctaKind,
                     todaySteps: todaySteps,
                     activeCalories: activeCalories,
                     weightUnit: weightUnit,
-                    tappedDayWorkout: $tappedDayWorkout,
                     blockForDetailSheet: $blockForDetailSheet,
                     showingAddWorkout: $showingAddWorkout,
-                    onPlanDetail: { homeRoute = .planDetail },
                     onInsertBlock: { newBlock in
                         modelContext.insert(newBlock)
                         try? modelContext.save()
@@ -35,7 +50,11 @@ extension HomeDashboardScreen {
                     },
                     onOpenInsights: { appServices.router.openInsightsTab() }
                 )
+                .padding(.horizontal)
+
                 momentumCard
+                    .padding(.horizontal)
+
                 HomeDashboardMiddleSection(
                     snapshot: snapshot,
                     store: store,
@@ -46,6 +65,8 @@ extension HomeDashboardScreen {
                     suggestedBedtime: suggestedBedtime(from: .now),
                     caffeineClearTime: caffeineClearTime(from: .now)
                 )
+                .padding(.horizontal)
+
                 HomeDashboardBottomSection(
                     snapshot: snapshot,
                     healthKitEnabled: healthKitEnabled,
@@ -61,8 +82,8 @@ extension HomeDashboardScreen {
                     weightUnit: weightUnit,
                     showingAddWorkout: $showingAddWorkout
                 )
+                .padding(.horizontal)
             }
-            .padding(.horizontal)
             .padding(.bottom, 36)
         }
     }
@@ -70,8 +91,23 @@ extension HomeDashboardScreen {
     @ViewBuilder
     func homeDashboardChrome<Content: View>(_ content: Content) -> some View {
         content
-            .tabBackground(tint: heroGradientColors.first ?? .accentColor, height: 420)
+            // Home is the one surface on the redesigned palette. Scoping dark
+            // to this subtree (rather than app-wide) keeps the Settings
+            // appearance toggle meaningful for every other tab until their
+            // designs land.
+            //
+            // This has to be `environment(\.colorScheme:)`, not
+            // `preferredColorScheme` — the latter propagates up to the window,
+            // where ContentView's root value wins, leaving the sections below
+            // resolving `Color(.secondarySystemGroupedBackground)` as white
+            // cards on a near-black page.
+            .background(AppTheme.Dark.bg.ignoresSafeArea())
+            .environment(\.colorScheme, .dark)
             .navigationTitle("Home")
+            // The brand row and hero carry the identity now; a large "Home"
+            // title above them would just be a second, weaker headline.
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(AppTheme.Dark.bg, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     HStack(spacing: 16) {
@@ -156,16 +192,6 @@ extension HomeDashboardScreen {
                     withAnimation(.easeOut(duration: 0.8)) { animateRings = true }
                 }
             }
-    }
-
-    var heroGradientColors: [Color] {
-        guard healthKitEnabled && healthDataLoaded else {
-            return AppTheme.Gradients.calm
-        }
-        let score = store.recoveryResult.readinessScore
-        if score >= 0.70 { return AppTheme.Gradients.recovery }
-        if score >= 0.45 { return AppTheme.Gradients.caution }
-        return AppTheme.Gradients.strain
     }
 
     var shouldOfferInsightsTease: Bool {

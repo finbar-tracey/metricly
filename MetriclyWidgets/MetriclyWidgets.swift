@@ -110,8 +110,7 @@ struct StreakWidgetView: View {
         .padding(15)
         .containerBackground(for: .widget) {
             LinearGradient(
-                colors: [Color(red: 1.0, green: 0.52, blue: 0.15),
-                         Color(red: 0.88, green: 0.22, blue: 0.10)],
+                colors: MetriclyBrand.workout,
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
@@ -229,8 +228,7 @@ struct MetriclyLargeWidgetView: View {
             // Gradient header panel
             ZStack(alignment: .bottomLeading) {
                 LinearGradient(
-                    colors: [Color(red: 1.0, green: 0.52, blue: 0.15),
-                             Color(red: 0.88, green: 0.22, blue: 0.10)],
+                    colors: MetriclyBrand.workout,
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )

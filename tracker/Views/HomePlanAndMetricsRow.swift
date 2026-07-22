@@ -18,11 +18,17 @@ struct HomePlanAndMetricsRow: View {
     let activitiesThisWeek: Int
     let weeklyGoal: Int
     let currentStreak: Int
+    /// Home's redesigned head shows today's plan in `TodayHero` + `NextUpCard`,
+    /// so it opts out of the plan half and keeps this as a full-width metrics
+    /// card. Other callers still get the pair.
+    var showsPlanCard: Bool = true
     let onStartWorkout: () -> Void
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
-            todayPlanMiniCard
+            if showsPlanCard {
+                todayPlanMiniCard
+            }
             keyMetricsMiniCard
         }
     }

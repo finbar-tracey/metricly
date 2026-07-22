@@ -12,6 +12,8 @@
 		1EB787865C77762031B1F03C /* HealthKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 62964D20926F033C299E8669 /* HealthKit.framework */; settings = {ATTRIBUTES = (); }; };
 		256F025906207781C4A42241 /* WatchGymView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8542A36BEB6EAFCC197C9226 /* WatchGymView.swift */; };
 		2C483E36543470E6FC3B4E78 /* WidgetModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D4F51462FE8B1D8E7C56A0E /* WidgetModels.swift */; };
+		D5A29A21938233E7A93D0003 /* MetriclyTokens.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5A29A21938233E7A93D0001 /* MetriclyTokens.swift */; };
+		D5A29A21938233E7A93D0004 /* MetriclyTokens.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5A29A21938233E7A93D0001 /* MetriclyTokens.swift */; };
 		2FBFAED8CF597A8948429AB2 /* WatchRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 663DD188085EEE0F6A1E3458 /* WatchRootView.swift */; };
 		35515EA8CD7ABF9D043C5710 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4101AA73A1268A38D07B832B /* WidgetKit.framework */; settings = {ATTRIBUTES = (); }; };
 		424EEF5EC8024FAB25D38FC2 /* WatchWorkoutSessionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C7565ACAA622AD970A48063 /* WatchWorkoutSessionManager.swift */; };
@@ -186,6 +188,7 @@
 		6E48B48972259787CEA4E374 /* HealthDataCache.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = HealthDataCache.swift; sourceTree = "<group>"; };
 		703FFA80F67EF45A2C03DB9E /* StravaImportService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = StravaImportService.swift; sourceTree = "<group>"; };
 		7D4F51462FE8B1D8E7C56A0E /* WidgetModels.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WidgetModels.swift; sourceTree = "<group>"; };
+		D5A29A21938233E7A93D0001 /* MetriclyTokens.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MetriclyTokens.swift; sourceTree = "<group>"; };
 		8297692C2FC6441200590CAA /* Secrets.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secrets.xcconfig; sourceTree = "<group>"; };
 		82A0C4CE2F58E8E200BD421B /* tracker.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = tracker.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		82CCBB032F81354000BD46EA /* AppShortcuts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppShortcuts.swift; sourceTree = "<group>"; };
@@ -404,6 +407,7 @@
 				82CCBB8E2F8BF6A200BD46EA /* Services */,
 				82CCBB8F2F8BF6A200BD46EA /* Helpers */,
 				82CCBB902F8BF6A300BD46EA /* Components */,
+				D5A29A21938233E7A93D0002 /* DesignTokens */,
 				6ED0973E21277FB2753A848A /* MetriclyWatch */,
 				7FA17C6917C523B86CA1468A /* MetriclyWatchComplications */,
 				8297692C2FC6441200590CAA /* Secrets.xcconfig */,
@@ -457,6 +461,14 @@
 				AD57A2F0DFB3E5C8E31FE25C /* StravaErrorPresenter.swift */,
 			);
 			path = Services;
+			sourceTree = "<group>";
+		};
+		D5A29A21938233E7A93D0002 /* DesignTokens */ = {
+			isa = PBXGroup;
+			children = (
+				D5A29A21938233E7A93D0001 /* MetriclyTokens.swift */,
+			);
+			path = DesignTokens;
 			sourceTree = "<group>";
 		};
 		82CCBB8F2F8BF6A200BD46EA /* Helpers */ = {
@@ -782,6 +794,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D5A29A21938233E7A93D0003 /* MetriclyTokens.swift in Sources */,
 				82CCBB3A2F81354000BD46EA /* AppShortcuts.swift in Sources */,
 				82CCBB422F81354000BD46EA /* ExportHelper.swift in Sources */,
 				82CCBB892F8AD6AE00BD46EA /* WorkoutCardView.swift in Sources */,
@@ -847,6 +860,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D5A29A21938233E7A93D0004 /* MetriclyTokens.swift in Sources */,
 				B73646A32DCED919C461C1A8 /* WidgetModels.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

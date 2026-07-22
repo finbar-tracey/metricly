@@ -55,10 +55,12 @@ enum AppTheme {
         static let actionGreen  = Color(red: 0.10, green: 0.72, blue: 0.40)
         /// Strong amber used in "this week" stat gradients.
         static let amber        = Color(red: 0.95, green: 0.62, blue: 0.10)
-        /// Bright orange for runs / cardio accents (shared with widget).
-        static let runOrange    = Color(red: 1.0, green: 0.52, blue: 0.15)
-        /// Strong red used in heart-rate / strain gradients (shared with widget).
-        static let alarmRed     = Color(red: 0.88, green: 0.22, blue: 0.10)
+        /// Bright orange for runs / cardio accents. Defined in
+        /// `MetriclyTokens.swift` because the widget extension draws it too.
+        static let runOrange    = MetriclyBrand.runOrange
+        /// Strong red used in heart-rate / strain gradients. Shared with the
+        /// widget extension — see `MetriclyBrand`.
+        static let alarmRed     = MetriclyBrand.alarmRed
     }
 
     // Gradient palette — multi-stop palettes for hero surfaces.

@@ -327,8 +327,7 @@ struct TodaysPlanWidgetView: View {
             return [Color(red: 0.28, green: 0.18, blue: 0.45),
                     Color(red: 0.18, green: 0.10, blue: 0.32)]
         }
-        return [Color(red: 1.0,  green: 0.52, blue: 0.15),
-                Color(red: 0.88, green: 0.22, blue: 0.10)]
+        return MetriclyBrand.workout
     }
 
     var body: some View {

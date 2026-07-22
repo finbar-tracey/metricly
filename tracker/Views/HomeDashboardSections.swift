@@ -3,46 +3,29 @@ import SwiftData
 
 // Split Home layout into dedicated section views so the root body avoids AnyView type-erasure.
 
+/// The band between the redesigned head of Home (`HomeTodaySection`) and the
+/// deeper sections. The hero, the adaptive-plan card and the today's-plan mini
+/// card that used to live here are now `TodayHero` + `NextUpCard` — this keeps
+/// the pieces they never covered: sync state, contextual CTA, training block,
+/// the top insight, and the activity metrics.
 struct HomeDashboardTopSection: View {
     let snapshot: HomeDashboardSnapshot
     @Bindable var store: HomeDashboardStore
-    let greeting: String
     let healthKitEnabled: Bool
     let healthDataLoaded: Bool
-    let hrv: Double?
-    let sleepMinutes: Double
-    let restingHR: Double?
-    let animateRings: Bool
-    let heroGradientColors: [Color]
     let topInsight: Insight?
     let shouldOfferInsightsTease: Bool
     let ctaKind: HomeContextualCTASection.Kind?
     let todaySteps: Double
     let activeCalories: Double
     let weightUnit: WeightUnit
-    @Binding var tappedDayWorkout: Workout?
     @Binding var blockForDetailSheet: TrainingBlock?
     @Binding var showingAddWorkout: Bool
-    let onPlanDetail: () -> Void
     let onInsertBlock: (TrainingBlock) -> Void
     let onOpenInsights: () -> Void
 
     var body: some View {
         VStack(spacing: AppTheme.sectionSpacing) {
-            HomeHeroSection(
-                greeting: greeting,
-                healthKitEnabled: healthKitEnabled,
-                healthDataLoaded: healthDataLoaded,
-                recovery: store.recoveryResult,
-                hrv: hrv,
-                sleepMinutes: sleepMinutes,
-                restingHR: restingHR,
-                currentStreak: snapshot.currentStreak,
-                allWorkouts: snapshot.allWorkouts,
-                animateRings: animateRings,
-                gradientColors: heroGradientColors,
-                onWeekDayTapped: { tappedDayWorkout = $0 }
-            )
             if HomeSyncStatusPill.shouldShow {
                 HomeSyncStatusPill()
             }
@@ -56,11 +39,6 @@ struct HomeDashboardTopSection: View {
                 onTapActive: {
                     blockForDetailSheet = TrainingBlockEngine.currentBlock(in: snapshot.trainingBlocks)
                 }
-            )
-            AdaptivePlanCardView(
-                plan: store.todayPlan,
-                onStart: { showingAddWorkout = true },
-                onTapDetail: onPlanDetail
             )
             if let insight = topInsight {
                 TopInsightCardView(insight: insight, onTap: onOpenInsights)
@@ -82,6 +60,8 @@ struct HomeDashboardTopSection: View {
                 activitiesThisWeek: snapshot.activitiesThisWeek,
                 weeklyGoal: snapshot.settings.weeklyGoal,
                 currentStreak: snapshot.currentStreak,
+                // `NextUpCard` above owns today's plan and the Start button now.
+                showsPlanCard: false,
                 onStartWorkout: { showingAddWorkout = true }
             )
         }
