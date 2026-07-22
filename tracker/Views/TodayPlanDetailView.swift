@@ -1,301 +1,330 @@
 import SwiftUI
 
-/// Detailed breakdown of the Today's Plan recommendation — what drove the
-/// readiness score, which muscles are fatigued, and what the suggested
-/// adjustments mean. Pushed when the user taps the Today card on Home.
+/// The pre-session plan view, reached by tapping the hero or Next-Up card on
+/// Home. Its whole job is the adaptive reasoning: *why* this plan, *why* these
+/// weights, *what's* flagged — before a single set is logged.
+///
+/// Restyled to the v2 dark language (design_handoff_app, `screen-detail.jsx`).
+/// The handoff's file map calls this `WorkoutDetailView`, but that name already
+/// belongs to the logged-workout screen, and this is the screen actually wired
+/// to the Next-Up tap — so the restyle lands here, keeping the `.planDetail`
+/// route intact.
 struct TodayPlanDetailView: View {
     let plan: TodayPlan
     let recovery: RecoveryResult
     let health: HealthSignals
+    let data: PlanDetailData
+    /// Start the session and pop back to Home. nil on a rest day, where there's
+    /// no session to start.
+    var onStart: (() -> Void)?
+    var onBack: () -> Void = {}
+
+    @Environment(\.dismiss) private var dismiss
+
+    private var accent: Color { AppTheme.Dark.accent(for: plan.intensity) }
 
     var body: some View {
         ScrollView {
-            VStack(spacing: AppTheme.sectionSpacing) {
-                readinessHero
-                signalsCard
-                if !recovery.muscleResults.isEmpty {
-                    muscleFatigueCard
+            VStack(alignment: .leading, spacing: 0) {
+                hero
+                whyThisPlan
+                if !data.muscleLoad.isEmpty {
+                    muscleLoad
                 }
-                reasoningCard
-            }
-            .padding(.horizontal)
-            .padding(.top, 8)
-            .padding(.bottom, 36)
-        }
-        .background(Color(.systemGroupedBackground))
-        .navigationTitle("Today's Plan")
-        .navigationBarTitleDisplayMode(.inline)
-    }
-
-    // MARK: - Readiness hero
-
-    private var readinessHero: some View {
-        let score = recovery.readinessScore
-        let pct = Int(round(score * 100))
-        let color = RecoveryEngine.freshnessColor(score)
-
-        return VStack(spacing: 12) {
-            ZStack {
-                Circle()
-                    .stroke(color.opacity(0.15), lineWidth: 12)
-                    .frame(width: 130, height: 130)
-                Circle()
-                    .trim(from: 0, to: max(0.001, score))
-                    .stroke(color, style: StrokeStyle(lineWidth: 12, lineCap: .round))
-                    .rotationEffect(.degrees(-90))
-                    .frame(width: 130, height: 130)
-                VStack(spacing: 2) {
-                    Text("\(pct)")
-                        .font(.system(size: 44, weight: .bold, design: .rounded))
-                        .monospacedDigit()
-                    Text("READINESS")
-                        .font(.caption2.weight(.bold))
-                        .foregroundStyle(.secondary)
+                if !data.lifts.isEmpty {
+                    theLifts
                 }
             }
-            Text(RecoveryEngine.readinessLabel(score))
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .fixedSize(horizontal: false, vertical: true)
+            .padding(.bottom, 24)
         }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 20)
-        .appCard()
+        .safeAreaInset(edge: .bottom) { if onStart != nil { cta } }
+        .background(AppTheme.Dark.bg.ignoresSafeArea())
+        .environment(\.colorScheme, .dark)
+        // A focused pre-session screen: the tab bar steps aside so the back
+        // button and the Start CTA are the only two ways out, matching the
+        // handoff's full-bleed detail and freeing the bottom for the CTA.
+        .hidesMetriclyTabBar()
+        .navigationBarBackButtonHidden(true)
+        .toolbarBackground(AppTheme.Dark.bg, for: .navigationBar)
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button {
+                    onBack()
+                    dismiss()
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 14, weight: .semibold))
+                        Text("TODAY")
+                            .font(.system(size: 10, weight: .bold, design: .monospaced))
+                            .tracking(1.2)
+                    }
+                    .foregroundStyle(AppTheme.Dark.text3)
+                }
+                .accessibilityLabel("Back to today")
+            }
+        }
     }
 
-    // MARK: - Signals card (sleep, HRV, resting HR)
+    // MARK: - Hero
 
-    private var signalsCard: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            SectionHeader(title: "Health Signals", icon: "heart.text.square.fill", color: .pink)
+    private var hero: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 8) {
+                pill
+                Spacer(minLength: 8)
+                Text(data.meta)
+                    .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                    .tracking(0.6)
+                    .foregroundStyle(AppTheme.Dark.text3)
+            }
+            HStack(spacing: 6) {
+                Text(data.titleMain)
+                    .foregroundStyle(AppTheme.Dark.text)
+                if let suffix = data.titleSuffix {
+                    Text(suffix)
+                        .foregroundStyle(AppTheme.Dark.text3)
+                }
+            }
+            .font(.system(size: 34, weight: .bold, design: .rounded))
+            .tracking(-1.4)
+            .lineSpacing(0)
+            .minimumScaleFactor(0.7)
+            .lineLimit(2)
+            .accessibilityElement(children: .combine)
+        }
+        .padding(.horizontal, 18)
+        .padding(.top, 4)
+    }
 
+    private var pill: some View {
+        HStack(spacing: 6) {
+            Circle()
+                .fill(accent)
+                .frame(width: 5, height: 5)
+                .signalGlow(accent, radius: 4)
+            Text(data.pillText)
+                .font(.system(size: 9.5, weight: .bold, design: .monospaced))
+                .tracking(1.2)
+                .foregroundStyle(accent)
+        }
+        .padding(.horizontal, 9)
+        .padding(.vertical, 4)
+        .background(accent.opacity(0.13), in: Capsule())
+        .overlay(Capsule().strokeBorder(accent.opacity(0.33), lineWidth: 1))
+        .accessibilityLabel(data.pillAccessibilityLabel)
+    }
+
+    // MARK: - Why this plan
+
+    private var whyThisPlan: some View {
+        section(title: "WHY THIS PLAN", right: "RECOVERY ENGINE") {
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(Array(data.reasons.enumerated()), id: \.offset) { _, reason in
+                    HStack(alignment: .top, spacing: 9) {
+                        Circle()
+                            .fill(accent)
+                            .frame(width: 5, height: 5)
+                            .signalGlow(accent, radius: 6)
+                            .padding(.top, 6)
+                        Text(reason)
+                            .font(.system(size: 12.5))
+                            .foregroundStyle(AppTheme.Dark.text2)
+                            .lineSpacing(2)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .padding(.vertical, 5)
+                }
+                if let flag = data.flag {
+                    Rectangle()
+                        .fill(AppTheme.Dark.hairlineSoft)
+                        .frame(height: 0.5)
+                        .padding(.vertical, 9)
+                    HStack(spacing: 8) {
+                        Circle()
+                            .fill(AppTheme.Dark.Signal.caution)
+                            .frame(width: 4, height: 4)
+                        Text(flag)
+                            .font(.system(size: 12))
+                            .foregroundStyle(AppTheme.Dark.text2)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                }
+            }
+            .padding(.horizontal, 15)
+            .padding(.vertical, 13)
+            .darkCard(radius: 16, border: accent.opacity(0.25))
+        }
+    }
+
+    // MARK: - Muscle load
+
+    private var muscleLoad: some View {
+        section(title: "MUSCLE LOAD · 7 DAY", right: data.muscleLoadCallout) {
+            LazyVGrid(
+                columns: [GridItem(.flexible(), spacing: 16), GridItem(.flexible(), spacing: 16)],
+                alignment: .leading,
+                spacing: 11
+            ) {
+                ForEach(Array(data.muscleLoad.enumerated()), id: \.element.id) { index, row in
+                    muscleLoadRow(row, index: index)
+                }
+            }
+        }
+    }
+
+    private func muscleLoadRow(_ row: PlanDetailData.MuscleLoad, index: Int) -> some View {
+        VStack(alignment: .leading, spacing: 5) {
+            HStack {
+                Text(row.name.uppercased())
+                    .font(.system(size: 9.5, weight: .semibold, design: .monospaced))
+                    .tracking(0.6)
+                    .foregroundStyle(AppTheme.Dark.text2)
+                Spacer()
+                Text("\(row.load)")
+                    .font(.system(size: 9.5, weight: .bold, design: .monospaced))
+                    .tracking(0.4)
+                    .foregroundStyle(row.tone)
+            }
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Capsule()
+                        .fill(AppTheme.Dark.surfaceHi)
+                    Capsule()
+                        .fill(row.tone)
+                        .frame(width: max(4, geo.size.width * (Double(row.load) / 100)))
+                        .signalGlow(row.tone, radius: 4, opacity: 0.4)
+                        .growIn(
+                            axis: .horizontal,
+                            animation: .snappy(duration: 0.9),
+                            delay: Double(index) * 0.08
+                        )
+                }
+            }
+            .frame(height: 6)
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(row.name) \(row.load) percent load")
+    }
+
+    // MARK: - The lifts
+
+    private var theLifts: some View {
+        section(title: "THE LIFTS", right: nil) {
             VStack(spacing: 0) {
-                signalRow(
-                    icon: "moon.fill",
-                    color: .indigo,
-                    label: "Sleep last night",
-                    value: sleepValue,
-                    delta: sleepDelta,
-                    deltaTone: sleepTone
-                )
-                Divider().padding(.leading, 50)
-                signalRow(
-                    icon: "waveform.path.ecg",
-                    color: .red,
-                    label: "HRV vs baseline",
-                    value: hrvValue,
-                    delta: hrvDelta,
-                    deltaTone: hrvTone
-                )
-                Divider().padding(.leading, 50)
-                signalRow(
-                    icon: "heart.fill",
-                    color: .pink,
-                    label: "Resting HR",
-                    value: rhrValue,
-                    delta: rhrDelta,
-                    deltaTone: rhrTone
-                )
+                ForEach(Array(data.lifts.enumerated()), id: \.element.id) { index, lift in
+                    liftRow(lift, index: index, isLast: index == data.lifts.count - 1)
+                }
             }
-            .background(Color(.tertiarySystemGroupedBackground),
-                        in: RoundedRectangle(cornerRadius: 12))
+            .darkCard(radius: 16)
         }
-        .appCard()
     }
 
-    private func signalRow(
-        icon: String,
-        color: Color,
-        label: String,
-        value: String,
-        delta: String?,
-        deltaTone: SignalTone
-    ) -> some View {
+    private func liftRow(_ lift: PlanDetailData.Lift, index: Int, isLast: Bool) -> some View {
         HStack(spacing: 12) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(color.opacity(0.14))
-                    .frame(width: 32, height: 32)
-                Image(systemName: icon)
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(color)
+            Text(String(format: "%02d", index + 1))
+                .font(.system(size: 11, weight: .bold, design: .monospaced))
+                .foregroundStyle(AppTheme.Dark.text4)
+                .frame(width: 20, alignment: .leading)
+            Text(lift.name)
+                .font(.system(size: 14, weight: .semibold))
+                .tracking(-0.2)
+                .foregroundStyle(AppTheme.Dark.text)
+                .lineLimit(1)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            VStack(alignment: .trailing, spacing: 1) {
+                Text(lift.load)
+                    .font(.system(size: 12, weight: .semibold, design: .monospaced))
+                    .foregroundStyle(AppTheme.Dark.text)
+                Text(lift.sets)
+                    .font(.system(size: 10, design: .monospaced))
+                    .foregroundStyle(AppTheme.Dark.text3)
             }
-            VStack(alignment: .leading, spacing: 1) {
-                Text(label).font(.caption.weight(.medium))
-                Text(value)
-                    .font(.subheadline.weight(.semibold).monospacedDigit())
-            }
-            Spacer()
-            if let delta {
-                Text(delta)
-                    .font(.caption.weight(.bold).monospacedDigit())
-                    .foregroundStyle(deltaTone.color)
-                    .padding(.horizontal, 8).padding(.vertical, 3)
-                    .background(deltaTone.color.opacity(0.12), in: Capsule())
+            if let hint = lift.hint {
+                Text(hint.text.uppercased())
+                    .font(.system(size: 8, weight: .bold, design: .monospaced))
+                    .tracking(0.7)
+                    .foregroundStyle(hint.color)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+                    .frame(width: 62, alignment: .trailing)
+            } else {
+                Color.clear.frame(width: 62, height: 0)
             }
         }
-        .padding(.horizontal, 14).padding(.vertical, 11)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .overlay(alignment: .bottom) {
+            if !isLast {
+                Rectangle()
+                    .fill(AppTheme.Dark.hairlineSoft)
+                    .frame(height: 0.5)
+                    .padding(.leading, 14)
+            }
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(
+            "\(lift.name), \(lift.load), \(lift.sets)\(lift.hint.map { ". \($0.text)" } ?? "")"
+        )
     }
 
-    // MARK: - Muscle fatigue list
+    // MARK: - CTA
 
-    private var muscleFatigueCard: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            SectionHeader(title: "Muscle Fatigue", icon: "figure.strengthtraining.traditional", color: .orange)
+    private var cta: some View {
+        Button {
+            onStart?()
+        } label: {
+            HStack {
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(data.ctaTitle)
+                        .font(.system(size: 17, weight: .bold, design: .rounded))
+                        .tracking(-0.2)
+                    Text(data.ctaSubline)
+                        .font(.system(size: 9.5, weight: .semibold, design: .monospaced))
+                        .tracking(0.6)
+                        .foregroundStyle(AppTheme.Dark.ink.opacity(0.73))
+                }
+                Spacer()
+                Image(systemName: "arrow.right")
+                    .font(.system(size: 15, weight: .bold))
+            }
+            .foregroundStyle(AppTheme.Dark.ink)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 15)
+            .frame(maxWidth: .infinity)
+            .background(accent, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .signalGlow(accent, radius: 16, opacity: 0.4)
+        }
+        .buttonStyle(.pressableCard)
+        .padding(.horizontal, 16)
+        .padding(.bottom, 8)
+    }
 
-            VStack(spacing: 10) {
-                ForEach(recovery.muscleResults) { result in
-                    HStack(spacing: 10) {
-                        Text(result.group.rawValue)
-                            .font(.caption.weight(.semibold))
-                            .frame(width: 70, alignment: .leading)
-                        GeometryReader { geo in
-                            ZStack(alignment: .leading) {
-                                RoundedRectangle(cornerRadius: 4)
-                                    .fill(Color(.tertiarySystemFill))
-                                RoundedRectangle(cornerRadius: 4)
-                                    .fill(RecoveryEngine.freshnessColor(result.freshness))
-                                    .frame(width: max(4, geo.size.width * result.freshness))
-                            }
-                        }
-                        .frame(height: 10)
-                        Text(RecoveryEngine.freshnessLabel(result.freshness))
-                            .font(.caption2.weight(.medium))
-                            .foregroundStyle(.secondary)
-                            .frame(width: 80, alignment: .trailing)
-                    }
+    // MARK: - Section scaffold
+
+    @ViewBuilder
+    private func section<Content: View>(
+        title: String,
+        right: String?,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text(title)
+                    .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                    .tracking(1.4)
+                    .foregroundStyle(AppTheme.Dark.text3)
+                Spacer()
+                if let right {
+                    Text(right)
+                        .font(.system(size: 9, weight: .semibold, design: .monospaced))
+                        .tracking(0.6)
+                        .foregroundStyle(AppTheme.Dark.text4)
                 }
             }
+            content()
         }
-        .appCard()
-    }
-
-    // MARK: - Reasoning recap
-
-    private var reasoningCard: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            SectionHeader(title: "Why This Plan", icon: "lightbulb.fill", color: .yellow)
-
-            VStack(alignment: .leading, spacing: 12) {
-                Text(plan.recommendedName)
-                    .font(.headline.weight(.bold))
-                if !plan.reasons.isEmpty {
-                    VStack(alignment: .leading, spacing: 6) {
-                        ForEach(plan.reasons, id: \.self) { r in
-                            HStack(alignment: .top, spacing: 8) {
-                                Image(systemName: "circle.fill")
-                                    .font(.system(size: 4))
-                                    .foregroundStyle(.tertiary)
-                                    .padding(.top, 6)
-                                Text(r).font(.caption).foregroundStyle(.secondary)
-                            }
-                        }
-                    }
-                }
-                if !plan.adjustments.isEmpty {
-                    Divider().padding(.vertical, 4)
-                    Text("Suggested adjustments")
-                        .font(.caption2.weight(.bold))
-                        .foregroundStyle(.tertiary)
-                        .textCase(.uppercase)
-                    VStack(alignment: .leading, spacing: 6) {
-                        ForEach(plan.adjustments, id: \.self) { a in
-                            HStack(alignment: .top, spacing: 8) {
-                                Image(systemName: "wand.and.stars")
-                                    .font(.system(size: 10, weight: .semibold))
-                                    .foregroundStyle(.orange)
-                                    .padding(.top, 2)
-                                Text(a).font(.caption).foregroundStyle(.primary)
-                            }
-                        }
-                    }
-                }
-                Divider().padding(.vertical, 4)
-                HStack(spacing: 6) {
-                    Image(systemName: confidenceIcon).font(.caption).foregroundStyle(.secondary)
-                    Text(plan.confidence.label).font(.caption).foregroundStyle(.secondary)
-                    Spacer()
-                }
-            }
-        }
-        .appCard()
-    }
-
-    // MARK: - Derived signal values
-
-    private enum SignalTone {
-        case good, neutral, bad
-
-        var color: Color {
-            switch self {
-            case .good:    return .green
-            case .neutral: return .secondary
-            case .bad:     return .orange
-            }
-        }
-    }
-
-    private var sleepValue: String {
-        guard let m = health.sleepMinutes, m > 0 else { return "—" }
-        let h = m / 60
-        return String(format: "%.1fh", h)
-    }
-    private var sleepDelta: String? {
-        guard let m = health.sleepMinutes, m > 0 else { return nil }
-        let h = m / 60
-        if h < 6 { return "Short" }
-        if h >= 7.5 { return "Good" }
-        return nil
-    }
-    private var sleepTone: SignalTone {
-        guard let m = health.sleepMinutes, m > 0 else { return .neutral }
-        let h = m / 60
-        if h < 6 { return .bad }
-        if h >= 7.5 { return .good }
-        return .neutral
-    }
-
-    private var hrvValue: String {
-        guard let v = health.todayHRV else { return "—" }
-        return String(format: "%.0f ms", v)
-    }
-    private var hrvDelta: String? {
-        guard let v = health.todayHRV, let avg = health.averageHRV, avg > 0 else { return nil }
-        let pct = (v - avg) / avg * 100
-        if abs(pct) < 5 { return nil }
-        return String(format: "%@%.0f%%", pct >= 0 ? "+" : "", pct)
-    }
-    private var hrvTone: SignalTone {
-        guard let v = health.todayHRV, let avg = health.averageHRV, avg > 0 else { return .neutral }
-        let pct = (v - avg) / avg
-        if pct <= -0.10 { return .bad }
-        if pct >= 0.10  { return .good }
-        return .neutral
-    }
-
-    private var rhrValue: String {
-        guard let v = health.todayRestingHR else { return "—" }
-        return String(format: "%.0f bpm", v)
-    }
-    private var rhrDelta: String? {
-        guard let v = health.todayRestingHR, let avg = health.averageRestingHR, avg > 0 else { return nil }
-        let diff = v - avg
-        if abs(diff) < 3 { return nil }
-        return String(format: "%@%.0f bpm", diff >= 0 ? "+" : "", diff)
-    }
-    private var rhrTone: SignalTone {
-        guard let v = health.todayRestingHR, let avg = health.averageRestingHR, avg > 0 else { return .neutral }
-        if v > avg + 5 { return .bad }
-        if v < avg - 3 { return .good }
-        return .neutral
-    }
-
-    private var confidenceIcon: String {
-        switch plan.confidence {
-        case .low:    return "questionmark.circle"
-        case .medium: return "circle.lefthalf.filled"
-        case .high:   return "checkmark.circle.fill"
-        }
+        .padding(.horizontal, 18)
+        .padding(.top, 24)
     }
 }

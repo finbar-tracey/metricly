@@ -148,7 +148,19 @@ extension HomeDashboardScreen {
                     TodayPlanDetailView(
                         plan: store.todayPlan,
                         recovery: store.recoveryResult,
-                        health: liveHealthSignals
+                        health: liveHealthSignals,
+                        data: PlanDetailData.build(
+                            snapshot: snapshot,
+                            plan: store.todayPlan,
+                            recovery: store.recoveryResult,
+                            weightUnit: weightUnit,
+                            progressionSuggestions: cachedProgressionSuggestions
+                        ),
+                        // Rest days have no session to start — the CTA drops away.
+                        onStart: store.todayPlan.intensity == .rest ? nil : {
+                            onQuickStart()
+                            homeRoute = nil
+                        }
                     )
                 }
             }
