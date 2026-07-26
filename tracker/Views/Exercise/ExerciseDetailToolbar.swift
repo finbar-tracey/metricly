@@ -62,7 +62,13 @@ extension ExerciseDetailView {
                 .accessibilityLabel("Set added. Undo available.")
             }
             if session.restTimer.timerActive {
-                ExerciseRestTimerBar(controller: session.restTimer)
+                ExerciseRestTimerBar(
+                    controller: session.restTimer,
+                    // Resting comes after logging a working set, so the next one
+                    // is the current working count + 1.
+                    nextSetNumber: exercise.sets.filter { !$0.isWarmUp }.count + 1,
+                    suggestion: suggestedSet
+                )
             }
         }
     }

@@ -33,3 +33,6 @@ icon_1024_dark.png
 # Config/Secrets.xcconfig.example for setup.
 Secrets.xcconfig
 **/Secrets.xcconfig
+
+# Local design handoff reference — not shipped
+.design_handoff/
