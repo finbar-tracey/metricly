@@ -20,6 +20,9 @@ struct FinishWorkoutSheet: View {
     @State private var shareImage: UIImage?
     @State private var showingShare = false
     @State private var showingReminderPrompt = false
+    /// The post-save payoff (step 10). Presented after the workout commits,
+    /// then handed off to the reminder prompt or dismissal via `onDismiss`.
+    @State private var showingSummary = false
     /// Per-muscle-group soreness level the user picks. Only groups
     /// trained in this workout appear in the UI. 0 = none (not stored).
     @State private var sorenessLevels: [MuscleGroup: Int] = [:]
@@ -102,10 +105,11 @@ struct FinishWorkoutSheet: View {
                             UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { _, _ in }
                         }
                     }
+                    dismiss()
                 }
                 Button(String(localized: "Maybe Later",
                               comment: "Dismiss button on the reminder-prompt alert"),
-                       role: .cancel) {}
+                       role: .cancel) { dismiss() }
             } message: {
                 Text(String(
                     localized: "Want Metricly to remind you on your training days? You can set this up in Settings anytime.",
@@ -140,6 +144,26 @@ struct FinishWorkoutSheet: View {
                 if let img = shareImage {
                     ShareSheet(items: [img])
                 }
+            }
+            .fullScreenCover(isPresented: $showingSummary, onDismiss: {
+                // Sequenced after the payoff: first-run users get the reminder
+                // prompt (which then dismisses); everyone else closes straight out.
+                if shouldPromptForReminders {
+                    showingReminderPrompt = true
+                } else {
+                    dismiss()
+                }
+            }) {
+                SessionSummaryView(
+                    data: SessionSummaryData.build(
+                        workout: workout,
+                        allExercises: allExercises,
+                        settings: settingsArray.first ?? UserSettings(),
+                        weightUnit: weightUnit,
+                        plan: TodayPlanStore.load()
+                    ),
+                    onSeeTrend: { showingSummary = false }
+                )
             }
         }
     }
@@ -197,12 +221,6 @@ struct FinishWorkoutSheet: View {
         UIImpactFeedbackGenerator(style: .heavy).impactOccurred()
         ReminderManager.cancelTodayStreakNudge()
 
-        if shouldPromptForReminders {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
-                showingReminderPrompt = true
-            }
-        }
-
         let settings = settingsArray.first ?? UserSettings()
         MetriclySyncCoordinator.publishAfterWorkoutFinishAndRefresh(
             workout: workout,
@@ -210,6 +228,8 @@ struct FinishWorkoutSheet: View {
             modelContainer: modelContext.container
         )
 
-        dismiss()
+        // The session is committed — show the payoff. Dismissal and the
+        // first-run reminder prompt are sequenced from the cover's onDismiss.
+        showingSummary = true
     }
 }
