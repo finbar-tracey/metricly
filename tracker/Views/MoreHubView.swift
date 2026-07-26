@@ -3,6 +3,12 @@ import SwiftUI
 struct MoreHubView: View {
     var body: some View {
         List {
+            Section {
+                NavigationLink { ProfileView() } label: {
+                    hubRow(icon: "person.crop.circle", color: .green, title: "You", subtitle: "Baselines, goals & connections")
+                }
+            }
+
             // Achievements lives in TrainingHubView's Progress section
             // (matching iPad sidebar). Don't duplicate here.
             Section("Library") {
