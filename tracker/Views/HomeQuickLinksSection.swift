@@ -26,8 +26,8 @@ struct HomeQuickLinksSection: View {
                     tile(icon: "books.vertical", color: .blue, title: "Exercise Library")
                 }.buttonStyle(.pressableCard)
 
-                NavigationLink { InsightsView() } label: {
-                    tile(icon: "chart.bar.fill", color: .purple, title: "Insights")
+                NavigationLink { TrendsView() } label: {
+                    tile(icon: "chart.bar.fill", color: .purple, title: "Trends")
                 }.buttonStyle(.pressableCard)
 
                 NavigationLink { PersonalRecordsView() } label: {

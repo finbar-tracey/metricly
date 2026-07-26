@@ -84,9 +84,9 @@ struct TrainingHubView: View {
             }
 
             Section("Analyze") {
-                NavigationLink { InsightsView() } label: {
+                NavigationLink { TrendsView() } label: {
                     hubRow(icon: "chart.bar", color: .green,
-                           title: "Insights", subtitle: "Training analytics & trends")
+                           title: "Trends", subtitle: "Volume, HRV & recent PRs")
                 }
                 NavigationLink { WorkoutComparisonView() } label: {
                     hubRow(icon: "arrow.left.arrow.right", color: .indigo,

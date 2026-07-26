@@ -23,6 +23,11 @@ struct FinishWorkoutSheet: View {
     /// The post-save payoff (step 10). Presented after the workout commits,
     /// then handed off to the reminder prompt or dismissal via `onDismiss`.
     @State private var showingSummary = false
+    /// The Trends screen, opened by the payoff's "See the trend" CTA (step 11).
+    @State private var showingTrends = false
+    /// Set by "See the trend" so the payoff's `onDismiss` routes to Trends
+    /// rather than closing the flow.
+    @State private var wantsTrends = false
     /// Per-muscle-group soreness level the user picks. Only groups
     /// trained in this workout appear in the UI. 0 = none (not stored).
     @State private var sorenessLevels: [MuscleGroup: Int] = [:]
@@ -146,9 +151,13 @@ struct FinishWorkoutSheet: View {
                 }
             }
             .fullScreenCover(isPresented: $showingSummary, onDismiss: {
-                // Sequenced after the payoff: first-run users get the reminder
-                // prompt (which then dismisses); everyone else closes straight out.
-                if shouldPromptForReminders {
+                // Sequenced after the payoff: "See the trend" opens Trends;
+                // first-run users get the reminder prompt (which then dismisses);
+                // everyone else closes straight out.
+                if wantsTrends {
+                    wantsTrends = false
+                    showingTrends = true
+                } else if shouldPromptForReminders {
                     showingReminderPrompt = true
                 } else {
                     dismiss()
@@ -162,8 +171,21 @@ struct FinishWorkoutSheet: View {
                         weightUnit: weightUnit,
                         plan: TodayPlanStore.load()
                     ),
-                    onSeeTrend: { showingSummary = false }
+                    onSeeTrend: { wantsTrends = true; showingSummary = false },
+                    onClose: { showingSummary = false }
                 )
+            }
+            .fullScreenCover(isPresented: $showingTrends, onDismiss: { dismiss() }) {
+                NavigationStack {
+                    TrendsView()
+                        .toolbar {
+                            ToolbarItem(placement: .confirmationAction) {
+                                Button("Done") { showingTrends = false }
+                                    .tint(AppTheme.Dark.Signal.recovery)
+                            }
+                        }
+                }
+                .environment(\.colorScheme, .dark)
             }
         }
     }

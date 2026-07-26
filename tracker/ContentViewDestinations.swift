@@ -23,7 +23,7 @@ extension ContentView {
         case .water:            WaterTrackerView()
         case .caffeine:         CaffeineTrackerView()
         case .creatine:         CreatineTrackerView()
-        case .insights:         InsightsView().navigationTitle("Insights")
+        case .insights:         TrendsView()
         case .exerciseLibrary:  ExerciseLibraryView().navigationTitle("Exercise Library")
         case .comparison:       WorkoutComparisonView().navigationTitle("Compare Workouts")
         case .smartSuggestions: SmartSuggestionsView()

@@ -10,9 +10,10 @@ import SwiftUI
 /// the payoff. Praises a deload as readily as a PR; never guilt-trips.
 struct SessionSummaryView: View {
     let data: SessionSummaryData
-    /// "See the trend" — ends the finish flow. Wires to the Trends tab in
-    /// step 11; for now it returns to Home, where the effort tape *is* the trend.
+    /// "See the trend" CTA — closes the payoff and opens Trends.
     var onSeeTrend: () -> Void
+    /// The corner dismiss — closes the payoff without going to Trends.
+    var onClose: () -> Void
 
     var body: some View {
         VStack(spacing: 0) {
@@ -47,7 +48,7 @@ struct SessionSummaryView: View {
                 .font(.system(size: 10, weight: .semibold, design: .monospaced))
                 .tracking(0.8)
                 .foregroundStyle(AppTheme.Dark.text3)
-            Button(action: onSeeTrend) {
+            Button(action: onClose) {
                 Image(systemName: "xmark")
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(AppTheme.Dark.text3)
@@ -178,42 +179,5 @@ struct SessionSummaryView: View {
         .padding(.horizontal, 16)
         .padding(.top, 8)
         .padding(.bottom, 8)
-    }
-}
-
-/// A number that counts up from zero to `target` on appear. Drives an
-/// `AnimatableModifier` whose `animatableData` is the value, so SwiftUI rebuilds
-/// the text at each interpolated step rather than snapping start→end. Reduce
-/// Motion shows the final value at once.
-private struct CountUpNumber: View {
-    let target: Double
-    let decimals: Int
-
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var shown = false
-
-    var body: some View {
-        // The modifier replaces this placeholder with the interpolated number;
-        // font/color set on `CountUpNumber` reach it through the environment.
-        Text(verbatim: "")
-            .modifier(CountingText(value: shown ? target : 0, decimals: decimals))
-            .onAppear {
-                guard !reduceMotion else { shown = true; return }
-                withAnimation(.easeOut(duration: 0.8)) { shown = true }
-            }
-    }
-}
-
-private struct CountingText: AnimatableModifier {
-    var value: Double
-    let decimals: Int
-
-    var animatableData: Double {
-        get { value }
-        set { value = newValue }
-    }
-
-    func body(content: Content) -> some View {
-        Text(value, format: .number.precision(.fractionLength(decimals)))
     }
 }
