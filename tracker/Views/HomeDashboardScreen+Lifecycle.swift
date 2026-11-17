@@ -13,7 +13,8 @@ extension HomeDashboardScreen {
             health: liveHealthSignals,
             sleepMinutes: sleepMinutes,
             healthDataLoaded: healthKitEnabled && healthDataLoaded,
-            progressionSuggestions: cachedProgressionSuggestions
+            progressionSuggestions: cachedProgressionSuggestions,
+            weightUnit: weightUnit
         )
     }
 

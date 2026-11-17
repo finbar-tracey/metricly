@@ -38,7 +38,7 @@ enum StreakCalendarGridSections {
                 ForEach(Array(monthlyBreakdown.enumerated()), id: \.offset) { idx, month in
                     HStack(spacing: 12) {
                         Text(month.label.uppercased())
-                            .font(.system(size: 11, weight: .bold, design: .rounded))
+                            .scaledFont(size: 11, weight: .bold, design: .rounded)
                             .tracking(0.4)
                             .frame(width: 40, alignment: .leading)
                             .foregroundStyle(.secondary)
@@ -66,7 +66,7 @@ enum StreakCalendarGridSections {
                         }
                         .frame(height: 22)
                         Text("\(month.count)")
-                            .font(.system(size: 15, weight: .black, design: .rounded))
+                            .scaledFont(size: 15, weight: .black, design: .rounded)
                             .monospacedDigit()
                             .frame(width: 26, alignment: .trailing)
                             .foregroundStyle(month.count == 0 ? Color.secondary : Color.orange)
@@ -119,7 +119,7 @@ enum StreakCalendarGridSections {
                 VStack(spacing: 3) {
                     ForEach(["", "M", "", "W", "", "F", ""], id: \.self) { label in
                         Text(label)
-                            .font(.system(size: 8))
+                            .scaledFont(size: 8)
                             .foregroundStyle(.secondary)
                             .frame(width: 14, height: 14)
                     }
@@ -168,16 +168,16 @@ enum StreakCalendarGridSections {
                     .frame(width: 38, height: 38)
                     .shadow(color: color.opacity(0.40), radius: 5, y: 2)
                 Image(systemName: icon)
-                    .font(.system(size: 14, weight: .bold))
+                    .scaledFont(size: 14, weight: .bold)
                     .foregroundStyle(.white)
             }
             VStack(alignment: .leading, spacing: 3) {
                 Text(value)
-                    .font(.system(size: 15, weight: .black, design: .rounded))
+                    .scaledFont(size: 15, weight: .black, design: .rounded)
                     .monospacedDigit()
                     .foregroundStyle(color)
                 Text(title.uppercased())
-                    .font(.system(size: 10, weight: .bold, design: .rounded))
+                    .scaledFont(size: 10, weight: .bold, design: .rounded)
                     .tracking(0.4)
                     .foregroundStyle(.secondary)
             }

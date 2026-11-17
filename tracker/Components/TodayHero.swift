@@ -21,6 +21,8 @@ struct TodayHero: View {
     var isFirstSession: Bool = false
     var onTap: () -> Void = {}
 
+    @Environment(\.dynamicTypeSize) private var typeSize
+
     private var accent: Color { AppTheme.Dark.accent(for: plan.intensity) }
 
     /// True when the engine recommended something other than what was on the
@@ -43,7 +45,7 @@ struct TodayHero: View {
                             .fill(caveatColor)
                             .frame(width: 4, height: 4)
                         Text(caveat)
-                            .font(.system(size: 11.5))
+                            .scaledFont(size: 11.5)
                             .foregroundStyle(AppTheme.Dark.text2)
                             .lineLimit(2)
                             .multilineTextAlignment(.leading)
@@ -63,8 +65,20 @@ struct TodayHero: View {
             )
         }
         .buttonStyle(.pressableCard)
-        .accessibilityElement(children: .contain)
+        .dynamicTypeSize(...DynamicTypeSize.accessibility2)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(spokenSummary)
         .accessibilityHint("Opens today's plan in detail")
+    }
+
+    /// One spoken line: verdict, intensity and confidence, the four signals,
+    /// then the caveat. Replaces reading each child in turn.
+    private var spokenSummary: String {
+        let copy = verdictCopy
+        var parts = ["\(copy.0) \(copy.1)", pillAccessibilityLabel]
+        parts.append(contentsOf: signals.cells.map(\.accessibilityLabel))
+        if let caveat, !caveat.isEmpty { parts.append(caveat) }
+        return parts.joined(separator: ". ")
     }
 
     /// Soft accent bloom out of the top-left corner. Sits behind the content so
@@ -81,25 +95,42 @@ struct TodayHero: View {
     // MARK: - Top row
 
     private var topRow: some View {
+        Group {
+            if typeSize.isAccessibilitySize {
+                VStack(alignment: .leading, spacing: 8) {
+                    dateBlock
+                    pill
+                }
+            } else {
+                HStack(alignment: .center, spacing: 8) {
+                    dateBlock
+                    Spacer()
+                    pill
+                }
+            }
+        }
+        .accessibilityHidden(true)
+    }
+
+    private var dateBlock: some View {
         HStack(alignment: .center, spacing: 8) {
             Text(Date.now, format: .dateTime.day())
-                .font(.system(size: 28, weight: .bold, design: .rounded))
+                .scaledFont(size: 28, weight: .bold, design: .rounded)
                 .tracking(-0.8)
                 .foregroundStyle(AppTheme.Dark.text)
             VStack(alignment: .leading, spacing: 0) {
-                Text(Date.now.formatted(.dateTime.month(.abbreviated)).uppercased())
-                    .font(.system(size: 9, weight: .semibold, design: .monospaced))
+                Text(Date.now.formatted(.dateTime.month(.abbreviated)))
+                    .textCase(.uppercase)
+                    .scaledFont(size: 9, weight: .semibold, design: .monospaced)
                     .tracking(1)
                     .foregroundStyle(AppTheme.Dark.text3)
-                Text(Date.now.formatted(.dateTime.weekday(.abbreviated)).uppercased())
-                    .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                Text(Date.now.formatted(.dateTime.weekday(.abbreviated)))
+                    .textCase(.uppercase)
+                    .scaledFont(size: 10, weight: .semibold, design: .monospaced)
                     .tracking(0.6)
                     .foregroundStyle(AppTheme.Dark.text2)
             }
-            Spacer()
-            pill
         }
-        .accessibilityElement(children: .combine)
     }
 
     private var pill: some View {
@@ -109,7 +140,8 @@ struct TodayHero: View {
                 .frame(width: 5, height: 5)
                 .signalGlow(accent, radius: 4)
             Text(pillText)
-                .font(.system(size: 9.5, weight: .bold, design: .monospaced))
+                .textCase(.uppercase)
+                .scaledFont(size: 9.5, weight: .bold, design: .monospaced)
                 .tracking(1.2)
                 .foregroundStyle(accent)
         }
@@ -117,26 +149,25 @@ struct TodayHero: View {
         .padding(.vertical, 4)
         .background(accent.opacity(0.13), in: Capsule())
         .overlay(Capsule().strokeBorder(accent.opacity(0.33), lineWidth: 1))
-        .accessibilityLabel(pillAccessibilityLabel)
     }
 
     private var pillText: String {
         // A planned rest day isn't a low-confidence call, it's the plan — so it
         // says PLANNED rather than quoting a confidence level at the user.
-        guard plan.intensity != .rest else { return "REST · PLANNED" }
+        guard plan.intensity != .rest else { return String(localized: "Rest · planned") }
         let confidence: String
         switch plan.confidence {
-        case .low:    confidence = "LO"
-        case .medium: confidence = "MED"
-        case .high:   confidence = "HI"
+        case .low:    confidence = String(localized: "Lo")
+        case .medium: confidence = String(localized: "Med")
+        case .high:   confidence = String(localized: "Hi")
         }
-        return "\(plan.intensity.label.uppercased()) · \(confidence) CONF"
+        return String(localized: "\(plan.intensity.label) · \(confidence) conf")
     }
 
     private var pillAccessibilityLabel: String {
         plan.intensity == .rest
-            ? "Planned rest day"
-            : "\(plan.intensity.label) intensity, \(plan.confidence.label)"
+            ? String(localized: "Planned rest day")
+            : String(localized: "\(plan.intensity.label) intensity, \(plan.confidence.label)")
     }
 
     // MARK: - Verdict
@@ -149,13 +180,11 @@ struct TodayHero: View {
             Text(copy.1)
                 .foregroundStyle(accent)
         }
-        .font(.system(size: 32, weight: .bold, design: .rounded))
+        .scaledFont(size: 32, weight: .bold, design: .rounded)
         .tracking(-1.4)
         .lineSpacing(0)
-        .minimumScaleFactor(0.7)
+        .minimumScaleFactor(0.5)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(copy.0) \(copy.1)")
     }
 
     /// Coach voice, two lines: the subject in white, the call in the accent.
@@ -165,19 +194,19 @@ struct TodayHero: View {
     /// so the whole coach voice can be tone-reviewed in a single place.
     private var verdictCopy: (String, String) {
         if isFirstSession {
-            return ("Day one.", "Let's get a baseline.")
+            return (String(localized: "Day one."), String(localized: "Let's get a baseline."))
         }
         switch plan.intensity {
         case .rest:
-            return ("Rest today,", "let it rebuild.")
+            return (String(localized: "Rest today,"), String(localized: "let it rebuild."))
         case .light where isSwapped:
-            return ("Pull back,", "deload today.")
+            return (String(localized: "Pull back,"), String(localized: "deload today."))
         case .light:
-            return ("\(plan.recommendedName),", "back it off ~20%.")
+            return ("\(plan.recommendedName),", String(localized: "back it off ~20%."))
         case .moderate:
-            return ("\(plan.recommendedName),", "hold the line.")
+            return ("\(plan.recommendedName),", String(localized: "hold the line."))
         case .hard:
-            return ("\(plan.recommendedName),", "cleared for full.")
+            return ("\(plan.recommendedName),", String(localized: "cleared for full."))
         }
     }
 }

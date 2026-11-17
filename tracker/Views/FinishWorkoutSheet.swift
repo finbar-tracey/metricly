@@ -167,7 +167,7 @@ struct FinishWorkoutSheet: View {
                     data: SessionSummaryData.build(
                         workout: workout,
                         allExercises: allExercises,
-                        settings: settingsArray.first ?? UserSettings(),
+                        settings: settingsArray.first ?? .fallback,
                         weightUnit: weightUnit,
                         plan: TodayPlanStore.load()
                     ),
@@ -243,7 +243,7 @@ struct FinishWorkoutSheet: View {
         UIImpactFeedbackGenerator(style: .heavy).impactOccurred()
         ReminderManager.cancelTodayStreakNudge()
 
-        let settings = settingsArray.first ?? UserSettings()
+        let settings = settingsArray.first ?? .fallback
         MetriclySyncCoordinator.publishAfterWorkoutFinishAndRefresh(
             workout: workout,
             settings: settings,

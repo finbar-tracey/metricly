@@ -61,14 +61,14 @@ struct HomePlanAndMetricsRow: View {
                 HStack(spacing: 4) {
                     Text("\(doneCount)/\(totalCount) completed")
                         .font(.caption.weight(.semibold))
-                        .foregroundStyle(doneCount >= totalCount ? Color.green : Color.accentColor)
+                        .foregroundStyle(doneCount >= totalCount ? AppTheme.Dark.Signal.recovery : Color.accentColor)
                     Spacer()
                 }
                 GradientProgressBar(value: progress, color: doneCount >= totalCount ? .green : .accentColor, height: 5)
                     .padding(.bottom, 2)
 
                 HStack(spacing: 8) {
-                    let discTint = doneCount > 0 ? Color.green : Color.accentColor
+                    let discTint = doneCount > 0 ? AppTheme.Dark.Signal.recovery : Color.accentColor
                     ZStack {
                         Circle()
                             .fill(
@@ -80,7 +80,7 @@ struct HomePlanAndMetricsRow: View {
                             .frame(width: 30, height: 30)
                             .overlay(Circle().stroke(discTint.opacity(0.28), lineWidth: 0.5))
                         Image(systemName: doneCount > 0 ? "checkmark" : "dumbbell.fill")
-                            .font(.system(size: 11, weight: .semibold))
+                            .scaledFont(size: 11, weight: .semibold)
                             .foregroundStyle(discTint)
                     }
                     Text(name)
@@ -109,7 +109,7 @@ struct HomePlanAndMetricsRow: View {
             Button(action: onStartWorkout) {
                 HStack(spacing: 6) {
                     Image(systemName: "play.fill")
-                        .font(.system(size: 10, weight: .semibold))
+                        .scaledFont(size: 10, weight: .semibold)
                     Text("Start Workout")
                         .font(.caption.weight(.semibold))
                 }
@@ -129,7 +129,7 @@ struct HomePlanAndMetricsRow: View {
         }
         .padding(16)
         .frame(maxWidth: .infinity, minHeight: 168, alignment: .topLeading)
-        .background(Color(.secondarySystemGroupedBackground))
+        .background(AppTheme.Dark.surface)
         .clipShape(RoundedRectangle(cornerRadius: AppTheme.miniCardRadius, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: AppTheme.miniCardRadius, style: .continuous)
@@ -165,7 +165,7 @@ struct HomePlanAndMetricsRow: View {
                                   status: todaySteps >= 10000 ? "Goal hit" : "of 10k",
                                   good: todaySteps >= 10000)
                     Divider().padding(.vertical, 5)
-                    miniMetricRow(icon: "flame.fill", color: .orange, label: "Calories",
+                    miniMetricRow(icon: "flame.fill", color: AppTheme.Dark.Signal.caution, label: "Calories",
                                   value: "\(Int(activeCalories))",
                                   status: activeCalories >= 300 ? "On track" : "Low",
                                   good: activeCalories >= 300)
@@ -186,7 +186,7 @@ struct HomePlanAndMetricsRow: View {
                                   value: "\(activitiesThisWeek)", status: weeklyGoal > 0 ? "/ \(weeklyGoal) goal" : "workouts",
                                   good: weeklyGoal > 0 ? activitiesThisWeek >= weeklyGoal : true)
                     Divider().padding(.vertical, 5)
-                    miniMetricRow(icon: "flame.fill", color: .orange, label: "Streak",
+                    miniMetricRow(icon: "flame.fill", color: AppTheme.Dark.Signal.caution, label: "Streak",
                                   value: "\(currentStreak) day\(currentStreak == 1 ? "" : "s")",
                                   status: currentStreak >= 3 ? "Active" : "",
                                   good: currentStreak >= 3)
@@ -200,7 +200,7 @@ struct HomePlanAndMetricsRow: View {
         }
         .padding(16)
         .frame(maxWidth: .infinity, minHeight: 168, alignment: .topLeading)
-        .background(Color(.secondarySystemGroupedBackground))
+        .background(AppTheme.Dark.surface)
         .clipShape(RoundedRectangle(cornerRadius: AppTheme.miniCardRadius, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: AppTheme.miniCardRadius, style: .continuous)
@@ -222,7 +222,7 @@ struct HomePlanAndMetricsRow: View {
                     .frame(width: 26, height: 26)
                     .overlay(Circle().stroke(color.opacity(0.28), lineWidth: 0.5))
                 Image(systemName: icon)
-                    .font(.system(size: 12, weight: .semibold))
+                    .scaledFont(size: 12, weight: .semibold)
                     .foregroundStyle(color)
             }
             Text(label)
@@ -237,8 +237,8 @@ struct HomePlanAndMetricsRow: View {
                     .lineLimit(1)
                 if !status.isEmpty {
                     Text(status)
-                        .font(.system(size: 9, weight: .medium))
-                        .foregroundStyle(good ? Color.green : Color.orange)
+                        .scaledFont(size: 9, weight: .medium)
+                        .foregroundStyle(good ? AppTheme.Dark.Signal.recovery : AppTheme.Dark.Signal.caution)
                 }
             }
         }

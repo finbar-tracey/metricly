@@ -11,7 +11,8 @@ import SwiftUI
 /// because it hasn't happened yet.
 struct EffortTape: View {
     struct Day: Identifiable {
-        let id = UUID()
+        /// One entry per calendar day, so identity survives data rebuilds.
+        var id: Date { date }
         /// Single-letter weekday initial.
         let letter: String
         let kind: Kind
@@ -35,13 +36,15 @@ struct EffortTape: View {
     var accent: Color = AppTheme.Dark.Signal.recovery
     var onSelectDay: (Workout) -> Void = { _ in }
 
+    @Environment(\.weightUnit) private var weightUnit
+
     /// Nominal cell width from the handoff. Columns are flexible and the bar is
     /// capped at this, so the strip stays centred on a Pro Max and compresses
     /// rather than clipping on an SE.
     private let cellW: CGFloat = 18
     private let gap: CGFloat = 4
     private let fullH: CGFloat = 72
-    private let pipH: CGFloat = 9
+    private let pipH: CGFloat = 13
 
     private var maxVolumeK: Double {
         max(0.01, days.map(\.volumeK).max() ?? 0)
@@ -52,32 +55,50 @@ struct EffortTape: View {
             header
             HStack(alignment: .bottom, spacing: gap) {
                 ForEach(Array(days.enumerated()), id: \.element.id) { index, day in
-                    column(day, index: index)
+                    interactiveColumn(day, index: index)
                 }
             }
             dayLetters
             legend
         }
         .padding(.horizontal, 16)
+        // Fixed-height columns can't grow with the text; past this size the
+        // letters and pips would collide.
+        .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
     }
 
     // MARK: - Header
 
+    /// `totalVolumeK` arrives as thousands of kg; show it in the user's unit.
+    private var displayVolumeK: Double { weightUnit.display(totalVolumeK * 1000) / 1000 }
+
+    private func volumeText(_ volumeK: Double) -> String {
+        volumeK.formatted(.number.precision(.fractionLength(1)))
+    }
+
     private var header: some View {
-        HStack(alignment: .firstTextBaseline) {
-            Text("14 DAYS · TRAINING EFFORT")
-                .font(.system(size: 10, weight: .semibold, design: .monospaced))
-                .tracking(1.4)
-                .foregroundStyle(AppTheme.Dark.text3)
-            Spacer()
-            Text("\(totalVolumeK, specifier: "%.1f")k kg · \(sessionCount) sessions")
-                .font(.system(size: 9, weight: .semibold, design: .monospaced))
-                .tracking(0.6)
-                .foregroundStyle(AppTheme.Dark.text3)
+        let title = Text("14 DAYS · TRAINING EFFORT")
+            .scaledFont(size: 10, weight: .semibold, design: .monospaced)
+            .tracking(1.4)
+            .foregroundStyle(AppTheme.Dark.text3)
+        let totals = Text("\(volumeText(displayVolumeK))k \(weightUnit.label) · \(sessionCount) sessions")
+            .scaledFont(size: 10, weight: .semibold, design: .monospaced)
+            .tracking(0.6)
+            .foregroundStyle(AppTheme.Dark.text3)
+        return ViewThatFits(in: .horizontal) {
+            HStack(alignment: .firstTextBaseline) {
+                title
+                Spacer()
+                totals
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                title
+                totals
+            }
         }
-        .accessibilityElement(children: .combine)
+        .accessibilityElement(children: .ignore)
         .accessibilityLabel(
-            "Last 14 days: \(String(format: "%.1f", totalVolumeK)) thousand kilograms across \(sessionCount) sessions"
+            "Last 14 days: \(volumeText(displayVolumeK)) thousand \(weightUnit.label) across \(sessionCount) sessions"
         )
     }
 
@@ -103,12 +124,24 @@ struct EffortTape: View {
                 .growIn(delay: Double(index) * AppTheme.Dark.Motion.tapeStagger)
         }
         .frame(maxWidth: .infinity)
-        .frame(height: fullH + pipH, alignment: .bottom)
+        .frame(height: fullH + pipH + 2, alignment: .bottom)
         .contentShape(Rectangle())
-        .onTapGesture { if let workout = day.workout { onSelectDay(workout) } }
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(accessibilityLabel(for: day))
-        .accessibilityAddTraits(day.workout != nil ? .isButton : [])
+    }
+
+    /// Columns with a workout are real buttons; the rest are static, so
+    /// VoiceOver doesn't announce dead "dimmed" controls.
+    @ViewBuilder
+    private func interactiveColumn(_ day: Day, index: Int) -> some View {
+        if let workout = day.workout {
+            Button { onSelectDay(workout) } label: { column(day, index: index) }
+                .buttonStyle(.plain)
+                .accessibilityLabel(accessibilityLabel(for: day))
+                .accessibilityHint("Opens this workout")
+        } else {
+            column(day, index: index)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(accessibilityLabel(for: day))
+        }
     }
 
     @ViewBuilder
@@ -116,13 +149,13 @@ struct EffortTape: View {
         switch day.kind {
         case .today:
             Text("NOW")
-                .font(.system(size: 7.5, weight: .bold, design: .monospaced))
+                .scaledFont(size: 7.5, weight: .bold, design: .monospaced)
                 .tracking(0.6)
                 .foregroundStyle(AppTheme.Dark.text)
         default:
             if let rpe = day.rpe {
                 Text(rpe, format: .number.precision(.fractionLength(1)))
-                    .font(.system(size: 7.5, weight: .semibold, design: .monospaced))
+                    .scaledFont(size: 7.5, weight: .semibold, design: .monospaced)
                     .foregroundStyle(AppTheme.Dark.text4)
             } else {
                 Color.clear.frame(height: pipH)
@@ -164,7 +197,7 @@ struct EffortTape: View {
         HStack(spacing: gap) {
             ForEach(days) { day in
                 Text(day.letter)
-                    .font(.system(size: 8, weight: .semibold, design: .monospaced))
+                    .scaledFont(size: 8, weight: .semibold, design: .monospaced)
                     .tracking(0.4)
                     .foregroundStyle(day.kind == .today ? AppTheme.Dark.text : AppTheme.Dark.text4)
                     .frame(maxWidth: .infinity)
@@ -193,7 +226,7 @@ struct EffortTape: View {
                 .fill(color)
                 .frame(width: 7, height: 7)
             Text(label)
-                .font(.system(size: 8.5, weight: .semibold, design: .monospaced))
+                .scaledFont(size: 8.5, weight: .semibold, design: .monospaced)
                 .tracking(0.6)
                 .foregroundStyle(AppTheme.Dark.text3)
         }
@@ -208,9 +241,15 @@ struct EffortTape: View {
         case .rest:   return "\(when). Rest day."
         case .cardio: return "\(when). Cardio session."
         default:
-            let volume = String(format: "%.1f", day.volumeK)
-            let effort = day.rpe.map { ", RPE \(String(format: "%.1f", $0))" } ?? ""
-            return "\(when). \(volume) thousand kilograms\(effort)."
+            let volume = volumeText(weightUnit.display(day.volumeK * 1000) / 1000)
+            let effort = day.rpe.map { ", RPE \($0.formatted(.number.precision(.fractionLength(1))))" } ?? ""
+            let level: String
+            switch day.kind {
+            case .hard:     level = String(localized: "Hard day")
+            case .moderate: level = String(localized: "Moderate day")
+            default:        level = String(localized: "Light day")
+            }
+            return "\(when). \(level). \(volume) thousand \(weightUnit.label)\(effort)."
         }
     }
 }

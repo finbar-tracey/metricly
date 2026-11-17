@@ -8,7 +8,7 @@ import SwiftUI
 /// plan changed under them.
 struct NextUpCard: View {
     struct Exercise: Identifiable {
-        let id = UUID()
+        var id: String { "\(name)|\(sets)|\(setCount)" }
         let name: String
         /// Set/rep label, e.g. "4 × 5".
         let sets: String
@@ -51,13 +51,15 @@ struct NextUpCard: View {
     /// preview, not the session.
     private let visibleRows = 4
 
+    @Environment(\.dynamicTypeSize) private var typeSize
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             Button(action: onOpenDetail) {
                 VStack(alignment: .leading, spacing: 0) {
                     header
                     Text(workoutName)
-                        .font(.system(size: 18, weight: .semibold, design: .rounded))
+                        .scaledFont(size: 18, weight: .semibold, design: .rounded)
                         .tracking(-0.4)
                         .foregroundStyle(AppTheme.Dark.text)
                         .padding(.horizontal, 14)
@@ -73,17 +75,18 @@ struct NextUpCard: View {
             cta
         }
         .darkCard()
+        .dynamicTypeSize(...DynamicTypeSize.accessibility2)
     }
 
     private var header: some View {
         HStack {
             Text(eyebrow)
-                .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                .scaledFont(size: 10, weight: .semibold, design: .monospaced)
                 .tracking(1.4)
                 .foregroundStyle(AppTheme.Dark.text3)
             Spacer(minLength: 8)
             Text(meta)
-                .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                .scaledFont(size: 10, weight: .semibold, design: .monospaced)
                 .tracking(0.6)
                 .foregroundStyle(AppTheme.Dark.text3)
         }
@@ -96,10 +99,10 @@ struct NextUpCard: View {
     @ViewBuilder
     private var rows: some View {
         VStack(spacing: 0) {
-            ForEach(exercises.prefix(visibleRows)) { row($0) }
+            ForEach(Array(exercises.prefix(visibleRows).enumerated()), id: \.offset) { _, exercise in row(exercise) }
             if exercises.count > visibleRows {
                 Text("+ \(exercises.count - visibleRows) MORE")
-                    .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                    .scaledFont(size: 10, weight: .semibold, design: .monospaced)
                     .tracking(0.6)
                     .foregroundStyle(AppTheme.Dark.text3)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -110,26 +113,60 @@ struct NextUpCard: View {
         .padding(.vertical, 6)
     }
 
+    @ViewBuilder
     private func row(_ exercise: Exercise) -> some View {
+        if typeSize.isAccessibilitySize {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(exercise.name)
+                    .scaledFont(size: 13.5, weight: .semibold)
+                    .foregroundStyle(AppTheme.Dark.text)
+                HStack(spacing: 8) {
+                    Text(exercise.sets)
+                        .scaledFont(size: 11, weight: .semibold, design: .monospaced)
+                        .foregroundStyle(AppTheme.Dark.text2)
+                    if let hint = exercise.hint {
+                        Text(hint.text)
+                            .textCase(.uppercase)
+                            .scaledFont(size: 10, weight: .bold, design: .monospaced)
+                            .foregroundStyle(hint.color)
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 7)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(rowLabel(exercise))
+        } else {
+            compactRow(exercise)
+        }
+    }
+
+    private func rowLabel(_ exercise: Exercise) -> String {
+        "\(exercise.name), \(exercise.sets)\(exercise.hint.map { ". \($0.text)" } ?? "")"
+    }
+
+    private func compactRow(_ exercise: Exercise) -> some View {
         HStack(spacing: 10) {
-            Text(String(format: "%02d", exercise.setCount))
-                .font(.system(size: 10, weight: .semibold, design: .monospaced))
+            Text(exercise.setCount, format: .number.precision(.integerLength(2)))
+                .scaledFont(size: 10, weight: .semibold, design: .monospaced)
                 .tracking(0.6)
                 .foregroundStyle(AppTheme.Dark.text4)
                 .frame(width: 22, alignment: .leading)
             Text(exercise.name)
-                .font(.system(size: 13.5, weight: .semibold))
+                .scaledFont(size: 13.5, weight: .semibold)
                 .tracking(-0.1)
                 .foregroundStyle(AppTheme.Dark.text)
                 .lineLimit(1)
                 .frame(maxWidth: .infinity, alignment: .leading)
             Text(exercise.sets)
-                .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                .scaledFont(size: 11, weight: .semibold, design: .monospaced)
                 .foregroundStyle(AppTheme.Dark.text2)
                 .frame(width: 50, alignment: .trailing)
             if let hint = exercise.hint {
-                Text(hint.text.uppercased())
-                    .font(.system(size: 9.5, weight: .bold, design: .monospaced))
+                Text(hint.text)
+                    .textCase(.uppercase)
+                    .scaledFont(size: 9.5, weight: .bold, design: .monospaced)
                     .tracking(0.6)
                     .foregroundStyle(hint.color)
                     .lineLimit(1)
@@ -142,20 +179,18 @@ struct NextUpCard: View {
         .padding(.horizontal, 14)
         .padding(.vertical, 7)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(
-            "\(exercise.name), \(exercise.sets)\(exercise.hint.map { ". \($0.text)" } ?? "")"
-        )
+        .accessibilityLabel(rowLabel(exercise))
     }
 
     private var cta: some View {
         Button(action: onStart) {
             HStack {
                 Text(ctaTitle)
-                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .scaledFont(size: 16, weight: .bold, design: .rounded)
                     .tracking(-0.2)
                 Spacer()
                 Image(systemName: "arrow.right")
-                    .font(.system(size: 13, weight: .bold))
+                    .scaledFont(size: 13, weight: .bold)
             }
             .foregroundStyle(AppTheme.Dark.ink)
             .padding(.horizontal, 14)

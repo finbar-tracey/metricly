@@ -21,15 +21,15 @@ struct HomeContextualCTASection: View {
                         Circle()
                             .fill(
                                 LinearGradient(
-                                    colors: [Color.orange.opacity(0.28), Color.orange.opacity(0.12)],
+                                    colors: [AppTheme.Dark.Signal.caution.opacity(0.28), AppTheme.Dark.Signal.caution.opacity(0.12)],
                                     startPoint: .topLeading, endPoint: .bottomTrailing
                                 )
                             )
                             .frame(width: 50, height: 50)
-                            .overlay(Circle().stroke(Color.orange.opacity(0.30), lineWidth: 0.5))
-                            .shadow(color: Color.orange.opacity(0.25), radius: 6, y: 3)
+                            .overlay(Circle().stroke(AppTheme.Dark.Signal.caution.opacity(0.30), lineWidth: 0.5))
+                            .shadow(color: AppTheme.Dark.Signal.caution.opacity(0.25), radius: 6, y: 3)
                         Image(systemName: "play.fill")
-                            .font(.system(size: 20, weight: .semibold)).foregroundStyle(.orange)
+                            .scaledFont(size: 20, weight: .semibold).foregroundStyle(AppTheme.Dark.Signal.caution)
                     }
                     VStack(alignment: .leading, spacing: 3) {
                         Text("Workout in progress")
@@ -38,16 +38,16 @@ struct HomeContextualCTASection: View {
                     }
                     Spacer()
                     Text("Continue")
-                        .font(.subheadline.bold()).foregroundStyle(.white)
+                        .font(.subheadline.bold()).foregroundStyle(AppTheme.Dark.ink)
                         .padding(.horizontal, 16).padding(.vertical, 9)
                         .background(
                             LinearGradient(
-                                colors: [.orange, AppTheme.Signal.actionOrange],
+                                colors: [AppTheme.Dark.Signal.caution, AppTheme.Dark.Signal.caution.opacity(0.8)],
                                 startPoint: .topLeading, endPoint: .bottomTrailing
                             ),
                             in: Capsule()
                         )
-                        .shadow(color: .orange.opacity(0.45), radius: 8, x: 0, y: 4)
+                        .shadow(color: AppTheme.Dark.Signal.caution.opacity(0.45), radius: 8, x: 0, y: 4)
                     Image(systemName: "chevron.right").font(.caption2).foregroundStyle(.tertiary)
                 }
                 .appCard()
@@ -60,15 +60,15 @@ struct HomeContextualCTASection: View {
                     Circle()
                         .fill(
                             LinearGradient(
-                                colors: [Color.yellow.opacity(0.30), Color.orange.opacity(0.16)],
+                                colors: [AppTheme.Dark.Signal.caution.opacity(0.30), AppTheme.Dark.Signal.caution.opacity(0.16)],
                                 startPoint: .topLeading, endPoint: .bottomTrailing
                             )
                         )
                         .frame(width: 50, height: 50)
-                        .overlay(Circle().stroke(Color.orange.opacity(0.30), lineWidth: 0.5))
-                        .shadow(color: Color.orange.opacity(0.28), radius: 6, y: 3)
+                        .overlay(Circle().stroke(AppTheme.Dark.Signal.caution.opacity(0.30), lineWidth: 0.5))
+                        .shadow(color: AppTheme.Dark.Signal.caution.opacity(0.28), radius: 6, y: 3)
                     Image(systemName: "star.fill")
-                        .font(.system(size: 20, weight: .semibold)).foregroundStyle(.yellow)
+                        .scaledFont(size: 20, weight: .semibold).foregroundStyle(AppTheme.Dark.Signal.caution)
                 }
                 VStack(alignment: .leading, spacing: 3) {
                     Text("Nice work today!")
@@ -78,10 +78,10 @@ struct HomeContextualCTASection: View {
                 }
                 Spacer()
                 Image(systemName: "checkmark.seal.fill")
-                    .font(.system(size: 22))
+                    .scaledFont(size: 22)
                     .foregroundStyle(
                         LinearGradient(
-                            colors: [.yellow, .orange],
+                            colors: [AppTheme.Dark.Signal.caution, AppTheme.Dark.Signal.caution.opacity(0.8)],
                             startPoint: .topLeading, endPoint: .bottomTrailing
                         )
                     )
@@ -89,9 +89,9 @@ struct HomeContextualCTASection: View {
             .padding(16)
             .background(
                 ZStack {
-                    Color(.secondarySystemGroupedBackground)
+                    AppTheme.Dark.surface
                     LinearGradient(
-                        colors: [Color.orange.opacity(0.10), .clear],
+                        colors: [AppTheme.Dark.Signal.caution.opacity(0.10), .clear],
                         startPoint: .topLeading, endPoint: .center
                     )
                 }
@@ -99,7 +99,7 @@ struct HomeContextualCTASection: View {
             )
             .overlay(
                 RoundedRectangle(cornerRadius: AppTheme.cardRadius, style: .continuous)
-                    .stroke(Color.orange.opacity(0.22), lineWidth: 0.5)
+                    .stroke(AppTheme.Dark.Signal.caution.opacity(0.22), lineWidth: 0.5)
             )
             .shadow(color: .black.opacity(0.10), radius: 14, x: 0, y: 5)
         }

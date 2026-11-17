@@ -68,7 +68,7 @@ struct HomeTrainingBlockChip: View {
                         .frame(width: 36, height: 36)
                         .overlay(Circle().stroke(accent.opacity(0.30), lineWidth: 0.5))
                     Image(systemName: block.phase.icon)
-                        .font(.system(size: 14, weight: .bold))
+                        .scaledFont(size: 14, weight: .bold)
                         .foregroundStyle(accent)
                 }
                 VStack(alignment: .leading, spacing: 2) {
@@ -91,7 +91,7 @@ struct HomeTrainingBlockChip: View {
         .padding(.vertical, 12)
         .background(
             RoundedRectangle(cornerRadius: AppTheme.tileRadius, style: .continuous)
-                .fill(Color(.secondarySystemGroupedBackground))
+                .fill(AppTheme.Dark.surface)
         )
         .overlay(
             RoundedRectangle(cornerRadius: AppTheme.tileRadius, style: .continuous)
@@ -117,7 +117,7 @@ struct HomeTrainingBlockChip: View {
                         .frame(width: 36, height: 36)
                         .overlay(Circle().stroke(AppTheme.Signal.focus.opacity(0.30), lineWidth: 0.5))
                     Image(systemName: "calendar.badge.plus")
-                        .font(.system(size: 14, weight: .bold))
+                        .scaledFont(size: 14, weight: .bold)
                         .foregroundStyle(AppTheme.Signal.focus)
                 }
                 VStack(alignment: .leading, spacing: 2) {
@@ -140,7 +140,7 @@ struct HomeTrainingBlockChip: View {
             .padding(.vertical, 12)
             .background(
                 RoundedRectangle(cornerRadius: AppTheme.tileRadius, style: .continuous)
-                    .fill(Color(.secondarySystemGroupedBackground))
+                    .fill(AppTheme.Dark.surface)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: AppTheme.tileRadius, style: .continuous)

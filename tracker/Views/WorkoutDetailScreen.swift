@@ -36,7 +36,7 @@ struct WorkoutDetailScreen: View {
     @State private var dismissedSubstitutions: Set<PersistentIdentifier> = []
 
     private var settings: UserSettings {
-        settingsArray.first ?? UserSettings()
+        settingsArray.first ?? .fallback
     }
 
     private var sortedExercises: [Exercise] {

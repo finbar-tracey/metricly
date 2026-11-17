@@ -22,7 +22,7 @@ struct TodayPlanAdjustmentsBanner: View {
                         .fill(intensityColor.opacity(0.16))
                         .frame(width: 30, height: 30)
                     Image(systemName: "wand.and.stars")
-                        .font(.system(size: 13, weight: .semibold))
+                        .scaledFont(size: 13, weight: .semibold)
                         .foregroundStyle(intensityColor)
                 }
                 Text("Today's plan: \(plan.intensity.label)")
@@ -30,7 +30,7 @@ struct TodayPlanAdjustmentsBanner: View {
                 Spacer()
                 Button(action: onDismiss) {
                     Image(systemName: "xmark")
-                        .font(.system(size: 11, weight: .bold))
+                        .scaledFont(size: 11, weight: .bold)
                         .foregroundStyle(.tertiary)
                         .padding(6)
                         .contentShape(Rectangle())
@@ -64,11 +64,11 @@ struct TodayPlanAdjustmentsBanner: View {
                 } label: {
                     HStack(spacing: 6) {
                         Image(systemName: "wand.and.stars")
-                            .font(.system(size: 11, weight: .semibold))
+                            .scaledFont(size: 11, weight: .semibold)
                         Text("Apply to this workout")
                             .font(.caption.weight(.bold))
                     }
-                    .foregroundStyle(.white)
+                    .foregroundStyle(AppTheme.Dark.ink)
                     .padding(.horizontal, 12).padding(.vertical, 7)
                     .background(intensityColor, in: Capsule())
                 }
@@ -98,12 +98,5 @@ struct TodayPlanAdjustmentsBanner: View {
         )
     }
 
-    private var intensityColor: Color {
-        switch plan.intensity {
-        case .rest:     return .gray
-        case .light:    return .teal
-        case .moderate: return .blue
-        case .hard:     return .orange
-        }
-    }
+    private var intensityColor: Color { AppTheme.Dark.accent(for: plan.intensity) }
 }

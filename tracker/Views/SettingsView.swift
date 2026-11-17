@@ -30,7 +30,7 @@ struct SettingsView: View {
     @AppStorage("celebrationsEnabled") private var celebrationsEnabled = true
 
     private var settings: UserSettings {
-        settingsArray.first ?? UserSettings()
+        settingsArray.first ?? .fallback
     }
 
     var body: some View {

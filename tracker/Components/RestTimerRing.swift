@@ -18,8 +18,15 @@ struct RestTimerRing: View {
         return CGFloat(max(0, remaining)) / CGFloat(total)
     }
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     private var clock: String {
-        String(format: "%d:%02d", remaining / 60, remaining % 60)
+        let secs = max(0, remaining)
+        return Duration.seconds(secs).formatted(.time(pattern: .minuteSecond))
+    }
+
+    private var spokenRemaining: String {
+        Duration.seconds(max(0, remaining)).formatted(.units(allowed: [.minutes, .seconds], width: .wide))
     }
 
     var body: some View {
@@ -33,31 +40,33 @@ struct RestTimerRing: View {
                 .signalGlow(accent, radius: 6)
                 // The controller ticks twice a second; a 1s linear tween keeps
                 // the sweep smooth rather than stepping.
-                .animation(.linear(duration: 1), value: remaining)
+                .animation(reduceMotion ? nil : .linear(duration: 1), value: remaining)
 
             VStack(spacing: 2) {
                 Text("REST")
-                    .font(.system(size: 9, weight: .bold, design: .monospaced))
+                    .scaledFont(size: 9, weight: .bold, design: .monospaced)
                     .tracking(1.6)
                     .foregroundStyle(AppTheme.Dark.text3)
                 Text(clock)
-                    .font(.system(size: 34, weight: .bold, design: .rounded))
+                    .scaledFont(size: 34, weight: .bold, design: .rounded)
                     .tracking(-1)
                     .foregroundStyle(AppTheme.Dark.text)
                     .monospacedDigit()
                     .contentTransition(.numericText(countsDown: true))
-                    .animation(.snappy(duration: 0.3), value: remaining)
+                    .animation(reduceMotion ? nil : .snappy(duration: 0.3), value: remaining)
                 if let nextHint {
                     Text(nextHint)
-                        .font(.system(size: 8.5, weight: .semibold, design: .monospaced))
+                        .scaledFont(size: 8.5, weight: .semibold, design: .monospaced)
                         .tracking(0.8)
                         .foregroundStyle(accent)
                 }
             }
         }
         .frame(width: 148, height: 148)
+        .dynamicTypeSize(...DynamicTypeSize.accessibility2)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Rest timer, \(remaining) seconds remaining")
+        .accessibilityLabel("Rest timer")
+        .accessibilityValue(spokenRemaining)
     }
 }
 

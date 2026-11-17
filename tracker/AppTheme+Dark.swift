@@ -106,3 +106,44 @@ private struct GrowIn: ViewModifier {
             }
     }
 }
+
+// MARK: - Scaled type
+
+extension View {
+    /// A fixed design size that still follows Dynamic Type. Sizes between 7 and
+    /// 10pt are lifted to 10pt so the mono micro-labels stay legible; anything
+    /// below 7 (decorative glyphs such as bullets) is left alone.
+    func scaledFont(
+        size: CGFloat,
+        weight: Font.Weight = .regular,
+        design: Font.Design = .default
+    ) -> some View {
+        modifier(ScaledSystemFont(size: size, weight: weight, design: design))
+    }
+}
+
+private struct ScaledSystemFont: ViewModifier {
+    @ScaledMetric private var size: CGFloat
+    private let weight: Font.Weight
+    private let design: Font.Design
+
+    init(size: CGFloat, weight: Font.Weight, design: Font.Design) {
+        let base: CGFloat = (size >= 7 && size < 10) ? 10 : size
+        let style: Font.TextStyle
+        switch base {
+        case ..<12: style = .caption2
+        case ..<14: style = .footnote
+        case ..<18: style = .body
+        case ..<24: style = .title3
+        case ..<30: style = .title2
+        default:    style = .title
+        }
+        _size = ScaledMetric(wrappedValue: base, relativeTo: style)
+        self.weight = weight
+        self.design = design
+    }
+
+    func body(content: Content) -> some View {
+        content.font(.system(size: size, weight: weight, design: design))
+    }
+}

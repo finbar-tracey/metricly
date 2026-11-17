@@ -9,7 +9,7 @@ struct HomeBedtimeSuggestion: View {
     let clearTime: Date?
 
     var body: some View {
-        let color: Color = delayedByCaffeine ? .orange : .indigo
+        let color: Color = delayedByCaffeine ? AppTheme.Dark.Signal.caution : .indigo
 
         return NavigationLink { CaffeineTrackerView() } label: {
             HStack(spacing: 14) {
@@ -25,7 +25,7 @@ struct HomeBedtimeSuggestion: View {
                         .frame(width: 48, height: 48)
                         .shadow(color: color.opacity(0.45), radius: 9, x: 0, y: 4)
                     Image(systemName: delayedByCaffeine ? "moon.fill" : "moon.zzz.fill")
-                        .font(.system(size: 20, weight: .bold))
+                        .scaledFont(size: 20, weight: .bold)
                         .foregroundStyle(.white)
                 }
                 VStack(alignment: .leading, spacing: 3) {
@@ -35,7 +35,7 @@ struct HomeBedtimeSuggestion: View {
                         Text(bedtime, format: .dateTime.hour().minute())
                             .font(.caption.weight(.semibold)).foregroundStyle(.secondary)
                         if delayedByCaffeine {
-                            Text("· Caffeine still active").font(.caption).foregroundStyle(.orange)
+                            Text("· Caffeine still active").font(.caption).foregroundStyle(AppTheme.Dark.Signal.caution)
                         }
                     }
                 }
@@ -54,7 +54,7 @@ struct HomeBedtimeSuggestion: View {
                 Image(systemName: "chevron.right").font(.caption2.weight(.semibold)).foregroundStyle(.tertiary)
             }
             .padding(.horizontal, 16).padding(.vertical, 14)
-            .background(Color(.secondarySystemGroupedBackground))
+            .background(AppTheme.Dark.surface)
             .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardRadius, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: AppTheme.cardRadius, style: .continuous)

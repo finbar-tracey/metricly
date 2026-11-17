@@ -7,6 +7,7 @@
 
 import SwiftUI
 import SwiftData
+import os
 import AppIntents
 import UserNotifications
 
@@ -45,47 +46,17 @@ struct trackerApp: App {
         // gets a default-inferred migration that doesn't match the plan
         // (App Intents were already correctly threading the plan via
         // `MetriclySchema.makeSharedContainer()`; the main app was not).
-        let container: ModelContainer?
-        let recoveryError: Error?
-        do {
-            let cloudConfig = ModelConfiguration(cloudKitDatabase: .automatic)
-            container = try ModelContainer(
-                for: MetriclySchema.schema,
-                migrationPlan: MetriclyMigrationPlan.self,
-                configurations: cloudConfig
-            )
-            recoveryError = nil
-        } catch {
-            print("⚠️ CloudKit container failed: \(error). Trying local store.")
-            do {
-                container = try ModelContainer(
-                    for: MetriclySchema.schema,
-                    migrationPlan: MetriclyMigrationPlan.self
-                )
-                recoveryError = nil
-            } catch {
-                // Local store can't open. Quarantine the broken files
-                // (rename with a timestamp) so the data is reachable via
-                // Files for manual export, then retry once on a fresh
-                // store. If even that fails, fall through to the
-                // recovery scene — DON'T fatalError; the user keeps a
-                // launchable app and a recoverable on-disk trail.
-                print("⚠️ Local store corrupted, quarantining: \(error)")
-                Self.quarantineCorruptedStore()
-                do {
-                    container = try ModelContainer(
-                        for: MetriclySchema.schema,
-                        migrationPlan: MetriclyMigrationPlan.self
-                    )
-                    recoveryError = nil
-                } catch let retryError {
-                    // Last resort: surface a recovery screen.
-                    print("⚠️ Cannot create any SwiftData container after quarantine: \(retryError)")
-                    container = nil
-                    recoveryError = retryError
-                }
-            }
-        }
+        // Recovery policy (product rule: quarantine, never delete):
+        //   1. Never quarantine on a transient failure (device locked /
+        //      protected data unavailable, disk full, file busy…). Those
+        //      show the recovery screen and a relaunch simply retries.
+        //   2. A failure that looks like genuine corruption or a failed
+        //      migration shows the recovery screen first ("Try Again"
+        //      relaunches). Only if the NEXT launch fails the same way do
+        //      we quarantine the store files and start fresh.
+        let outcome = Self.openContainer()
+        let container: ModelContainer? = outcome.container
+        let recoveryError: Error? = outcome.error
         // Seed UserSettings once so views never need to insert from
         // computed properties. Only runs on the happy path; the
         // recovery scene doesn't need or have a context.
@@ -106,6 +77,62 @@ struct trackerApp: App {
         }
         self.modelContainer = container
         self.recoveryError = recoveryError
+    }
+
+    private static let pendingCorruptionKey = "store.pendingCorruptionRetry"
+
+    private static func makeLocalContainer() throws -> ModelContainer {
+        try ModelContainer(for: MetriclySchema.schema, migrationPlan: MetriclyMigrationPlan.self)
+    }
+
+    private static func openContainer() -> (container: ModelContainer?, error: Error?) {
+        let defaults = UserDefaults.standard
+        do {
+            let cloudConfig = ModelConfiguration(cloudKitDatabase: .automatic)
+            let c = try ModelContainer(
+                for: MetriclySchema.schema,
+                migrationPlan: MetriclyMigrationPlan.self,
+                configurations: cloudConfig
+            )
+            defaults.removeObject(forKey: pendingCorruptionKey)
+            MetriclySchema.register(c)
+            return (c, nil)
+        } catch {
+            MetriclySchema.log.error("CloudKit container failed: \(String(describing: error), privacy: .public). Trying local store.")
+        }
+        do {
+            let c = try makeLocalContainer()
+            defaults.removeObject(forKey: pendingCorruptionKey)
+            MetriclySchema.register(c)
+            return (c, nil)
+        } catch {
+            MetriclySchema.log.error("Local container failed: \(String(describing: error), privacy: .public)")
+            // Transient conditions: never touch the files.
+            guard UIApplication.shared.isProtectedDataAvailable else {
+                MetriclySchema.log.error("Protected data unavailable; not quarantining.")
+                return (nil, error)
+            }
+            guard StoreFailureClassifier.isLikelyCorruption(error) else {
+                MetriclySchema.log.error("Failure does not look like corruption; not quarantining.")
+                return (nil, error)
+            }
+            // Genuine corruption: first time, show recovery + Retry.
+            guard defaults.bool(forKey: pendingCorruptionKey) else {
+                defaults.set(true, forKey: pendingCorruptionKey)
+                return (nil, error)
+            }
+            // Second consecutive corruption failure: quarantine and retry.
+            quarantineCorruptedStore()
+            do {
+                let c = try makeLocalContainer()
+                defaults.removeObject(forKey: pendingCorruptionKey)
+                MetriclySchema.register(c)
+                return (c, nil)
+            } catch let retryError {
+                MetriclySchema.log.error("Cannot create container after quarantine: \(String(describing: retryError), privacy: .public)")
+                return (nil, retryError)
+            }
+        }
     }
 
     /// Rename the broken SQLite store files (and their WAL/SHM siblings)

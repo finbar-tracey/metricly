@@ -117,7 +117,7 @@ struct HomeHeroSection: View {
                         color: .white
                     )
                     Text("%")
-                        .font(.system(size: 23, weight: .heavy, design: .rounded))
+                        .scaledFont(size: 23, weight: .heavy, design: .rounded)
                         .foregroundStyle(.white.opacity(0.78))
                         .padding(.bottom, 4)
                 }
@@ -156,19 +156,19 @@ struct HomeHeroSection: View {
         } label: {
             VStack(spacing: 3) {
                 Text(value)
-                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .scaledFont(size: 16, weight: .bold, design: .rounded)
                     .foregroundStyle(.white)
                     .monospacedDigit()
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
                 HStack(spacing: 2) {
                     Text(label)
-                        .font(.system(size: 10, weight: .semibold))
+                        .scaledFont(size: 10, weight: .semibold)
                         .foregroundStyle(.white.opacity(0.62))
                         .tracking(0.4)
                         .textCase(.uppercase)
                     Image(systemName: "chevron.right")
-                        .font(.system(size: 7, weight: .bold))
+                        .scaledFont(size: 7, weight: .bold)
                         .foregroundStyle(.white.opacity(0.4))
                 }
             }
@@ -197,7 +197,7 @@ struct HomeHeroSection: View {
                 .textCase(.uppercase)
             HStack(alignment: .lastTextBaseline, spacing: 12) {
                 Image(systemName: "flame.fill")
-                    .font(.system(size: 44, weight: .bold))
+                    .scaledFont(size: 44, weight: .bold)
                     .foregroundStyle(.white.opacity(0.92))
                     .shadow(color: .black.opacity(0.20), radius: 6, x: 0, y: 3)
                 AnimatedInt(
@@ -222,9 +222,9 @@ struct HomeHeroSection: View {
 
     private var readinessTintColor: Color {
         let s = recovery.readinessScore
-        if s >= 0.60 { return Color(red: 0.25, green: 0.95, blue: 0.55) }
-        if s >= 0.40 { return .yellow }
-        return .orange
+        if s >= 0.60 { return AppTheme.Dark.Signal.recovery }
+        if s >= 0.40 { return AppTheme.Dark.Signal.caution }
+        return AppTheme.Dark.Signal.strain
     }
 
     // MARK: - Week activity strip
@@ -246,7 +246,7 @@ struct HomeHeroSection: View {
         let accentBase = gradientColors.first ?? .accentColor
 
         return HStack(spacing: 0) {
-            ForEach(Array(days.enumerated()), id: \.offset) { i, day in
+            ForEach(Array(days.enumerated()), id: \.element) { i, day in
                 let isToday = calendar.isDate(day, inSameDayAs: today)
                 let isFuture = day > today
                 let hasWorkout = allWorkouts.contains { calendar.isDate($0.date, inSameDayAs: day) }
@@ -257,7 +257,7 @@ struct HomeHeroSection: View {
                 } label: {
                     VStack(spacing: 5) {
                         Text(labels[i])
-                            .font(.system(size: 10, weight: .semibold))
+                            .scaledFont(size: 10, weight: .semibold)
                             .foregroundStyle(.white.opacity(isToday ? 1.0 : 0.55))
 
                         ZStack {
@@ -273,7 +273,7 @@ struct HomeHeroSection: View {
 
                             if hasWorkout {
                                 Image(systemName: "checkmark")
-                                    .font(.system(size: 11, weight: .bold))
+                                    .scaledFont(size: 11, weight: .bold)
                                     .foregroundStyle(accentBase)
                             } else if isToday {
                                 Circle()
@@ -286,6 +286,14 @@ struct HomeHeroSection: View {
                 .buttonStyle(.pressableCard)
                 .disabled(workout == nil)
                 .frame(maxWidth: .infinity)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(day.formatted(.dateTime.weekday(.wide)))
+                .accessibilityValue(
+                    hasWorkout
+                        ? String(localized: "Workout completed")
+                        : (isToday ? String(localized: "Today, no workout yet") : String(localized: "No workout"))
+                )
+                .accessibilityAddTraits(workout != nil ? .isButton : [])
             }
         }
         .padding(.vertical, 4)

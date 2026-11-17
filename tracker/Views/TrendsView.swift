@@ -19,8 +19,25 @@ struct TrendsView: View {
     @Query private var settingsArray: [UserSettings]
 
     @State private var hrvSeries: [Double] = []
+    /// Built once per data change (not per body evaluation).
+    @State private var cachedData: TrendsData?
+    @ScaledMetric(relativeTo: .caption2) private var chartHeight: CGFloat = 92
+    @ScaledMetric(relativeTo: .caption2) private var barMaxHeight: CGFloat = 76
 
-    private var data: TrendsData {
+    /// Inputs that change what the dashboard shows.
+    private struct RefreshKey: Equatable {
+        var workouts: Int
+        var latestWorkout: Date?
+        var cardio: Int
+        var unit: WeightUnit
+    }
+
+    private var refreshKey: RefreshKey {
+        RefreshKey(workouts: finishedWorkouts.count, latestWorkout: finishedWorkouts.first?.date,
+                   cardio: cardioSessions.count, unit: weightUnit)
+    }
+
+    private func buildData() -> TrendsData {
         TrendsData.build(
             finishedWorkouts: finishedWorkouts,
             currentStreak: Workout.currentStreak(from: finishedWorkouts, cardioSessions: Array(cardioSessions.prefix(60))),
@@ -33,12 +50,20 @@ struct TrendsView: View {
     }
 
     var body: some View {
-        ScrollView {
-            if data.isEmpty {
-                EmptyTrendsContent()
-            } else {
-                content
+        let data = cachedData ?? buildData()
+        return ScrollView {
+            Group {
+                if data.isEmpty {
+                    EmptyTrendsContent()
+                } else {
+                    content(data)
+                }
             }
+            .frame(maxWidth: 720)
+            .frame(maxWidth: .infinity)
+        }
+        .onChange(of: refreshKey, initial: true) { _, _ in
+            cachedData = buildData()
         }
         .background(AppTheme.Dark.bg.ignoresSafeArea())
         .environment(\.colorScheme, .dark)
@@ -53,16 +78,16 @@ struct TrendsView: View {
         }
     }
 
-    private var content: some View {
+    private func content(_ data: TrendsData) -> some View {
         VStack(alignment: .leading, spacing: 0) {
-            title
-            statGrid
-            weeklyVolume
+            title(data)
+            statGrid(data)
+            weeklyVolume(data)
             if hrvSeries.count >= 2 {
                 hrvTrajectory
             }
             if !data.recentPRs.isEmpty {
-                recentPRs
+                recentPRs(data)
             }
             insightsLink
         }
@@ -71,7 +96,7 @@ struct TrendsView: View {
 
     // MARK: - Title
 
-    private var title: some View {
+    private func title(_ data: TrendsData) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 6) {
                 Text(data.verdictA)
@@ -79,10 +104,11 @@ struct TrendsView: View {
                 Text(data.verdictB)
                     .foregroundStyle(AppTheme.Dark.Signal.recovery)
             }
-            .font(.system(size: 30, weight: .bold, design: .rounded))
+            .font(.system(.title, design: .rounded).weight(.bold))
             .tracking(-1.2)
+            .accessibilityElement(children: .combine)
             Text(data.subline)
-                .font(.system(size: 12.5))
+                .font(.footnote)
                 .foregroundStyle(AppTheme.Dark.text3)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -93,9 +119,9 @@ struct TrendsView: View {
 
     // MARK: - Stat grid
 
-    private var statGrid: some View {
+    private func statGrid(_ data: TrendsData) -> some View {
         LazyVGrid(
-            columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)],
+            columns: [GridItem(.adaptive(minimum: 160), spacing: 10)],
             spacing: 10
         ) {
             ForEach(data.stats) { stat in
@@ -109,21 +135,24 @@ struct TrendsView: View {
     private func statTile(_ stat: TrendsData.Stat) -> some View {
         VStack(alignment: .leading, spacing: 3) {
             Text(stat.label)
-                .font(.system(size: 8.5, weight: .bold, design: .monospaced))
+                .textCase(.uppercase)
+                .font(.system(.caption2, design: .monospaced).weight(.bold))
                 .tracking(1)
                 .foregroundStyle(AppTheme.Dark.text4)
             HStack(alignment: .firstTextBaseline, spacing: 3) {
                 CountUpNumber(target: stat.value, decimals: stat.decimals)
-                    .font(.system(size: 26, weight: .bold, design: .rounded))
+                    .font(.system(.title, design: .rounded).weight(.bold))
+                    .minimumScaleFactor(0.6)
+                    .lineLimit(1)
                     .tracking(-1)
                     .foregroundStyle(stat.tone)
                     .monospacedDigit()
                 Text(stat.unit)
-                    .font(.system(size: 9.5, design: .monospaced))
+                    .font(.system(.caption2, design: .monospaced))
                     .foregroundStyle(AppTheme.Dark.text3)
             }
             Text(stat.sub)
-                .font(.system(size: 9, design: .monospaced))
+                .font(.system(.caption2, design: .monospaced))
                 .tracking(0.3)
                 .foregroundStyle(AppTheme.Dark.text3)
         }
@@ -137,38 +166,58 @@ struct TrendsView: View {
 
     // MARK: - Weekly volume
 
-    private var weeklyVolume: some View {
-        section(title: "WEEKLY VOLUME", right: weightUnit == .kg ? "k·kg lifted" : "k·lb lifted") {
+    private func weeklyVolume(_ data: TrendsData) -> some View {
+        section(title: String(localized: "Weekly volume", comment: "Trends section title (shown uppercase)"),
+                right: String(localized: "k·\(weightUnit.label) lifted", comment: "Trends weekly volume unit caption; thousands of the user's weight unit")) {
             let maxVolume = max(0.01, data.weeklyVolume.map(\.volumeK).max() ?? 0)
             HStack(alignment: .bottom, spacing: 8) {
                 ForEach(Array(data.weeklyVolume.enumerated()), id: \.element.id) { index, week in
                     volumeBar(week, maxVolume: maxVolume, index: index)
                 }
             }
-            .frame(height: 92, alignment: .bottom)
+            .frame(height: chartHeight, alignment: .bottom)
         }
     }
 
     private func volumeBar(_ week: TrendsData.WeekBar, maxVolume: Double, index: Int) -> some View {
         VStack(spacing: 3) {
             Text(week.volumeK, format: .number.precision(.fractionLength(0)))
-                .font(.system(size: 8, weight: .semibold, design: .monospaced))
+                .font(.system(.caption2, design: .monospaced).weight(.semibold))
+                .minimumScaleFactor(0.6)
+                .lineLimit(1)
                 .foregroundStyle(week.isCurrent ? AppTheme.Dark.Signal.recovery : AppTheme.Dark.text4)
             Spacer(minLength: 0)
             RoundedRectangle(cornerRadius: 4, style: .continuous)
                 .fill(week.isCurrent
                       ? AnyShapeStyle(LinearGradient(colors: [AppTheme.Dark.Signal.recovery, AppTheme.Dark.Signal.recovery.opacity(0.9)], startPoint: .top, endPoint: .bottom))
                       : AnyShapeStyle(TrendsPalette.pastWeek))
-                .frame(height: max(4, CGFloat(week.volumeK / maxVolume) * 76))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 4, style: .continuous)
+                        .strokeBorder(AppTheme.Dark.text, lineWidth: week.isCurrent ? 1.5 : 0)
+                )
+                .frame(height: max(4, CGFloat(week.volumeK / maxVolume) * barMaxHeight))
                 .signalGlow(week.isCurrent ? AppTheme.Dark.Signal.recovery : .clear, radius: 10)
                 .growIn(delay: Double(index) * 0.07)
-            Text(week.isCurrent ? "NOW" : " ")
-                .font(.system(size: 8, weight: .semibold, design: .monospaced))
+            Text(week.isCurrent ? String(localized: "Now", comment: "Trends chart label under the current week bar (shown uppercase)") : " ")
+                .textCase(.uppercase)
+                .font(.system(.caption2, design: .monospaced).weight(.semibold))
                 .foregroundStyle(AppTheme.Dark.text2)
         }
         .frame(maxWidth: .infinity)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(week.isCurrent ? "This week" : "Week"): \(String(format: "%.0f", week.volumeK)) thousand")
+        .accessibilityLabel(volumeSpokenLabel(week))
+    }
+
+    private func volumeSpokenLabel(_ week: TrendsData.WeekBar) -> String {
+        let volume = week.volumeK.formatted(.number.precision(.fractionLength(0)))
+        let unit = weightUnit == .kg
+            ? String(localized: "kilograms", comment: "Spoken weight unit")
+            : String(localized: "pounds", comment: "Spoken weight unit")
+        if week.isCurrent {
+            return String(localized: "This week: \(volume) thousand \(unit)", comment: "VoiceOver: current week's lifted volume")
+        }
+        let date = week.weekStart.formatted(.dateTime.month(.abbreviated).day())
+        return String(localized: "Week of \(date): \(volume) thousand \(unit)", comment: "VoiceOver: a past week's lifted volume; date is the week start")
     }
 
     // MARK: - HRV trajectory
@@ -177,20 +226,24 @@ struct TrendsView: View {
         let lo = hrvSeries.min() ?? 0
         let hi = hrvSeries.max() ?? 0
         return section(
-            title: "HRV TRAJECTORY · \(hrvSeries.count) DAY",
-            right: "\(Int(lo)) → \(Int(hi)) ms"
+            title: String(localized: "HRV trajectory · \(hrvSeries.count) day", comment: "Trends section title (shown uppercase); count of days"),
+            right: String(localized: "\(Int(lo)) → \(Int(hi)) ms", comment: "HRV range low to high in milliseconds")
         ) {
             VStack(spacing: 8) {
                 TrajectoryLine(values: hrvSeries, accent: AppTheme.Dark.Signal.recovery)
                     .frame(height: 74)
                 HStack {
-                    Text("\(hrvSeries.count) DAYS AGO")
-                        .font(.system(size: 8.5, weight: .semibold, design: .monospaced))
+                    Text("\(hrvSeries.count) days ago")
+                        .textCase(.uppercase)
+                        .font(.system(.caption2, design: .monospaced).weight(.semibold))
                         .foregroundStyle(AppTheme.Dark.text4)
                     Spacer()
                     let delta = (hrvSeries.last ?? 0) - (hrvSeries.first ?? 0)
-                    Text("\(delta >= 0 ? "+" : "")\(Int(delta)) ms · \(delta >= 0 ? "BASELINE RISING" : "EASED OFF")")
-                        .font(.system(size: 8.5, weight: .bold, design: .monospaced))
+                    Text(delta >= 0
+                         ? String(localized: "+\(Int(delta)) ms · baseline rising", comment: "HRV delta caption when rising (shown uppercase)")
+                         : String(localized: "\(Int(delta)) ms · eased off", comment: "HRV delta caption when falling (shown uppercase)"))
+                        .textCase(.uppercase)
+                        .font(.system(.caption2, design: .monospaced).weight(.bold))
                         .foregroundStyle(delta >= 0 ? AppTheme.Dark.Signal.recovery : AppTheme.Dark.Signal.caution)
                 }
             }
@@ -201,30 +254,32 @@ struct TrendsView: View {
 
     // MARK: - Recent PRs
 
-    private var recentPRs: some View {
-        section(title: "RECENT PRs", right: "\(data.recentPRs.count) RECENT") {
+    private func recentPRs(_ data: TrendsData) -> some View {
+        section(title: String(localized: "Recent PRs", comment: "Trends section title (shown uppercase)"),
+                right: String(localized: "\(data.recentPRs.count) recent", comment: "Trends recent PR count caption (shown uppercase)")) {
             VStack(spacing: 0) {
                 ForEach(Array(data.recentPRs.enumerated()), id: \.element.id) { index, pr in
                     HStack(spacing: 12) {
                         Image(systemName: "flame.fill")
-                            .font(.system(size: 15, weight: .semibold))
+                            .font(.body.weight(.semibold))
                             .foregroundStyle(AppTheme.Dark.Signal.caution)
                         VStack(alignment: .leading, spacing: 1) {
                             Text(pr.name)
-                                .font(.system(size: 13.5, weight: .semibold))
+                                .font(.subheadline.weight(.semibold))
                                 .tracking(-0.1)
                                 .foregroundStyle(AppTheme.Dark.text)
                             Text(pr.detail)
-                                .font(.system(size: 10, design: .monospaced))
+                                .font(.system(.caption2, design: .monospaced))
                                 .foregroundStyle(AppTheme.Dark.text3)
                         }
                         Spacer()
                         VStack(alignment: .trailing, spacing: 1) {
                             Text(pr.delta)
-                                .font(.system(size: 11, weight: .bold, design: .monospaced))
+                                .font(.system(.caption, design: .monospaced).weight(.bold))
                                 .foregroundStyle(AppTheme.Dark.Signal.recovery)
                             Text(pr.when)
-                                .font(.system(size: 8.5, design: .monospaced))
+                                .textCase(.uppercase)
+                                .font(.system(.caption2, design: .monospaced))
                                 .tracking(0.6)
                                 .foregroundStyle(AppTheme.Dark.text4)
                         }
@@ -251,11 +306,11 @@ struct TrendsView: View {
         } label: {
             HStack {
                 Text("Patterns, muscles & more")
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(.subheadline.weight(.semibold))
                     .foregroundStyle(AppTheme.Dark.text2)
                 Spacer()
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.footnote.weight(.semibold))
                     .foregroundStyle(AppTheme.Dark.text4)
             }
             .padding(.horizontal, 15)
@@ -278,13 +333,15 @@ struct TrendsView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Text(title)
-                    .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                    .textCase(.uppercase)
+                    .font(.system(.caption2, design: .monospaced).weight(.semibold))
                     .tracking(1.4)
                     .foregroundStyle(AppTheme.Dark.text3)
                 Spacer()
                 if let right {
                     Text(right)
-                        .font(.system(size: 9, weight: .semibold, design: .monospaced))
+                        .textCase(.uppercase)
+                        .font(.system(.caption2, design: .monospaced).weight(.semibold))
                         .tracking(0.6)
                         .foregroundStyle(AppTheme.Dark.text4)
                 }

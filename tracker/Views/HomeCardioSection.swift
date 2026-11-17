@@ -17,10 +17,10 @@ struct HomeCardioSection: View {
 
         return VStack(alignment: .leading, spacing: 14) {
             HStack {
-                SectionHeader(title: "Cardio", icon: "figure.run", color: .orange)
+                SectionHeader(title: "Cardio", icon: "figure.run", color: AppTheme.Dark.Signal.caution)
                 Spacer()
                 NavigationLink { CardioHubView() } label: {
-                    Text("See All").font(.caption.weight(.semibold)).foregroundStyle(.orange)
+                    Text("See All").font(.caption.weight(.semibold)).foregroundStyle(AppTheme.Dark.Signal.caution)
                 }
             }
 
@@ -31,13 +31,13 @@ struct HomeCardioSection: View {
                         // Caption2 (~11pt) preserves the all-caps small-label
                         // feel while letting Dynamic Type scale it.
                         .font(.system(.caption2, design: .rounded).weight(.bold))
-                        .foregroundStyle(.orange)
+                        .foregroundStyle(AppTheme.Dark.Signal.caution)
                         .tracking(0.4)
                         .textCase(.uppercase)
                     Text(String(format: "%.1f %@", distUnit.display(thisWeekKm), distUnit.label))
-                        .font(.system(size: 24, weight: .black, design: .rounded))
+                        .scaledFont(size: 24, weight: .black, design: .rounded)
                         .monospacedDigit()
-                        .foregroundStyle(.orange)
+                        .foregroundStyle(AppTheme.Dark.Signal.caution)
                     Text("\(thisWeekSessions.count) session\(thisWeekSessions.count == 1 ? "" : "s")")
                         .font(.caption).foregroundStyle(.secondary)
                 }
@@ -45,7 +45,7 @@ struct HomeCardioSection: View {
                 .padding(16)
                 .background(
                     LinearGradient(
-                        colors: [Color.orange.opacity(0.18), Color.orange.opacity(0.06)],
+                        colors: [AppTheme.Dark.Signal.caution.opacity(0.18), AppTheme.Dark.Signal.caution.opacity(0.06)],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     ),
@@ -53,7 +53,7 @@ struct HomeCardioSection: View {
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: AppTheme.tileRadius, style: .continuous)
-                        .stroke(Color.orange.opacity(0.20), lineWidth: 0.5)
+                        .stroke(AppTheme.Dark.Signal.caution.opacity(0.20), lineWidth: 0.5)
                 )
 
                 // Last run stat
@@ -66,7 +66,7 @@ struct HomeCardioSection: View {
                                 .tracking(0.4)
                                 .textCase(.uppercase)
                             Text(last.formattedDistance(useKm: useKm))
-                                .font(.system(size: 24, weight: .black, design: .rounded))
+                                .scaledFont(size: 24, weight: .black, design: .rounded)
                                 .monospacedDigit()
                                 .foregroundStyle(last.type.color)
                             Text(last.formattedPace(useKm: useKm))

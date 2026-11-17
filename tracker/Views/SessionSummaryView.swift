@@ -18,6 +18,7 @@ struct SessionSummaryView: View {
     var body: some View {
         VStack(spacing: 0) {
             header
+                .frame(maxWidth: 720)
             ScrollView {
                 VStack(spacing: 0) {
                     CheckRing(accent: data.accent)
@@ -29,8 +30,11 @@ struct SessionSummaryView: View {
                     bulletLines
                 }
                 .padding(.bottom, 20)
+                .frame(maxWidth: 720)
+                .frame(maxWidth: .infinity)
             }
             cta
+                .frame(maxWidth: 720)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(AppTheme.Dark.bg.ignoresSafeArea())
@@ -39,18 +43,19 @@ struct SessionSummaryView: View {
 
     private var header: some View {
         HStack {
-            Text("SESSION COMPLETE")
-                .font(.system(size: 10, weight: .semibold, design: .monospaced))
+            Text("Session complete")
+                .textCase(.uppercase)
+                .font(.system(.caption2, design: .monospaced).weight(.semibold))
                 .tracking(1.4)
                 .foregroundStyle(AppTheme.Dark.text3)
             Spacer()
             Text(data.dateText)
-                .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                .font(.system(.caption2, design: .monospaced).weight(.semibold))
                 .tracking(0.8)
                 .foregroundStyle(AppTheme.Dark.text3)
             Button(action: onClose) {
                 Image(systemName: "xmark")
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(.footnote.weight(.semibold))
                     .foregroundStyle(AppTheme.Dark.text3)
                     .padding(.leading, 12)
             }
@@ -67,7 +72,7 @@ struct SessionSummaryView: View {
             Text(data.verdictB)
                 .foregroundStyle(data.accent)
         }
-        .font(.system(size: 32, weight: .bold, design: .rounded))
+        .font(.system(.largeTitle, design: .rounded).weight(.bold))
         .tracking(-1.4)
         .multilineTextAlignment(.center)
         .lineSpacing(0)
@@ -79,7 +84,7 @@ struct SessionSummaryView: View {
 
     private var stats: some View {
         LazyVGrid(
-            columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)],
+            columns: [GridItem(.adaptive(minimum: 160), spacing: 10)],
             spacing: 10
         ) {
             ForEach(data.stats) { stat in
@@ -93,17 +98,19 @@ struct SessionSummaryView: View {
     private func statTile(_ stat: SessionSummaryData.Stat) -> some View {
         VStack(alignment: .leading, spacing: 5) {
             Text(stat.label)
-                .font(.system(size: 8.5, weight: .bold, design: .monospaced))
+                .font(.system(.caption2, design: .monospaced).weight(.bold))
                 .tracking(1)
                 .foregroundStyle(AppTheme.Dark.text4)
             HStack(alignment: .firstTextBaseline, spacing: 3) {
                 CountUpNumber(target: stat.value, decimals: stat.decimals)
-                    .font(.system(size: 24, weight: .bold, design: .rounded))
+                    .font(.system(.title, design: .rounded).weight(.bold))
+                    .minimumScaleFactor(0.6)
+                    .lineLimit(1)
                     .tracking(-1)
                     .foregroundStyle(AppTheme.Dark.text)
                     .monospacedDigit()
                 Text(stat.unit)
-                    .font(.system(size: 9.5, design: .monospaced))
+                    .font(.system(.caption2, design: .monospaced))
                     .foregroundStyle(AppTheme.Dark.text3)
             }
         }
@@ -118,10 +125,10 @@ struct SessionSummaryView: View {
     private var highlight: some View {
         HStack(spacing: 10) {
             Image(systemName: "flame.fill")
-                .font(.system(size: 15, weight: .semibold))
+                .font(.body.weight(.semibold))
                 .foregroundStyle(data.accent)
             Text(data.highlight)
-                .font(.system(size: 12.5))
+                .font(.footnote)
                 .foregroundStyle(AppTheme.Dark.text)
                 .lineSpacing(1)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -152,7 +159,7 @@ struct SessionSummaryView: View {
         HStack(spacing: 8) {
             Circle().fill(dot).frame(width: 4, height: 4)
             Text(text)
-                .font(.system(size: 12))
+                .font(.footnote)
                 .foregroundStyle(AppTheme.Dark.text2)
             Spacer(minLength: 0)
         }
@@ -162,11 +169,11 @@ struct SessionSummaryView: View {
         Button(action: onSeeTrend) {
             HStack {
                 Text("See the trend")
-                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .font(.system(.callout, design: .rounded).weight(.bold))
                     .tracking(-0.2)
                 Spacer()
                 Image(systemName: "arrow.right")
-                    .font(.system(size: 13, weight: .bold))
+                    .font(.footnote.weight(.bold))
             }
             .foregroundStyle(AppTheme.Dark.ink)
             .padding(.horizontal, 16)

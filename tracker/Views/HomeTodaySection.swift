@@ -51,6 +51,9 @@ struct HomeTodaySection: View {
             )
             .padding(.horizontal, 12)
         }
+        // On iPad the hero would otherwise stretch edge to edge.
+        .frame(maxWidth: 720)
+        .frame(maxWidth: .infinity)
     }
 
     private var brandRow: some View {
@@ -61,7 +64,7 @@ struct HomeTodaySection: View {
                     .frame(width: 8, height: 8)
                     .signalGlow(AppTheme.Dark.Signal.recovery)
                 Text("METRICLY")
-                    .font(.system(size: 11, weight: .bold, design: .monospaced))
+                    .scaledFont(size: 11, weight: .bold, design: .monospaced)
                     .tracking(1.6)
                     .foregroundStyle(AppTheme.Dark.text)
             }
@@ -69,7 +72,7 @@ struct HomeTodaySection: View {
             // The prototype pairs this with a clock; the status bar already owns
             // the time, and a second one baked into a scroll view goes stale.
             Text("WK \(Calendar.current.component(.weekOfYear, from: .now))")
-                .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                .scaledFont(size: 10, weight: .semibold, design: .monospaced)
                 .tracking(0.8)
                 .foregroundStyle(AppTheme.Dark.text3)
         }
@@ -110,7 +113,8 @@ struct HomeTodayData {
         health: HealthSignals,
         sleepMinutes: Double,
         healthDataLoaded: Bool,
-        progressionSuggestions: [HomeProgressionSuggestion]
+        progressionSuggestions: [HomeProgressionSuggestion],
+        weightUnit: WeightUnit = .kg
     ) -> HomeTodayData {
         let tape = buildTape(snapshot: snapshot)
         let isFirstSession = !snapshot.allWorkouts.contains(where: \.isFinished)
@@ -122,7 +126,8 @@ struct HomeTodayData {
                 health: health,
                 sleepMinutes: sleepMinutes,
                 loaded: healthDataLoaded,
-                snapshot: snapshot
+                snapshot: snapshot,
+                weightUnit: weightUnit
             ),
             caveat: buildCaveat(plan: plan),
             caveatColor: plan.avoidGroups.isEmpty
@@ -249,13 +254,14 @@ struct HomeTodayData {
         health: HealthSignals,
         sleepMinutes: Double,
         loaded: Bool,
-        snapshot: HomeDashboardSnapshot
+        snapshot: HomeDashboardSnapshot,
+        weightUnit: WeightUnit
     ) -> MicroSignalRow.Signals {
         MicroSignalRow.Signals(
             hrv: hrvCell(health, loaded: loaded),
             rhr: rhrCell(health, loaded: loaded),
             sleep: sleepCell(sleepMinutes, loaded: loaded),
-            strain: strainCell(snapshot)
+            strain: strainCell(snapshot, weightUnit: weightUnit)
         )
     }
 
@@ -323,49 +329,60 @@ struct HomeTodayData {
         )
     }
 
-    private static func strainCell(_ snapshot: HomeDashboardSnapshot) -> MicroSignalRow.Cell {
+    private static func strainCell(_ snapshot: HomeDashboardSnapshot, weightUnit: WeightUnit) -> MicroSignalRow.Cell {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: .now)
         let weekAgo = calendar.date(byAdding: .day, value: -7, to: today) ?? today
         let fortnightAgo = calendar.date(byAdding: .day, value: -14, to: today) ?? today
         let finished = snapshot.allWorkouts.filter(\.isFinished)
 
-        let thisWeek = finished
+        let thisWeekKg = finished
             .filter { $0.date >= weekAgo }
-            .reduce(0) { $0 + $1.totalVolumeKg() } / 1000
-        let lastWeek = finished
+            .reduce(0) { $0 + $1.totalVolumeKg() }
+        let lastWeekKg = finished
             .filter { $0.date >= fortnightAgo && $0.date < weekAgo }
-            .reduce(0) { $0 + $1.totalVolumeKg() } / 1000
+            .reduce(0) { $0 + $1.totalVolumeKg() }
+        // Thousands of the user's unit, so the "k·kg" label can't lie to a lbs user.
+        let thisWeek = weightUnit.display(thisWeekKg) / 1000
+        let lastWeek = weightUnit.display(lastWeekKg) / 1000
         let delta = lastWeek > 0 ? thisWeek - lastWeek : nil
 
         // A jump in load isn't failure, but it is the thing most likely to
         // explain a bad readiness score tomorrow — so a sharp rise reads amber.
-        let color: Color = (lastWeek > 0 && thisWeek > lastWeek * 1.2)
+        let isElevated = lastWeek > 0 && thisWeek > lastWeek * 1.2
+        let color: Color = isElevated
             ? AppTheme.Dark.Signal.caution
             : AppTheme.Dark.Signal.recovery
 
+        let valueText = thisWeek.formatted(.number.precision(.fractionLength(1)))
+        let spokenUnit = weightUnit == .kg
+            ? String(localized: "thousand kilograms")
+            : String(localized: "thousand pounds")
+        var spokenBase = String(localized: "7-day training volume \(valueText) \(spokenUnit)")
+        if isElevated {
+            // Amber is color-only on screen; say it out loud too.
+            spokenBase += String(localized: ", elevated, up more than 20 percent on last week")
+        }
+
         return MicroSignalRow.Cell(
             label: "STRAIN",
-            value: String(format: "%.1f", thisWeek),
-            unit: "k·kg",
+            value: valueText,
+            unit: "k·\(weightUnit.label)",
             delta: formatDelta(delta, decimals: 1),
             color: color,
-            accessibilityLabel: spoken(
-                "7-day training volume \(String(format: "%.1f", thisWeek)) thousand kilograms",
-                delta: delta, unit: "thousand kilograms", decimals: 1
-            )
+            accessibilityLabel: spoken(spokenBase, delta: delta, unit: spokenUnit, decimals: 1)
         )
     }
 
     private static func formatDelta(_ delta: Double?, decimals: Int) -> String {
         guard let delta else { return "—" }
-        let magnitude = String(format: "%.\(decimals)f", abs(delta))
+        let magnitude = abs(delta).formatted(.number.precision(.fractionLength(decimals)))
         return "\(delta >= 0 ? "+" : "−")\(magnitude)"
     }
 
     private static func spoken(_ base: String, delta: Double?, unit: String, decimals: Int) -> String {
         guard let delta else { return base }
-        let magnitude = String(format: "%.\(decimals)f", abs(delta))
+        let magnitude = abs(delta).formatted(.number.precision(.fractionLength(decimals)))
         return "\(base), \(magnitude) \(unit) \(delta >= 0 ? "above" : "below") baseline"
     }
 

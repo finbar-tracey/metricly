@@ -34,11 +34,11 @@ struct ProfileData {
         appleHealthLinked: Bool,
         stravaLinked: Bool
     ) -> ProfileData {
-        let name = settings.userName.isEmpty ? "Athlete" : settings.userName
+        let name = settings.userName.isEmpty ? String(localized: "Athlete", comment: "Default display name on the profile when the user has not set one") : settings.userName
         let weightUnit: WeightUnit = settings.useKilograms ? .kg : .lbs
 
         return ProfileData(
-            initial: name.first.map { String($0).uppercased() } ?? "A",
+            initial: name.first.map { String($0).uppercased() } ?? String(localized: "A", comment: "Avatar initial fallback when there is no name"),
             name: name,
             memberSince: memberSince(finishedWorkouts: finishedWorkouts),
             statLine: statLine(settings: settings, finishedWorkouts: finishedWorkouts,
@@ -46,7 +46,7 @@ struct ProfileData {
             goal: goal(liftGoals: liftGoals, finishedWorkouts: finishedWorkouts, weightUnit: weightUnit),
             appleHealthLinked: appleHealthLinked,
             stravaLinked: stravaLinked,
-            unitLabel: weightUnit.label.uppercased()
+            unitLabel: weightUnit.label
         )
     }
 
@@ -54,7 +54,8 @@ struct ProfileData {
 
     private static func memberSince(finishedWorkouts: [Workout]) -> String? {
         guard let earliest = finishedWorkouts.map(\.date).min() else { return nil }
-        return "MEMBER SINCE \(earliest.formatted(.dateTime.year()))"
+        let year = earliest.formatted(.dateTime.year())
+        return String(localized: "Member since \(year)", comment: "Profile header; year of first logged workout (shown uppercase)")
     }
 
     private static func statLine(
@@ -66,19 +67,19 @@ struct ProfileData {
         var parts: [String] = []
 
         let count = finishedWorkouts.count
-        if count > 0 { parts.append("\(count) SESSION\(count == 1 ? "" : "S")") }
+        if count > 0 { parts.append(String(localized: "\(count) sessions", comment: "Profile stat line: number of finished workouts (shown uppercase)")) }
 
         if let latest = bodyWeights.max(by: { $0.date < $1.date }), latest.weight > 0 {
-            parts.append(weightUnit.formatShort(latest.weight).uppercased())
+            parts.append(weightUnit.formatShort(latest.weight))
         }
 
         // The user's own most-scheduled split, if they keep a weekly plan.
         let planNames = settings.weeklyPlan.values.filter { !$0.isEmpty }
-        if let split = planNames.map({ $0.uppercased() }).mostCommon() {
+        if let split = planNames.mostCommon() {
             parts.append(split)
         }
 
-        return parts.isEmpty ? "LEARNING YOUR BASELINES" : parts.joined(separator: " · ")
+        return parts.isEmpty ? String(localized: "Learning your baselines", comment: "Profile stat line fallback (shown uppercase)") : parts.joined(separator: " · ")
     }
 
     // MARK: - Goal

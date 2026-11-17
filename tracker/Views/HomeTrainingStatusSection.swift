@@ -20,7 +20,7 @@ struct HomeTrainingStatusSection: View {
                     VStack(alignment: .leading, spacing: 10) {
                         HStack {
                             HStack(spacing: 6) {
-                                Image(systemName: "target").foregroundStyle(weekDone ? Color.green : Color.accentColor)
+                                Image(systemName: "target").foregroundStyle(weekDone ? AppTheme.Dark.Signal.recovery : Color.accentColor)
                                 Text("\(activitiesThisWeek)/\(weeklyGoal) workouts this week").font(.subheadline)
                             }
                             Spacer()
@@ -50,7 +50,7 @@ struct HomeTrainingStatusSection: View {
                 HStack {
                     HStack(spacing: 6) {
                         Image(systemName: "flame.fill")
-                            .foregroundStyle(currentStreak >= 3 ? .orange : .secondary)
+                            .foregroundStyle(currentStreak >= 3 ? AppTheme.Dark.Signal.caution : .secondary)
                         Text("\(currentStreak) day streak")
                             .font(.system(.subheadline, design: .rounded).weight(.semibold))
                     }
@@ -78,7 +78,7 @@ struct HomeTrainingStatusSection: View {
                 if let avgRating = averageRating {
                     Divider().padding(.leading, 16)
                     HStack(spacing: 5) {
-                        Image(systemName: "star.fill").foregroundStyle(.yellow)
+                        Image(systemName: "star.fill").foregroundStyle(AppTheme.Dark.Signal.caution)
                         Text(String(format: "%.1f", avgRating)).font(.subheadline.weight(.medium))
                         Text("avg rating this week").font(.caption).foregroundStyle(.secondary)
                     }

@@ -104,7 +104,7 @@ struct HomeMuscleReadinessSection: View {
     private func summaryHeadline(_ s: (title: String, detail: String)) -> some View {
         HStack(alignment: .top, spacing: 9) {
             Image(systemName: "sparkles")
-                .font(.system(size: 12, weight: .bold))
+                .scaledFont(size: 12, weight: .bold)
                 .foregroundStyle(.purple)
                 .padding(.top, 1)
             VStack(alignment: .leading, spacing: 2) {

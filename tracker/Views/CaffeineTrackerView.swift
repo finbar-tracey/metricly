@@ -23,7 +23,7 @@ struct CaffeineTrackerView: View {
     @State private var undoWorkItem: DispatchWorkItem?
     @FocusState private var isMgFocused: Bool
 
-    private var settings: UserSettings { settingsArray.first ?? UserSettings() }
+    private var settings: UserSettings { settingsArray.first ?? .fallback }
     private var halfLife: Double { settings.caffeineHalfLife }
     private var dailyLimit: Double { Double(settings.dailyCaffeineLimit) }
 

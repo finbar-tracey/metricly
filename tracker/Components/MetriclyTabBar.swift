@@ -57,6 +57,8 @@ struct MetriclyTabBar: View {
         )
         .shadow(color: .black.opacity(0.5), radius: 15, y: 10)
         .padding(.horizontal, 12)
+        // Fixed-height chrome: let it grow a little, not unboundedly.
+        .dynamicTypeSize(...DynamicTypeSize.accessibility1)
         // The bar is dark on every tab, not just the redesigned Home. It spans
         // all four, so following the page would make it flip appearance mid-app;
         // holding it dark reads as one piece of chrome — the same reasoning the
@@ -80,10 +82,10 @@ struct MetriclyTabBar: View {
         } label: {
             VStack(spacing: 3) {
                 Image(systemName: item.symbol)
-                    .font(.system(size: 17, weight: isSelected ? .semibold : .regular))
+                    .scaledFont(size: 17, weight: isSelected ? .semibold : .regular)
                     .symbolVariant(isSelected ? .fill : .none)
                 Text(item.label)
-                    .font(.system(size: 8, weight: .bold, design: .monospaced))
+                    .scaledFont(size: 10, weight: .bold, design: .monospaced)
                     .textCase(.uppercase)
                     .tracking(0.8)
                     .lineLimit(1)

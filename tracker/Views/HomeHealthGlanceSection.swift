@@ -23,7 +23,7 @@ struct HomeHealthGlanceSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            SectionHeader(title: "All Health Metrics", icon: "heart.circle.fill", color: .red)
+            SectionHeader(title: "All Health Metrics", icon: "heart.circle.fill", color: AppTheme.Dark.Signal.strain)
 
             LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
                 NavigationLink { StepsDetailView() } label: {
@@ -39,7 +39,7 @@ struct HomeHealthGlanceSection: View {
                 }.buttonStyle(.pressableCard)
 
                 NavigationLink { HeartRateDetailView() } label: {
-                    tile(icon: "heart.fill", color: .red,
+                    tile(icon: "heart.fill", color: AppTheme.Dark.Signal.strain,
                          value: restingHR.map { "\(Int($0))" } ?? "—", label: "Resting HR",
                          progress: nil)
                 }.buttonStyle(.pressableCard)
@@ -51,7 +51,7 @@ struct HomeHealthGlanceSection: View {
                 }.buttonStyle(.pressableCard)
 
                 NavigationLink { HealthDashboardView() } label: {
-                    tile(icon: "flame.fill", color: .orange,
+                    tile(icon: "flame.fill", color: AppTheme.Dark.Signal.caution,
                          value: "\(Int(activeCalories))", label: "Active Cal",
                          progress: nil)
                 }.buttonStyle(.pressableCard)
@@ -95,14 +95,14 @@ struct HomeHealthGlanceSection: View {
                             .animation(.easeOut(duration: 0.8), value: animateRings)
                     }
                     Image(systemName: icon)
-                        .font(.system(size: 16, weight: .bold))
+                        .scaledFont(size: 16, weight: .bold)
                         .foregroundStyle(color)
                 }
                 .frame(width: 44, height: 44)
                 Spacer()
                 if let progress {
                     Text("\(Int(min(1, progress) * 100))%")
-                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                        .scaledFont(size: 12, weight: .bold, design: .rounded)
                         .foregroundStyle(color)
                         .monospacedDigit()
                         .padding(.horizontal, 8)
@@ -112,7 +112,7 @@ struct HomeHealthGlanceSection: View {
             }
             VStack(alignment: .leading, spacing: 2) {
                 Text(value)
-                    .font(.system(size: 22, weight: .black, design: .rounded))
+                    .scaledFont(size: 22, weight: .black, design: .rounded)
                     .monospacedDigit()
                     .lineLimit(1)
                     .minimumScaleFactor(0.75)

@@ -9,12 +9,12 @@ struct HomeQuickLinksSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            SectionHeader(title: "Quick Access", icon: "bolt.circle.fill", color: .yellow)
+            SectionHeader(title: "Quick Access", icon: "bolt.circle.fill", color: AppTheme.Dark.Signal.caution)
 
             LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
                 if let active = inProgressWorkout {
                     NavigationLink(value: active) {
-                        tile(icon: "play.circle.fill", color: .orange, title: "Continue Workout")
+                        tile(icon: "play.circle.fill", color: AppTheme.Dark.Signal.caution, title: "Continue Workout")
                     }.buttonStyle(.pressableCard)
                 } else {
                     NavigationLink { WorkoutScheduleView() } label: {
@@ -31,11 +31,11 @@ struct HomeQuickLinksSection: View {
                 }.buttonStyle(.pressableCard)
 
                 NavigationLink { PersonalRecordsView() } label: {
-                    tile(icon: "trophy.fill", color: .yellow, title: "Personal Records")
+                    tile(icon: "trophy.fill", color: AppTheme.Dark.Signal.caution, title: "Personal Records")
                 }.buttonStyle(.pressableCard)
 
                 NavigationLink { HealthDashboardView() } label: {
-                    tile(icon: "heart.text.square", color: .red, title: "Health")
+                    tile(icon: "heart.text.square", color: AppTheme.Dark.Signal.strain, title: "Health")
                 }.buttonStyle(.pressableCard)
             }
         }
@@ -56,7 +56,7 @@ struct HomeQuickLinksSection: View {
                     .frame(width: 52, height: 52)
                     .shadow(color: color.opacity(0.45), radius: 10, x: 0, y: 5)
                 Image(systemName: icon)
-                    .font(.system(size: 22, weight: .bold))
+                    .scaledFont(size: 22, weight: .bold)
                     .foregroundStyle(.white)
             }
             Text(title)

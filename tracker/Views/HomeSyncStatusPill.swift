@@ -10,7 +10,7 @@ struct HomeSyncStatusPill: View {
     var body: some View {
         let mgr = appServices.syncStatus
         let isAccountIssue = !mgr.accountStatus.isHealthy && mgr.accountStatus != .unknown
-        let tint: Color = isAccountIssue ? .orange : .yellow
+        let tint: Color = isAccountIssue ? AppTheme.Dark.Signal.strain : AppTheme.Dark.Signal.caution
         let title: String = isAccountIssue ? mgr.accountStatus.label : "iCloud sync paused"
         let subtitle: String = isAccountIssue
             ? "Your data isn't backing up. Tap for help."
@@ -29,7 +29,7 @@ struct HomeSyncStatusPill: View {
                         .frame(width: 30, height: 30)
                         .overlay(Circle().stroke(tint.opacity(0.30), lineWidth: 0.5))
                     Image(systemName: "exclamationmark.icloud.fill")
-                        .font(.system(size: 13, weight: .bold))
+                        .scaledFont(size: 13, weight: .bold)
                         .foregroundStyle(tint)
                 }
                 VStack(alignment: .leading, spacing: 1) {

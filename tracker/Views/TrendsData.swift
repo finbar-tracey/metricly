@@ -13,7 +13,7 @@ struct TrendsData {
         let decimals: Int
         let sub: String
         let tone: Color
-        var spokenValue: String { String(format: "%.\(decimals)f", value) }
+        var spokenValue: String { value.formatted(.number.precision(.fractionLength(decimals))) }
     }
 
     struct WeekBar: Identifiable {
@@ -21,6 +21,8 @@ struct TrendsData {
         /// Volume in thousands of the user's unit.
         let volumeK: Double
         let isCurrent: Bool
+        /// First day of the week the bar covers (for VoiceOver).
+        let weekStart: Date
     }
 
     struct PRRow: Identifiable {
@@ -46,8 +48,9 @@ struct TrendsData {
         guard !finished.isEmpty else {
             return TrendsData(
                 isEmpty: true,
-                verdictA: "Day", verdictB: "one.",
-                subline: "Log your first session and the engine starts learning you — baselines, load, readiness.",
+                verdictA: String(localized: "Day", comment: "Trends empty-state headline, first word (reads \"Day one.\")"),
+                verdictB: String(localized: "one.", comment: "Trends empty-state headline, second word (reads \"Day one.\")"),
+                subline: String(localized: "Log your first session and the engine starts learning you — baselines, load, readiness.", comment: "Trends empty-state subline"),
                 stats: [], weeklyVolume: [], recentPRs: []
             )
         }
@@ -57,7 +60,7 @@ struct TrendsData {
 
         return TrendsData(
             isEmpty: false,
-            verdictA: "Trending",
+            verdictA: String(localized: "Trending", comment: "Trends headline, first word (reads \"Trending up.\")"),
             verdictB: verdictB,
             subline: subline,
             stats: stats(finished: finished, currentStreak: currentStreak, weightUnit: weightUnit),
@@ -80,7 +83,7 @@ struct TrendsData {
             let volumeKg = finished
                 .filter { $0.date >= start && $0.date < end }
                 .reduce(0.0) { $0 + $1.totalVolumeKg() }
-            return WeekBar(volumeK: weightUnit.display(volumeKg) / 1000, isCurrent: offset == 0)
+            return WeekBar(volumeK: weightUnit.display(volumeKg) / 1000, isCurrent: offset == 0, weekStart: start)
         }
     }
 
@@ -88,21 +91,21 @@ struct TrendsData {
         // Compare the last four weeks against the prior four — enough to smooth
         // a single big or missed session.
         guard weeks.count >= 8 else {
-            return ("up.", "Every session sharpens the picture.")
+            return (String(localized: "up.", comment: "Trends verdict: volume rising"), String(localized: "Every session sharpens the picture.", comment: "Trends subline when under 8 weeks of data"))
         }
         let recent = weeks.suffix(4).reduce(0.0) { $0 + $1.volumeK }
         let prior = weeks.prefix(4).reduce(0.0) { $0 + $1.volumeK }
         if prior <= 0 {
-            return ("up.", "Volume building from the ground up — keep stacking sessions.")
+            return (String(localized: "up.", comment: "Trends verdict: volume rising"), String(localized: "Volume building from the ground up — keep stacking sessions.", comment: "Trends subline when prior block had no volume"))
         }
         let change = (recent - prior) / prior
         if change >= 0.05 {
-            return ("up.", "Volume climbing over the last month — best block of the eight.")
+            return (String(localized: "up.", comment: "Trends verdict: volume rising"), String(localized: "Volume climbing over the last month — best block of the eight.", comment: "Trends subline: volume up over last 4 weeks vs prior 4"))
         }
         if change <= -0.05 {
-            return ("down.", "Lighter month — a deliberate deload or a dip to close?")
+            return (String(localized: "down.", comment: "Trends verdict: volume falling"), String(localized: "Lighter month — a deliberate deload or a dip to close?", comment: "Trends subline: volume down over last 4 weeks vs prior 4"))
         }
-        return ("steady.", "Holding volume week to week — consistency is its own progress.")
+        return (String(localized: "steady.", comment: "Trends verdict: volume flat"), String(localized: "Holding volume week to week — consistency is its own progress.", comment: "Trends subline: volume flat"))
     }
 
     // MARK: - Stats
@@ -113,13 +116,13 @@ struct TrendsData {
         let block = finished.filter { $0.date >= blockStart }
         let volumeKg = block.reduce(0.0) { $0 + $1.totalVolumeKg() }
         let volumeK = weightUnit.display(volumeKg) / 1000
-        let volumeUnit = weightUnit == .kg ? "k·kg" : "k·lb"
+        let volumeUnit = "k·\(weightUnit.label)"
 
         var stats: [Stat] = [
-            Stat(label: "TOTAL VOLUME", value: volumeK, unit: volumeUnit, decimals: 0,
-                 sub: "last 8 weeks", tone: AppTheme.Dark.Signal.recovery),
-            Stat(label: "SESSIONS", value: Double(block.count), unit: "done", decimals: 0,
-                 sub: "logged this block", tone: AppTheme.Dark.text)
+            Stat(label: String(localized: "Total volume", comment: "Trends stat tile label (shown uppercase)"), value: volumeK, unit: volumeUnit, decimals: 0,
+                 sub: String(localized: "last 8 weeks", comment: "Trends stat tile caption"), tone: AppTheme.Dark.Signal.recovery),
+            Stat(label: String(localized: "Sessions", comment: "Trends stat tile label (shown uppercase)"), value: Double(block.count), unit: String(localized: "done", comment: "Trends stat unit: sessions completed"), decimals: 0,
+                 sub: String(localized: "logged this block", comment: "Trends stat tile caption"), tone: AppTheme.Dark.text)
         ]
 
         // A recovery-forward tile when RPE exists (the readiness story), else the
@@ -127,16 +130,16 @@ struct TrendsData {
         let rpes = block.flatMap(\.exercises).flatMap(\.sets).filter { !$0.isWarmUp }.compactMap(\.rpe)
         if !rpes.isEmpty {
             let avg = Double(rpes.reduce(0, +)) / Double(rpes.count)
-            stats.append(Stat(label: "AVG RPE", value: avg, unit: "/10", decimals: 1,
-                              sub: "effort logged", tone: AppTheme.Dark.Signal.caution))
+            stats.append(Stat(label: String(localized: "Avg RPE", comment: "Trends stat tile label (shown uppercase)"), value: avg, unit: "/10", decimals: 1,
+                              sub: String(localized: "effort logged", comment: "Trends stat tile caption"), tone: AppTheme.Dark.Signal.caution))
         } else {
             let prCount = recentPRs(finished: block, weightUnit: weightUnit).count
-            stats.append(Stat(label: "PRS", value: Double(prCount), unit: "new", decimals: 0,
-                              sub: "this block", tone: AppTheme.Dark.Signal.caution))
+            stats.append(Stat(label: String(localized: "PRs", comment: "Trends stat tile label: personal records (shown uppercase)"), value: Double(prCount), unit: String(localized: "new", comment: "Trends stat unit: new personal records"), decimals: 0,
+                              sub: String(localized: "this block", comment: "Trends stat tile caption"), tone: AppTheme.Dark.Signal.caution))
         }
 
-        stats.append(Stat(label: "STREAK", value: Double(currentStreak), unit: currentStreak == 1 ? "day" : "days", decimals: 0,
-                          sub: currentStreak > 0 ? "keep it lit" : "start today", tone: AppTheme.Dark.text))
+        stats.append(Stat(label: String(localized: "Streak", comment: "Trends stat tile label (shown uppercase)"), value: Double(currentStreak), unit: currentStreak == 1 ? String(localized: "day", comment: "Singular day unit") : String(localized: "days", comment: "Plural days unit"), decimals: 0,
+                          sub: currentStreak > 0 ? String(localized: "keep it lit", comment: "Trends streak caption when active") : String(localized: "start today", comment: "Trends streak caption when zero"), tone: AppTheme.Dark.text))
         return stats
     }
 
@@ -172,7 +175,7 @@ struct TrendsData {
                 name: event.name,
                 detail: weightUnit.formatShort(event.weight),
                 delta: "+\(weightUnit.formatShort(event.delta))",
-                when: event.date.formatted(.dateTime.weekday(.abbreviated)).uppercased()
+                when: event.date.formatted(.dateTime.weekday(.abbreviated))
             )
         }
     }

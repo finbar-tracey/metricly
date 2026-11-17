@@ -22,10 +22,39 @@ struct ProfileView: View {
     @State private var rhr: [Double] = []
     @State private var sleepMinutes: Double?
 
-    private var settings: UserSettings { settingsArray.first ?? UserSettings() }
+    @State private var cachedData: ProfileData?
+    @ScaledMetric(relativeTo: .title2) private var avatarSize: CGFloat = 56
+
+    private var settings: UserSettings { settingsArray.first ?? .fallback }
     private var healthKitEnabled: Bool { settings.healthKitEnabled }
 
-    private var data: ProfileData {
+    /// Inputs that change what the dashboard shows.
+    private struct RefreshKey: Equatable {
+        var workouts: Int
+        var latestWorkout: Date?
+        var bodyWeights: Int
+        var latestWeight: Date?
+        var goals: Int
+        var goalsAchieved: Int
+        var userName: String
+        var useKilograms: Bool
+        var planData: Data?
+        var healthKit: Bool
+        var strava: Bool
+    }
+
+    private var refreshKey: RefreshKey {
+        RefreshKey(
+            workouts: finishedWorkouts.count, latestWorkout: finishedWorkouts.first?.date,
+            bodyWeights: bodyWeights.count, latestWeight: bodyWeights.first?.date,
+            goals: liftGoals.count, goalsAchieved: liftGoals.filter { $0.achievedDate != nil }.count,
+            userName: settings.userName, useKilograms: settings.useKilograms,
+            planData: settings.weeklyPlanData, healthKit: healthKitEnabled,
+            strava: appServices.strava.isConnected
+        )
+    }
+
+    private func buildData() -> ProfileData {
         ProfileData.build(
             settings: settings,
             finishedWorkouts: finishedWorkouts,
@@ -37,18 +66,24 @@ struct ProfileView: View {
     }
 
     var body: some View {
-        ScrollView {
+        let data = cachedData ?? buildData()
+        return ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                header
-                identity
+                header(data)
+                identity(data)
                 baselines
                 if let goal = data.goal {
                     goalCard(goal)
                 }
-                connected
-                settingsCard
+                connected(data)
+                settingsCard(data)
             }
             .padding(.bottom, 28)
+            .frame(maxWidth: 720)
+            .frame(maxWidth: .infinity)
+        }
+        .onChange(of: refreshKey, initial: true) { _, _ in
+            cachedData = buildData()
         }
         .background(AppTheme.Dark.bg.ignoresSafeArea())
         .environment(\.colorScheme, .dark)
@@ -72,12 +107,13 @@ struct ProfileView: View {
 
     // MARK: - Header
 
-    private var header: some View {
+    private func header(_ data: ProfileData) -> some View {
         HStack {
             Spacer()
             if let since = data.memberSince {
                 Text(since)
-                    .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                    .textCase(.uppercase)
+                    .font(.system(.caption2, design: .monospaced).weight(.semibold))
                     .tracking(0.8)
                     .foregroundStyle(AppTheme.Dark.text3)
             }
@@ -88,12 +124,12 @@ struct ProfileView: View {
 
     // MARK: - Identity
 
-    private var identity: some View {
+    private func identity(_ data: ProfileData) -> some View {
         HStack(spacing: 14) {
             Text(data.initial)
-                .font(.system(size: 22, weight: .bold, design: .rounded))
+                .font(.system(.title2, design: .rounded).weight(.bold))
                 .foregroundStyle(AppTheme.Dark.text)
-                .frame(width: 56, height: 56)
+                .frame(width: avatarSize, height: avatarSize)
                 .background(
                     Circle().fill(AppTheme.Dark.surfaceHi)
                         .overlay(
@@ -108,14 +144,15 @@ struct ProfileView: View {
                 .overlay(Circle().strokeBorder(AppTheme.Dark.hairline, lineWidth: 1))
             VStack(alignment: .leading, spacing: 4) {
                 Text(data.name)
-                    .font(.system(size: 24, weight: .bold, design: .rounded))
+                    .font(.system(.title2, design: .rounded).weight(.bold))
                     .tracking(-0.8)
                     .foregroundStyle(AppTheme.Dark.text)
                 Text(data.statLine)
-                    .font(.system(size: 10, weight: .medium, design: .monospaced))
+                    .textCase(.uppercase)
+                    .font(.system(.caption2, design: .monospaced).weight(.medium))
                     .tracking(0.6)
                     .foregroundStyle(AppTheme.Dark.text3)
-                    .lineLimit(1)
+                    .lineLimit(2)
                     .minimumScaleFactor(0.8)
             }
             Spacer(minLength: 0)
@@ -128,19 +165,19 @@ struct ProfileView: View {
     // MARK: - Baselines
 
     private var baselines: some View {
-        section(title: "YOUR BASELINES", right: "LEARNED · NOT GUESSED") {
+        section(title: String(localized: "Your baselines", comment: "Profile section title (shown uppercase)"), right: String(localized: "Learned · not guessed", comment: "Profile baselines caption (shown uppercase)")) {
             VStack(spacing: 0) {
                 if healthKitEnabled, hrv.count >= 2 || rhr.count >= 2 {
                     if hrv.count >= 2 {
-                        baselineRow("HRV BASELINE", value: "\(Int(average(hrv))) ms",
+                        baselineRow(String(localized: "HRV baseline", comment: "Profile baseline row label (shown uppercase)"), value: String(localized: "\(Int(average(hrv))) ms", comment: "Average HRV in milliseconds"),
                                     series: hrv, tone: AppTheme.Dark.Signal.recovery, isLast: rhr.count < 2 && sleepMinutes == nil)
                     }
                     if rhr.count >= 2 {
-                        baselineRow("RESTING HR", value: "\(Int(average(rhr))) bpm",
+                        baselineRow(String(localized: "Resting HR", comment: "Profile baseline row label (shown uppercase)"), value: String(localized: "\(Int(average(rhr))) bpm", comment: "Average resting heart rate in beats per minute"),
                                     series: rhr, tone: AppTheme.Dark.Signal.recovery, isLast: sleepMinutes == nil)
                     }
                     if let sleepMinutes {
-                        baselineRow("SLEEP", value: HealthFormatters.formatSleepShort(sleepMinutes),
+                        baselineRow(String(localized: "Sleep", comment: "Profile baseline row label (shown uppercase)"), value: HealthFormatters.formatSleepShort(sleepMinutes),
                                     series: [], tone: AppTheme.Dark.Signal.calm, isLast: true)
                     }
                 } else {
@@ -155,11 +192,12 @@ struct ProfileView: View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 3) {
                 Text(label)
-                    .font(.system(size: 8.5, weight: .bold, design: .monospaced))
+                    .textCase(.uppercase)
+                    .font(.system(.caption2, design: .monospaced).weight(.bold))
                     .tracking(1)
                     .foregroundStyle(AppTheme.Dark.text4)
                 Text(value)
-                    .font(.system(size: 18, weight: .bold, design: .rounded))
+                    .font(.system(.title3, design: .rounded).weight(.bold))
                     .tracking(-0.5)
                     .foregroundStyle(AppTheme.Dark.text)
             }
@@ -183,12 +221,12 @@ struct ProfileView: View {
     private var baselineEmpty: some View {
         HStack(spacing: 10) {
             Image(systemName: healthKitEnabled ? "waveform.path.ecg" : "heart.text.square")
-                .font(.system(size: 15))
+                .font(.body)
                 .foregroundStyle(AppTheme.Dark.text3)
             Text(healthKitEnabled
-                 ? "Learning your baselines — a few days of Health data and they'll appear."
-                 : "Connect Apple Health and the engine learns your HRV, resting HR, and sleep.")
-                .font(.system(size: 12))
+                 ? String(localized: "Learning your baselines — a few days of Health data and they'll appear.", comment: "Profile baselines empty state, Health linked")
+                 : String(localized: "Connect Apple Health and the engine learns your HRV, resting HR, and sleep.", comment: "Profile baselines empty state, Health not linked"))
+                .font(.footnote)
                 .foregroundStyle(AppTheme.Dark.text2)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -201,22 +239,23 @@ struct ProfileView: View {
 
     private func goalCard(_ goal: ProfileData.GoalProgress) -> some View {
         let pct = Int((goal.fraction * 100).rounded())
-        return section(title: "GOAL", right: "\(pct)% THERE") {
+        return section(title: String(localized: "Goal", comment: "Profile section title (shown uppercase)"), right: String(localized: "\(pct)% there", comment: "Profile goal progress percent (shown uppercase)")) {
             VStack(alignment: .leading, spacing: 10) {
                 HStack(alignment: .firstTextBaseline) {
                     Text("\(goal.exerciseName) \(weightUnit.formatShort(goal.targetKg))")
-                        .font(.system(size: 14, weight: .semibold))
+                        .font(.subheadline.weight(.semibold))
                         .tracking(-0.2)
                         .foregroundStyle(AppTheme.Dark.text)
                     Spacer()
                     Text("\(weightUnit.formatShort(goal.currentKg)) / \(weightUnit.formatShort(goal.targetKg))")
-                        .font(.system(size: 11, weight: .bold, design: .monospaced))
+                        .font(.system(.caption, design: .monospaced).weight(.bold))
                         .foregroundStyle(AppTheme.Dark.Signal.recovery)
                 }
                 ProgressTrack(fraction: goal.fraction, color: AppTheme.Dark.Signal.recovery)
                     .frame(height: 7)
                 Text(paceText(goal))
-                    .font(.system(size: 9.5, weight: .semibold, design: .monospaced))
+                    .textCase(.uppercase)
+                    .font(.system(.caption2, design: .monospaced).weight(.semibold))
                     .tracking(0.4)
                     .foregroundStyle(AppTheme.Dark.text3)
             }
@@ -228,26 +267,26 @@ struct ProfileView: View {
 
     private func paceText(_ goal: ProfileData.GoalProgress) -> String {
         if let weeks = goal.etaWeeks {
-            return "ON PACE · EST. \(weeks) WEEK\(weeks == 1 ? "" : "S") AT CURRENT PROGRESSION"
+            return String(localized: "On pace · est. \(weeks) weeks at current progression", comment: "Profile goal pace caption (shown uppercase); count of weeks, pluralized")
         }
-        return "KEEP LOGGING · PACE APPEARS ONCE YOU'RE PROGRESSING"
+        return String(localized: "Keep logging · pace appears once you're progressing", comment: "Profile goal pace caption when no estimate (shown uppercase)")
     }
 
     // MARK: - Connected
 
-    private var connected: some View {
-        section(title: "CONNECTED", right: nil) {
+    private func connected(_ data: ProfileData) -> some View {
+        section(title: String(localized: "Connected", comment: "Profile section title (shown uppercase)"), right: nil) {
             VStack(spacing: 0) {
                 NavigationLink { HealthDashboardView() } label: {
                     connectedRow("Apple Health",
-                                 status: data.appleHealthLinked ? "LINKED" : "CONNECT",
+                                 status: data.appleHealthLinked ? String(localized: "Linked", comment: "Connection status (shown uppercase)") : String(localized: "Connect", comment: "Connection action (shown uppercase)"),
                                  tone: data.appleHealthLinked ? AppTheme.Dark.Signal.recovery : AppTheme.Dark.text4,
                                  isLast: false)
                 }
                 .buttonStyle(.plain)
                 NavigationLink { SettingsView() } label: {
                     connectedRow("Strava",
-                                 status: data.stravaLinked ? "LINKED" : "ADD",
+                                 status: data.stravaLinked ? String(localized: "Linked", comment: "Connection status (shown uppercase)") : String(localized: "Add", comment: "Connection action (shown uppercase)"),
                                  tone: data.stravaLinked ? AppTheme.Dark.Signal.recovery : AppTheme.Dark.text4,
                                  isLast: true)
                 }
@@ -260,15 +299,16 @@ struct ProfileView: View {
     private func connectedRow(_ label: String, status: String, tone: Color, isLast: Bool) -> some View {
         HStack(spacing: 12) {
             Text(label)
-                .font(.system(size: 13.5, weight: .semibold))
+                .font(.subheadline.weight(.semibold))
                 .foregroundStyle(AppTheme.Dark.text)
             Spacer()
             Text(status)
-                .font(.system(size: 11, weight: .bold, design: .monospaced))
+                .textCase(.uppercase)
+                .font(.system(.caption, design: .monospaced).weight(.bold))
                 .tracking(0.4)
                 .foregroundStyle(tone)
             Image(systemName: "chevron.right")
-                .font(.system(size: 11, weight: .semibold))
+                .font(.caption.weight(.semibold))
                 .foregroundStyle(AppTheme.Dark.text4)
         }
         .padding(.horizontal, 14)
@@ -283,15 +323,15 @@ struct ProfileView: View {
 
     // MARK: - Settings
 
-    private var settingsCard: some View {
-        section(title: "SETTINGS", right: nil) {
+    private func settingsCard(_ data: ProfileData) -> some View {
+        section(title: String(localized: "Settings", comment: "Profile section title (shown uppercase)"), right: nil) {
             VStack(spacing: 0) {
                 NavigationLink { ProfileSettingsView() } label: {
-                    settingsRow("Units", value: data.unitLabel, isLast: false)
+                    settingsRow(String(localized: "Units", comment: "Profile settings row"), value: data.unitLabel, isLast: false)
                 }
                 .buttonStyle(.plain)
                 NavigationLink { SettingsView() } label: {
-                    settingsRow("Notifications, export & more", value: "", isLast: true)
+                    settingsRow(String(localized: "Notifications, export & more", comment: "Profile settings row"), value: "", isLast: true)
                 }
                 .buttonStyle(.plain)
             }
@@ -302,17 +342,18 @@ struct ProfileView: View {
     private func settingsRow(_ label: String, value: String, isLast: Bool) -> some View {
         HStack(spacing: 12) {
             Text(label)
-                .font(.system(size: 13.5, weight: .semibold))
+                .font(.subheadline.weight(.semibold))
                 .foregroundStyle(AppTheme.Dark.text)
             Spacer()
             if !value.isEmpty {
                 Text(value)
-                    .font(.system(size: 11, weight: .bold, design: .monospaced))
+                    .textCase(.uppercase)
+                    .font(.system(.caption, design: .monospaced).weight(.bold))
                     .tracking(0.4)
                     .foregroundStyle(AppTheme.Dark.text2)
             }
             Image(systemName: "chevron.right")
-                .font(.system(size: 11, weight: .semibold))
+                .font(.caption.weight(.semibold))
                 .foregroundStyle(AppTheme.Dark.text4)
         }
         .padding(.horizontal, 14)
@@ -341,13 +382,15 @@ struct ProfileView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Text(title)
-                    .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                    .textCase(.uppercase)
+                    .font(.system(.caption2, design: .monospaced).weight(.semibold))
                     .tracking(1.4)
                     .foregroundStyle(AppTheme.Dark.text3)
                 Spacer()
                 if let right {
                     Text(right)
-                        .font(.system(size: 9, weight: .semibold, design: .monospaced))
+                        .textCase(.uppercase)
+                        .font(.system(.caption2, design: .monospaced).weight(.semibold))
                         .tracking(0.6)
                         .foregroundStyle(AppTheme.Dark.text4)
                 }

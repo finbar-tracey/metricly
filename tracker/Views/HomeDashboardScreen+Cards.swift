@@ -10,17 +10,17 @@ extension HomeDashboardScreen {
                 HStack(spacing: 14) {
                     ZStack {
                         RoundedRectangle(cornerRadius: AppTheme.tileRadius, style: .continuous)
-                            .fill(LinearGradient(colors: [.orange, AppTheme.Signal.runOrange], startPoint: .topLeading, endPoint: .bottomTrailing))
+                            .fill(LinearGradient(colors: [AppTheme.Dark.Signal.caution, AppTheme.Signal.runOrange], startPoint: .topLeading, endPoint: .bottomTrailing))
                             .frame(width: 48, height: 48)
-                            .shadow(color: .orange.opacity(0.4), radius: 8, y: 4)
+                            .shadow(color: AppTheme.Dark.Signal.caution.opacity(0.4), radius: 8, y: 4)
                         Image(systemName: "flame.fill")
-                            .font(.system(size: 22, weight: .bold))
+                            .scaledFont(size: 22, weight: .bold)
                             .foregroundStyle(.white)
                     }
                     VStack(alignment: .leading, spacing: 6) {
                         Text("\(snapshot.currentStreak)-Day Streak")
-                            .font(.system(size: 16, weight: .bold, design: .rounded))
-                        GradientProgressBar(value: Double(snapshot.currentStreak) / Double(next), color: .orange, height: 6)
+                            .scaledFont(size: 16, weight: .bold, design: .rounded)
+                        GradientProgressBar(value: Double(snapshot.currentStreak) / Double(next), color: AppTheme.Dark.Signal.caution, height: 6)
                         Text("\(next - snapshot.currentStreak) more to your \(next)-day milestone.")
                             .font(.caption)
                             .foregroundStyle(.secondary)
@@ -33,7 +33,7 @@ extension HomeDashboardScreen {
                 .padding(16)
                 .background(
                     LinearGradient(
-                        colors: [Color.orange.opacity(0.10), Color(.secondarySystemGroupedBackground)],
+                        colors: [AppTheme.Dark.Signal.caution.opacity(0.10), AppTheme.Dark.surface],
                         startPoint: .topLeading, endPoint: .bottomTrailing
                     ),
                     in: RoundedRectangle(cornerRadius: AppTheme.cardRadius, style: .continuous)

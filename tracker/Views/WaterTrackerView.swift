@@ -12,7 +12,7 @@ struct WaterTrackerView: View {
     @State private var undoEntry: WaterEntry?
     @State private var undoWorkItem: DispatchWorkItem?
 
-    private var settings: UserSettings { settingsArray.first ?? UserSettings() }
+    private var settings: UserSettings { settingsArray.first ?? .fallback }
     private var goalMl: Double { Double(settings.dailyWaterGoalMl) }
 
     private var todayEntries: [WaterEntry] {

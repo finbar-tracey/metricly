@@ -30,9 +30,27 @@ struct MicroSignalRow: View {
 
     let signals: Signals
 
+    @Environment(\.dynamicTypeSize) private var typeSize
+
     var body: some View {
+        if typeSize.isAccessibilitySize {
+            // Four cramped columns can't hold accessibility-size text; stack them.
+            VStack(spacing: 8) {
+                ForEach(signals.cells, id: \.label) { cell in
+                    self.cell(cell)
+                }
+            }
+            .padding(.horizontal, 4)
+            .padding(.vertical, 10)
+            .darkWell()
+        } else {
+            strip
+        }
+    }
+
+    private var strip: some View {
         HStack(spacing: 0) {
-            ForEach(Array(signals.cells.enumerated()), id: \.offset) { index, cell in
+            ForEach(Array(signals.cells.enumerated()), id: \.element.label) { index, cell in
                 self.cell(cell)
                 if index < signals.cells.count - 1 {
                     Rectangle()
@@ -50,24 +68,24 @@ struct MicroSignalRow: View {
     private func cell(_ cell: Cell) -> some View {
         VStack(alignment: .leading, spacing: 1) {
             Text(cell.label)
-                .font(.system(size: 8.5, weight: .bold, design: .monospaced))
+                .scaledFont(size: 8.5, weight: .bold, design: .monospaced)
                 .tracking(1)
                 .foregroundStyle(AppTheme.Dark.text4)
             HStack(alignment: .firstTextBaseline, spacing: 2) {
                 Text(cell.value)
-                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .scaledFont(size: 16, weight: .bold, design: .rounded)
                     .tracking(-0.5)
                     .foregroundStyle(AppTheme.Dark.text)
                     .monospacedDigit()
                 Text(cell.unit)
-                    .font(.system(size: 8.5, design: .monospaced))
+                    .scaledFont(size: 8.5, design: .monospaced)
                     .foregroundStyle(AppTheme.Dark.text3)
             }
             Text(cell.delta)
-                .font(.system(size: 9, weight: .semibold, design: .monospaced))
+                .scaledFont(size: 9, weight: .semibold, design: .monospaced)
                 .foregroundStyle(cell.color)
         }
-        .lineLimit(1)
+        .lineLimit(typeSize.isAccessibilitySize ? 2 : 1)
         .minimumScaleFactor(0.8)
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 8)

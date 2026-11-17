@@ -28,7 +28,7 @@ struct AdaptivePlanCardView: View {
     private var header: some View {
         HStack(spacing: 8) {
             Text("Today")
-                .font(.system(size: 18, weight: .bold, design: .rounded))
+                .scaledFont(size: 18, weight: .bold, design: .rounded)
             Spacer()
             intensityPill
         }
@@ -48,7 +48,7 @@ struct AdaptivePlanCardView: View {
                     .overlay(Circle().stroke(intensityColor.opacity(0.30), lineWidth: 0.5))
                     .shadow(color: intensityColor.opacity(0.25), radius: 6, y: 3)
                 Image(systemName: intensityIcon)
-                    .font(.system(size: 20, weight: .semibold))
+                    .scaledFont(size: 20, weight: .semibold)
                     .foregroundStyle(intensityColor)
             }
             VStack(alignment: .leading, spacing: 2) {
@@ -65,7 +65,7 @@ struct AdaptivePlanCardView: View {
     private var headlineSubtitle: some View {
         if plan.alreadyTrainedToday {
             Text("Workout complete")
-                .font(.caption).foregroundStyle(.green)
+                .font(.caption).foregroundStyle(AppTheme.Dark.Signal.recovery)
         } else if let scheduled = plan.scheduledName, scheduled != plan.recommendedName {
             Text("(scheduled: \(scheduled))")
                 .font(.caption).foregroundStyle(.secondary)
@@ -100,7 +100,7 @@ struct AdaptivePlanCardView: View {
             ForEach(plan.adjustments, id: \.self) { tip in
                 HStack(alignment: .top, spacing: 8) {
                     Image(systemName: "wand.and.stars")
-                        .font(.system(size: 10, weight: .semibold))
+                        .scaledFont(size: 10, weight: .semibold)
                         .foregroundStyle(intensityColor)
                         .padding(.top, 2)
                     Text(tip)
@@ -139,11 +139,11 @@ struct AdaptivePlanCardView: View {
             Button(action: onStart) {
                 HStack(spacing: 6) {
                     Image(systemName: "play.fill")
-                        .font(.system(size: 11, weight: .semibold))
+                        .scaledFont(size: 11, weight: .semibold)
                     Text("Start")
                         .font(.caption.weight(.bold))
                 }
-                .foregroundStyle(.white)
+                .foregroundStyle(AppTheme.Dark.ink)
                 .padding(.horizontal, 18).padding(.vertical, 9)
                 .background(
                     LinearGradient(
@@ -162,14 +162,7 @@ struct AdaptivePlanCardView: View {
 
     // MARK: - Style helpers
 
-    private var intensityColor: Color {
-        switch plan.intensity {
-        case .rest:     return .gray
-        case .light:    return .teal
-        case .moderate: return .blue
-        case .hard:     return .orange
-        }
-    }
+    private var intensityColor: Color { AppTheme.Dark.accent(for: plan.intensity) }
 
     private var intensityIcon: String {
         switch plan.intensity {
@@ -183,7 +176,7 @@ struct AdaptivePlanCardView: View {
     private var intensityPill: some View {
         HStack(spacing: 4) {
             Image(systemName: intensityIcon)
-                .font(.system(size: 9, weight: .bold))
+                .scaledFont(size: 9, weight: .bold)
             Text(plan.intensity.label.uppercased())
                 .font(.caption2.weight(.bold))
         }
@@ -198,10 +191,10 @@ struct AdaptivePlanCardView: View {
         switch plan.confidence {
         case .low:    icon = "questionmark.circle";       color = .secondary
         case .medium: icon = "circle.lefthalf.filled";    color = .secondary
-        case .high:   icon = "checkmark.circle.fill";     color = .green
+        case .high:   icon = "checkmark.circle.fill";     color = AppTheme.Dark.Signal.recovery
         }
         return HStack(spacing: 4) {
-            Image(systemName: icon).font(.system(size: 10))
+            Image(systemName: icon).scaledFont(size: 10)
             Text(plan.confidence.label)
                 .font(.caption2.weight(.medium))
         }

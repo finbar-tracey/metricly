@@ -35,7 +35,7 @@ struct HomeProgressionSection: View {
                                     .frame(width: 38, height: 38)
                                     .shadow(color: .green.opacity(0.40), radius: 6, y: 3)
                                 Image(systemName: "arrow.up.circle.fill")
-                                    .font(.system(size: 18, weight: .bold))
+                                    .scaledFont(size: 18, weight: .bold)
                                     .foregroundStyle(.white)
                             }
                             VStack(alignment: .leading, spacing: 3) {

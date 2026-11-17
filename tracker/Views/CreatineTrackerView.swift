@@ -12,7 +12,7 @@ struct CreatineTrackerView: View {
     @State private var historyRange: CreatineEngine.HistoryRange = .week
     @State private var historyScaffoldTimeRange: DetailTimeRange = .week
 
-    private var settings: UserSettings { settingsArray.first ?? UserSettings() }
+    private var settings: UserSettings { settingsArray.first ?? .fallback }
     private var dose: Double { settings.creatineLoadingPhase ? 5.0 : settings.creatineDailyDose }
     private var isLoadingPhase: Bool { settings.creatineLoadingPhase }
     private var loadingDosesPerDay: Int { 4 }
