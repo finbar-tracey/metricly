@@ -24,11 +24,10 @@ extension PhoneConnectivityManager {
             }
         case .finishActiveWorkout:
             finishActiveWorkout()
+            lastSyncDate = .now
         default:
-            break
+            lastSyncDate = .now
         }
-
-        lastSyncDate = .now
     }
 
     /// Watch requested we finish the phone's in-progress workout. Mirrors
@@ -71,7 +70,9 @@ extension PhoneConnectivityManager {
             pendingWorkoutPayloads.append(payload)
             return
         }
-        if !WatchPayloadPersistence.persistWorkout(payload, in: ctx) {
+        if WatchPayloadPersistence.persistWorkout(payload, in: ctx) {
+            lastSyncDate = .now
+        } else {
             pendingWorkoutPayloads.append(payload)
         }
     }
@@ -81,7 +82,9 @@ extension PhoneConnectivityManager {
             pendingCardioPayloads.append(payload)
             return
         }
-        if !WatchPayloadPersistence.persistCardio(payload, in: ctx) {
+        if WatchPayloadPersistence.persistCardio(payload, in: ctx) {
+            lastSyncDate = .now
+        } else {
             pendingCardioPayloads.append(payload)
         }
     }
@@ -94,12 +97,16 @@ extension PhoneConnectivityManager {
         let cardio = pendingCardioPayloads
         pendingWorkoutPayloads = []
         pendingCardioPayloads = []
-        for p in workouts where !WatchPayloadPersistence.persistWorkout(p, in: ctx) {
-            pendingWorkoutPayloads.append(p)
+        var persistedAny = false
+        for p in workouts {
+            if WatchPayloadPersistence.persistWorkout(p, in: ctx) { persistedAny = true }
+            else { pendingWorkoutPayloads.append(p) }
         }
-        for p in cardio where !WatchPayloadPersistence.persistCardio(p, in: ctx) {
-            pendingCardioPayloads.append(p)
+        for p in cardio {
+            if WatchPayloadPersistence.persistCardio(p, in: ctx) { persistedAny = true }
+            else { pendingCardioPayloads.append(p) }
         }
-        if !workouts.isEmpty || !cardio.isEmpty { lastSyncDate = .now }
+        // Only a payload that actually landed counts as a sync.
+        if persistedAny { lastSyncDate = .now }
     }
 }

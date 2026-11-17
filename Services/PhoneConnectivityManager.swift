@@ -24,12 +24,24 @@ final class PhoneConnectivityManager: NSObject, ObservableObject {
     }
 
     /// Payloads received before the context was injected (cold launch via
-    /// WCSession background delivery) or whose save failed. In-memory only.
-    var pendingWorkoutPayloads: [WatchWorkoutPayload] = []
-    var pendingCardioPayloads: [WatchCardioPayload] = []
+    /// WCSession background delivery) or whose save failed. Mirrored to disk
+    /// (`PendingWatchPayloadStore`) so they survive the app being killed.
+    var pendingWorkoutPayloads: [WatchWorkoutPayload] = [] {
+        didSet { savePendingPayloads() }
+    }
+    var pendingCardioPayloads: [WatchCardioPayload] = [] {
+        didSet { savePendingPayloads() }
+    }
+
+    private func savePendingPayloads() {
+        PendingWatchPayloadStore.save(.init(workouts: pendingWorkoutPayloads, cardio: pendingCardioPayloads))
+    }
 
     private override init() {
         super.init()
+        let restored = PendingWatchPayloadStore.load()
+        pendingWorkoutPayloads = restored.workouts
+        pendingCardioPayloads = restored.cardio
         if WCSession.isSupported() {
             WCSession.default.delegate = self
             WCSession.default.activate()

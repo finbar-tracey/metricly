@@ -60,6 +60,20 @@ final class WatchPayloadPersistenceTests: XCTestCase {
         manager.modelContext = nil
     }
 
+    func testPendingQueueSurvivesRelaunch() {
+        let p = workoutPayload()
+        PendingWatchPayloadStore.save(.init(workouts: [p], cardio: []))
+        defer { PendingWatchPayloadStore.save(.init()) }
+
+        // A fresh load stands in for the app relaunching after a kill.
+        let restored = PendingWatchPayloadStore.load()
+        XCTAssertEqual(restored.workouts.map(\.id), [p.id])
+        XCTAssertTrue(restored.cardio.isEmpty)
+
+        PendingWatchPayloadStore.save(.init())
+        XCTAssertTrue(PendingWatchPayloadStore.load().workouts.isEmpty)
+    }
+
     func testStoreFailureClassifier() {
         let corrupt = NSError(domain: NSCocoaErrorDomain, code: 134110)
         let wrapped = NSError(domain: "SwiftData", code: 1, userInfo: [NSUnderlyingErrorKey: corrupt])

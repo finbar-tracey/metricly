@@ -81,3 +81,44 @@ enum WatchPayloadPersistence {
         }
     }
 }
+
+/// Disk-backed copy of watch payloads that haven't reached SwiftData yet.
+/// WCSession drops a userInfo transfer once it is delivered, so an in-memory
+/// queue alone loses the workout if the app is killed before the save lands.
+enum PendingWatchPayloadStore {
+
+    struct Snapshot: Codable {
+        var workouts: [WatchWorkoutPayload] = []
+        var cardio: [WatchCardioPayload] = []
+    }
+
+    private static var fileURL: URL? {
+        FileManager.default
+            .urls(for: .applicationSupportDirectory, in: .userDomainMask).first?
+            .appendingPathComponent("pending-watch-payloads.json")
+    }
+
+    static func load() -> Snapshot {
+        guard let url = fileURL,
+              let data = try? Data(contentsOf: url),
+              let snapshot = try? JSONDecoder().decode(Snapshot.self, from: data)
+        else { return Snapshot() }
+        return snapshot
+    }
+
+    /// Writes the queue, or removes the file when nothing is pending.
+    static func save(_ snapshot: Snapshot) {
+        guard let url = fileURL else { return }
+        if snapshot.workouts.isEmpty && snapshot.cardio.isEmpty {
+            try? FileManager.default.removeItem(at: url)
+            return
+        }
+        do {
+            try FileManager.default.createDirectory(
+                at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try JSONEncoder().encode(snapshot).write(to: url, options: .atomic)
+        } catch {
+            AppErrorBus.shared.report(message: "Couldn't queue a Watch workout for retry.")
+        }
+    }
+}
