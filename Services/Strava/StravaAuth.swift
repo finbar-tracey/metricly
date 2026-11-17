@@ -92,10 +92,14 @@ extension StravaService {
             guard let latest = tokens else { throw StravaError.notConnected }
             do {
                 let fresh = try await refresh(refreshToken: latest.refreshToken)
-                guard StravaTokenStore.save(fresh) else {
-                    throw StravaError.keychainFailure
-                }
+                // Strava rotates the refresh token, so the old one is already
+                // dead: always adopt the fresh tokens in memory, even if the
+                // Keychain write fails, or the next refresh would be rejected
+                // and disconnect the user.
                 applyTokens(fresh)
+                if !StravaTokenStore.save(fresh) {
+                    lastError = StravaError.keychainFailure.errorDescription
+                }
                 return fresh.accessToken
             } catch StravaError.refreshFailed {
                 // Refresh token revoked/invalid: drop credentials so the UI
