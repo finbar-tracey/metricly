@@ -5,11 +5,15 @@ import SwiftData
 @MainActor
 final class WatchPayloadPersistenceTests: XCTestCase {
 
+    /// Retained for the test's lifetime: a ModelContext crashes if its container is freed.
+    private var container: ModelContainer?
+
     private func makeContext() throws -> ModelContext {
         let container = try ModelContainer(
             for: MetriclySchema.schema,
             configurations: ModelConfiguration(isStoredInMemoryOnly: true)
         )
+        self.container = container
         return container.mainContext
     }
 
