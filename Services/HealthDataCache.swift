@@ -227,7 +227,8 @@ final class HealthDataCache {
         let key = Calendar.current.startOfDay(for: date)
         if let entry = sleepByDay[key], entry.isFresh { return entry.value }
         let value = try await coalesce("fetchSleep:\(date)") { try await self.store.fetchSleep(for: date) }
-        sleepByDay[key] = makeEntry(value)
+        // A tuple isn't recognised by `isEmptyValue`; 0 minutes means no data yet.
+        sleepByDay[key] = makeEntry(value, isEmpty: value.totalMinutes == 0)
         return value
     }
 
@@ -272,9 +273,11 @@ final class HealthDataCache {
     /// right after the user grants access.
     static let emptyTTL: TimeInterval = 20
 
-    private func makeEntry<T>(_ value: T) -> Entry<T> {
+    /// `isEmpty` overrides the reflection check for results it can't judge,
+    /// such as tuples.
+    private func makeEntry<T>(_ value: T, isEmpty: Bool? = nil) -> Entry<T> {
         guard store.isAvailable else { return Entry(value: value, expiresAt: .distantPast) }
-        let ttl = Self.isEmptyValue(value) ? Self.emptyTTL : Self.ttl
+        let ttl = (isEmpty ?? Self.isEmptyValue(value)) ? Self.emptyTTL : Self.ttl
         return Entry(value: value, expiresAt: .now.addingTimeInterval(ttl))
     }
 
