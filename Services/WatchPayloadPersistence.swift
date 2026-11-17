@@ -4,10 +4,20 @@ import SwiftData
 /// Persists Watch-originated workout / cardio payloads into SwiftData.
 enum WatchPayloadPersistence {
 
+    /// Persist a watch workout. Returns false on save failure (also
+    /// reported via `AppErrorBus`); true when saved or already present.
     @MainActor
-    static func persistWorkout(_ payload: WatchWorkoutPayload, in context: ModelContext) {
+    @discardableResult
+    static func persistWorkout(_ payload: WatchWorkoutPayload, in context: ModelContext) -> Bool {
+        let id = payload.id
+        let existing = (try? context.fetchCount(FetchDescriptor<Workout>(
+            predicate: #Predicate { $0.sourceID == id }
+        ))) ?? 0
+        guard existing == 0 else { return true }
+
         let workout = Workout(name: payload.name, date: payload.startDate)
         workout.endTime = payload.endDate
+        workout.sourceID = id
         context.insert(workout)
 
         for (order, ex) in payload.exercises.enumerated() {
@@ -27,11 +37,18 @@ enum WatchPayloadPersistence {
                 exercise.sets.append(set)
             }
         }
-        try? context.save()
+        return save(context, what: "workout", undo: workout)
     }
 
     @MainActor
-    static func persistCardio(_ payload: WatchCardioPayload, in context: ModelContext) {
+    @discardableResult
+    static func persistCardio(_ payload: WatchCardioPayload, in context: ModelContext) -> Bool {
+        let id = payload.id
+        let existing = (try? context.fetchCount(FetchDescriptor<CardioSession>(
+            predicate: #Predicate { $0.sourceID == id }
+        ))) ?? 0
+        guard existing == 0 else { return true }
+
         let session = CardioSession(
             date: payload.date,
             title: payload.activityTypeRaw,
@@ -43,7 +60,24 @@ enum WatchPayloadPersistence {
         session.avgHeartRate = payload.avgHeartRate
         session.maxHeartRate = payload.maxHeartRate
         session.caloriesBurned = payload.calories
+        session.sourceID = id
         context.insert(session)
-        try? context.save()
+        return save(context, what: "cardio session", undo: session)
+    }
+
+    @MainActor
+    private static func save(_ context: ModelContext, what: String, undo: any PersistentModel) -> Bool {
+        do {
+            try context.save()
+            return true
+        } catch {
+            // Remove the unsaved insert (not a full rollback, which could
+            // discard unrelated pending edits) so a retry doesn't duplicate.
+            context.delete(undo)
+            AppErrorBus.shared.report(
+                message: "Couldn't save your Apple Watch \(what). It will be retried."
+            )
+            return false
+        }
     }
 }

@@ -17,6 +17,10 @@ enum StravaAuthConfig {
         return raw
     }
 
+    // TODO(security): The Strava client secret ships in the app bundle (Info.plist
+    // via Secrets.xcconfig) and can be extracted from the IPA. The real fix is a
+    // small backend proxy that holds the secret and performs the code exchange /
+    // token refresh. Intentionally not changed here (no backend yet).
     static var clientSecret: String? {
         guard let raw = Bundle.main.object(forInfoDictionaryKey: "STRAVA_CLIENT_SECRET") as? String,
               !raw.isEmpty,
@@ -42,7 +46,9 @@ extension StravaService {
         do {
             let code = try await runAuthSession(clientID: clientID)
             let issued = try await exchangeCodeForTokens(code: code)
-            StravaTokenStore.save(issued)
+            guard StravaTokenStore.save(issued) else {
+                throw StravaError.keychainFailure
+            }
             applyTokens(issued)
         } catch {
             if let asError = error as? ASWebAuthenticationSessionError,
@@ -63,17 +69,55 @@ extension StravaService {
         lastError = nil
     }
 
-    func accessToken() async throws -> String {
-        guard var current = tokens else {
+    func accessToken(forceRefresh: Bool = false) async throws -> String {
+        guard let current = tokens else {
             throw StravaError.notConnected
         }
         let buffer: TimeInterval = 5 * 60
-        if Date.now.timeIntervalSince1970 + buffer >= current.expiresAt {
-            current = try await refresh(refreshToken: current.refreshToken)
-            StravaTokenStore.save(current)
-            applyTokens(current)
+        if !forceRefresh, Date.now.timeIntervalSince1970 + buffer < current.expiresAt {
+            return current.accessToken
         }
-        return current.accessToken
+        // Single in-flight refresh shared by concurrent callers (Strava rotates
+        // refresh tokens, so parallel refreshes would invalidate each other).
+        if let task = refreshTask {
+            return try await task.value
+        }
+        let rejectedToken = current.accessToken
+        let task = Task { @MainActor [self] () throws -> String in
+            defer { refreshTask = nil }
+            // Another caller may have already refreshed while we were queued.
+            if forceRefresh, let latest = tokens, latest.accessToken != rejectedToken {
+                return latest.accessToken
+            }
+            guard let latest = tokens else { throw StravaError.notConnected }
+            do {
+                let fresh = try await refresh(refreshToken: latest.refreshToken)
+                guard StravaTokenStore.save(fresh) else {
+                    throw StravaError.keychainFailure
+                }
+                applyTokens(fresh)
+                return fresh.accessToken
+            } catch StravaError.refreshFailed {
+                // Refresh token revoked/invalid: drop credentials so the UI
+                // shows disconnected instead of failing every call.
+                StravaTokenStore.clear()
+                applyTokens(nil)
+                throw StravaError.refreshFailed
+            }
+        }
+        refreshTask = task
+        return try await task.value
+    }
+
+    /// Runs an authenticated request; on a 401 forces one token refresh and retries once.
+    func withAuthRetry<T>(_ operation: (String) async throws -> T) async throws -> T {
+        let token = try await accessToken()
+        do {
+            return try await operation(token)
+        } catch StravaError.httpFailure(let status, _) where status == 401 {
+            let fresh = try await accessToken(forceRefresh: true)
+            return try await operation(fresh)
+        }
     }
 
     // MARK: - OAuth session
@@ -212,7 +256,7 @@ extension StravaService: ASWebAuthenticationPresentationContextProviding {
             return win
         }
         guard let scene = scenes.first else {
-            fatalError("No UIWindowScene available for Strava OAuth presentation")
+            return ASPresentationAnchor()
         }
         return UIWindow(windowScene: scene)
     }

@@ -3,6 +3,7 @@ import Combine
 import WatchConnectivity
 import SwiftData
 import WidgetKit
+import os
 
 // MARK: - PhoneConnectivityManager
 //
@@ -18,7 +19,14 @@ final class PhoneConnectivityManager: NSObject, ObservableObject {
     @Published var lastSyncDate: Date?
 
     // Injected by the app on launch — lets us write SwiftData records.
-    var modelContext: ModelContext?
+    var modelContext: ModelContext? {
+        didSet { if modelContext != nil { drainPendingPayloads() } }
+    }
+
+    /// Payloads received before the context was injected (cold launch via
+    /// WCSession background delivery) or whose save failed. In-memory only.
+    var pendingWorkoutPayloads: [WatchWorkoutPayload] = []
+    var pendingCardioPayloads: [WatchCardioPayload] = []
 
     private override init() {
         super.init()
@@ -74,6 +82,7 @@ final class PhoneConnectivityManager: NSObject, ObservableObject {
     /// updateApplicationContext below.
     @MainActor
     func pushWatchContext() {
+        drainPendingPayloads()
         let context = collectWatchContext()
         // Mirror to the iPhone's shared defaults — widget readers + the
         // watch complication's own cold cache (which is fed via the
@@ -121,7 +130,8 @@ final class PhoneConnectivityManager: NSObject, ObservableObject {
         }
 
         guard WCSession.default.activationState == .activated else { return }
-        try? WCSession.default.updateApplicationContext(context)
+        do { try WCSession.default.updateApplicationContext(context) }
+        catch { MetriclySchema.log.error("updateApplicationContext failed: \(String(describing: error), privacy: .public)") }
     }
 
     // MARK: - Per-exercise rest overrides

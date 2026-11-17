@@ -8,6 +8,11 @@ extension HealthKitManager {
     /// Save a cardio session to Apple Health with distance and active calories.
     func saveCardioSession(_ session: CardioSession) async throws {
         guard isAvailable else { return }
+        try await reportingFailure("cardio session") { try await writeCardioSession(session) }
+    }
+
+    private func writeCardioSession(_ session: CardioSession) async throws {
+        try requireSharing(HKObjectType.workoutType(), what: "cardio session")
         let start = session.start
         let end   = session.end
         guard session.durationSeconds > 0 else { return }
@@ -67,7 +72,12 @@ extension HealthKitManager {
 
         if !samples.isEmpty { try await builder.addSamples(samples) }
         try await builder.endCollection(at: end)
-        try await builder.addMetadata([HKMetadataKeyWorkoutBrandName: session.title])
+        let syncID = session.sourceID?.uuidString ?? "\(Int(start.timeIntervalSince1970))"
+        try await builder.addMetadata([
+            HKMetadataKeyWorkoutBrandName: session.title,
+            HKMetadataKeySyncIdentifier: "metricly.cardio.\(syncID)",
+            HKMetadataKeySyncVersion: 1
+        ])
         let workout = try await builder.finishWorkout()
 
         if let workout, session.type.usesGPS, !session.routePoints.isEmpty {

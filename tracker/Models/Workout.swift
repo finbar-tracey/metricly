@@ -10,6 +10,8 @@ final class Workout {
     var rating: Int? = nil
     var startTime: Date? = nil
     var endTime: Date? = nil
+    /// Id of the external payload (e.g. Watch) this row was created from; used to dedup retried deliveries. Additive optional.
+    var sourceID: UUID? = nil
     @Relationship(deleteRule: .cascade, inverse: \Exercise.workout)
     var _exercises: [Exercise]? = nil
 

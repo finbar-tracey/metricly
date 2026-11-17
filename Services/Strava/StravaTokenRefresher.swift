@@ -22,8 +22,16 @@ struct StravaTokenRefresher: Sendable {
         request.httpBody = StravaAPIClient.formEncode(body)
 
         let (data, response) = try await session.data(for: request)
-        guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
-            throw StravaError.refreshFailed
+        guard let http = response as? HTTPURLResponse else {
+            throw StravaError.noResponse
+        }
+        guard (200...299).contains(http.statusCode) else {
+            // 400/401 = refresh token rejected (revoked/invalid): caller should
+            // disconnect. Anything else (5xx, 429) is treated as transient.
+            if http.statusCode == 400 || http.statusCode == 401 {
+                throw StravaError.refreshFailed
+            }
+            throw StravaError.httpFailure(status: http.statusCode, body: "")
         }
         let decoded = try JSONDecoder().decode(RefreshTokenResponse.self, from: data)
         return StravaTokenStore.Tokens(

@@ -38,4 +38,32 @@ final class HealthKitManager {
 
         try await store.requestAuthorization(toShare: typesToShare, read: typesToRead)
     }
+
+    // MARK: - Write guards
+
+    enum WriteError: LocalizedError {
+        case notAuthorized
+        var errorDescription: String? { "Apple Health sharing is not enabled for Metricly." }
+    }
+
+    /// Throws (after surfacing a banner) when the user has denied sharing
+    /// for `type`. `.notDetermined` is allowed through; HealthKit will
+    /// prompt or fail on its own.
+    func requireSharing(_ type: HKObjectType, what: String) throws {
+        if store.authorizationStatus(for: type) == .sharingDenied {
+            AppErrorBus.shared.report(message: "Couldn't save \(what) to Apple Health: access is turned off in Settings.")
+            throw WriteError.notAuthorized
+        }
+    }
+
+    /// Run a write, surfacing any failure on the global error bus.
+    func reportingFailure<T>(_ what: String, _ op: () async throws -> T) async throws -> T {
+        do { return try await op() }
+        catch {
+            if !(error is WriteError) {
+                AppErrorBus.shared.report(message: "Couldn't save \(what) to Apple Health.")
+            }
+            throw error
+        }
+    }
 }

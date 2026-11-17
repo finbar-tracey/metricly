@@ -149,9 +149,24 @@ final class WatchConnectivityManager: NSObject, ObservableObject {
             currentStreak = streak
             defaults?.set(streak, forKey: WatchSharedKeys.currentStreak)
         }
-        if let map = reply[WatchMessageKey.perExerciseRest] as? [String: Int] {
+        // The phone always sends this key (empty dict when no overrides), so a
+        // present-but-empty map means "clear overrides". An absent key leaves
+        // the cached values untouched (older payloads / partial replies).
+        if let raw = reply[WatchMessageKey.perExerciseRest] {
+            let map: [String: Int]
+            if let typed = raw as? [String: Int] {
+                map = typed
+            } else if let loose = raw as? [String: Any] {
+                map = loose.compactMapValues { $0 as? Int }
+            } else {
+                map = [:]
+            }
             perExerciseRest = map
-            defaults?.set(map, forKey: WatchSharedKeys.perExerciseRest)
+            if map.isEmpty {
+                defaults?.removeObject(forKey: WatchSharedKeys.perExerciseRest)
+            } else {
+                defaults?.set(map, forKey: WatchSharedKeys.perExerciseRest)
+            }
         }
         // Global rest fallback. Mirrors to the App Group so cold-launch
         // reads in `loadCachedData` see the user's actual setting, not

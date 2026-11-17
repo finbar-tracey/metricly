@@ -113,8 +113,12 @@ final class CardioTracker: NSObject {
 
         // Configure audio session for background speech cues
         let audioSession = AVAudioSession.sharedInstance()
-        try? audioSession.setCategory(.playback, mode: .voicePrompt, options: [.duckOthers, .mixWithOthers])
-        try? audioSession.setActive(true)
+        do {
+            try audioSession.setCategory(.playback, mode: .voicePrompt, options: [.duckOthers, .mixWithOthers])
+            try audioSession.setActive(true)
+        } catch {
+            print("CardioTracker: audio session activation failed: \(error)")
+        }
 
         sessionStart = .now
         state = .active
@@ -185,7 +189,11 @@ final class CardioTracker: NSObject {
         locationManager.stopUpdatingLocation()
         pedometer.stopUpdates()
         stopHeartRateStreaming()
-        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+        do {
+            try AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+        } catch {
+            print("CardioTracker: audio session deactivation failed: \(error)")
+        }
         state = .finished
 
         let avgHR: Double? = heartRateSamples.isEmpty
@@ -310,9 +318,11 @@ final class CardioTracker: NSObject {
         guard CMPedometer.isDistanceAvailable() else { return }
         let from = sessionStart ?? .now
         pedometer.startUpdates(from: from) { [weak self] data, _ in
-            guard let self, let data, state == .active else { return }
+            guard let self, let data else { return }
             let meters = data.distance?.doubleValue ?? 0
+            // CMPedometer calls back on its own queue: hop to main before touching state.
             DispatchQueue.main.async {
+                guard self.state == .active else { return }
                 self.distanceMeters = meters
                 if self.elapsedSeconds > 0 && meters > 0 {
                     let paceRaw = self.elapsedSeconds / (meters / 1000)

@@ -15,6 +15,9 @@ final class StravaService: NSObject, ObservableObject {
     @Published private(set) var isAuthorizing: Bool = false
     @Published var lastError: String?
 
+    /// Shared in-flight token refresh (see `accessToken(forceRefresh:)`).
+    var refreshTask: Task<String, Error>?
+
     var isConnected: Bool { tokens != nil }
 
     var athleteDisplayName: String? {
@@ -88,7 +91,6 @@ extension StravaService {
 
     @discardableResult
     func uploadActivity(_ session: CardioSession) async throws -> StravaActivity {
-        let token = try await accessToken()
         let mapping = Self.stravaMapping(for: session)
 
         let name: String = {
@@ -114,19 +116,22 @@ extension StravaService {
         }
 
         do {
-            return try await StravaAPIClient.authedPostForm(
-                url: "https://www.strava.com/api/v3/activities",
-                body: body,
-                token: token
-            )
+            return try await withAuthRetry { token in
+                try await StravaAPIClient.authedPostForm(
+                    url: "https://www.strava.com/api/v3/activities",
+                    body: body,
+                    token: token
+                ) as StravaActivity
+            }
         } catch StravaError.httpFailure(let status, _) where status == 409 {
             throw StravaError.duplicateActivity
         }
     }
 
     func fetchActivities(limit: Int = 200, after: Date? = nil) async throws -> [StravaSummaryActivity] {
-        let token = try await accessToken()
-        return try await StravaAPIClient.fetchActivities(token: token, limit: limit, after: after)
+        try await withAuthRetry { token in
+            try await StravaAPIClient.fetchActivities(token: token, limit: limit, after: after)
+        }
     }
 
     private struct StravaMapping {

@@ -55,25 +55,41 @@ enum StravaTokenStore {
         return try? JSONDecoder().decode(Tokens.self, from: data)
     }
 
-    /// Atomically upsert the stored tokens. Idempotent.
-    static func save(_ tokens: Tokens) {
-        if isRunningTests { inMemoryTokens = tokens; return }
-        guard let data = try? JSONEncoder().encode(tokens) else { return }
+    /// Upsert the stored tokens. Returns `false` if encoding or the Keychain
+    /// write failed so callers can avoid appearing connected without persistence.
+    @discardableResult
+    static func save(_ tokens: Tokens) -> Bool {
+        if isRunningTests { inMemoryTokens = tokens; return true }
+        guard let data = try? JSONEncoder().encode(tokens) else { return false }
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
             kSecAttrAccount as String: account
         ]
-        let attributes: [String: Any] = [kSecValueData as String: data]
+        // Accessible after first unlock so background refresh / upload can run
+        // while locked; ThisDeviceOnly keeps bearer tokens out of backups.
+        // Setting the accessibility attribute on update migrates items that
+        // were stored with the older (backup-eligible) class.
+        let attributes: [String: Any] = [
+            kSecValueData as String: data,
+            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+        ]
         let updateStatus = SecItemUpdate(query as CFDictionary, attributes as CFDictionary)
-        if updateStatus == errSecItemNotFound {
+        switch updateStatus {
+        case errSecSuccess:
+            return true
+        case errSecItemNotFound:
             var addQuery = query
             addQuery[kSecValueData as String] = data
-            // Marking as accessible only after first unlock so background
-            // refresh / upload can run while the device is locked but past
-            // the post-boot lock screen.
-            addQuery[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
-            SecItemAdd(addQuery as CFDictionary, nil)
+            addQuery[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+            let addStatus = SecItemAdd(addQuery as CFDictionary, nil)
+            if addStatus != errSecSuccess {
+                print("StravaTokenStore: SecItemAdd failed (\(addStatus))")
+            }
+            return addStatus == errSecSuccess
+        default:
+            print("StravaTokenStore: SecItemUpdate failed (\(updateStatus))")
+            return false
         }
     }
 

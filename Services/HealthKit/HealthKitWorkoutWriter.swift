@@ -7,6 +7,11 @@ extension HealthKitManager {
     /// Save a strength workout to Apple Health with estimated active calories.
     func saveStrengthWorkout(_ workout: Workout) async throws {
         guard isAvailable else { return }
+        try await reportingFailure("workout") { try await writeStrengthWorkout(workout) }
+    }
+
+    private func writeStrengthWorkout(_ workout: Workout) async throws {
+        try requireSharing(HKObjectType.workoutType(), what: "workout")
         let start = workout.date
         let end   = workout.endTime ?? .now
         guard end > start else { return }
@@ -29,16 +34,24 @@ extension HealthKitManager {
         try await builder.addSamples([energySample])
 
         try await builder.endCollection(at: end)
-        try await builder.addMetadata([HKMetadataKeyWorkoutBrandName: workout.name])
+        // Sync identifier makes a retried save replace/ignore rather than
+        // create a duplicate HKWorkout.
+        let syncID = workout.sourceID?.uuidString ?? "\(Int(start.timeIntervalSince1970))"
+        try await builder.addMetadata([
+            HKMetadataKeyWorkoutBrandName: workout.name,
+            HKMetadataKeySyncIdentifier: "metricly.workout.\(syncID)",
+            HKMetadataKeySyncVersion: 1
+        ])
         try await builder.finishWorkout()
     }
 
     func saveBodyWeight(_ kg: Double, date: Date) async throws {
         guard isAvailable else { return }
         guard let quantityType = HKQuantityType.quantityType(forIdentifier: .bodyMass) else { return }
+        try requireSharing(quantityType, what: "body weight")
 
         let quantity = HKQuantity(unit: .gramUnit(with: .kilo), doubleValue: kg)
         let sample = HKQuantitySample(type: quantityType, quantity: quantity, start: date, end: date)
-        try await store.save(sample)
+        try await reportingFailure("body weight") { try await store.save(sample) }
     }
 }

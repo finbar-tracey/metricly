@@ -20,6 +20,8 @@ enum StravaImportService {
         /// (Swim, Hike, Kayak, etc.). Counted so the UI can be honest
         /// about partial syncs.
         var unsupportedType: Int = 0
+        /// True when the final save failed; `imported` is then 0.
+        var saveFailed: Bool = false
     }
 
     /// Run a full backfill. Caller supplies the existing CardioSessions
@@ -93,6 +95,7 @@ enum StravaImportService {
         // event) only land once.
         var fuzzyPool: [CardioSession] = existing
         var result = Result()
+        var inserted: [CardioSession] = []
 
         for activity in activities {
             // Layer 1: ID match (both directions — already-imported AND
@@ -119,11 +122,19 @@ enum StravaImportService {
             context.insert(session)
             seenIDs.insert(activity.id)
             fuzzyPool.append(session)
+            inserted.append(session)
             result.imported += 1
         }
 
         if result.imported > 0 {
-            try? context.save()
+            do {
+                try context.save()
+            } catch {
+                inserted.forEach { context.delete($0) }
+                result.imported = 0
+                result.saveFailed = true
+                AppErrorBus.shared.report(message: "Strava import failed: couldn't save activities.")
+            }
         }
         return result
     }

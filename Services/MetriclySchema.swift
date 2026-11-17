@@ -1,5 +1,6 @@
 import Foundation
 import SwiftData
+import os
 
 /// Single source of truth for the Metricly SwiftData schema.
 ///
@@ -32,6 +33,15 @@ import SwiftData
 /// explicit field copies. Don't lean on the existing migration tests
 /// as proof of safety for that future change; they cover the additive
 /// path only.
+///
+/// **Known limitation.** Because V1–V5 all alias the live classes, the
+/// "from" and "to" schemas of every stage are identical at runtime, so
+/// the lightweight stages are effectively no-ops and SwiftData relies on
+/// store-level inference. Freezing real snapshots would require copying
+/// each @Model into per-version namespaces (`MetriclySchemaV1.Workout`…)
+/// as of its shipped shape, pointing each VersionedSchema at its own
+/// copies, and replacing the stages with `.custom` ones. See
+/// `MetriclySchemaMigrationTests.testMigrationPlanAliasesLiveClasses`.
 enum MetriclySchema {
 
     /// Complete model set — keep in sync with trackerApp.init.
@@ -40,25 +50,69 @@ enum MetriclySchema {
 
     static var schema: Schema { Schema(versionedSchema: MetriclySchemaV5.self) }
 
-    /// Build a CloudKit-backed container with the full schema. App
-    /// Intents call this so they share the user's iCloud-synced store
+    static let log = Logger(subsystem: "com.metricly.tracker", category: "SwiftData")
+
+    /// Process-wide container. The main app registers the one it opened
+    /// (`register`); App Intents reuse it via `makeSharedContainer()`
+    /// instead of building a fresh `ModelContainer` per intent run.
+    private static var cachedContainer: ModelContainer?
+
+    static func register(_ container: ModelContainer) {
+        cachedContainer = container
+    }
+
+    /// Returns the shared container, building it once if the main app
+    /// has not registered one (e.g. an intent launched in a cold process).
+    /// App Intents call this so they share the user's iCloud-synced store
     /// with the main app rather than creating a parallel local one.
     ///
     /// Falls back to a local-only container if CloudKit init fails so
-    /// intents still function when the user has iCloud disabled.
+    /// intents still function when the user has iCloud disabled; the
+    /// CloudKit error is logged before falling back.
     static func makeSharedContainer() throws -> ModelContainer {
+        if let cachedContainer { return cachedContainer }
         let cloud = ModelConfiguration(cloudKitDatabase: .automatic)
-        if let cloudContainer = try? ModelContainer(
-            for: schema,
-            migrationPlan: MetriclyMigrationPlan.self,
-            configurations: cloud
-        ) {
-            return cloudContainer
+        do {
+            let c = try ModelContainer(
+                for: schema,
+                migrationPlan: MetriclyMigrationPlan.self,
+                configurations: cloud
+            )
+            cachedContainer = c
+            return c
+        } catch {
+            log.error("CloudKit container failed, falling back to local: \(String(describing: error), privacy: .public)")
         }
-        return try ModelContainer(
+        let local = try ModelContainer(
             for: schema,
             migrationPlan: MetriclyMigrationPlan.self
         )
+        cachedContainer = local
+        return local
+    }
+}
+
+/// Heuristic classifier for container-open failures. SwiftData surfaces
+/// opaque errors, so we inspect the NSError chain: only SQLite corruption
+/// codes and Core Data migration / incompatible-model codes count as
+/// "genuine corruption". Anything else (locked device, disk full, busy
+/// file) is treated as transient and must never trigger quarantine.
+nonisolated enum StoreFailureClassifier {
+    static func isLikelyCorruption(_ error: Error) -> Bool {
+        var queue: [NSError] = [error as NSError]
+        var depth = 0
+        while let e = queue.popLast(), depth < 8 {
+            depth += 1
+            if e.domain == NSCocoaErrorDomain,
+               [134000, 134010, 134060].contains(e.code) || (134100...134199).contains(e.code) {
+                return true
+            }
+            // SQLITE_CORRUPT = 11, SQLITE_NOTADB = 26
+            if e.domain == "NSSQLiteErrorDomain", e.code == 11 || e.code == 26 { return true }
+            if let u = e.userInfo[NSUnderlyingErrorKey] as? NSError { queue.append(u) }
+            if let m = e.userInfo["NSDetailedErrors"] as? [NSError] { queue.append(contentsOf: m) }
+        }
+        return false
     }
 }
 

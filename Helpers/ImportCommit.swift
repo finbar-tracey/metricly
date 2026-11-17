@@ -14,8 +14,10 @@ extension ImportHelper {
     static func insertParsedWorkouts(_ workouts: [ParsedWorkout],
                                      into context: ModelContext) -> Int {
         var imported = 0
+        var inserted: [Workout] = []
         for parsed in workouts {
             let workout = Workout(name: parsed.title, date: parsed.startDate)
+            inserted.append(workout)
             workout.notes = parsed.notes
             workout.startTime = parsed.startDate
             workout.endTime = parsed.endDate
@@ -52,7 +54,14 @@ extension ImportHelper {
             }
             imported += 1
         }
-        try? context.save()
+        do {
+            try context.save()
+        } catch {
+            // Don't claim "imported N" when nothing was persisted.
+            inserted.forEach { context.delete($0) }
+            AppErrorBus.shared.report(message: "Import failed: couldn't save your workouts.")
+            return 0
+        }
         return imported
     }
 

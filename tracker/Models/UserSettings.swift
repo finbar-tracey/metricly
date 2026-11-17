@@ -75,6 +75,11 @@ final class UserSettings {
         caffeineSensitivityEnum.halfLifeHours
     }
 
+    /// Shared, never-inserted defaults for views that read settings before the
+    /// store has a row — avoids constructing a `@Model` on every render.
+    /// Treat as read-only; mutations here are not persisted.
+    @MainActor static let fallback = UserSettings()
+
     init(useKilograms: Bool = true, defaultRestDuration: Int = 90, autoStartRestTimer: Bool = false) {
         self.useKilograms = useKilograms
         self.defaultRestDuration = defaultRestDuration

@@ -21,6 +21,9 @@ final class WatchWorkoutSessionManager: NSObject, ObservableObject {
     @Published var isRunning        : Bool    = false
     @Published var isPaused         : Bool    = false
     @Published var sessionError     : Error?  = nil
+    /// Set when HealthKit authorization was denied or failed, so the UI can
+    /// explain why workouts won't record heart rate / save to Health.
+    @Published var authorizationDenied : Bool = false
 
     // Peak HR recorded during session
     @Published var maxHeartRate     : Double  = 0
@@ -67,7 +70,15 @@ final class WatchWorkoutSessionManager: NSObject, ObservableObject {
             HKQuantityType(.distanceWalkingRunning),
             HKQuantityType(.distanceCycling)
         ]
-        try? await healthStore.requestAuthorization(toShare: share, read: read)
+        do {
+            try await healthStore.requestAuthorization(toShare: share, read: read)
+            // Write (share) status is the only one HealthKit reports truthfully.
+            authorizationDenied =
+                healthStore.authorizationStatus(for: HKObjectType.workoutType()) == .sharingDenied
+        } catch {
+            authorizationDenied = true
+            sessionError = error
+        }
     }
 
     // MARK: - Start / Pause / Resume / End
@@ -96,7 +107,18 @@ final class WatchWorkoutSessionManager: NSObject, ObservableObject {
         self.builder = builder
 
         session.startActivity(with: .now)
-        try await builder.beginCollection(at: .now)
+        do {
+            try await builder.beginCollection(at: .now)
+        } catch {
+            session.end()
+            self.session = nil
+            self.builder = nil
+            startDate = nil
+            isRunning = false
+            isPaused  = false
+            sessionError = error
+            throw error
+        }
 
         startDate = .now
         reset()
@@ -125,10 +147,11 @@ final class WatchWorkoutSessionManager: NSObject, ObservableObject {
     /// Ends the session and returns the saved HKWorkout.
     func endSession() async throws -> HKWorkout? {
         guard let session, let builder else { return nil }
+        // Always reset state/timer/active-source flag, even if HealthKit throws.
+        defer { cleanup() }
         session.end()
         try await builder.endCollection(at: .now)
         let workout = try await builder.finishWorkout()
-        cleanup()
         WKInterfaceDevice.current().play(.success)
         return workout
     }

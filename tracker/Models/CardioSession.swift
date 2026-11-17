@@ -224,6 +224,9 @@ final class CardioSession {
     /// existing rows hydrate with nil.
     var stravaActivityID: Int? = nil
 
+    /// Id of the external payload (e.g. Watch) this row came from; used to dedup retried deliveries. Additive optional.
+    var sourceID: UUID? = nil
+
     /// Wall-clock start of the session. Lightweight migration (additive
     /// Optional) — legacy rows hydrate with nil and fall back to `date`
     /// via the `start` computed accessor. Every new write populates this.

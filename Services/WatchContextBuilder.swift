@@ -16,9 +16,17 @@ enum WatchContextBuilder {
         ))) ?? []
         let uniqueNames = Array(Set(allExercises.map(\.name))).sorted().prefix(50)
 
-        let workouts = (try? context.fetch(FetchDescriptor<Workout>())) ?? []
-        let cardio   = (try? context.fetch(FetchDescriptor<CardioSession>())) ?? []
-        let streak   = Workout.currentStreak(from: workouts, cardioSessions: Array(cardio.prefix(60)))
+        // Templates are irrelevant to streaks and plan matching; cardio
+        // is capped at the 60 most recent (newest first).
+        let workouts = (try? context.fetch(FetchDescriptor<Workout>(
+            predicate: #Predicate { !$0.isTemplate }
+        ))) ?? []
+        var cardioDescriptor = FetchDescriptor<CardioSession>(
+            sortBy: [SortDescriptor(\.date, order: .reverse)]
+        )
+        cardioDescriptor.fetchLimit = 60
+        let cardio   = (try? context.fetch(cardioDescriptor)) ?? []
+        let streak   = Workout.currentStreak(from: workouts, cardioSessions: cardio)
 
         let plannedExercises: [String] = {
             guard !todayPlanName.isEmpty else { return [] }
@@ -51,11 +59,12 @@ enum WatchContextBuilder {
             WatchMessageKey.currentStreak:   streak,
             WatchMessageKey.restDuration:    restSeconds,
             WatchMessageKey.activeStartedAt: activeStartedAt,
-            WatchMessageKey.activeName:      activeName
+            WatchMessageKey.activeName:      activeName,
+            WatchMessageKey.perExerciseRest: perRest
         ]
-        if !perRest.isEmpty {
-            payload[WatchMessageKey.perExerciseRest] = perRest
-        }
+        // Always present (empty when none) so the watch can clear stale
+        // overrides: the watch must REPLACE its stored map with this one
+        // (and remove its cached "watch.perExerciseRest" when empty).
         if let plan = TodayPlanStore.load() {
             payload[WatchMessageKey.adaptivePlanName] = plan.recommendedName
             payload[WatchMessageKey.adaptiveIntensity] = plan.intensity.rawValue

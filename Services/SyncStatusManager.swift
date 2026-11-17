@@ -14,6 +14,7 @@ import Observation
 /// SwiftData with `cloudKitDatabase: .automatic` uses an underlying
 /// `NSPersistentCloudKitContainer` whose events are posted as
 /// `eventChangedNotification`. We listen for those.
+@MainActor
 @Observable
 final class SyncStatusManager {
 
@@ -49,7 +50,8 @@ final class SyncStatusManager {
 
     private let lastSyncKey = "lastSuccessfulCloudKitSync"
     private let suiteName = WidgetAppGroup.suiteName
-    private var observers: [NSObjectProtocol] = []
+    // Only mutated on the main actor; `nonisolated(unsafe)` lets deinit read it.
+    @ObservationIgnored nonisolated(unsafe) private var observers: [NSObjectProtocol] = []
 
     private init() {
         // Hydrate from persisted store
@@ -72,7 +74,7 @@ final class SyncStatusManager {
     /// `CODE_SIGNING_ALLOWED=NO`, which strips the iCloud entitlement — and
     /// `CKContainer.default()` then throws an *uncaught Objective-C exception*
     /// (not a Swift error), aborting the host before tests can connect.
-    private static var isRunningTests: Bool {
+    nonisolated private static var isRunningTests: Bool {
         ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
             || NSClassFromString("XCTestCase") != nil
     }
@@ -82,23 +84,19 @@ final class SyncStatusManager {
         // Skip CloudKit under XCTest: `CKContainer.default()` throws an ObjC
         // exception when the iCloud entitlement is absent (unsigned test host).
         guard !Self.isRunningTests else {
-            await MainActor.run { self.accountStatus = .unknown }
+            accountStatus = .unknown
             return
         }
         let container = CKContainer.default()
         do {
             let status = try await container.accountStatus()
-            await MainActor.run {
-                self.accountStatus = Self.map(status)
-            }
+            accountStatus = Self.map(status)
         } catch {
-            await MainActor.run {
-                self.accountStatus = .unknown
-            }
+            accountStatus = .unknown
         }
     }
 
-    private static func map(_ status: CKAccountStatus) -> AccountStatus {
+    nonisolated private static func map(_ status: CKAccountStatus) -> AccountStatus {
         switch status {
         case .available:              return .available
         case .restricted:             return .restricted
@@ -118,7 +116,7 @@ final class SyncStatusManager {
             object: nil,
             queue: .main
         ) { [weak self] notification in
-            self?.handleEvent(notification)
+            MainActor.assumeIsolated { self?.handleEvent(notification) }
         }
         observers.append(eventToken)
 
@@ -128,7 +126,7 @@ final class SyncStatusManager {
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            Task { await self?.refreshAccountStatus() }
+            Task { @MainActor in await self?.refreshAccountStatus() }
         }
         observers.append(accountToken)
     }
@@ -165,7 +163,7 @@ final class SyncStatusManager {
         Self.formatLastSync(since: lastSuccessfulSync)
     }
 
-    static func formatLastSync(since date: Date?) -> String {
+    nonisolated static func formatLastSync(since date: Date?) -> String {
         guard let date else { return "Never" }
         return date.formatted(.relative(presentation: .named, unitsStyle: .abbreviated))
     }

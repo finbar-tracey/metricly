@@ -118,23 +118,23 @@ final class HealthDataCache {
     func fetchSteps(for date: Date) async throws -> Double {
         let key = Calendar.current.startOfDay(for: date)
         if let entry = stepsByDay[key], entry.isFresh { return entry.value }
-        let value = try await store.fetchSteps(for: date)
-        stepsByDay[key] = Entry(value: value, expiresAt: Self.expiry())
+        let value = try await coalesce("fetchSteps:\(date)") { try await self.store.fetchSteps(for: date) }
+        stepsByDay[key] = makeEntry(value)
         return value
     }
 
     func fetchDailySteps(days: Int) async throws -> [(date: Date, steps: Double)] {
         if let entry = dailyStepsByDays[days], entry.isFresh { return entry.value }
-        let value = try await store.fetchDailySteps(days: days)
-        dailyStepsByDays[days] = Entry(value: value, expiresAt: Self.expiry())
+        let value = try await coalesce("fetchDailySteps:\(days)") { try await self.store.fetchDailySteps(days: days) }
+        dailyStepsByDays[days] = makeEntry(value)
         return value
     }
 
     func fetchHourlySteps(for date: Date) async throws -> [(hour: Int, steps: Double)] {
         let key = Calendar.current.startOfDay(for: date)
         if let entry = hourlyStepsByDay[key], entry.isFresh { return entry.value }
-        let value = try await store.fetchHourlySteps(for: date)
-        hourlyStepsByDay[key] = Entry(value: value, expiresAt: Self.expiry())
+        let value = try await coalesce("fetchHourlySteps:\(date)") { try await self.store.fetchHourlySteps(for: date) }
+        hourlyStepsByDay[key] = makeEntry(value)
         return value
     }
 
@@ -143,15 +143,15 @@ final class HealthDataCache {
     func fetchDistance(for date: Date) async throws -> Double {
         let key = Calendar.current.startOfDay(for: date)
         if let entry = distanceByDay[key], entry.isFresh { return entry.value }
-        let value = try await store.fetchDistance(for: date)
-        distanceByDay[key] = Entry(value: value, expiresAt: Self.expiry())
+        let value = try await coalesce("fetchDistance:\(date)") { try await self.store.fetchDistance(for: date) }
+        distanceByDay[key] = makeEntry(value)
         return value
     }
 
     func fetchDailyDistance(days: Int) async throws -> [(date: Date, km: Double)] {
         if let entry = dailyDistanceByDays[days], entry.isFresh { return entry.value }
-        let value = try await store.fetchDailyDistance(days: days)
-        dailyDistanceByDays[days] = Entry(value: value, expiresAt: Self.expiry())
+        let value = try await coalesce("fetchDailyDistance:\(days)") { try await self.store.fetchDailyDistance(days: days) }
+        dailyDistanceByDays[days] = makeEntry(value)
         return value
     }
 
@@ -160,15 +160,15 @@ final class HealthDataCache {
     func fetchActiveEnergy(for date: Date) async throws -> Double {
         let key = Calendar.current.startOfDay(for: date)
         if let entry = activeEnergyByDay[key], entry.isFresh { return entry.value }
-        let value = try await store.fetchActiveEnergy(for: date)
-        activeEnergyByDay[key] = Entry(value: value, expiresAt: Self.expiry())
+        let value = try await coalesce("fetchActiveEnergy:\(date)") { try await self.store.fetchActiveEnergy(for: date) }
+        activeEnergyByDay[key] = makeEntry(value)
         return value
     }
 
     func fetchDailyActiveEnergy(days: Int) async throws -> [(date: Date, kcal: Double)] {
         if let entry = dailyActiveEnergyByDays[days], entry.isFresh { return entry.value }
-        let value = try await store.fetchDailyActiveEnergy(days: days)
-        dailyActiveEnergyByDays[days] = Entry(value: value, expiresAt: Self.expiry())
+        let value = try await coalesce("fetchDailyActiveEnergy:\(days)") { try await self.store.fetchDailyActiveEnergy(days: days) }
+        dailyActiveEnergyByDays[days] = makeEntry(value)
         return value
     }
 
@@ -177,30 +177,30 @@ final class HealthDataCache {
     func fetchRestingHeartRate(for date: Date) async throws -> Double? {
         let key = Calendar.current.startOfDay(for: date)
         if let entry = restingHRByDay[key], entry.isFresh { return entry.value }
-        let value = try await store.fetchRestingHeartRate(for: date)
-        restingHRByDay[key] = Entry(value: value, expiresAt: Self.expiry())
+        let value = try await coalesce("fetchRestingHeartRate:\(date)") { try await self.store.fetchRestingHeartRate(for: date) }
+        restingHRByDay[key] = makeEntry(value)
         return value
     }
 
     func fetchHeartRateStats(for date: Date) async throws -> (min: Double, max: Double, avg: Double)? {
         let key = Calendar.current.startOfDay(for: date)
         if let entry = heartRateStatsByDay[key], entry.isFresh { return entry.value }
-        let value = try await store.fetchHeartRateStats(for: date)
-        heartRateStatsByDay[key] = Entry(value: value, expiresAt: Self.expiry())
+        let value = try await coalesce("fetchHeartRateStats:\(date)") { try await self.store.fetchHeartRateStats(for: date) }
+        heartRateStatsByDay[key] = makeEntry(value)
         return value
     }
 
     func fetchDailyRestingHeartRate(days: Int) async throws -> [(date: Date, bpm: Double)] {
         if let entry = dailyRestingHRByDays[days], entry.isFresh { return entry.value }
-        let value = try await store.fetchDailyRestingHeartRate(days: days)
-        dailyRestingHRByDays[days] = Entry(value: value, expiresAt: Self.expiry())
+        let value = try await coalesce("fetchDailyRestingHeartRate:\(days)") { try await self.store.fetchDailyRestingHeartRate(days: days) }
+        dailyRestingHRByDays[days] = makeEntry(value)
         return value
     }
 
     func fetchDailyHeartRateRange(days: Int) async throws -> [(date: Date, min: Double, max: Double)] {
         if let entry = dailyHRRangeByDays[days], entry.isFresh { return entry.value }
-        let value = try await store.fetchDailyHeartRateRange(days: days)
-        dailyHRRangeByDays[days] = Entry(value: value, expiresAt: Self.expiry())
+        let value = try await coalesce("fetchDailyHeartRateRange:\(days)") { try await self.store.fetchDailyHeartRateRange(days: days) }
+        dailyHRRangeByDays[days] = makeEntry(value)
         return value
     }
 
@@ -209,15 +209,15 @@ final class HealthDataCache {
     func fetchHRV(for date: Date) async throws -> Double? {
         let key = Calendar.current.startOfDay(for: date)
         if let entry = hrvByDay[key], entry.isFresh { return entry.value }
-        let value = try await store.fetchHRV(for: date)
-        hrvByDay[key] = Entry(value: value, expiresAt: Self.expiry())
+        let value = try await coalesce("fetchHRV:\(date)") { try await self.store.fetchHRV(for: date) }
+        hrvByDay[key] = makeEntry(value)
         return value
     }
 
     func fetchDailyHRV(days: Int) async throws -> [(date: Date, ms: Double)] {
         if let entry = dailyHRVByDays[days], entry.isFresh { return entry.value }
-        let value = try await store.fetchDailyHRV(days: days)
-        dailyHRVByDays[days] = Entry(value: value, expiresAt: Self.expiry())
+        let value = try await coalesce("fetchDailyHRV:\(days)") { try await self.store.fetchDailyHRV(days: days) }
+        dailyHRVByDays[days] = makeEntry(value)
         return value
     }
 
@@ -226,22 +226,22 @@ final class HealthDataCache {
     func fetchSleep(for date: Date) async throws -> (totalMinutes: Double, inBed: Date?, wakeUp: Date?, stages: [SleepStage]) {
         let key = Calendar.current.startOfDay(for: date)
         if let entry = sleepByDay[key], entry.isFresh { return entry.value }
-        let value = try await store.fetchSleep(for: date)
-        sleepByDay[key] = Entry(value: value, expiresAt: Self.expiry())
+        let value = try await coalesce("fetchSleep:\(date)") { try await self.store.fetchSleep(for: date) }
+        sleepByDay[key] = makeEntry(value)
         return value
     }
 
     func fetchDailySleep(days: Int) async throws -> [(date: Date, minutes: Double)] {
         if let entry = dailySleepByDays[days], entry.isFresh { return entry.value }
-        let value = try await store.fetchDailySleep(days: days)
-        dailySleepByDays[days] = Entry(value: value, expiresAt: Self.expiry())
+        let value = try await coalesce("fetchDailySleep:\(days)") { try await self.store.fetchDailySleep(days: days) }
+        dailySleepByDays[days] = makeEntry(value)
         return value
     }
 
     func fetchDailySleepDetailed(days: Int) async throws -> [DailySleepDetail] {
         if let entry = dailySleepDetailedByDays[days], entry.isFresh { return entry.value }
-        let value = try await store.fetchDailySleepDetailed(days: days)
-        dailySleepDetailedByDays[days] = Entry(value: value, expiresAt: Self.expiry())
+        let value = try await coalesce("fetchDailySleepDetailed:\(days)") { try await self.store.fetchDailySleepDetailed(days: days) }
+        dailySleepDetailedByDays[days] = makeEntry(value)
         return value
     }
 
@@ -249,8 +249,8 @@ final class HealthDataCache {
 
     func fetchLatestVO2Max() async throws -> Double? {
         if let entry = latestVO2Max, entry.isFresh { return entry.value }
-        let value = try await store.fetchLatestVO2Max()
-        latestVO2Max = Entry(value: value, expiresAt: Self.expiry())
+        let value = try await coalesce("fetchLatestVO2Max") { try await self.store.fetchLatestVO2Max() }
+        latestVO2Max = makeEntry(value)
         return value
     }
 
@@ -258,12 +258,46 @@ final class HealthDataCache {
 
     func fetchExternalWorkouts(days: Int) async throws -> [ExternalWorkout] {
         if let entry = externalWorkoutsByDays[days], entry.isFresh { return entry.value }
-        let value = try await store.fetchExternalWorkouts(days: days)
-        externalWorkoutsByDays[days] = Entry(value: value, expiresAt: Self.expiry())
+        let value = try await coalesce("fetchExternalWorkouts:\(days)") { try await self.store.fetchExternalWorkouts(days: days) }
+        externalWorkoutsByDays[days] = makeEntry(value)
         return value
     }
 
     // MARK: - Private
 
-    private static func expiry() -> Date { .now.addingTimeInterval(ttl) }
+    /// Results are not cached at all when HealthKit is unavailable, and
+    /// empty results (0 / nil / []) get a short TTL: they are often the
+    /// product of denied or not-yet-granted read authorization (HealthKit
+    /// hides read denial), and caching them for 5 minutes would hide data
+    /// right after the user grants access.
+    static let emptyTTL: TimeInterval = 20
+
+    private func makeEntry<T>(_ value: T) -> Entry<T> {
+        guard store.isAvailable else { return Entry(value: value, expiresAt: .distantPast) }
+        let ttl = Self.isEmptyValue(value) ? Self.emptyTTL : Self.ttl
+        return Entry(value: value, expiresAt: .now.addingTimeInterval(ttl))
+    }
+
+    private static func isEmptyValue(_ value: Any) -> Bool {
+        if let d = value as? Double { return d == 0 }
+        let m = Mirror(reflecting: value)
+        switch m.displayStyle {
+        case .optional, .collection: return m.children.isEmpty
+        default: return false
+        }
+    }
+
+    // MARK: - In-flight coalescing
+
+    private var inflight: [String: Any] = [:]
+
+    /// Concurrent identical fetches (e.g. Home + Health cards loading at
+    /// once) share a single HealthKit query.
+    private func coalesce<T>(_ key: String, _ op: @escaping () async throws -> T) async throws -> T {
+        if let existing = inflight[key] as? Task<T, Error> { return try await existing.value }
+        let task = Task { try await op() }
+        inflight[key] = task
+        defer { inflight[key] = nil }
+        return try await task.value
+    }
 }

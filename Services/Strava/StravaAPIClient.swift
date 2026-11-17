@@ -15,6 +15,7 @@ enum StravaError: LocalizedError, Sendable {
     case httpFailure(status: Int, body: String)
     case duplicateActivity
     case refreshFailed
+    case keychainFailure
 
     var errorDescription: String? {
         switch self {
@@ -34,12 +35,14 @@ enum StravaError: LocalizedError, Sendable {
             return "Couldn't open the Strava sign-in page."
         case .noResponse:
             return "No response from Strava — check your internet connection."
-        case .httpFailure(let status, let body):
-            return "Strava request failed (HTTP \(status)). \(body)"
+        case .httpFailure(let status, _):
+            return "Strava request failed (HTTP \(status))."
         case .duplicateActivity:
             return "This activity is already on Strava."
         case .refreshFailed:
             return "Could not refresh your Strava session. Reconnect in Settings."
+        case .keychainFailure:
+            return "Couldn't securely save your Strava login on this device. Try connecting again."
         }
     }
 }
@@ -65,6 +68,13 @@ enum StravaAPIClient: Sendable {
         return encoded.data(using: .utf8)
     }
 
+    /// Builds the error and logs the raw body (kept out of user-facing text).
+    private static func httpFailure(status: Int, data: Data) -> StravaError {
+        let bodyText = String(data: data, encoding: .utf8) ?? "<no body>"
+        print("Strava HTTP \(status): \(bodyText)")
+        return .httpFailure(status: status, body: bodyText)
+    }
+
     static func postForm<T: Decodable>(url: String, body: [String: String]) async throws -> T {
         guard let endpoint = URL(string: url) else {
             throw StravaError.invalidURL
@@ -79,8 +89,7 @@ enum StravaAPIClient: Sendable {
             throw StravaError.noResponse
         }
         guard (200..<300).contains(http.statusCode) else {
-            let bodyText = String(data: data, encoding: .utf8) ?? "<no body>"
-            throw StravaError.httpFailure(status: http.statusCode, body: bodyText)
+            throw httpFailure(status: http.statusCode, data: data)
         }
         return try JSONDecoder().decode(T.self, from: data)
     }
@@ -100,8 +109,7 @@ enum StravaAPIClient: Sendable {
             throw StravaError.noResponse
         }
         guard (200..<300).contains(http.statusCode) else {
-            let bodyText = String(data: data, encoding: .utf8) ?? "<no body>"
-            throw StravaError.httpFailure(status: http.statusCode, body: bodyText)
+            throw httpFailure(status: http.statusCode, data: data)
         }
         return try JSONDecoder().decode(T.self, from: data)
     }
@@ -131,8 +139,7 @@ enum StravaAPIClient: Sendable {
             let (data, response) = try await URLSession.shared.data(for: request)
             guard let http = response as? HTTPURLResponse else { throw StravaError.noResponse }
             guard (200..<300).contains(http.statusCode) else {
-                let bodyText = String(data: data, encoding: .utf8) ?? "<no body>"
-                throw StravaError.httpFailure(status: http.statusCode, body: bodyText)
+                throw httpFailure(status: http.statusCode, data: data)
             }
 
             let pageBatch = try JSONDecoder().decode([StravaSummaryActivity].self, from: data)

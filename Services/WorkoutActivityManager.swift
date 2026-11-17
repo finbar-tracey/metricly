@@ -62,6 +62,8 @@ final class WorkoutActivityManager {
         guard let activity = currentActivity else { return }
 
         stopUpdateTimer()
+        // Clear synchronously so a quick restart isn't clobbered/orphaned by the async end.
+        currentActivity = nil
 
         let elapsed = Int(Date.now.timeIntervalSince(activity.attributes.startDate))
 
@@ -76,7 +78,6 @@ final class WorkoutActivityManager {
 
         Task {
             await activity.end(content, dismissalPolicy: .after(.now + 300))
-            currentActivity = nil
         }
     }
 

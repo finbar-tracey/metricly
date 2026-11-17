@@ -46,7 +46,9 @@ extension PhoneConnectivityManager {
             return
         }
         workout.endTime = .now
-        try? ctx.save()
+        do { try ctx.save() } catch {
+            AppErrorBus.shared.report(message: "Couldn't save the finished workout.")
+        }
 
         let totalSets = workout.exercises.flatMap(\.sets).count
         WorkoutActivityManager.shared.endActivity(
@@ -57,17 +59,47 @@ extension PhoneConnectivityManager {
 
         let settings = (try? ctx.fetch(FetchDescriptor<UserSettings>()))?.first
         if settings?.healthKitEnabled == true {
-            Task { try? await HealthKitManager.shared.saveStrengthWorkout(workout) }
+            Task {
+                do { try await HealthKitManager.shared.saveStrengthWorkout(workout) }
+                catch { AppErrorBus.shared.report(message: "Couldn't save workout to Apple Health.") }
+            }
         }
     }
 
     func persistWorkout(_ payload: WatchWorkoutPayload) {
-        guard let ctx = modelContext else { return }
-        WatchPayloadPersistence.persistWorkout(payload, in: ctx)
+        guard let ctx = modelContext else {
+            pendingWorkoutPayloads.append(payload)
+            return
+        }
+        if !WatchPayloadPersistence.persistWorkout(payload, in: ctx) {
+            pendingWorkoutPayloads.append(payload)
+        }
     }
 
     func persistCardio(_ payload: WatchCardioPayload) {
+        guard let ctx = modelContext else {
+            pendingCardioPayloads.append(payload)
+            return
+        }
+        if !WatchPayloadPersistence.persistCardio(payload, in: ctx) {
+            pendingCardioPayloads.append(payload)
+        }
+    }
+
+    /// Persist payloads that arrived before `modelContext` was set (or
+    /// whose save failed). Safe to call repeatedly; dedup is by sourceID.
+    func drainPendingPayloads() {
         guard let ctx = modelContext else { return }
-        WatchPayloadPersistence.persistCardio(payload, in: ctx)
+        let workouts = pendingWorkoutPayloads
+        let cardio = pendingCardioPayloads
+        pendingWorkoutPayloads = []
+        pendingCardioPayloads = []
+        for p in workouts where !WatchPayloadPersistence.persistWorkout(p, in: ctx) {
+            pendingWorkoutPayloads.append(p)
+        }
+        for p in cardio where !WatchPayloadPersistence.persistCardio(p, in: ctx) {
+            pendingCardioPayloads.append(p)
+        }
+        if !workouts.isEmpty || !cardio.isEmpty { lastSyncDate = .now }
     }
 }
