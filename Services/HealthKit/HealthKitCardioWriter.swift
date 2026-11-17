@@ -72,11 +72,17 @@ extension HealthKitManager {
 
         if !samples.isEmpty { try await builder.addSamples(samples) }
         try await builder.endCollection(at: end)
-        let syncID = session.sourceID?.uuidString ?? "\(Int(start.timeIntervalSince1970))"
+        // In-app rows have no sourceID, so fall back to the start time at
+        // millisecond precision (second precision collides for two starts in
+        // the same second). The sync version follows the end time, so a later
+        // edit of the same entry replaces the earlier HKWorkout while an
+        // identical retry is still ignored.
+        let syncID = session.sourceID?.uuidString ?? "\(Int(start.timeIntervalSince1970 * 1000))"
+        let syncVersion = max(1, Int(end.timeIntervalSince1970))
         try await builder.addMetadata([
             HKMetadataKeyWorkoutBrandName: session.title,
             HKMetadataKeySyncIdentifier: "metricly.cardio.\(syncID)",
-            HKMetadataKeySyncVersion: 1
+            HKMetadataKeySyncVersion: syncVersion
         ])
         let workout = try await builder.finishWorkout()
 

@@ -36,11 +36,17 @@ extension HealthKitManager {
         try await builder.endCollection(at: end)
         // Sync identifier makes a retried save replace/ignore rather than
         // create a duplicate HKWorkout.
-        let syncID = workout.sourceID?.uuidString ?? "\(Int(start.timeIntervalSince1970))"
+        // In-app rows have no sourceID, so fall back to the start time at
+        // millisecond precision (second precision collides for two starts in
+        // the same second). The sync version follows the end time, so a later
+        // edit of the same entry replaces the earlier HKWorkout while an
+        // identical retry is still ignored.
+        let syncID = workout.sourceID?.uuidString ?? "\(Int(start.timeIntervalSince1970 * 1000))"
+        let syncVersion = max(1, Int(end.timeIntervalSince1970))
         try await builder.addMetadata([
             HKMetadataKeyWorkoutBrandName: workout.name,
             HKMetadataKeySyncIdentifier: "metricly.workout.\(syncID)",
-            HKMetadataKeySyncVersion: 1
+            HKMetadataKeySyncVersion: syncVersion
         ])
         try await builder.finishWorkout()
     }
