@@ -13,6 +13,8 @@ included:
 excluded:
   - trackerTests
   - DerivedData
+  - build
+  - .claude
 line_length:
   warning: 140
   error: 200

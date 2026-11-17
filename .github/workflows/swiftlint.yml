@@ -5,12 +5,24 @@ on:
   push:
     branches: [main, master]
 
+concurrency:
+  group: swiftlint-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  SWIFTLINT_VERSION: "0.57.1"
+
 jobs:
   lint:
-    runs-on: macos-latest
+    runs-on: macos-26
     steps:
       - uses: actions/checkout@v4
-      - name: Install SwiftLint
-        run: brew install swiftlint
+      - name: Install SwiftLint (pinned)
+        run: |
+          curl -fsSL -o portable_swiftlint.zip \
+            "https://github.com/realm/SwiftLint/releases/download/${SWIFTLINT_VERSION}/portable_swiftlint.zip"
+          mkdir -p "$RUNNER_TEMP/swiftlint"
+          unzip -q portable_swiftlint.zip -d "$RUNNER_TEMP/swiftlint"
+          echo "$RUNNER_TEMP/swiftlint" >> "$GITHUB_PATH"
       - name: Run SwiftLint
         run: swiftlint lint --strict --config .swiftlint.yml
