@@ -7,11 +7,12 @@ enum SleepEngine {
 
     static func sleepScore(
         todaySleep: (totalMinutes: Double, inBed: Date?, wakeUp: Date?, stages: [SleepStage]),
-        detailedSleep: [DailySleepDetail]
+        detailedSleep: [DailySleepDetail],
+        calendar: Calendar = .current
     ) -> Int {
         let duration = durationScore(minutes: todaySleep.totalMinutes)
         let stages = stageQualityScore(stages: todaySleep.stages)
-        let consistency = consistencyScore(detailedSleep: detailedSleep)
+        let consistency = consistencyScore(detailedSleep: detailedSleep, calendar: calendar)
         let efficiency = efficiencyScore(
             totalMinutes: todaySleep.totalMinutes,
             inBed: todaySleep.inBed,
@@ -50,16 +51,14 @@ enum SleepEngine {
         Array(dailySleep.suffix(dayCount))
     }
 
-    static func thisWeekAverage(dailySleep: [(date: Date, minutes: Double)], now: Date = .now) -> Double {
-        let calendar = Calendar.current
+    static func thisWeekAverage(dailySleep: [(date: Date, minutes: Double)], now: Date = .now, calendar: Calendar = .current) -> Double {
         let weekStart = calendar.dateInterval(of: .weekOfYear, for: now)?.start ?? now
         let thisWeek = dailySleep.filter { $0.date >= weekStart }
         guard !thisWeek.isEmpty else { return 0 }
         return thisWeek.map(\.minutes).reduce(0, +) / Double(thisWeek.count)
     }
 
-    static func lastWeekAverage(dailySleep: [(date: Date, minutes: Double)], now: Date = .now) -> Double {
-        let calendar = Calendar.current
+    static func lastWeekAverage(dailySleep: [(date: Date, minutes: Double)], now: Date = .now, calendar: Calendar = .current) -> Double {
         let weekStart = calendar.dateInterval(of: .weekOfYear, for: now)?.start ?? now
         let prevStart = calendar.date(byAdding: .day, value: -7, to: weekStart) ?? weekStart
         let lastWeek = dailySleep.filter { $0.date >= prevStart && $0.date < weekStart }
@@ -126,10 +125,9 @@ enum SleepEngine {
         return Int(deepScore + remScore + awakeScore)
     }
 
-    private static func consistencyScore(detailedSleep: [DailySleepDetail]) -> Int {
+    private static func consistencyScore(detailedSleep: [DailySleepDetail], calendar: Calendar) -> Int {
         let withTimes = detailedSleep.filter { $0.inBed != nil && $0.wakeUp != nil }
         guard withTimes.count >= 3 else { return 15 }
-        let calendar = Calendar.current
         let bedMinutes = withTimes.compactMap { detail -> Double? in
             guard let bed = detail.inBed else { return nil }
             let h = calendar.component(.hour, from: bed)

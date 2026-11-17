@@ -72,7 +72,11 @@ enum ProgressionAdvisor {
     /// - Parameters:
     ///   - sessions: Array of `SessionSummary`, **newest first**.
     ///   - muscleGroup: The exercise's muscle group (used for weight increment).
-    static func recommend(sessions: [SessionSummary], muscleGroup: MuscleGroup?) -> ProgressionRecommendation {
+    static func recommend(
+        sessions: [SessionSummary],
+        muscleGroup: MuscleGroup?,
+        weightUnit: WeightUnit = .kg
+    ) -> ProgressionRecommendation {
         guard sessions.count >= 2 else {
             return ProgressionRecommendation(
                 action: .insufficient,
@@ -92,12 +96,21 @@ enum ProgressionAdvisor {
             let avg = (rpe0 + rpe1) / 2.0
             let C = EngineConstants.Progression.self
 
-            if avg <= C.rpeIncreaseThreshold {
+            if avg <= C.rpeIncreaseThreshold && latest.topWeight < previous.topWeight {
+                // Low RPE but the load went down: don't suggest building on a
+                // regression — match the previous best first.
+                return ProgressionRecommendation(
+                    action: .hold(reason: "weight dipped"),
+                    headline: "Hold steady",
+                    detail: "Weight dipped last session — aim to match your previous best before adding load.",
+                    confidence: C.confidenceMinorDipHold
+                )
+            } else if avg <= C.rpeIncreaseThreshold {
                 return ProgressionRecommendation(
                     action: .increase(suggestedWeight: suggested),
                     headline: "Ready to increase",
                     detail: "RPE averaging \(String(format: "%.1f", avg)) — room to grow.",
-                    confidence: min(1.0, (8.0 - avg) / 3.0)
+                    confidence: min(1.0, (C.rpeIncreaseThreshold - avg) / 3.0)
                 )
             } else if avg < C.rpeDeloadThreshold {
                 return ProgressionRecommendation(
@@ -156,7 +169,7 @@ enum ProgressionAdvisor {
                     return ProgressionRecommendation(
                         action: .deload(reason: "declining trend"),
                         headline: "Consider a deload",
-                        detail: "Weight has declined over \(C.sustainedDeclineSessions) sessions — drop to \(Int(deloadWeight)) kg and rebuild.",
+                        detail: "Weight has declined over \(C.sustainedDeclineSessions) sessions — drop to \(Int(weightUnit.display(deloadWeight).rounded())) \(weightUnit.label) and rebuild.",
                         confidence: C.confidenceDeload
                     )
                 }

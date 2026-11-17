@@ -12,6 +12,7 @@ enum AchievementsEngine {
         let stepsData: [(date: Date, steps: Double)]
         let sleepData: [(date: Date, minutes: Double)]
         let externalWorkouts: [ExternalWorkout]
+        var calendar: Calendar = .current
     }
 
     static func allAchievements(from inputs: Inputs) -> [Achievement] {
@@ -104,7 +105,7 @@ enum AchievementsEngine {
             unlockedDate: inputs.bodyWeights.count >= 10 ? .now : nil))
 
         let earlyWorkouts = finishedWorkouts.filter {
-            let hour = Calendar.current.component(.hour, from: $0.date); return hour >= 5 && hour < 8
+            let hour = inputs.calendar.component(.hour, from: $0.date); return hour >= 5 && hour < 8
         }.count
         list.append(Achievement(id: "early_bird", name: "Early Bird", description: "Complete 10 workouts before 8 AM",
             icon: "sunrise.fill", tier: .silver, category: .gym,

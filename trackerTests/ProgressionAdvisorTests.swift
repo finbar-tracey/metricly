@@ -203,6 +203,26 @@ final class ProgressionAdvisorTests: XCTestCase {
         }
     }
 
+    func testLowRPEWithWeightRegressionHolds() {
+        let latest = makeSession(daysAgo: 0, weight: 70, reps: 8, rpe: 6)
+        let prev   = makeSession(daysAgo: -7, weight: 80, reps: 8, rpe: 6)
+        let result = ProgressionAdvisor.recommend(sessions: [latest, prev], muscleGroup: .chest)
+        if case .hold = result.action {} else {
+            XCTFail("Expected .hold after weight regression, got \(result.action)")
+        }
+    }
+
+    func testDeloadDetailUsesWeightUnit() {
+        let s0 = makeSession(daysAgo: 0, weight: 60, reps: 5)
+        let s1 = makeSession(daysAgo: -7, weight: 70, reps: 5)
+        let s2 = makeSession(daysAgo: -14, weight: 80, reps: 5)
+        let kg = ProgressionAdvisor.recommend(sessions: [s0, s1, s2], muscleGroup: .chest)
+        XCTAssertTrue(kg.detail.contains("kg"))
+        let lbs = ProgressionAdvisor.recommend(sessions: [s0, s1, s2], muscleGroup: .chest, weightUnit: .lbs)
+        XCTAssertTrue(lbs.detail.contains("lbs"))
+        XCTAssertFalse(lbs.detail.contains(" kg"))
+    }
+
     // MARK: - Helpers (additions)
 
     private func makeHistoricalExercise(

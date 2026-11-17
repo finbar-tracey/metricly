@@ -60,10 +60,11 @@ enum WeeklyMonthlyReportEngine {
         var bodyWeightEntries: [BodyWeightEntry]
         var resolvedMaxHR: Double = 190
         var referenceDate: Date = .now
+        var calendar: Calendar = .current
     }
 
     static func make(_ inputs: Inputs) -> WeeklyMonthlyReportSnapshot {
-        let calendar = Calendar.current
+        let calendar = inputs.calendar
         let now = inputs.referenceDate
 
         let currentRange = periodRange(period: inputs.period, calendar: calendar, now: now)

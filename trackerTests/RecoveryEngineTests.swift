@@ -38,7 +38,7 @@ final class RecoveryEngineTests: XCTestCase {
                              "Good sleep should produce a higher readiness score than poor sleep")
     }
 
-    func testSleepBoostMatchesEnginePolicy() {
+    func testGoodSleepNeverLowersScore() {
         // ≥7.5h boosts the score by ~5% (multiplier 1.05) per RecoveryEngine
         let workouts = [makeChestWorkout(daysAgo: 5)]
         let neutral  = HealthSignals()
@@ -48,6 +48,7 @@ final class RecoveryEngineTests: XCTestCase {
         let boostedResult = RecoveryEngine.evaluate(workouts: workouts, health: boosted)
 
         XCTAssertGreaterThanOrEqual(boostedResult.readinessScore, neutralResult.readinessScore)
+        XCTAssertLessThanOrEqual(boostedResult.readinessScore, 1.0)
     }
 
     // MARK: - HRV modifier
@@ -86,7 +87,8 @@ final class RecoveryEngineTests: XCTestCase {
             sleepMinutes: 9 * 60                      // long sleep
         )
         let result = RecoveryEngine.evaluate(workouts: workouts, health: stackedGoodSignals)
-        XCTAssertLessThanOrEqual(result.readinessScore, 1.0)
+        XCTAssertEqual(result.readinessScore, 1.0, accuracy: 0.001,
+                       "Stacked good signals + recovered muscles clamp to exactly 1.0")
     }
 
     func testScoreNeverDropsBelowZero() {
@@ -99,6 +101,8 @@ final class RecoveryEngineTests: XCTestCase {
         )
         let result = RecoveryEngine.evaluate(workouts: workouts, health: bad)
         XCTAssertGreaterThanOrEqual(result.readinessScore, 0.0)
+        XCTAssertLessThan(result.readinessScore, 0.10,
+                          "All three physiology signals floored should leave readiness near zero")
     }
 
     // MARK: - Suggested workout type
@@ -256,36 +260,169 @@ final class RecoveryEngineTests: XCTestCase {
 
     // MARK: - Combined health signals
 
-    func testCombinedNegativeSignalsCompound() {
-        // Two bad signals at once should produce a lower score than either
-        // alone. Catches the case where the engine accidentally treats
-        // them as substitutes rather than additive.
+    func testCombinedNegativeSignalsStayLow() {
+        // Physiology is a weighted blend of the available signals, so a second
+        // bad signal never *improves* readiness: the combined score stays at or
+        // below the less-severe of the two single-signal scores, and well below
+        // baseline. (Inputs chosen so neither sub-score clamps to its floor,
+        // which would make the comparison degenerate.)
         let baseline = RecoveryEngine.evaluate(workouts: [], health: HealthSignals())
 
         let shortSleepOnly = RecoveryEngine.evaluate(
             workouts: [],
-            health: HealthSignals(sleepMinutes: 240)
+            health: HealthSignals(sleepMinutes: 300)   // 5h → ~0.33
         )
         let lowHRVOnly = RecoveryEngine.evaluate(
             workouts: [],
-            health: HealthSignals(todayHRV: 20, averageHRV: 50)
+            health: HealthSignals(todayHRV: 40, averageHRV: 50)   // 0.8× → ~0.40
         )
         let both = RecoveryEngine.evaluate(
             workouts: [],
             health: HealthSignals(
-                todayHRV: 20, averageHRV: 50,
-                sleepMinutes: 240
+                todayHRV: 40, averageHRV: 50,
+                sleepMinutes: 300
             )
         )
 
         XCTAssertLessThan(shortSleepOnly.readinessScore, baseline.readinessScore)
         XCTAssertLessThan(lowHRVOnly.readinessScore, baseline.readinessScore)
+        XCTAssertLessThan(both.readinessScore, baseline.readinessScore)
         XCTAssertLessThanOrEqual(both.readinessScore,
-                                 min(shortSleepOnly.readinessScore, lowHRVOnly.readinessScore),
-                                 "Stacking two negative signals shouldn't be more lenient than either alone")
+                                 max(shortSleepOnly.readinessScore, lowHRVOnly.readinessScore),
+                                 "Adding a second negative signal must not raise readiness above the less-severe one")
+    }
+
+    func testRoughNightReadsLow() {
+        // The motivating case: muscles are fresh (no recent training) but the
+        // user drank and slept badly. Suppressed HRV, short sleep, and an
+        // elevated resting HR should land readiness in clearly-low territory,
+        // not the ~80% the old muscle-first model produced.
+        let roughNight = HealthSignals(
+            todayHRV: 32, averageHRV: 50,            // −36% (typical post-alcohol)
+            todayRestingHR: 66, averageRestingHR: 60, // +10%
+            sleepMinutes: 5 * 60                       // 5h, poor
+        )
+        let result = RecoveryEngine.evaluate(workouts: [], health: roughNight)
+
+        XCTAssertLessThan(result.readinessScore, 0.40,
+                          "A wrecked night should read clearly low even with fresh muscles")
+    }
+
+    // MARK: - Physiology calibration
+
+    private func score(_ health: HealthSignals) -> Double {
+        RecoveryEngine.evaluate(workouts: [], health: health).readinessScore
+    }
+
+    func testBaselineDayReachesHardThreshold() {
+        let baseline = HealthSignals(
+            todayHRV: 50, averageHRV: 50,
+            todayRestingHR: 60, averageRestingHR: 60,
+            sleepMinutes: 7 * 60
+        )
+        let s = score(baseline)
+        XCTAssertEqual(s, 1.0, accuracy: 0.001)
+        XCTAssertGreaterThanOrEqual(s, EngineConstants.TodayPlan.hardThreshold)
+    }
+
+    func testSleepScoreClampsAndGradient() {
+        XCTAssertEqual(score(HealthSignals(sleepMinutes: 9 * 60)), 1.0, accuracy: 0.001)
+        XCTAssertEqual(score(HealthSignals(sleepMinutes: 7 * 60)), 1.0, accuracy: 0.001)
+        // (6 - 3.5) / (7 - 3.5)
+        XCTAssertEqual(score(HealthSignals(sleepMinutes: 6 * 60)), 2.5 / 3.5, accuracy: 0.001)
+        // Sleep floor: at/below 3.5h the sleep sub-score is 0
+        XCTAssertEqual(score(HealthSignals(sleepMinutes: 3.5 * 60)), 0.0, accuracy: 0.001)
+        XCTAssertEqual(score(HealthSignals(sleepMinutes: 3.2 * 60)), 0.0, accuracy: 0.001)
+    }
+
+    func testTinySleepTreatedAsMissing() {
+        // 2h (nap / partial sample) must behave exactly like no sleep data.
+        XCTAssertEqual(score(HealthSignals(sleepMinutes: 120)), score(HealthSignals()), accuracy: 0.0001)
+        XCTAssertNil(RecoveryEngine.validSleepHours(120))
+        XCTAssertNil(RecoveryEngine.validSleepHours(nil))
+        XCTAssertEqual(RecoveryEngine.validSleepHours(180) ?? 0, 3.0, accuracy: 0.0001)
+    }
+
+    func testHRVSlopeAndClamps() {
+        XCTAssertEqual(score(HealthSignals(todayHRV: 42.5, averageHRV: 50)), 0.70, accuracy: 0.001) // -15%
+        XCTAssertEqual(score(HealthSignals(todayHRV: 20, averageHRV: 50)), 0.0, accuracy: 0.001)    // clamp low
+        XCTAssertEqual(score(HealthSignals(todayHRV: 90, averageHRV: 50)), 1.0, accuracy: 0.001)    // clamp high
+    }
+
+    func testRHRSlopeAndClamps() {
+        XCTAssertEqual(score(HealthSignals(todayRestingHR: 63, averageRestingHR: 60)), 0.80, accuracy: 0.001) // +5%
+        XCTAssertEqual(score(HealthSignals(todayRestingHR: 90, averageRestingHR: 60)), 0.0, accuracy: 0.001)
+        XCTAssertEqual(score(HealthSignals(todayRestingHR: 50, averageRestingHR: 60)), 1.0, accuracy: 0.001)
+    }
+
+    func testPartialSignalsRenormaliseWeights() {
+        // HRV only (-15% → 0.70): weight renormalised to 1, so score is 0.70, not 0.70 * 0.45.
+        XCTAssertEqual(score(HealthSignals(todayHRV: 42.5, averageHRV: 50)), 0.70, accuracy: 0.001)
+        // HRV 0.70 (w .45) + sleep 7h 1.0 (w .35) → (0.315 + 0.35) / 0.80
+        let blended = score(HealthSignals(todayHRV: 42.5, averageHRV: 50, sleepMinutes: 7 * 60))
+        XCTAssertEqual(blended, 0.665 / 0.80, accuracy: 0.001)
+    }
+
+    func testNoHealthFallsBackToMuscleFreshness() {
+        let reports = trainableReports(level: 4)
+        let result = RecoveryEngine.evaluate(workouts: [], sorenessReports: reports)
+        XCTAssertEqual(result.readinessScore, 1.0 - 4 * EngineConstants.Recovery.sorenessLevelStep, accuracy: 0.001)
+    }
+
+    func testMuscleModulationIsGentleWithPhysiology() {
+        let reports = trainableReports(level: 4)   // all muscles at 0.70 freshness
+        let perfect = HealthSignals(sleepMinutes: 7 * 60)
+        let result = RecoveryEngine.evaluate(workouts: [], health: perfect, sorenessReports: reports)
+        let C = EngineConstants.Recovery.self
+        let expected = C.muscleModulationFloor + (1 - C.muscleModulationFloor) * 0.70
+        XCTAssertEqual(result.readinessScore, expected, accuracy: 0.001)
+        // Never below physiology * floor
+        XCTAssertGreaterThanOrEqual(result.readinessScore, C.muscleModulationFloor)
+    }
+
+    func testHealthSignalsNotDoubleCountedInAggregate() {
+        // Poor HRV slows per-muscle recovery hours but the aggregate for a
+        // recently-trained user must equal physiology * modulation computed
+        // from neutral muscle freshness.
+        let workouts = [makeChestWorkout(daysAgo: 1, sets: 4)]
+        let hrv = HealthSignals(todayHRV: 40, averageHRV: 50)    // ratio 0.80 (< hrvLowRatio), physiology 0.60
+        let neutral = RecoveryEngine.evaluate(workouts: workouts)
+        let withHRV = RecoveryEngine.evaluate(workouts: workouts, health: hrv)
+        let C = EngineConstants.Recovery.self
+        let neutralMean = neutral.muscleResults.map(\.freshness).reduce(0, +) / Double(neutral.muscleResults.count)
+        let expected = 0.60 * (C.muscleModulationFloor + (1 - C.muscleModulationFloor) * neutralMean)
+        XCTAssertEqual(withHRV.readinessScore, expected, accuracy: 0.001)
+        // Per-muscle display still reflects the slower recovery.
+        let chestNeutral = neutral.muscleResults.first { $0.group == .chest }!
+        let chestHRV = withHRV.muscleResults.first { $0.group == .chest }!
+        XCTAssertGreaterThan(chestHRV.effectiveRecoveryHours, chestNeutral.effectiveRecoveryHours)
+    }
+
+    func testReadinessMonotonicInHRV() {
+        let ratios: [Double] = [0.5, 0.7, 0.85, 0.95, 1.0]
+        let scores = ratios.map { score(HealthSignals(todayHRV: 50 * $0, averageHRV: 50)) }
+        for i in 1..<scores.count { XCTAssertGreaterThanOrEqual(scores[i], scores[i - 1]) }
+        XCTAssertLessThan(scores.first!, scores.last!)
+    }
+
+    func testEmptyResultUsesUnknownReadiness() {
+        XCTAssertEqual(RecoveryResult.empty.readinessScore, EngineConstants.Recovery.unknownReadiness)
+    }
+
+    func testUnsortedWorkoutsStillCountRecentSessions() {
+        // Oldest-first input must not terminate the scan early.
+        let workouts = [makeChestWorkout(daysAgo: 30), makeChestWorkout(daysAgo: 0, sets: 5)]
+        let result = RecoveryEngine.evaluate(workouts: workouts)
+        let chest = result.muscleResults.first { $0.group == .chest }!
+        XCTAssertLessThan(chest.freshness, 1.0)
+        XCTAssertNotNil(chest.lastTrained)
     }
 
     // MARK: - Helpers
+
+    private func trainableReports(level: Int) -> [SorenessEntry] {
+        RecoveryEngine.trainableGroups.map { SorenessEntry(date: .now, group: $0, level: level) }
+    }
 
     private func makeChestWorkout(daysAgo: Int, sets: Int = 3) -> Workout {
         let date = Calendar.current.date(byAdding: .day, value: -daysAgo, to: .now)!

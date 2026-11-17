@@ -40,8 +40,13 @@ enum SmartSuggestionsEngine {
         return suggestions
     }
 
-    static func recentExerciseNames(days: Int, in workouts: [Workout]) -> Set<String> {
-        let cutoff = Calendar.current.date(byAdding: .day, value: -days, to: .now) ?? .now
+    static func recentExerciseNames(
+        days: Int,
+        in workouts: [Workout],
+        now: Date = .now,
+        calendar: Calendar = .current
+    ) -> Set<String> {
+        let cutoff = calendar.date(byAdding: .day, value: -days, to: now) ?? now
         return Set(
             workouts
                 .filter { $0.date >= cutoff }
@@ -49,9 +54,18 @@ enum SmartSuggestionsEngine {
         )
     }
 
-    static func reasonForGroup(_ group: MuscleGroup, recovery: RecoveryResult) -> String {
+    static func reasonForGroup(
+        _ group: MuscleGroup,
+        recovery: RecoveryResult,
+        now: Date = .now,
+        calendar: Calendar = .current
+    ) -> String {
         if let lastTrained = recovery.muscleResults.first(where: { $0.group == group })?.lastTrained {
-            let days = Int(Date.now.timeIntervalSince(lastTrained) / 86400)
+            let days = max(0, calendar.dateComponents(
+                [.day],
+                from: calendar.startOfDay(for: lastTrained),
+                to: calendar.startOfDay(for: now)
+            ).day ?? 0)
             if days == 0 { return "Trained today" }
             if days == 1 { return "Last trained yesterday" }
             return "Last trained \(days) days ago"

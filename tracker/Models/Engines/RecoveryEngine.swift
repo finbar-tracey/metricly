@@ -37,7 +37,7 @@ struct RecoveryResult {
     let muscleResults: [MuscleFatigueResult]
     let suggestedWorkoutType: String
 
-    static let empty = RecoveryResult(readinessScore: 0.75, muscleResults: [], suggestedWorkoutType: "Anything")
+    static let empty = RecoveryResult(readinessScore: EngineConstants.Recovery.unknownReadiness, muscleResults: [], suggestedWorkoutType: "Anything")
 }
 
 // MARK: - Internal Types
@@ -79,42 +79,35 @@ enum RecoveryEngine {
     ) -> RecoveryResult {
         let healthMultiplier = computeHealthMultiplier(health: health)
 
-        var muscleResults: [MuscleFatigueResult] = trainableGroups.map { group in
-            computeMuscleFatigue(
-                for: group,
-                workouts: workouts,
-                health: health,
-                healthMultiplier: healthMultiplier,
-                now: now
-            )
+        // Full per-muscle pipeline for a given health multiplier.
+        func buildMuscleResults(multiplier: Double) -> [MuscleFatigueResult] {
+            var results: [MuscleFatigueResult] = trainableGroups.map { group in
+                computeMuscleFatigue(
+                    for: group,
+                    workouts: workouts,
+                    health: health,
+                    healthMultiplier: multiplier,
+                    now: now
+                )
+            }
+            // User-reported soreness wins over the model (applied after it).
+            results = applySorenessReports(muscleResults: results, reports: sorenessReports, now: now)
+            // Systemic fatigue from external workouts and app-native cardio.
+            results = applyExternalWorkoutFatigue(muscleResults: results, externalWorkouts: externalWorkouts, now: now)
+            results = applyCardioSessionFatigue(muscleResults: results, cardioSessions: cardioSessions, now: now)
+            return results
         }
 
-        // Apply user-reported soreness as a per-group freshness override.
-        // Applied AFTER the per-muscle model so it shows up clearly in
-        // the user's own input — if they say "my legs are sore", legs
-        // freshness drops regardless of what the volume model thinks.
-        muscleResults = applySorenessReports(
-            muscleResults: muscleResults,
-            reports: sorenessReports,
-            now: now
-        )
-
-        // Apply systemic fatigue from external workouts (runs, rides, etc.)
-        muscleResults = applyExternalWorkoutFatigue(
-            muscleResults: muscleResults,
-            externalWorkouts: externalWorkouts,
-            now: now
-        )
-
-        // Apply systemic fatigue from app-native cardio sessions
-        muscleResults = applyCardioSessionFatigue(
-            muscleResults: muscleResults,
-            cardioSessions: cardioSessions,
-            now: now
-        )
+        // Per-muscle display uses health-adjusted recovery hours. The aggregate
+        // score uses a neutral (multiplier 1.0) pass so HRV / sleep / RHR are
+        // counted once, by the physiology score, not twice.
+        let muscleResults = buildMuscleResults(multiplier: healthMultiplier)
+        let neutralResults = healthMultiplier == 1.0
+            ? muscleResults
+            : buildMuscleResults(multiplier: 1.0)
 
         let readinessScore = computeReadinessScore(
-            muscleResults: muscleResults,
+            muscleResults: neutralResults,
             health: health
         )
 
@@ -168,7 +161,7 @@ enum RecoveryEngine {
         var compositeFreshness = 1.0
         var latestEffectiveRecovery = base * healthMultiplier
 
-        for session in sessions {
+        for (index, session) in sessions.enumerated() {
             // Volume multiplier
             let volumeMultiplier: Double
             if let avg = trailingAvgVolume, avg > 0, session.totalVolume > 0 {
@@ -198,7 +191,7 @@ enum RecoveryEngine {
             compositeFreshness *= (1.0 - residualFatigue * EngineConstants.Recovery.compoundFatigueCoefficient)
 
             // Track the most recent session's effective recovery for display
-            if session.date == sessions.first?.date {
+            if index == 0 { // sessions are sorted newest-first
                 latestEffectiveRecovery = effectiveRecovery
             }
         }
@@ -229,7 +222,7 @@ enum RecoveryEngine {
             // negative fatigue. Skip them but don't break — there may be
             // legitimate past workouts after them in the array.
             guard workout.date <= now else { continue }
-            guard workout.date >= cutoff else { break } // sorted newest-first
+            guard workout.date >= cutoff else { continue } // don't assume sort order
             guard workout.endTime != nil else { continue } // only finished workouts
 
             let matchingExercises = workout.exercises.filter { $0.category == group }
@@ -262,7 +255,7 @@ enum RecoveryEngine {
             ))
         }
 
-        return sessions // already newest-first from input order
+        return sessions.sorted { $0.date > $1.date }
     }
 
     // MARK: - Trailing Average Volume
@@ -280,10 +273,7 @@ enum RecoveryEngine {
             // See `recentSessions` — future-dated workouts get skipped
             // rather than terminating the loop.
             guard workout.date <= now else { continue }
-            guard workout.date >= cutoff, workout.endTime != nil else {
-                if workout.date < cutoff { break }
-                continue
-            }
+            guard workout.date >= cutoff, workout.endTime != nil else { continue }
 
             let matchingExercises = workout.exercises.filter { $0.category == group }
             guard !matchingExercises.isEmpty else { continue }
@@ -322,8 +312,7 @@ enum RecoveryEngine {
         }
 
         // Sleep signal
-        if let sleepMins = health.sleepMinutes, sleepMins > 0 {
-            let sleepHours = sleepMins / 60
+        if let sleepHours = validSleepHours(health.sleepMinutes) {
             if sleepHours < C.sleepPoorHours {
                 multiplier *= C.sleepPoorMultiplier   // poor sleep = slower recovery
             }
@@ -344,43 +333,71 @@ enum RecoveryEngine {
 
     // MARK: - Aggregate Readiness Score
 
+    /// Physiology-first aggregate readiness.
+    ///
+    /// Overall readiness is driven primarily by autonomic + sleep signals
+    /// (HRV, resting HR, sleep) — matching Whoop / Garmin Body Battery /
+    /// Bevel. Muscle freshness then only modulates the result within a band
+    /// around the physiology value, so a rough night reads genuinely low even
+    /// when the muscles are fresh. When no physiology data is available we
+    /// fall back to muscle freshness alone.
     private static func computeReadinessScore(
         muscleResults: [MuscleFatigueResult],
         health: HealthSignals
     ) -> Double {
-        guard !muscleResults.isEmpty else { return 0.5 }
+        let C0 = EngineConstants.Recovery.self
+        guard !muscleResults.isEmpty else { return C0.unknownReadiness }
 
-        var score = muscleResults.map(\.freshness).reduce(0, +) / Double(muscleResults.count)
+        let muscleScore = muscleResults.map(\.freshness).reduce(0, +) / Double(muscleResults.count)
+
+        guard let physiology = computePhysiologyScore(health: health) else {
+            return clamp01(muscleScore)
+        }
+
         let C = EngineConstants.Recovery.self
-
-        // HRV modifier on aggregate (±20%)
-        if let hrv = health.todayHRV, let avg = health.averageHRV, avg > 0 {
-            let hrvModifier = ((hrv / avg) - 1.0) * C.hrvAggregateWeight
-            score = min(1.0, max(0.0, score + hrvModifier))
-        }
-
-        // Resting HR modifier on aggregate
-        if let rhr = health.todayRestingHR, let avg = health.averageRestingHR, avg > 0 {
-            let rhrRatio = rhr / avg
-            if rhrRatio > C.rhrHighRatio {
-                score *= C.rhrAggregateHighMultiplier
-            } else if rhrRatio > C.rhrModerateRatio {
-                score *= C.rhrAggregateModerateMultiplier
-            }
-        }
-
-        // Sleep modifier on aggregate
-        if let sleepMins = health.sleepMinutes, sleepMins > 0 {
-            let sleepHours = sleepMins / 60
-            if sleepHours < C.sleepPoorHours {
-                score *= C.sleepAggregatePoorMultiplier
-            } else if sleepHours >= C.sleepGoodHours {
-                score = min(1.0, score * C.sleepAggregateGoodMultiplier)
-            }
-        }
-
-        return min(1.0, max(0.0, score))
+        let modulation = C.muscleModulationFloor + (1.0 - C.muscleModulationFloor) * muscleScore
+        return clamp01(physiology * modulation)
     }
+
+    /// Blends whatever autonomic/sleep signals are present into a single
+    /// 0...1 physiology score (1 = great, 0 = severely suppressed). Returns
+    /// nil when no physiology data is available at all.
+    private static func computePhysiologyScore(health: HealthSignals) -> Double? {
+        let C = EngineConstants.Recovery.self
+        var weightedSum = 0.0
+        var totalWeight = 0.0
+
+        if let hrv = health.todayHRV, let avg = health.averageHRV, avg > 0 {
+            let score = clamp01(C.hrvScoreBaseline + ((hrv / avg) - 1.0) * C.hrvScoreSlope)
+            weightedSum += score * C.hrvScoreWeight
+            totalWeight += C.hrvScoreWeight
+        }
+
+        if let hours = validSleepHours(health.sleepMinutes) {
+            let score = clamp01((hours - C.sleepScoreFloorHours) /
+                                (C.sleepScoreFullHours - C.sleepScoreFloorHours))
+            weightedSum += score * C.sleepScoreWeight
+            totalWeight += C.sleepScoreWeight
+        }
+
+        if let rhr = health.todayRestingHR, let avg = health.averageRestingHR, avg > 0 {
+            let score = clamp01(C.rhrScoreBaseline - ((rhr / avg) - 1.0) * C.rhrScoreSlope)
+            weightedSum += score * C.rhrScoreWeight
+            totalWeight += C.rhrScoreWeight
+        }
+
+        guard totalWeight > 0 else { return nil }
+        return weightedSum / totalWeight
+    }
+
+    /// Sleep in hours, or nil when missing or implausibly short (naps /
+    /// partial samples under `sleepMinValidHours` are treated as no data).
+    static func validSleepHours(_ minutes: Double?) -> Double? {
+        guard let minutes, minutes / 60 >= EngineConstants.Recovery.sleepMinValidHours else { return nil }
+        return minutes / 60
+    }
+
+    private static func clamp01(_ value: Double) -> Double { min(1.0, max(0.0, value)) }
 
     // MARK: - External Workout Fatigue
 

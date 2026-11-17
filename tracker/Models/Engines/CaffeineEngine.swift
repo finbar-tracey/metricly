@@ -42,9 +42,9 @@ enum CaffeineEngine {
         from now: Date,
         entries: [CaffeineEntry],
         halfLifeHours: Double,
-        defaultHour: Int = 22
+        defaultHour: Int = 22,
+        calendar: Calendar = .current
     ) -> (time: Date, delayedByCaffeine: Bool) {
-        let calendar = Calendar.current
         var defaultBedtime = calendar.date(
             bySettingHour: defaultHour, minute: 0, second: 0,
             of: calendar.startOfDay(for: now)

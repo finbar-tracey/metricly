@@ -308,8 +308,7 @@ enum TodayPlanEngine {
         }
 
         // Sleep callout
-        if let sleep = health.sleepMinutes, sleep > 0 {
-            let hours = sleep / 60
+        if let hours = RecoveryEngine.validSleepHours(health.sleepMinutes) {
             let formatted = String(format: "%.1f", hours)
             if hours < C.sleepShortHours {
                 reasons.append(String(

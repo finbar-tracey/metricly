@@ -79,14 +79,63 @@ enum EngineConstants {
         static let rhrModerateMultiplier: Double = 1.07
         static let rhrHighMultiplier: Double = 1.15
 
-        // Aggregate readiness score modifiers.
-        /// HRV's contribution to aggregate score is bounded at ±20%.
-        static let hrvAggregateWeight: Double = 0.20
-        static let rhrAggregateModerateMultiplier: Double = 0.95
-        static let rhrAggregateHighMultiplier: Double = 0.90
-        static let sleepAggregatePoorMultiplier: Double = 0.80
-        static let sleepGoodHours: Double = 7.5
-        static let sleepAggregateGoodMultiplier: Double = 1.10
+        // MARK: Physiology-first aggregate readiness
+        //
+        // Overall readiness is driven PRIMARILY by autonomic + sleep signals
+        // (HRV, resting HR, sleep duration) — the way Whoop, Garmin Body
+        // Battery, and Bevel behave. A rough night (alcohol, short/poor sleep,
+        // suppressed HRV, elevated RHR) should read genuinely low even when
+        // your muscles are fresh. Muscle freshness then only *modulates* the
+        // score within a band around the physiology value.
+        //
+        // Each physiology signal maps to a 0...1 sub-score (1 = great,
+        // 0 = severely suppressed), calibrated so a baseline day (today ≈ trailing
+        // average HRV/RHR, ~7h sleep) scores ~1.0: only DEVIATIONS below baseline
+        // are penalised (above-baseline HRV/RHR/sleep clamps at 1.0). This keeps
+        // health-connected users able to reach TodayPlan.hardThreshold.
+        //
+        // Per-muscle recovery hours are slowed by the health multiplier for
+        // display, but the aggregate score is built from muscle freshness
+        // computed WITHOUT that multiplier, so HRV/sleep/RHR count once.
+
+        /// HRV sub-score = clamp(baseline + (todayHRV/avgHRV − 1) × slope); baseline 1.0.
+        /// Slope 2.0 → a 15% HRV drop costs ~0.30; a 30% drop (typical after
+        /// a heavy drinking night) costs ~0.60.
+        static let hrvScoreBaseline: Double = 1.0
+        static let hrvScoreSlope: Double = 2.0
+
+        /// RHR sub-score = clamp(baseline − (todayRHR/avgRHR − 1) × slope).
+        /// Slope 4.0 → a 5% elevation costs ~0.20, a 10% elevation ~0.40.
+        static let rhrScoreBaseline: Double = 1.0
+        static let rhrScoreSlope: Double = 4.0
+
+        /// Sleep sub-score is a gradient (not a <6h cliff):
+        /// clamp((hours − floor) / (full − floor)). 7h → 1.0, 6h → ~0.71,
+        /// 5h → ~0.43, 4h → ~0.14.
+        static let sleepScoreFloorHours: Double = 3.5
+        static let sleepScoreFullHours: Double = 7.0
+
+        /// Relative weights when blending whatever physiology signals are
+        /// present. HRV leads (most predictive of autonomic stress), sleep
+        /// next, RHR confirms.
+        static let hrvScoreWeight: Double = 0.45
+        static let sleepScoreWeight: Double = 0.35
+        static let rhrScoreWeight: Double = 0.20
+
+        /// Muscle freshness modulates readiness within
+        /// [muscleModulationFloor, 1.0] of the physiology score. At 0.70,
+        /// fully-fatigued muscles cut readiness to 70% of what physiology
+        /// alone would allow; fully-fresh muscles leave it untouched. Keeps
+        /// the score physiology-first while still responding to heavy load.
+        static let muscleModulationFloor: Double = 0.70
+
+        /// Readiness reported when there is nothing to compute from (before
+        /// data loads / no muscle results). Between light and hard.
+        static let unknownReadiness: Double = 0.75
+
+        /// Sleep totals below this are treated as missing (naps / partial
+        /// samples before the night is fully synced), not as "terrible sleep".
+        static let sleepMinValidHours: Double = 3.0
 
         // External (HealthKit) workout fatigue.
         /// Look-back window for non-app workouts that still count.

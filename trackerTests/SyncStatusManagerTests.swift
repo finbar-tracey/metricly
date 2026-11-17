@@ -1,6 +1,7 @@
 import XCTest
 @testable import tracker
 
+@MainActor
 final class SyncStatusManagerTests: XCTestCase {
 
     func testAccountStatusLabels() {
